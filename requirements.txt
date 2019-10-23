@@ -1,0 +1,22 @@
+cached-property==1.5.1
+executor==18.0
+Flask==0.12.3
+Flask-Compress==1.3.0
+Flask-DebugToolbar==0.10.0
+Flask-SQLAlchemy==2.2
+gunicorn==19.9.0
+heroku3==3.3.0
+itsdangerous==0.24
+Jinja2==2.8
+monthdelta
+newrelic==4.20.0.120
+nose==1.3.7
+oauth2client==4.1.3
+psycopg2-binary==2.8.2
+python-dateutil==2.6.0
+requests[security] == 2.20.0
+shortuuid==0.4.3
+sqlalchemy-redshift==0.7.3
+unicodecsv==0.14.1
+unidecode==0.04.19
+Werkzeug==0.11.2
