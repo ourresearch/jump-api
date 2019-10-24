@@ -20,6 +20,7 @@ import psycopg2
 import psycopg2.extras # needed though you wouldn't guess it
 from psycopg2.pool import ThreadedConnectionPool
 from contextlib import contextmanager
+import joblib
 
 from util import safe_commit
 from util import elapsed
@@ -64,6 +65,8 @@ for a_library in libraries_to_mum:
 requests.packages.urllib3.disable_warnings()
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
+mycache = joblib.Memory(cachedir='./cache', verbose=2)
+
 app = Flask(__name__)
 
 # database stuff
@@ -72,12 +75,9 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True  # as instructed, to suppres
 app.config['SQLALCHEMY_ECHO'] = (os.getenv("SQLALCHEMY_ECHO", False) == "True")
 # app.config['SQLALCHEMY_ECHO'] = True
 
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")  # don't use this though, default is unclear, use binds
+app.config["SQLALCHEMY_DATABASE_URI"] = None  # don't use this though, default is unclear, use binds
 app.config["SQLALCHEMY_BINDS"] = {
-    "unpaywall_db": os.getenv("DATABASE_URL_UNPAYWALL"),
-    "redshift_db": os.getenv("DATABASE_URL_REDSHIFT"),
-    "paperbuzz_db": os.getenv("DATABASE_URL_PAPERBUZZ"),
-    "pubmed_db": os.getenv("DATABASE_URL_MEDOC")
+    "redshift_db": os.getenv("DATABASE_URL_REDSHIFT")
 }
 
 # from http://stackoverflow.com/a/12417346/596939
