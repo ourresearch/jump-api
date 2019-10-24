@@ -148,8 +148,8 @@ def get_settings():
         "alacart_cost_increase": 0.08,
         "bigdeal_cost": 2200000,
         "include_docdel": False,
-        "weight_citation": 0,
-        "weight_authorship": 0,
+        "weight_citation": 0, # 10,
+        "weight_authorship": 0, #100,
         "docdel_cost": 0
     }
 
@@ -263,19 +263,21 @@ def get_jump_response(package="mit_elsevier"):
     start_time = time()
     section_time = time()
 
+    settings = get_settings()
+    settings["package"] = request.args.get("package", None)  # so get demo if that's what was used
+
     data = get_data_from_db(package)
     timing += data["timing"]
 
     timing.append(("total db time", elapsed(section_time, 2)))
     section_time = time()
 
-    settings = get_settings()
-
     rows_to_export = []
-    summary_dict = {}
-    summary_dict["year"] = [2020 + projected_year for projected_year in range(0, 5)]
+    summary_unweighted_usage = {}
+    summary_unweighted_usage["year"] = [2020 + projected_year for projected_year in range(0, 5)]
     for field in ["total", "oa", "researchgate", "backfile", "turnaways", "ill", "other"]:
-        summary_dict[field] = [0 for projected_year in range(0, 5)]
+        summary_unweighted_usage[field] = [0 for projected_year in range(0, 5)]
+    summary_weighted_usage = summary_unweighted_usage
 
     timing.append(("calc summary", elapsed(section_time, 2)))
     section_time = time()
@@ -297,42 +299,45 @@ def get_jump_response(package="mit_elsevier"):
         my_dict["num_authorships"] = data["authorship_dict"].get(my_dict["issn_l"], 0)
         my_dict["oa_embargo_months"] = data["embargo_dict"].get(my_dict["issn_l"], None)
 
-        my_dict["downloads_by_year"] = {}
-        my_dict["downloads_by_year"]["year"] = [2020 + projected_year for projected_year in range(0, 5)]
+        my_dict["unweighted_usage"] = {}
+        my_dict["unweighted_usage"]["year"] = [2020 + projected_year for projected_year in range(0, 5)]
+
+        my_dict["weighted_usage"] = {}
+        my_dict["weighted_usage"]["year"] = [2020 + projected_year for projected_year in range(0, 5)]
 
         oa_recall_scaling_factor = 1.3
         researchgate_proportion_of_downloads = 0.1
         growth_scaling = {}
         growth_scaling["downloads"] =   [1.10, 1.21, 1.34, 1.49, 1.65]
         growth_scaling["oa"] =          [1.16, 1.24, 1.57, 1.83, 2.12]
-        my_dict["downloads_by_year"]["total"] = [row["downloads_total"]*growth_scaling["downloads"][year] for year in range(0, 5)]
-        my_dict["downloads_by_year"]["oa"] = [int(oa_recall_scaling_factor * row["downloads_total_oa"] * growth_scaling["oa"][year]) for year in range(0, 5)]
+        my_dict["unweighted_usage"]["total"] = [row["downloads_total"]*growth_scaling["downloads"][year] for year in range(0, 5)]
+        my_dict["unweighted_usage"]["oa"] = [int(oa_recall_scaling_factor * row["downloads_total_oa"] * growth_scaling["oa"][year]) for year in range(0, 5)]
 
-        my_dict["downloads_by_year"]["oa"] = [min(a, b) for a, b in zip(my_dict["downloads_by_year"]["total"], my_dict["downloads_by_year"]["oa"])]
+        my_dict["unweighted_usage"]["oa"] = [min(a, b) for a, b in zip(my_dict["unweighted_usage"]["total"], my_dict["unweighted_usage"]["oa"])]
 
-        my_dict["downloads_by_year"]["researchgate"] = [int(researchgate_proportion_of_downloads * my_dict["downloads_by_year"]["total"][projected_year]) for projected_year in range(0, 5)]
+        my_dict["unweighted_usage"]["researchgate"] = [int(researchgate_proportion_of_downloads * my_dict["unweighted_usage"]["total"][projected_year]) for projected_year in range(0, 5)]
 
         total_downloads_by_age = [row["downloads_{}y".format(age)] for age in range(0, 5)]
         oa_downloads_by_age = [row["downloads_{}y_oa".format(age)] for age in range(0, 5)]
 
-        my_dict["downloads_by_year"]["turnaways"] = [0 for year in range(0, 5)]
+        my_dict["unweighted_usage"]["turnaways"] = [0 for year in range(0, 5)]
         for year in range(0,5):
-            my_dict["downloads_by_year"]["turnaways"][year] = (1 - researchgate_proportion_of_downloads) *\
+            my_dict["unweighted_usage"]["turnaways"][year] = (1 - researchgate_proportion_of_downloads) *\
                 sum([(total_downloads_by_age[age]*growth_scaling["downloads"][year] - oa_downloads_by_age[age]*growth_scaling["oa"][year])
                      for age in range(0, year+1)])
-        my_dict["downloads_by_year"]["turnaways"] = [max(0, num) for num in my_dict["downloads_by_year"]["turnaways"]]
+        my_dict["unweighted_usage"]["turnaways"] = [max(0, num) for num in my_dict["unweighted_usage"]["turnaways"]]
 
-        my_dict["downloads_by_year"]["oa"] = [min(my_dict["downloads_by_year"]["total"][year] - my_dict["downloads_by_year"]["turnaways"][year], my_dict["downloads_by_year"]["oa"][year]) for year in range(0,5)]
+        my_dict["unweighted_usage"]["oa"] = [min(my_dict["unweighted_usage"]["total"][year] - my_dict["unweighted_usage"]["turnaways"][year], my_dict["unweighted_usage"]["oa"][year]) for year in range(0,5)]
 
-        my_dict["downloads_by_year"]["backfile"] = [my_dict["downloads_by_year"]["total"][projected_year]\
-                                                        - (my_dict["downloads_by_year"]["turnaways"][projected_year]
-                                                           + my_dict["downloads_by_year"]["oa"][projected_year]
-                                                           + my_dict["downloads_by_year"]["researchgate"][projected_year])\
+        my_dict["unweighted_usage"]["backfile"] = [my_dict["unweighted_usage"]["total"][projected_year]\
+                                                        - (my_dict["unweighted_usage"]["turnaways"][projected_year]
+                                                           + my_dict["unweighted_usage"]["oa"][projected_year]
+                                                           + my_dict["unweighted_usage"]["researchgate"][projected_year])\
                                                         for projected_year in range(0, 5)]
-        my_dict["downloads_by_year"]["backfile"] = [max(0, num) for num in my_dict["downloads_by_year"]["backfile"]]
+        my_dict["unweighted_usage"]["backfile"] = [max(0, num) for num in my_dict["unweighted_usage"]["backfile"]]
 
-        my_dict["downloads_by_year"]["ill"] = [int(turnaways*settings["ill_request_percent"]) for turnaways in my_dict["downloads_by_year"]["turnaways"]]
-        my_dict["downloads_by_year"]["other"] = [my_dict["downloads_by_year"]["turnaways"][year] - my_dict["downloads_by_year"]["ill"][year] for year in range(0, 5)]
+        my_dict["unweighted_usage"]["ill"] = [int(turnaways*settings["ill_request_percent"]) for turnaways in my_dict["unweighted_usage"]["turnaways"]]
+        my_dict["unweighted_usage"]["other"] = [my_dict["unweighted_usage"]["turnaways"][year] - my_dict["unweighted_usage"]["ill"][year] for year in range(0, 5)]
 
         # now scale for the org
         try:
@@ -343,34 +348,34 @@ def get_jump_response(package="mit_elsevier"):
 
         for field in ["total", "oa", "researchgate", "backfile", "turnaways", "ill", "other"]:
             for projected_year in range(0, 5):
-                my_dict["downloads_by_year"][field][projected_year] *= float(total_org_downloads_multiple)
-                my_dict["downloads_by_year"][field][projected_year] = int(my_dict["downloads_by_year"][field][projected_year])
+                my_dict["unweighted_usage"][field][projected_year] *= float(total_org_downloads_multiple)
+                my_dict["unweighted_usage"][field][projected_year] = int(my_dict["unweighted_usage"][field][projected_year])
 
 
         for field in ["total", "oa", "researchgate", "backfile", "turnaways", "ill", "other"]:
             for projected_year in range(0, 5):
-                summary_dict[field][projected_year] += my_dict["downloads_by_year"][field][projected_year]
-
+                summary_unweighted_usage[field][projected_year] += my_dict["unweighted_usage"][field][projected_year]
+                summary_weighted_usage[field] = summary_unweighted_usage[field]
 
         my_dict["dollars_2018_subscription"] = float(row["usa_usd"])
 
         rows_to_export.append(my_dict)
 
-    average_weighted_usage = {}
-
-    average_unweighted_usage = {}
+    annual_unweighted_usage = {}
+    annual_weighted_usage = {}
     for field in ["total", "oa", "researchgate", "backfile", "ill", "other"]:
-        average_unweighted_usage[field] = int(np.mean(summary_dict[field]))
+        annual_unweighted_usage[field] = int(np.mean(summary_unweighted_usage[field]))
+        annual_weighted_usage[field] = int(np.mean(summary_weighted_usage[field]))  # + my_dict["num_citations"] * settings["weight_citations"]
 
-    average_price = {}
+    annual_price = {}
     for field in ["total", "oa", "researchgate", "backfile", "other"]:
-        average_price[field] = 0
-    average_price["ill"] = int(average_unweighted_usage["ill"] * settings["ill_cost"])
+        annual_price[field] = 0
+    annual_price["ill"] = int(annual_unweighted_usage["ill"] * settings["ill_cost"])
 
     timing.append(("loop", elapsed(section_time, 2)))
     section_time = time()
 
-    sorted_rows = sorted(rows_to_export, key=lambda x: x["downloads_by_year"]["total"][0], reverse=True)
+    sorted_rows = sorted(rows_to_export, key=lambda x: x["unweighted_usage"]["total"][0], reverse=True)
     timing.append(("after sort", elapsed(section_time, 2)))
     section_time = time()
 
@@ -379,11 +384,11 @@ def get_jump_response(package="mit_elsevier"):
 
     timing_messages = ["{}: {}s".format(*item) for item in timing]
     return {"_timing": timing_messages,
-            "journals": sorted_rows[0:100],
-            "total": summary_dict,
-            "annual_average": {"unweighted_usage": average_unweighted_usage, "weighted_usage": average_weighted_usage, "price": average_price},
-            "settings": settings,
-            "count": len(sorted_rows)}
+            "_settings": settings,
+            "journals_list": sorted_rows[0:100],
+            "by_year": {"unweighted_usage": summary_unweighted_usage, "weighted_usage": summary_weighted_usage},
+            "annual": {"unweighted_usage": annual_unweighted_usage, "weighted_usage": annual_weighted_usage, "price": annual_price},
+            "journals_count": len(sorted_rows)}
 
 
 if __name__ == "__main__":
