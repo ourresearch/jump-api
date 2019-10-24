@@ -267,9 +267,9 @@ def get_jump_response(package="mit_elsevier"):
     settings["package"] = request.args.get("package", None)  # so get demo if that's what was used
 
     data = get_data_from_db(package)
-    timing += data["timing"]
+    # timing += data["timing"]
 
-    timing.append(("total db time", elapsed(section_time, 2)))
+    timing.append(("total db/cache time", elapsed(section_time, 2)))
     section_time = time()
 
     rows_to_export = []
