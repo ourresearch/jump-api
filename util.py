@@ -622,7 +622,7 @@ def jsonify_fast(*args, **kwargs):
               indent=None,
               # separators=None,
               default=None,
-              sort_keys=sort_keys) + '\n', mimetype=current_app.config['JSONIFY_MIMETYPE']
+              sort_keys=sort_keys) + u'\n', mimetype=current_app.config['JSONIFY_MIMETYPE']
     )
 
 def find_normalized_license(text):

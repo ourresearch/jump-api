@@ -19,7 +19,9 @@ from app import logger
 from app import mycache
 from util import jsonify_fast
 from util import str2bool
-
+from journal import Journal
+from journal_list import JournalList
+from assumptions import Assumptions
 
 
 
@@ -100,15 +102,11 @@ def jump_package_get(package):
 
 @app.route("/jump/temp/issn/<issn_l>", methods=["GET"])
 def jump_issn_get(issn_l):
-    use_cache = str2bool(request.args.get("use_cache", "false"))
     package = request.args.get("package", "demo")
     if package == "demo":
         package = "uva_elsevier"
 
-    if use_cache:
-        jump_response = jump_cache[package]
-    else:
-        jump_response = get_jump_response(package)
+    jump_response = get_jump_response(package)
 
     journal_dicts = jump_response["list"]
     issnl_dict = filter(lambda my_dict: my_dict['issn_l'] == issn_l, journal_dicts)[0]
@@ -140,37 +138,59 @@ def get_issn_ls_for_package(package):
     return package_issn_ls
 
 def get_settings():
-    settings = {
-        "docdel_cost": 25,
-        "ill_cost": 5,
-        "ill_request_percent": 0.1,
-        "bigdeal_cost_increase": 0.05,
-        "alacart_cost_increase": 0.08,
-        "bigdeal_cost": 2200000,
-        "include_docdel": False,
-        "weight_citation": 0, # 10,
-        "weight_authorship": 0, #100,
-        "docdel_cost": 0
-    }
+    settings = Assumptions()
 
-    for key in settings:
-        if request.args.get(key):
-            settings[key] = float(request.args.get(key))
+    for key in request.args:
+        try:
+            settings.set_assumption(key, float(request.args.get(key)))
+        except ValueError:
+            settings.set_assumption(key, request.args.get(key))
 
+    settings.package = request.args.get("package", None)  # so get demo if that's what was used
     return settings
+
+def do_wizardly_things(jump_details, spend):
+    journal_list = JournalList(jump_details["journals_list"], get_settings())
+
+    my_max = spend/100.0 * journal_list.settings.bigdeal_cost
+    my_spend_so_far = 0
+    for journal in journal_list.journals_by_value:
+        my_spend_so_far += journal.subscription_price_average
+        if my_spend_so_far > my_max:
+            return journal_list
+        journal.set_subscribe()
+
+    return journal_list
+
+
+@app.route("/jump/wizard", methods=["GET"])
+def jump_wizard_get():
+    package = request.args.get("package", "demo")
+    if package == "demo":
+        package = "uva_elsevier"
+    spend = int(request.args.get("spend", 0))
+    jump_details = get_jump_response(package, max_journals=100000000)
+    journal_list = do_wizardly_things(jump_details, spend)
+    response = {
+        "_summary": {
+            "cost": journal_list.cost,
+            "num_journals_subscribed": len(journal_list.subscribed),
+            "num_journals_total": len(journal_list.journals)
+        },
+        "journals": [j.to_dict() for j in journal_list.journals],
+        "_settings": journal_list.settings.to_dict()
+    }
+    return jsonify_fast(response)
+
 
 @app.route("/jump/temp", methods=["GET"])
 def jump_get():
-    use_cache = str2bool(request.args.get("use_cache", "false"))
     package = request.args.get("package", "demo")
     if package == "demo":
         package = "uva_elsevier"
 
-    if use_cache:
-        global jump_cache
-        return jsonify_fast(jump_cache[package])
-    else:
-        return jsonify_fast(get_jump_response(package))
+    return jsonify_fast(get_jump_response(package))
+
 
 # observation_year 	total views 	total views percent of 2018 	total oa views 	total oa views percent of 2018
 # 2018 	25,565,054.38 	1.00 	12,664,693.62 	1.00
@@ -257,14 +277,14 @@ def get_data_from_db(package):
     return response
 
 
-def get_jump_response(package="mit_elsevier"):
+
+def get_jump_response(package="mit_elsevier", max_journals=100):
     timing = []
 
     start_time = time()
     section_time = time()
 
     settings = get_settings()
-    settings["package"] = request.args.get("package", None)  # so get demo if that's what was used
 
     data = get_data_from_db(package)
     # timing += data["timing"]
@@ -275,7 +295,7 @@ def get_jump_response(package="mit_elsevier"):
     rows_to_export = []
     summary_unweighted_usage = {}
     summary_unweighted_usage["year"] = [2020 + projected_year for projected_year in range(0, 5)]
-    for field in ["total", "oa", "researchgate", "backfile", "turnaways", "ill", "other"]:
+    for field in ["total", "oa", "social_networks", "backfile", "notfreenotinstant", "ill", "other_delayed"]:
         summary_unweighted_usage[field] = [0 for projected_year in range(0, 5)]
     summary_weighted_usage = summary_unweighted_usage
 
@@ -294,7 +314,6 @@ def get_jump_response(package="mit_elsevier"):
         for field in ["issn_l", "title", "subject", "publisher"]:
             my_dict[field] = row[field]
         my_dict["papers_2018"] = row["num_papers_2018"]
-        my_dict["citations_from_mit_in_2018"] = data["citation_dict"].get(my_dict["issn_l"], 0)
         my_dict["num_citations"] = data["citation_dict"].get(my_dict["issn_l"], 0)
         my_dict["num_authorships"] = data["authorship_dict"].get(my_dict["issn_l"], 0)
         my_dict["oa_embargo_months"] = data["embargo_dict"].get(my_dict["issn_l"], None)
@@ -306,7 +325,7 @@ def get_jump_response(package="mit_elsevier"):
         my_dict["weighted_usage"]["year"] = [2020 + projected_year for projected_year in range(0, 5)]
 
         oa_recall_scaling_factor = 1.3
-        researchgate_proportion_of_downloads = 0.1
+        social_networks_proportion_of_downloads = 0.1
         growth_scaling = {}
         growth_scaling["downloads"] =   [1.10, 1.21, 1.34, 1.49, 1.65]
         growth_scaling["oa"] =          [1.16, 1.24, 1.57, 1.83, 2.12]
@@ -315,29 +334,29 @@ def get_jump_response(package="mit_elsevier"):
 
         my_dict["unweighted_usage"]["oa"] = [min(a, b) for a, b in zip(my_dict["unweighted_usage"]["total"], my_dict["unweighted_usage"]["oa"])]
 
-        my_dict["unweighted_usage"]["researchgate"] = [int(researchgate_proportion_of_downloads * my_dict["unweighted_usage"]["total"][projected_year]) for projected_year in range(0, 5)]
+        my_dict["unweighted_usage"]["social_networks"] = [int(social_networks_proportion_of_downloads * my_dict["unweighted_usage"]["total"][projected_year]) for projected_year in range(0, 5)]
 
         total_downloads_by_age = [row["downloads_{}y".format(age)] for age in range(0, 5)]
         oa_downloads_by_age = [row["downloads_{}y_oa".format(age)] for age in range(0, 5)]
 
-        my_dict["unweighted_usage"]["turnaways"] = [0 for year in range(0, 5)]
+        my_dict["unweighted_usage"]["notfreenotinstant"] = [0 for year in range(0, 5)]
         for year in range(0,5):
-            my_dict["unweighted_usage"]["turnaways"][year] = (1 - researchgate_proportion_of_downloads) *\
+            my_dict["unweighted_usage"]["notfreenotinstant"][year] = (1 - social_networks_proportion_of_downloads) *\
                 sum([(total_downloads_by_age[age]*growth_scaling["downloads"][year] - oa_downloads_by_age[age]*growth_scaling["oa"][year])
                      for age in range(0, year+1)])
-        my_dict["unweighted_usage"]["turnaways"] = [max(0, num) for num in my_dict["unweighted_usage"]["turnaways"]]
+        my_dict["unweighted_usage"]["notfreenotinstant"] = [max(0, num) for num in my_dict["unweighted_usage"]["notfreenotinstant"]]
 
-        my_dict["unweighted_usage"]["oa"] = [min(my_dict["unweighted_usage"]["total"][year] - my_dict["unweighted_usage"]["turnaways"][year], my_dict["unweighted_usage"]["oa"][year]) for year in range(0,5)]
+        my_dict["unweighted_usage"]["oa"] = [min(my_dict["unweighted_usage"]["total"][year] - my_dict["unweighted_usage"]["notfreenotinstant"][year], my_dict["unweighted_usage"]["oa"][year]) for year in range(0,5)]
 
         my_dict["unweighted_usage"]["backfile"] = [my_dict["unweighted_usage"]["total"][projected_year]\
-                                                        - (my_dict["unweighted_usage"]["turnaways"][projected_year]
+                                                        - (my_dict["unweighted_usage"]["notfreenotinstant"][projected_year]
                                                            + my_dict["unweighted_usage"]["oa"][projected_year]
-                                                           + my_dict["unweighted_usage"]["researchgate"][projected_year])\
+                                                           + my_dict["unweighted_usage"]["social_networks"][projected_year])\
                                                         for projected_year in range(0, 5)]
         my_dict["unweighted_usage"]["backfile"] = [max(0, num) for num in my_dict["unweighted_usage"]["backfile"]]
 
-        my_dict["unweighted_usage"]["ill"] = [int(turnaways*settings["ill_request_percent"]) for turnaways in my_dict["unweighted_usage"]["turnaways"]]
-        my_dict["unweighted_usage"]["other"] = [my_dict["unweighted_usage"]["turnaways"][year] - my_dict["unweighted_usage"]["ill"][year] for year in range(0, 5)]
+        my_dict["unweighted_usage"]["ill"] = [int(notfreenotinstant*settings.ill_request_percent) for notfreenotinstant in my_dict["unweighted_usage"]["notfreenotinstant"]]
+        my_dict["unweighted_usage"]["other_delayed"] = [my_dict["unweighted_usage"]["notfreenotinstant"][year] - my_dict["unweighted_usage"]["ill"][year] for year in range(0, 5)]
 
         # now scale for the org
         try:
@@ -346,13 +365,13 @@ def get_jump_response(package="mit_elsevier"):
         except:
             total_org_downloads_multiple = 0
 
-        for field in ["total", "oa", "researchgate", "backfile", "turnaways", "ill", "other"]:
+        for field in ["total", "oa", "social_networks", "backfile", "notfreenotinstant", "ill", "other_delayed"]:
             for projected_year in range(0, 5):
                 my_dict["unweighted_usage"][field][projected_year] *= float(total_org_downloads_multiple)
                 my_dict["unweighted_usage"][field][projected_year] = int(my_dict["unweighted_usage"][field][projected_year])
 
 
-        for field in ["total", "oa", "researchgate", "backfile", "turnaways", "ill", "other"]:
+        for field in ["total", "oa", "social_networks", "backfile", "notfreenotinstant", "ill", "other_delayed"]:
             for projected_year in range(0, 5):
                 summary_unweighted_usage[field][projected_year] += my_dict["unweighted_usage"][field][projected_year]
                 summary_weighted_usage[field] = summary_unweighted_usage[field]
@@ -363,14 +382,14 @@ def get_jump_response(package="mit_elsevier"):
 
     annual_unweighted_usage = {}
     annual_weighted_usage = {}
-    for field in ["total", "oa", "researchgate", "backfile", "ill", "other"]:
+    for field in ["total", "oa", "social_networks", "backfile", "ill", "other_delayed"]:
         annual_unweighted_usage[field] = int(np.mean(summary_unweighted_usage[field]))
-        annual_weighted_usage[field] = int(np.mean(summary_weighted_usage[field]))  # + my_dict["num_citations"] * settings["weight_citations"]
+        annual_weighted_usage[field] = int(np.mean(summary_weighted_usage[field]))  # + my_dict["num_citations"] * settings.weight_citations
 
     annual_price = {}
-    for field in ["total", "oa", "researchgate", "backfile", "other"]:
+    for field in ["total", "oa", "social_networks", "backfile", "other_delayed"]:
         annual_price[field] = 0
-    annual_price["ill"] = int(annual_unweighted_usage["ill"] * settings["ill_cost"])
+    annual_price["ill"] = int(annual_unweighted_usage["ill"] * settings.ill_cost)
 
     timing.append(("loop", elapsed(section_time, 2)))
     section_time = time()
@@ -384,8 +403,8 @@ def get_jump_response(package="mit_elsevier"):
 
     timing_messages = ["{}: {}s".format(*item) for item in timing]
     return {"_timing": timing_messages,
-            "_settings": settings,
-            "journals_list": sorted_rows[0:100],
+            "_settings": settings.to_dict(),
+            "journals_list": sorted_rows[0:max_journals],
             "by_year": {"unweighted_usage": summary_unweighted_usage, "weighted_usage": summary_weighted_usage},
             "annual": {"unweighted_usage": annual_unweighted_usage, "weighted_usage": annual_weighted_usage, "price": annual_price},
             "journals_count": len(sorted_rows)}
