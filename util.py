@@ -1,3 +1,5 @@
+# coding: utf-8
+
 import datetime
 import time
 import unicodedata
@@ -615,7 +617,7 @@ def jsonify_fast(*args, **kwargs):
     return current_app.response_class(
         dumps(data,
               skipkeys=True,
-              ensure_ascii=False,
+              ensure_ascii=True,
               check_circular=False,
               allow_nan=True,
               cls=None,
@@ -685,3 +687,18 @@ def find_normalized_license(text):
                     return None
             return license
     return None
+
+def for_sorting(x):
+    if x is None:
+        return float('inf')
+    return x
+
+def abort_json(status_code, msg):
+    from flask import make_response
+    from flask import abort
+
+    body_dict = {"HTTP_status_code": status_code, "message": msg, "error": True}
+    response_json = json.dumps(body_dict, sort_keys=True, indent=4)
+    response = make_response(response_json, status_code)
+    response.mimetype = "application/json"
+    abort(response)

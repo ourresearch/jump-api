@@ -1,3 +1,5 @@
+# coding: utf-8
+
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_compress import Compress
@@ -65,7 +67,7 @@ for a_library in libraries_to_mum:
 requests.packages.urllib3.disable_warnings()
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-mycache = joblib.Memory(cachedir='./cache', verbose=2)
+file_cache = joblib.Memory(cachedir='./cache', verbose=2)
 
 app = Flask(__name__)
 
@@ -143,3 +145,5 @@ def get_db_cursor(commit=False):
       finally:
           cursor.close()
           pass
+
+use_groups = ["total", "oa", "social_networks", "backfile", "ill", "other_delayed"]
