@@ -44,7 +44,7 @@ class Journal(object):
         return self.my_scenario_data_row["publisher"]
 
     @cached_property
-    def subscription_cost_2018(self):
+    def cost_subscription_2018(self):
         return float(self.my_scenario_data_row["usa_usd"])
 
     @cached_property
@@ -71,31 +71,30 @@ class Journal(object):
         return [2019 + year_index for year_index in self.years]
     
     @cached_property
-    def subscription_cost_2018(self):
+    def cost_subscription_2018(self):
         return float(self.my_scenario_data_row["usa_usd"])
 
 
     @cached_property
-    def subscription_cost_by_year(self):
-        response = [((1+self.settings.alacart_cost_increase)**year) *
-                                            self.subscription_cost_2018
+    def cost_subscription_by_year(self):
+        response = [int(((1+self.settings.cost_alacart_increase)**year) * self.cost_subscription_2018)
                                             for year in range(0,5)]
         return response
 
     @cached_property
-    def subscription_cost(self):
-        return np.mean(self.subscription_cost_by_year)
+    def cost_subscription(self):
+        return round(np.mean(self.cost_subscription_by_year), 4)
 
     @cached_property
-    def subscription_cpu_unweighted(self):
+    def cpu_unweighted(self):
         if not self.use_paywalled:
             return None
-        return self.subscription_cost/self.use_paywalled
+        return round(self.cost_subscription/self.use_paywalled, 6)
 
     @cached_property
-    def subscription_cpu_weighted(self):
+    def cpu_weighted(self):
         # TODO fix
-        return self.subscription_cpu_unweighted
+        return self.cpu_unweighted
 
     @cached_property
     def use_weighted(self):
@@ -106,7 +105,7 @@ class Journal(object):
     def use_unweighted(self):
         response = defaultdict(int)
         for group in self.use_unweighted_by_year:
-            response[group] = np.mean(self.use_unweighted_by_year[group])
+            response[group] = round(np.mean(self.use_unweighted_by_year[group]), 4)
         return response
 
     @cached_property
@@ -116,7 +115,7 @@ class Journal(object):
 
     @cached_property
     def use_paywalled(self):
-        return np.mean(self.use_paywalled_by_year)
+        return round(np.mean(self.use_paywalled_by_year), 4)
 
     @cached_property
     def use_social_networks_by_year(self):
@@ -135,7 +134,7 @@ class Journal(object):
         scaled = [self.use_total_by_year[year]
               - (self.use_paywalled_by_year[year] + self.use_oa_by_year[year] + self.use_social_networks_by_year[year])
           for year in self.years]
-        scaled = [max(0, num) for num in scaled]
+        scaled = [int(max(0, num)) for num in scaled]
         return scaled
 
     @cached_property
@@ -152,7 +151,7 @@ class Journal(object):
         use_total_before_counter_correction = [self.my_scenario_data_row["downloads_total"] for year in self.years]
         use_total_before_counter_correction = [val if val else 0 for val in use_total_before_counter_correction]
         use_total_scaled_by_counter = [num * self.use_multiplier_from_counter for num in use_total_before_counter_correction]
-        scaled = [use_total_scaled_by_counter[year] * self.growth_scaling["downloads"][year] for year in self.years]
+        scaled = [int(use_total_scaled_by_counter[year] * self.growth_scaling["downloads"][year]) for year in self.years]
         return scaled
 
     @cached_property
@@ -169,7 +168,7 @@ class Journal(object):
             scaled[year] = (1 - self.social_networks_proportion_of_downloads) *\
                 sum([(total_use_by_age[age] * self.growth_scaling["downloads"][year] - oa_use_by_age[age] * self.growth_scaling["oa"][year])
                      for age in range(0, year+1)])
-        scaled = [max(0, num) for num in scaled]
+        scaled = [int(max(0, num)) for num in scaled]
         return scaled
 
     @cached_property
@@ -194,17 +193,31 @@ class Journal(object):
 
 
     @cached_property
-    def ill_cost(self):
+    def cost_ill(self):
         # TODO make this by year
-        return self.use_unweighted["ill"] * self.settings.ill_cost
+        return self.use_unweighted["ill"] * self.settings.cost_ill
 
     @cached_property
-    def subscription_minus_ill_cost(self):
-        return self.subscription_cost - self.ill_cost
+    def cost_subscription_minus_ill(self):
+        return round(self.cost_subscription - self.cost_ill, 4)
 
     @cached_property
     def oa_status_history(self):
         return get_oa_history_from_db(self.issn_l)
+
+    def to_dict_timeline(self):
+        dummy = self.to_dict()  # instantiate everything
+        response = {"issn_l": self.issn_l,
+                    "title": self.title,
+                    "subject": self.subject,
+                    "subscribed": self.subscribed,
+                    "year": self.years_by_year
+        }
+        for k, v in self.__dict__.iteritems():
+            if k.endswith("by_year") and k not in ["use_unweighted_by_year", "years_by_year"]:
+                print k
+                response[k] = v
+        return response
 
     def to_dict_details(self):
         response = self.to_dict()
@@ -217,15 +230,16 @@ class Journal(object):
     def to_dict(self):
         return {"issn_l": self.issn_l,
                 "title": self.title,
+                "subject": self.subject,
                 "num_authorships": self.num_authorships,
                 "num_citations": self.num_citations,
-                "paywalled_use_unweighted": self.use_paywalled,
-                "subscription_cost": self.subscription_cost,
-                "ill_cost": self.ill_cost,
-                "subject": self.subject,
-                "subscription_minus_ill_cost": self.subscription_minus_ill_cost,
-                "subscription_cpu_unweighted": self.subscription_cpu_unweighted,
-                "subscribed": self.subscribed}
+                "use_paywalled_unweighted": self.use_paywalled,
+                "cost_subscription": self.cost_subscription,
+                "cost_ill": self.cost_ill,
+                "cost_subscription_minus_ill": self.cost_subscription_minus_ill,
+                "cpu_unweighted": self.cpu_unweighted,
+                "subscribed": self.subscribed
+                }
 
     def __repr__(self):
         return u"<{} ({}) {}>".format(self.__class__.__name__, self.issn_l, self.title)

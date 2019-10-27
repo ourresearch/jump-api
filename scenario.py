@@ -52,12 +52,12 @@ class ScenarioSummary(object):
         for group in use_groups:
             cost[group] = 0
         # now overwrite for ILL
-        cost["ill"] = round(self.use_unweighted["ill"] * self.scenario.settings.ill_cost, 2)
+        cost["ill"] = round(self.use_unweighted["ill"] * self.scenario.settings.cost_ill, 2)
         return cost
 
     @property
     def cost(self):
-        return round(sum([j.subscription_cost for j in self.scenario.journals_sorted_cpu if j.subscribed]), 2)
+        return round(sum([j.cost_subscription for j in self.scenario.journals_sorted_cpu if j.subscribed]), 2)
 
 
 class Scenario(object):
@@ -70,7 +70,7 @@ class Scenario(object):
 
     @property
     def journals_sorted_cpu(self):
-        return sorted(self.journals, key=lambda k: for_sorting(k.subscription_cpu_weighted), reverse=False)
+        return sorted(self.journals, key=lambda k: for_sorting(k.cpu_weighted), reverse=False)
 
     @property
     def subscribed(self):
@@ -83,13 +83,20 @@ class Scenario(object):
         return None
 
     def do_wizardly_things(self, spend):
-        my_max = spend/100.0 * self.settings.bigdeal_cost
+        my_max = spend/100.0 * self.settings.cost_bigdeal
         my_spend_so_far = 0
         for journal in self.journals_sorted_cpu:
-            my_spend_so_far += journal.subscription_cost
+            my_spend_so_far += journal.cost_subscription
             if my_spend_so_far > my_max:
                 return
             journal.set_subscribe()
+
+    def to_dict_timeline(self, pagesize):
+        return {"_timing": self.timing_messages,
+                "_settings": self.settings.to_dict(),
+                "journals": [j.to_dict_timeline() for j in self.journals_sorted_cpu[0:pagesize]],
+                "journals_count": len(self.journals),
+            }
 
     def to_dict(self, pagesize):
         return {"_timing": self.timing_messages,

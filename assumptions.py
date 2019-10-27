@@ -5,19 +5,18 @@ import numpy as np
 
 class Assumptions(object):
     def __init__(self, http_request_args=None):
-        self.docdel_cost = 25
-        self.ill_cost = 5
+        self.cost_docdel = 25
+        self.cost_ill = 5
+        self.cost_bigdeal_increase = 0.05
+        self.cost_alacart_increase = 0.08
+        self.cost_bigdeal = 2200000
+        self.cost_content_fee_percent = .057
         self.ill_request_percent = 0.1
-        self.bigdeal_cost_increase = 0.05
-        self.alacart_cost_increase = 0.08
-        self.bigdeal_cost = 2200000
-        self.include_docdel = False
         self.weight_citation = 0
         self.weight_authorship = 0
-        self.docdel_cost = 0
-        self.exclude_bronze = False
-        self.exclude_submitted_version = False
-        self.content_fee_percent = .057
+        self.include_docdel = False
+        self.include_bronze = True
+        self.include_submitted_version = True
 
         if http_request_args:
             for key in http_request_args:
