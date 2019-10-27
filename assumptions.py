@@ -15,6 +15,9 @@ class Assumptions(object):
         self.weight_citation = 0
         self.weight_authorship = 0
         self.docdel_cost = 0
+        self.exclude_bronze = False
+        self.exclude_submitted_version = False
+        self.content_fee_percent = .057
 
         if http_request_args:
             for key in http_request_args:

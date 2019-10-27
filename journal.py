@@ -74,9 +74,6 @@ class Journal(object):
     def subscription_cost_2018(self):
         return float(self.my_scenario_data_row["usa_usd"])
 
-    @cached_property
-    def paywalled_use_unweighted(self):
-        return self.use_unweighted["paywalled"]
 
     @cached_property
     def subscription_cost_by_year(self):
@@ -91,9 +88,9 @@ class Journal(object):
 
     @cached_property
     def subscription_cpu_unweighted(self):
-        if not self.paywalled_use_unweighted:
+        if not self.use_paywalled:
             return None
-        return self.subscription_cost/self.paywalled_use_unweighted
+        return self.subscription_cost/self.use_paywalled
 
     @cached_property
     def subscription_cpu_weighted(self):
@@ -118,57 +115,83 @@ class Journal(object):
         return self.use_unweighted_by_year
 
     @cached_property
-    def use_unweighted_by_year(self):
-        use_unweighted = {}
-        total_use = self.my_scenario_data_row["downloads_total"]
-        total_use = total_use if total_use else 0
-        use_unweighted["total"] = [total_use*self.growth_scaling["downloads"][year] for year in self.years]
+    def use_paywalled(self):
+        return np.mean(self.use_paywalled_by_year)
 
-        total_oa = self.my_scenario_data_row["downloads_total_oa"]
-        total_oa = total_oa if total_oa else 0
+    @cached_property
+    def use_social_networks_by_year(self):
+        return [int(self.social_networks_proportion_of_downloads * self.use_total_by_year[year]) for year in self.years]
 
-        use_unweighted["oa"] = [int(self.oa_recall_scaling_factor * total_oa * self.growth_scaling["oa"][year]) for year in self.years]
-    
-        use_unweighted["oa"] = [min(a, b) for a, b in zip(use_unweighted["total"], use_unweighted["oa"])]
-    
-        use_unweighted["social_networks"] = [int(self.social_networks_proportion_of_downloads * use_unweighted["total"][projected_year]) for projected_year in self.years]
-    
-        total_downloads_by_age = [self.my_scenario_data_row["downloads_{}y".format(age)] for age in self.years]
-        total_downloads_by_age = [val if val else 0 for val in total_downloads_by_age]
-        oa_downloads_by_age = [self.my_scenario_data_row["downloads_{}y_oa".format(age)] for age in self.years]
-        oa_downloads_by_age = [val if val else 0 for val in oa_downloads_by_age]
+    @cached_property
+    def use_ill_by_year(self):
+        return [int(self.settings.ill_request_percent * self.use_paywalled_by_year[year]) for year in self.years]
 
-        use_unweighted["paywalled"] = [0 for year in self.years]
+    @cached_property
+    def use_other_delayed_by_year(self):
+        return [self.use_paywalled_by_year[year] - self.use_ill_by_year[year] for year in self.years]
+
+    @cached_property
+    def use_backfile_by_year(self):
+        scaled = [self.use_total_by_year[year]
+              - (self.use_paywalled_by_year[year] + self.use_oa_by_year[year] + self.use_social_networks_by_year[year])
+          for year in self.years]
+        scaled = [max(0, num) for num in scaled]
+        return scaled
+
+    @cached_property
+    def use_oa_by_year(self):
+        use_oa_before_counter_correction = [self.my_scenario_data_row["downloads_total_oa"] for year in self.years]
+        use_oa_before_counter_correction = [val if val else 0 for val in use_oa_before_counter_correction]
+        use_oa_scaled_by_counter = [num * self.use_multiplier_from_counter for num in use_oa_before_counter_correction]
+        scaled = [int(self.oa_recall_scaling_factor * use_oa_scaled_by_counter[year] * self.growth_scaling["oa"][year]) for year in self.years]
+        scaled = [min(self.use_total_by_year[year], scaled[year]) for year in self.years]
+        return scaled
+
+    @cached_property
+    def use_total_by_year(self):
+        use_total_before_counter_correction = [self.my_scenario_data_row["downloads_total"] for year in self.years]
+        use_total_before_counter_correction = [val if val else 0 for val in use_total_before_counter_correction]
+        use_total_scaled_by_counter = [num * self.use_multiplier_from_counter for num in use_total_before_counter_correction]
+        scaled = [use_total_scaled_by_counter[year] * self.growth_scaling["downloads"][year] for year in self.years]
+        return scaled
+
+    @cached_property
+    def use_paywalled_by_year(self):
+        total_use_by_age_before_counter_correction = [self.my_scenario_data_row["downloads_{}y".format(age)] for age in self.years]
+        total_use_by_age_before_counter_correction = [val if val else 0 for val in total_use_by_age_before_counter_correction]
+        total_use_by_age = [num * self.use_multiplier_from_counter for num in total_use_by_age_before_counter_correction]
+        oa_use_by_age_before_counter_correction = [self.my_scenario_data_row["downloads_{}y_oa".format(age)] for age in self.years]
+        oa_use_by_age_before_counter_correction = [val if val else 0 for val in oa_use_by_age_before_counter_correction]
+        oa_use_by_age = [num * self.use_multiplier_from_counter for num in oa_use_by_age_before_counter_correction]
+
+        scaled = [0 for year in self.years]
         for year in self.years:
-            use_unweighted["paywalled"][year] = (1 - self.social_networks_proportion_of_downloads) *\
-                sum([(total_downloads_by_age[age]*self.growth_scaling["downloads"][year] - oa_downloads_by_age[age]*self.growth_scaling["oa"][year])
+            scaled[year] = (1 - self.social_networks_proportion_of_downloads) *\
+                sum([(total_use_by_age[age] * self.growth_scaling["downloads"][year] - oa_use_by_age[age] * self.growth_scaling["oa"][year])
                      for age in range(0, year+1)])
-        use_unweighted["paywalled"] = [max(0, num) for num in use_unweighted["paywalled"]]
-    
-        use_unweighted["oa"] = [min(use_unweighted["total"][year] - use_unweighted["paywalled"][year], use_unweighted["oa"][year]) for year in self.years]
-    
-        use_unweighted["backfile"] = [use_unweighted["total"][projected_year]\
-                                                        - (use_unweighted["paywalled"][projected_year]
-                                                           + use_unweighted["oa"][projected_year]
-                                                           + use_unweighted["social_networks"][projected_year])\
-                                                        for projected_year in self.years]
-        use_unweighted["backfile"] = [max(0, num) for num in use_unweighted["backfile"]]
-    
-        use_unweighted["ill"] = [int(paywalled*self.settings.ill_request_percent) for paywalled in use_unweighted["paywalled"]]
-        use_unweighted["other_delayed"] = [use_unweighted["paywalled"][year] - use_unweighted["ill"][year] for year in self.years]
-    
-        # now scale for the org
-        try:
-            total_org_downloads = self._scenario_data["counter_dict"][self.issn_l]
-            total_org_downloads_multiple = total_org_downloads / total_use
-        except:
-            total_org_downloads_multiple = 0
-    
+        scaled = [max(0, num) for num in scaled]
+        return scaled
+
+    @cached_property
+    def use_unweighted_by_year(self):
+        my_dict = {}
         for group in use_groups:
-            for projected_year in self.years:
-                use_unweighted[group][projected_year] *= float(total_org_downloads_multiple)
-                use_unweighted[group][projected_year] = int(use_unweighted[group][projected_year])
-        return use_unweighted
+            my_dict[group] = self.__getattribute__("use_{}_by_year".format(group))
+        return my_dict
+
+    @cached_property
+    def use_total_before_counter_correction(self):
+        return self.my_scenario_data_row["downloads_total"]
+
+    @cached_property
+    def use_multiplier_from_counter(self):
+        try:
+            counter_for_this_journal = self._scenario_data["counter_dict"][self.issn_l]
+            counter_multiplier = float(counter_for_this_journal) / self.use_total_before_counter_correction
+        except:
+            counter_multiplier = float(0)
+        return counter_multiplier
+
 
     @cached_property
     def ill_cost(self):
@@ -196,7 +219,7 @@ class Journal(object):
                 "title": self.title,
                 "num_authorships": self.num_authorships,
                 "num_citations": self.num_citations,
-                "paywalled_use_unweighted": self.paywalled_use_unweighted,
+                "paywalled_use_unweighted": self.use_paywalled,
                 "subscription_cost": self.subscription_cost,
                 "ill_cost": self.ill_cost,
                 "subject": self.subject,
