@@ -55,12 +55,22 @@ class Journal(object):
         return self.my_scenario_data_row["num_papers_2018"]
 
     @cached_property
+    def num_citations_historical_by_year(self):
+        my_dict = self._scenario_data["citation_dict"][self.issn_l]
+        return [my_dict.get(year, 0) for year in self.historical_years_by_year]
+
+    @cached_property
     def num_citations(self):
-        return self._scenario_data["citation_dict"].get(self.issn_l, 0)
+        return round(np.mean(self.num_citations_historical_by_year), 4)
+
+    @cached_property
+    def num_authorships_historical_by_year(self):
+        my_dict = self._scenario_data["authorship_dict"][self.issn_l]
+        return [my_dict.get(year, 0) for year in self.historical_years_by_year]
 
     @cached_property
     def num_authorships(self):
-        return self._scenario_data["authorship_dict"].get(self.issn_l, 0)
+        return round(np.mean(self.num_authorships_historical_by_year), 4)
 
     @cached_property
     def oa_embargo_months(self):
@@ -72,7 +82,12 @@ class Journal(object):
     @cached_property
     def years_by_year(self):
         return [2019 + year_index for year_index in self.years]
-    
+
+    @cached_property
+    def historical_years_by_year(self):
+        # used for citation, authorship lookup
+        return range(2014, 2019)
+
     @cached_property
     def cost_subscription_2018(self):
         return float(self.my_scenario_data_row["usa_usd"])
@@ -272,18 +287,31 @@ class Journal(object):
         }
         return response
 
-
-    def to_dict_timeline(self):
-        dummy = self.to_dict()  # instantiate everything
+    def to_dict_impact(self):
         response = {"issn_l": self.issn_l,
                     "title": self.title,
                     "subject": self.subject,
                     "subscribed": self.subscribed,
                     "year": self.years_by_year,
-                    "self.oa_embargo_months": self.oa_embargo_months
+                    "year_historical": self.historical_years_by_year,
+                    "num_citations_historical_by_year": self.num_citations_historical_by_year,
+                    "num_authorships_historical_by_year": self.num_authorships_historical_by_year,
+                    "use_total_by_year": self.use_total_by_year
+        }
+        return response
+
+
+    def to_dict_timeline(self):
+        response = {"issn_l": self.issn_l,
+                    "title": self.title,
+                    "subject": self.subject,
+                    "subscribed": self.subscribed,
+                    "year": self.years_by_year,
+                    "year_historical": self.historical_years_by_year,
+                    "oa_embargo_months": self.oa_embargo_months
         }
         for k, v in self.__dict__.iteritems():
-            if k.endswith("by_year") and k not in ["use_unweighted_by_year", "years_by_year"]:
+            if k.endswith("by_year") and k not in ["use_unweighted_by_year", "years_by_year", "historical_years_by_year"]:
                 response[k] = v
         return response
 

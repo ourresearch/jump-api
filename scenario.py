@@ -115,6 +115,13 @@ class Scenario(object):
                 return
             journal.set_subscribe()
 
+    def to_dict_impact(self, pagesize):
+        return {"_timing": self.timing_messages,
+                "_settings": self.settings.to_dict(),
+                "journals": [j.to_dict_impact() for j in self.journals_sorted_use_total[0:pagesize]],
+                "journals_count": len(self.journals),
+            }
+
     def to_dict_report(self, pagesize):
         return {"_timing": self.timing_messages,
                 "_settings": self.settings.to_dict(),
@@ -185,26 +192,30 @@ def get_scenario_data_from_db(package):
     timing.append(("time from db: journal_delayed_oa_active", elapsed(section_time, 2)))
     section_time = time()
 
-    command = """select issn_l, num_citations
-        from jump_citing_2018
-        where citing_org = 'University of Virginia'""".format(package)
+    command = """select *
+        from jump_citing
+        where citing_org = 'University of Virginia' and year < 2019""".format(package)
     citation_rows = None
     with get_db_cursor() as cursor:
         cursor.execute(command)
         citation_rows = cursor.fetchall()
-    citation_dict = dict((a["issn_l"], int(a["num_citations"])) for a in citation_rows)
+    citation_dict = defaultdict(dict)
+    for row in citation_rows:
+        citation_dict[row["issn_l"]][int(row["year"])] = int(row["num_citations"])
 
     timing.append(("time from db: citation_rows", elapsed(section_time, 2)))
     section_time = time()
 
-    command = """select issn_l as journal_issn_l, num_authorships
-        from jump_authorship_2018
-        where org = 'University of Virginia'""".format(package)
+    command = """select *
+        from jump_authorship
+        where org = 'University of Virginia' and year < 2019""".format(package)
     authorship_rows = None
     with get_db_cursor() as cursor:
         cursor.execute(command)
         authorship_rows = cursor.fetchall()
-    authorship_dict = dict((a["journal_issn_l"], int(a["num_authorships"])) for a in authorship_rows)
+    authorship_dict = defaultdict(dict)
+    for row in authorship_rows:
+        authorship_dict[row["issn_l"]][int(row["year"])] = int(row["num_authorships"])
 
     timing.append(("time from db: authorship_rows", elapsed(section_time, 2)))
     section_time = time()
