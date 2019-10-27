@@ -199,6 +199,7 @@ class Journal(object):
                 "paywalled_use_unweighted": self.paywalled_use_unweighted,
                 "subscription_cost": self.subscription_cost,
                 "ill_cost": self.ill_cost,
+                "subject": self.subject,
                 "subscription_minus_ill_cost": self.subscription_minus_ill_cost,
                 "subscription_cpu_unweighted": self.subscription_cpu_unweighted,
                 "subscribed": self.subscribed}
