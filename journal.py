@@ -57,7 +57,7 @@ class Journal(object):
 
     @cached_property
     def num_authorships(self):
-        return self._scenario_data["num_authorships"].get(self.issn_l, 0)
+        return self._scenario_data["authorship_dict"].get(self.issn_l, 0)
 
     @cached_property
     def oa_embargo_months(self):
@@ -73,10 +73,6 @@ class Journal(object):
     @cached_property
     def subscription_cost_2018(self):
         return float(self.my_scenario_data_row["usa_usd"])
-
-    @cached_property
-    def use_unweighted(self):
-        return self.use_unweighted["total"]
 
     @cached_property
     def paywalled_use_unweighted(self):
@@ -112,7 +108,7 @@ class Journal(object):
     @cached_property
     def use_unweighted(self):
         response = defaultdict(int)
-        for group in use_groups:
+        for group in self.use_unweighted_by_year:
             response[group] = np.mean(self.use_unweighted_by_year[group])
         return response
 
@@ -173,7 +169,16 @@ class Journal(object):
                 use_unweighted[group][projected_year] *= float(total_org_downloads_multiple)
                 use_unweighted[group][projected_year] = int(use_unweighted[group][projected_year])
         return use_unweighted
-    
+
+    @cached_property
+    def ill_cost(self):
+        # TODO make this by year
+        return self.use_unweighted["ill"] * self.settings.ill_cost
+
+    @cached_property
+    def subscription_minus_ill_cost(self):
+        return self.subscription_cost - self.ill_cost
+
     @cached_property
     def oa_status_history(self):
         return get_oa_history_from_db(self.issn_l)
@@ -181,14 +186,20 @@ class Journal(object):
     def to_dict_details(self):
         response = self.to_dict()
         response["oa_status_history"] = self.oa_status_history
+        response["use_unweighted_by_year"] = self.use_unweighted_by_year
+        response["use_unweighted"] = self.use_unweighted
         return response
 
 
     def to_dict(self):
         return {"issn_l": self.issn_l,
                 "title": self.title,
+                "num_authorships": self.num_authorships,
+                "num_citations": self.num_citations,
                 "paywalled_use_unweighted": self.paywalled_use_unweighted,
                 "subscription_cost": self.subscription_cost,
+                "ill_cost": self.ill_cost,
+                "subscription_minus_ill_cost": self.subscription_minus_ill_cost,
                 "subscription_cpu_unweighted": self.subscription_cpu_unweighted,
                 "subscribed": self.subscribed}
 

@@ -48,16 +48,18 @@ def get_clean_package(http_request_args):
 def jump_wizard_get():
     package = get_clean_package(request.args)
     spend = int(request.args.get("spend", 0))
+    pagesize = int(request.args.get("pagesize", 100))
     scenario = Scenario(package, request.args)
     scenario.do_wizardly_things(spend)
-    return jsonify_fast(scenario.to_dict())
+    return jsonify_fast(scenario.to_dict(pagesize))
 
 
 @app.route("/scenario", methods=["GET"])
 def jump_get():
     package = get_clean_package(request.args)
     scenario = Scenario(package, request.args)
-    return jsonify_fast(scenario.to_dict())
+    pagesize = int(request.args.get("pagesize", 100))
+    return jsonify_fast(scenario.to_dict(pagesize))
 
 
 @app.route("/journal/issn_l/<issn_l>", methods=["GET"])

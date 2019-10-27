@@ -91,13 +91,13 @@ class Scenario(object):
                 return
             journal.set_subscribe()
 
-    def to_dict(self, max_journals=100):
+    def to_dict(self, pagesize):
         return {"_timing": self.timing_messages,
                 "_settings": self.settings.to_dict(),
                 "_summary": {"cost": self.summary.cost,
                             "num_journals_subscribed": len(self.subscribed),
                             "num_journals_total": len(self.journals)},
-                "journals_list": [j.to_dict() for j in self.journals_sorted_cpu[0:max_journals]],
+                "journals": [j.to_dict() for j in self.journals_sorted_cpu[0:pagesize]],
                 "by_year": {"use_unweighted": self.summary.use_unweighted_by_year, "use_weighted": self.summary.use_weighted_by_year},
                 "annual": {"use_unweighted": self.summary.use_unweighted, "use_weighted": self.summary.use_weighted, "cost": self.summary.cost},
                 "journals_count": len(self.journals),
