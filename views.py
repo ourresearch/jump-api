@@ -68,6 +68,14 @@ def jump_timeline_get():
     pagesize = int(request.args.get("pagesize", 100))
     return jsonify_fast(scenario.to_dict_timeline(pagesize))
 
+@app.route("/scenario/report", methods=["GET"])
+def jump_report_get():
+    package = get_clean_package(request.args)
+    scenario = Scenario(package, request.args)
+    pagesize = int(request.args.get("pagesize", 100))
+    return jsonify_fast(scenario.to_dict_report(pagesize))
+
+
 @app.route("/journal/issn_l/<issn_l>", methods=["GET"])
 def jump_issn_get(issn_l):
     package = request.args.get("package", "demo")

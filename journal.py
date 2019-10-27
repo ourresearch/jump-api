@@ -21,11 +21,14 @@ class Journal(object):
         "oa": [1.16, 1.24, 1.57, 1.83, 2.12]
     }
     
-    def __init__(self, issn_l, scenario_data, settings):
-        self.settings = weakref.proxy(settings)
+    def __init__(self, issn_l, scenario_data, scenario):
+        self.scenario = weakref.proxy(scenario)
+        self.settings = self.scenario.settings
         self.issn_l = issn_l
         self._scenario_data = scenario_data
         self.subscribed = False
+        dummy = self.to_dict()  # instantiate everything
+
 
     @cached_property
     def my_scenario_data_row(self):
@@ -118,6 +121,27 @@ class Journal(object):
         return round(np.mean(self.use_paywalled_by_year), 4)
 
     @cached_property
+    def use_total(self):
+        return round(np.mean(self.use_total_by_year), 4)
+
+    @cached_property
+    def use_instant(self):
+        return round(np.mean(self.use_instant_by_year), 4)
+
+    @cached_property
+    def use_instant_by_year(self):
+        return [self.use_social_networks_by_year[year] +
+                self.use_backfile_by_year[year] +
+                self.use_subscription_by_year[year] +
+                self.use_oa_by_year[year]
+                for year in self.years]
+
+    @cached_property
+    def use_subscription_by_year(self):
+        # TODO
+        return [0 for year in self.years]
+
+    @cached_property
     def use_social_networks_by_year(self):
         return [int(self.social_networks_proportion_of_downloads * self.use_total_by_year[year]) for year in self.years]
 
@@ -205,17 +229,61 @@ class Journal(object):
     def oa_status_history(self):
         return get_oa_history_from_db(self.issn_l)
 
+    @cached_property
+    def use_total_fuzzed(self):
+        return self.scenario.use_total_fuzzed_lookup[self.issn_l]
+
+    @cached_property
+    def num_authorships_fuzzed(self):
+        return self.scenario.num_authorships_fuzzed_lookup[self.issn_l]
+
+    @cached_property
+    def num_citations_fuzzed(self):
+        return self.scenario.num_citations_fuzzed_lookup[self.issn_l]
+
+    @cached_property
+    def num_papers(self):
+        return self.papers_2018
+
+    @cached_property
+    def use_instant_percent(self):
+        if not self.use_total:
+            return None
+        return round(float(self.use_instant) / self.use_total, 4)
+
+    @cached_property
+    def use_instant_percent_by_year(self):
+        if not self.use_total:
+            return None
+        return [round(float(self.use_instant_by_year[year]) / self.use_total_by_year[year], 4) if self.use_total_by_year[year] else None for year in self.years]
+
+    def to_dict_report(self):
+        response = {"issn_l": self.issn_l,
+                    "title": self.title,
+                    "subject": self.subject,
+                    "subscribed": self.subscribed,
+                    "use_total_fuzzed": self.use_total_fuzzed,
+                    "num_authorships_fuzzed": self.num_authorships_fuzzed,
+                    "num_citations_fuzzed": self.num_citations_fuzzed,
+                    "num_papers": self.num_papers,
+                    "use_instant_percent": self.use_instant_percent,
+                    "use_instant_percent_by_year": self.use_instant_percent_by_year,
+                    "oa_embargo_months": self.oa_embargo_months,
+        }
+        return response
+
+
     def to_dict_timeline(self):
         dummy = self.to_dict()  # instantiate everything
         response = {"issn_l": self.issn_l,
                     "title": self.title,
                     "subject": self.subject,
                     "subscribed": self.subscribed,
-                    "year": self.years_by_year
+                    "year": self.years_by_year,
+                    "self.oa_embargo_months": self.oa_embargo_months
         }
         for k, v in self.__dict__.iteritems():
             if k.endswith("by_year") and k not in ["use_unweighted_by_year", "years_by_year"]:
-                print k
                 response[k] = v
         return response
 
@@ -224,6 +292,7 @@ class Journal(object):
         response["oa_status_history"] = self.oa_status_history
         response["use_unweighted_by_year"] = self.use_unweighted_by_year
         response["use_unweighted"] = self.use_unweighted
+        response["oa_embargo_months"] = self.oa_embargo_months
         return response
 
 

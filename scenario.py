@@ -2,6 +2,7 @@
 
 from cached_property import cached_property
 import numpy as np
+import pandas as pd
 from collections import defaultdict
 import weakref
 
@@ -64,7 +65,7 @@ class Scenario(object):
     def __init__(self, package, http_request_args=None):
         self.settings = Assumptions(http_request_args)
         self.data = get_scenario_data_from_db(package)
-        self.journals = [Journal(issn_l, self.data, self.settings) for issn_l in self.data["big_view_dict"]]
+        self.journals = [Journal(issn_l, self.data, self) for issn_l in self.data["big_view_dict"]]
         self.summary = ScenarioSummary(self)
         self.timing_messages = []
 
@@ -73,8 +74,31 @@ class Scenario(object):
         return sorted(self.journals, key=lambda k: for_sorting(k.cpu_weighted), reverse=False)
 
     @property
+    def journals_sorted_use_total(self):
+        return sorted(self.journals, key=lambda k: for_sorting(k.use_total), reverse=True)
+
+    @property
     def subscribed(self):
         return [j for j in self.journals_sorted_cpu if j.subscribed]
+
+    @cached_property
+    def num_citations_fuzzed_lookup(self):
+        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.num_citations for j in self.journals]})
+        df.ranked = df.lookup_value.rank(method='first')
+        return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
+
+    @cached_property
+    def num_authorships_fuzzed_lookup(self):
+        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.num_authorships for j in self.journals]})
+        df.ranked = df.lookup_value.rank(method='first')
+        return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
+
+    @cached_property
+    def use_total_fuzzed_lookup(self):
+        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.use_total for j in self.journals]})
+        df.ranked = df.lookup_value.rank(method='first')
+        return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
+
 
     def get_journal(self, issn_l):
         for journal in self.journals:
@@ -91,10 +115,17 @@ class Scenario(object):
                 return
             journal.set_subscribe()
 
+    def to_dict_report(self, pagesize):
+        return {"_timing": self.timing_messages,
+                "_settings": self.settings.to_dict(),
+                "journals": [j.to_dict_report() for j in self.journals_sorted_use_total[0:pagesize]],
+                "journals_count": len(self.journals),
+            }
+
     def to_dict_timeline(self, pagesize):
         return {"_timing": self.timing_messages,
                 "_settings": self.settings.to_dict(),
-                "journals": [j.to_dict_timeline() for j in self.journals_sorted_cpu[0:pagesize]],
+                "journals": [j.to_dict_timeline() for j in self.journals_sorted_use_total[0:pagesize]],
                 "journals_count": len(self.journals),
             }
 
@@ -161,7 +192,7 @@ def get_scenario_data_from_db(package):
     with get_db_cursor() as cursor:
         cursor.execute(command)
         citation_rows = cursor.fetchall()
-    citation_dict = dict((a["issn_l"], a["num_citations"]) for a in citation_rows)
+    citation_dict = dict((a["issn_l"], int(a["num_citations"])) for a in citation_rows)
 
     timing.append(("time from db: citation_rows", elapsed(section_time, 2)))
     section_time = time()
@@ -173,7 +204,7 @@ def get_scenario_data_from_db(package):
     with get_db_cursor() as cursor:
         cursor.execute(command)
         authorship_rows = cursor.fetchall()
-    authorship_dict = dict((a["journal_issn_l"], a["num_authorships"]) for a in authorship_rows)
+    authorship_dict = dict((a["journal_issn_l"], int(a["num_authorships"])) for a in authorship_rows)
 
     timing.append(("time from db: authorship_rows", elapsed(section_time, 2)))
     section_time = time()
