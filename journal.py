@@ -310,7 +310,7 @@ class Journal(object):
 
     @cached_property
     def oa_status_history(self):
-        return get_oa_history_from_db(self.issn_l)
+        return self._scenario_data["oa"][self.issn_l]
 
     @cached_property
     def use_total_fuzzed(self):
@@ -398,6 +398,22 @@ class Journal(object):
         response["oa_embargo_months"] = self.oa_embargo_months
         return response
 
+    def to_dict_apc(self):
+        return {"issn_l": self.issn_l,
+                "title": self.title,
+                "apc": None,
+                "num_hybrid": None,
+                "num_gold": None
+                }
+
+    def to_dict_fulfillment(self):
+        return {"issn_l": self.issn_l,
+                "title": self.title,
+                "subject": self.subject,
+                "subscribed": self.subscribed,
+                "use_actual_unweighted": self.use_actual_unweighted,
+                "use_actual_weighted": self.use_actual_weighted
+                }
 
     def to_dict(self):
         return {"issn_l": self.issn_l,

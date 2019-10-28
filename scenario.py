@@ -22,6 +22,7 @@ class Scenario(object):
     def __init__(self, package, http_request_args=None):
         self.settings = Assumptions(http_request_args)
         self.data = get_scenario_data_from_db(package)
+        self.data["oa"] = get_oa_data_from_db(package)
         self.journals = [Journal(issn_l, self.data, self) for issn_l in self.data["big_view_dict"]]
         self.timing_messages = []
 
@@ -179,6 +180,29 @@ class Scenario(object):
                 return
             journal.set_subscribe()
 
+    def to_dict_apc(self, pagesize):
+        return {"_timing": self.timing_messages,
+                "_settings": self.settings.to_dict(),
+                "_summary": {
+                    "apc_total": None,
+                    "num_gold_articles": None,
+                    "num_hybrid_articles": None
+                    },
+                "journals": [j.to_dict_apc() for j in self.journals_sorted_use_total[0:pagesize]],
+                "journals_count": len(self.journals),
+            }
+
+    def to_dict_fulfillment(self, pagesize):
+        return {"_timing": self.timing_messages,
+                "_settings": self.settings.to_dict(),
+                "_summary": {
+                    "use_unweighted": self.use_actual_unweighted_by_year,
+                    "use_weighted": self.use_actual_weighted_by_year,
+                    },
+                "journals": [j.to_dict_fulfillment() for j in self.journals_sorted_use_total[0:pagesize]],
+                "journals_count": len(self.journals),
+            }
+
     def to_dict_impact(self, pagesize):
         return {"_timing": self.timing_messages,
                 "_settings": self.settings.to_dict(),
@@ -214,6 +238,19 @@ class Scenario(object):
                      },
                 "journals": [j.to_dict_timeline() for j in self.journals_sorted_use_total[0:pagesize]],
                 "journals_count": len(self.journals),
+            }
+
+    def to_dict_summary(self):
+        return {"_timing": self.timing_messages,
+                "_settings": self.settings.to_dict(),
+                "_summary": {
+                    "cost_scenario": self.cost,
+                    "cost_bigdeal_projected": self.cost_bigdeal_projected,
+                    "cost_saved_percent": self.cost_saved_percent,
+                    "num_journals_subscribed": len(self.subscribed),
+                    "num_journals_total": len(self.journals),
+                    "use_instant_percent": self.use_instant_percent
+                }
             }
 
     def to_dict(self, pagesize):
@@ -328,3 +365,21 @@ def get_scenario_data_from_db(package):
 
     return data
 
+
+@file_cache.cache
+def get_oa_data_from_db(package):
+    command = """select issn_l, year::numeric, fixed.oa_status, count(*) as num_articles 
+                    from unpaywall u
+                    join unpaywall_updates_view fixed on fixed.doi=u.doi
+                    join jump_counter counter on u.journal_issn_l = counter.issn_l
+                    where package='{}'
+                    and year >= 2014 and year < 2019
+                    group by issn_l, year, fixed.oa_status
+                    """.format(package)
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+    my_dict = defaultdict(list)
+    for row in rows:
+        my_dict[row["issn_l"]] += [row]
+    return my_dict

@@ -62,8 +62,15 @@ def jump_wizard_get():
     return jsonify_fast(scenario.to_dict(pagesize))
 
 
+@app.route("/scenario/summary", methods=["GET"])
+def jump_summary_get():
+    package = get_clean_package(request.args)
+    scenario = Scenario(package, request.args)
+    return jsonify_fast(scenario.to_dict_summary())
+
 @app.route("/scenario", methods=["GET"])
-def jump_get():
+@app.route("/scenario/slider", methods=["GET"])
+def jump_slider_get():
     package = get_clean_package(request.args)
     scenario = Scenario(package, request.args)
     pagesize = int(request.args.get("pagesize", 100))
@@ -75,6 +82,20 @@ def jump_timeline_get():
     scenario = Scenario(package, request.args)
     pagesize = int(request.args.get("pagesize", 100))
     return jsonify_fast(scenario.to_dict_timeline(pagesize))
+
+@app.route("/scenario/apc", methods=["GET"])
+def jump_apc_get():
+    package = get_clean_package(request.args)
+    scenario = Scenario(package, request.args)
+    pagesize = int(request.args.get("pagesize", 100))
+    return jsonify_fast(scenario.to_dict_apc(pagesize))
+
+@app.route("/scenario/fulfillment", methods=["GET"])
+def jump_fulfillment_get():
+    package = get_clean_package(request.args)
+    scenario = Scenario(package, request.args)
+    pagesize = int(request.args.get("pagesize", 100))
+    return jsonify_fast(scenario.to_dict_fulfillment(pagesize))
 
 @app.route("/scenario/report", methods=["GET"])
 def jump_report_get():
