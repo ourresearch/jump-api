@@ -171,6 +171,12 @@ class Scenario(object):
     def to_dict_report(self, pagesize):
         return {"_timing": self.timing_messages,
                 "_settings": self.settings.to_dict(),
+                "_summary": {
+                            "num_journals_subscribed": len(self.subscribed),
+                            "num_journals_total": len(self.journals),
+                            "use_instant_percent_by_year": self.summary.use_instant_percent_by_year,
+                            "use_instant_percent": self.summary.use_instant_percent
+                             },
                 "journals": [j.to_dict_report() for j in self.journals_sorted_use_total[0:pagesize]],
                 "journals_count": len(self.journals),
             }
