@@ -19,6 +19,11 @@ from util import jsonify_fast
 from util import str2bool
 from util import elapsed
 
+# warm the cache
+print "warming the cache"
+start_time = time()
+Scenario("demo")
+print "done, took {} seconds".format(elapsed(start_time, 2))
 
 @app.after_request
 def after_request_stuff(resp):
