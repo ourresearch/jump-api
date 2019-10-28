@@ -49,7 +49,7 @@ class Journal(object):
 
     @cached_property
     def cost_subscription_2018(self):
-        return float(self.my_scenario_data_row["usa_usd"])
+        return float(self.my_scenario_data_row["usa_usd"]) * (1 + self.settings.cost_content_fee_percent)
 
     @cached_property
     def papers_2018(self):
@@ -94,10 +94,6 @@ class Journal(object):
         return range(2014, 2019)
 
     @cached_property
-    def cost_subscription_2018(self):
-        return float(self.my_scenario_data_row["usa_usd"])
-
-    @cached_property
     def cost_actual_by_year(self):
         if self.subscribed:
             return self.cost_subscription_by_year
@@ -112,7 +108,7 @@ class Journal(object):
 
     @cached_property
     def cost_subscription_by_year(self):
-        response = [int(((1+self.settings.cost_alacart_increase)**year) * self.cost_subscription_2018)
+        response = [int(((1+self.settings.cost_alacart_increase)**year) * self.cost_subscription_2018 )
                                             for year in range(0,5)]
         return response
 
