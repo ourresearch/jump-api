@@ -6,7 +6,7 @@ from flask import redirect
 from flask import abort
 from flask import render_template
 from flask import jsonify
-from flask import send_from_directory
+from flask import url_for
 
 import json
 import os
@@ -37,13 +37,9 @@ def base_endpoint():
         "msg": "Don't panic"
     })
 
-import os
-from flask import send_from_directory
-
 @app.route('/favicon.ico')
 def favicon():
-    return send_from_directory(os.path.join(app.root_path, '.'),
-                          'favicon.ico', mimetype='image/vnd.microsoft.icon')
+    return redirect(url_for("static", filename="img/favicon.ico"))
 
 def get_clean_package(http_request_args):
     package = http_request_args.get("package", "demo")
