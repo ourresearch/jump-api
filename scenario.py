@@ -47,19 +47,19 @@ class Scenario(object):
     @cached_property
     def num_citations_fuzzed_lookup(self):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.num_citations for j in self.journals]})
-        df.ranked = df.lookup_value.rank(method='first')
+        df["ranked"] = df.lookup_value.rank(method='first')
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
     @cached_property
     def num_authorships_fuzzed_lookup(self):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.num_authorships for j in self.journals]})
-        df.ranked = df.lookup_value.rank(method='first')
+        df["ranked"] = df.lookup_value.rank(method='first')
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
     @cached_property
     def use_total_fuzzed_lookup(self):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.use_total for j in self.journals]})
-        df.ranked = df.lookup_value.rank(method='first')
+        df["ranked"] = df.lookup_value.rank(method='first')
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
 
