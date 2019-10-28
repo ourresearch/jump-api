@@ -147,3 +147,4 @@ def get_db_cursor(commit=False):
           pass
 
 use_groups = ["total", "oa", "social_networks", "backfile", "ill", "other_delayed", "subscription"]
+use_groups_free_instant = ["oa", "social_networks", "backfile"]

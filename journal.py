@@ -6,6 +6,7 @@ from collections import defaultdict
 import weakref
 
 from app import use_groups
+from app import use_groups_free_instant
 from app import file_cache
 from app import get_db_cursor
 
@@ -78,6 +79,10 @@ class Journal(object):
 
     def set_subscribe(self):
         self.subscribed = True
+        # invalidate cache
+        for key in self.__dict__:
+            if "actual" in key:
+                del self.__dict__[key]
 
     @cached_property
     def years_by_year(self):
@@ -91,7 +96,6 @@ class Journal(object):
     @cached_property
     def cost_subscription_2018(self):
         return float(self.my_scenario_data_row["usa_usd"])
-
 
     @cached_property
     def cost_actual_by_year(self):
@@ -135,23 +139,6 @@ class Journal(object):
         return round(self.cost_subscription_minus_ill/self.use_paywalled_weighted, 6)
 
     @cached_property
-    def use_weighted(self):
-        # TODO fix
-        return self.use_unweighted
-
-    @cached_property
-    def use_unweighted(self):
-        response = defaultdict(int)
-        for group in self.use_unweighted_by_year:
-            response[group] = round(np.mean(self.use_unweighted_by_year[group]), 4)
-        return response
-
-    @cached_property
-    def use_weighted_by_year(self):
-        # TODO fix
-        return self.use_unweighted_by_year
-
-    @cached_property
     def use_paywalled(self):
         return round(np.mean(self.use_paywalled_by_year), 4)
 
@@ -173,9 +160,11 @@ class Journal(object):
 
     @cached_property
     def use_subscription_by_year(self):
-        # TODO
-        return [0 for year in self.years]
+        return self.use_paywalled_by_year
 
+    @cached_property
+    def use_subscription(self):
+        return self.use_paywalled
 
     @cached_property
     def use_weight_multiplier(self):
@@ -250,11 +239,32 @@ class Journal(object):
         return scaled
 
     @cached_property
-    def use_unweighted_by_year(self):
+    def use_actual_unweighted(self):
+        response = defaultdict(int)
+        for group in self.use_actual_unweighted_by_year:
+            response[group] = round(np.mean(self.use_actual_unweighted_by_year[group]), 4)
+        return response
+
+    @cached_property
+    def use_actual_unweighted_by_year(self):
+        #initialize
         my_dict = {}
         for group in use_groups:
+            my_dict[group] = [0 for year in self.years]
+
+        # true regardless
+        for group in use_groups_free_instant + ["total"]:
             my_dict[group] = self.__getattribute__("use_{}_by_year".format(group))
+
+        # depends
+        if self.subscribed:
+            my_dict["subscription"] = self.use_subscription_by_year
+        else:
+            my_dict["ill"] = self.use_ill_by_year
+            my_dict["other_delayed"] = self.use_other_delayed_by_year
+
         return my_dict
+
 
     @cached_property
     def use_total_before_counter_correction(self):
@@ -363,8 +373,8 @@ class Journal(object):
                     "cost_actual_by_year": self.cost_actual_by_year,
                     "use_total_weighted_by_year": self.use_total_weighted_by_year
         }
-        for k, v in self.__dict__.iteritems():
-            if k.endswith("by_year") and k not in ["use_unweighted_by_year", "years_by_year", "historical_years_by_year"]:
+        for k, v in vars(self).iteritems():
+            if k.endswith("by_year") and not k.endswith("years_by_year") and ("weighted_by_year" not in k):
                 response[k] = v
         # make sure we don't miss these because they haven't been initialized
         for group in use_groups:
@@ -375,8 +385,8 @@ class Journal(object):
     def to_dict_details(self):
         response = self.to_dict()
         response["oa_status_history"] = self.oa_status_history
-        response["use_unweighted_by_year"] = self.use_unweighted_by_year
-        response["use_unweighted"] = self.use_unweighted
+        response["use_actual_unweighted_by_year"] = self.use_actual_unweighted_by_year
+        response["use_actual_unweighted"] = self.use_actual_unweighted
         response["oa_embargo_months"] = self.oa_embargo_months
         return response
 

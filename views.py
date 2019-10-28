@@ -47,7 +47,7 @@ def get_clean_package(http_request_args):
         package = "uva_elsevier"
     return package
 
-@app.route("/scenario/subscription_wizard", methods=["GET"])
+@app.route("/scenario/wizard", methods=["GET"])
 def jump_wizard_get():
     package = get_clean_package(request.args)
     spend = int(request.args.get("spend", 0))
