@@ -185,7 +185,7 @@ class Journal(object):
 
     @cached_property
     def use_ill_by_year(self):
-        return [int(self.settings.ill_request_percent * self.use_paywalled_by_year[year]) for year in self.years]
+        return [int(self.settings.ill_request_percent_of_delayed * self.use_paywalled_by_year[year]) for year in self.years]
 
     @cached_property
     def use_other_delayed_by_year(self):

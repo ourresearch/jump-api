@@ -11,7 +11,7 @@ class Assumptions(object):
         self.cost_alacart_increase = 0.08
         self.cost_bigdeal = 2200000
         self.cost_content_fee_percent = .057
-        self.ill_request_percent = 0.1
+        self.ill_request_percent_of_delayed = 0.1
         self.social_networks_percent = 0.1
         self.weight_citation = 10
         self.weight_authorship = 100
