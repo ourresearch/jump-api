@@ -39,7 +39,7 @@ def base_endpoint():
 
 @app.route('/favicon.ico')
 def favicon():
-    return redirect(url_for("static", filename="img/favicon.ico"))
+    return redirect(url_for("static", filename="img/favicon.ico", _scheme='https'))
 
 def get_clean_package(http_request_args):
     package = http_request_args.get("package", "demo")
