@@ -18,9 +18,22 @@ from assumptions import Assumptions
 
 
 class ScenarioSummary(object):
+    years = range(0, 5)
 
     def __init__(self, scenario):
         self.scenario = weakref.proxy(scenario)
+
+    @cached_property
+    def use_total_weighted_by_year(self):
+        return [np.sum([journal.use_total_weighted_by_year[year] for journal in self.scenario.journals]) for year in range(0, 5)]
+
+    @cached_property
+    def use_total_unweighted_by_year(self):
+        return [np.sum([journal.use_total_by_year[year] for journal in self.scenario.journals]) for year in range(0, 5)]
+
+    @cached_property
+    def use_total_unweighted(self):
+        return round(np.mean(self.use_total_unweighted_by_year), 4)
 
     @cached_property
     def use_unweighted_by_year(self):
@@ -58,7 +71,35 @@ class ScenarioSummary(object):
 
     @property
     def cost(self):
-        return round(sum([j.cost_subscription for j in self.scenario.journals_sorted_cpu if j.subscribed]), 2)
+        return round(sum([j.cost_actual for j in self.scenario.journals_sorted_cpu]), 2)
+
+    @cached_property
+    def use_instant(self):
+        return round(np.mean(self.use_instant_by_year), 4)
+
+    @cached_property
+    def use_instant_by_year(self):
+        # TODO use weighted
+        print self.use_unweighted_by_year.keys()
+        return [self.use_unweighted_by_year["social_networks"][year] +
+                self.use_unweighted_by_year["backfile"][year] +
+                self.use_unweighted_by_year["subscription"][year] +
+                self.use_unweighted_by_year["oa"][year]
+                for year in self.years]
+
+    @cached_property
+    def use_instant_percent(self):
+        # TODO use weighted
+        if not self.use_total_unweighted:
+            return None
+        return round(float(self.use_instant) / self.use_total_unweighted, 4)
+
+    @cached_property
+    def use_instant_percent_by_year(self):
+        # TODO use weighted
+        if not self.use_total_unweighted:
+            return None
+        return [round(float(self.use_instant_by_year[year]) / self.use_total_unweighted_by_year[year], 4) if self.use_total_unweighted_by_year[year] else None for year in self.years]
 
 
 class Scenario(object):
@@ -146,10 +187,13 @@ class Scenario(object):
                 "_settings": self.settings.to_dict(),
                 "_summary": {"cost": self.summary.cost,
                             "num_journals_subscribed": len(self.subscribed),
-                            "num_journals_total": len(self.journals)},
+                            "num_journals_total": len(self.journals),
+                            "use_unweighted": self.summary.use_unweighted,
+                            "use_weighted": self.summary.use_weighted,
+                            "use_instant_percent_by_year": self.summary.use_instant_percent_by_year,
+                            "use_instant_percent": self.summary.use_instant_percent
+                             },
                 "journals": [j.to_dict() for j in self.journals_sorted_cpu[0:pagesize]],
-                "by_year": {"use_unweighted": self.summary.use_unweighted_by_year, "use_weighted": self.summary.use_weighted_by_year},
-                "annual": {"use_unweighted": self.summary.use_unweighted, "use_weighted": self.summary.use_weighted, "cost": self.summary.cost},
                 "journals_count": len(self.journals),
             }
 

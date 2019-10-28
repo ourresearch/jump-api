@@ -146,4 +146,4 @@ def get_db_cursor(commit=False):
           cursor.close()
           pass
 
-use_groups = ["total", "oa", "social_networks", "backfile", "ill", "other_delayed"]
+use_groups = ["total", "oa", "social_networks", "backfile", "ill", "other_delayed", "subscription"]
