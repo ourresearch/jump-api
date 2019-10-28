@@ -16,7 +16,6 @@ from app import get_db_cursor
 class Journal(object):
     years = range(0, 5)
     oa_recall_scaling_factor = 1.3
-    social_networks_proportion_of_downloads = 0.1
     growth_scaling = {
         "downloads": [1.10, 1.21, 1.34, 1.49, 1.65],
         "oa": [1.16, 1.24, 1.57, 1.83, 2.12]
@@ -182,7 +181,7 @@ class Journal(object):
 
     @cached_property
     def use_social_networks_by_year(self):
-        return [int(self.social_networks_proportion_of_downloads * self.use_total_by_year[year]) for year in self.years]
+        return [int(self.settings.social_networks_percent * self.use_total_by_year[year]) for year in self.years]
 
     @cached_property
     def use_ill_by_year(self):
@@ -228,7 +227,7 @@ class Journal(object):
 
         scaled = [0 for year in self.years]
         for year in self.years:
-            scaled[year] = (1 - self.social_networks_proportion_of_downloads) *\
+            scaled[year] = (1 - self.settings.social_networks_percent) *\
                 sum([(total_use_by_age[age] * self.growth_scaling["downloads"][year] - oa_use_by_age[age] * self.growth_scaling["oa"][year])
                      for age in range(0, year+1)])
         scaled = [int(max(0, num)) for num in scaled]
