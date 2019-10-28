@@ -94,6 +94,19 @@ class Journal(object):
 
 
     @cached_property
+    def cost_actual_by_year(self):
+        if self.subscribed:
+            return self.cost_subscription_by_year
+        return self.cost_ill_by_year
+
+    @cached_property
+    def cost_actual(self):
+        if self.subscribed:
+            return self.cost_subscription
+        return self.cost_ill
+
+
+    @cached_property
     def cost_subscription_by_year(self):
         response = [int(((1+self.settings.cost_alacart_increase)**year) * self.cost_subscription_2018)
                                             for year in range(0,5)]
@@ -233,8 +246,11 @@ class Journal(object):
 
     @cached_property
     def cost_ill(self):
-        # TODO make this by year
-        return self.use_unweighted["ill"] * self.settings.cost_ill
+        return round(np.mean(self.cost_ill_by_year), 4)
+
+    @cached_property
+    def cost_ill_by_year(self):
+        return [round(self.use_ill_by_year[year] * self.settings.cost_ill, 4) for year in self.years]
 
     @cached_property
     def cost_subscription_minus_ill(self):
@@ -308,11 +324,16 @@ class Journal(object):
                     "subscribed": self.subscribed,
                     "year": self.years_by_year,
                     "year_historical": self.historical_years_by_year,
-                    "oa_embargo_months": self.oa_embargo_months
+                    "oa_embargo_months": self.oa_embargo_months,
+                    "cost_actual_by_year": self.cost_actual_by_year
         }
         for k, v in self.__dict__.iteritems():
             if k.endswith("by_year") and k not in ["use_unweighted_by_year", "years_by_year", "historical_years_by_year"]:
                 response[k] = v
+        # make sure we don't miss these because they haven't been initialized
+        for group in use_groups:
+            field = "use_{}_by_year".format(group)
+            response[field] = self.__getattribute__(field)
         return response
 
     def to_dict_details(self):
