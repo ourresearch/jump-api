@@ -72,6 +72,10 @@ class Scenario(object):
         return [np.sum([journal.use_total_by_year[year] for journal in self.journals]) for year in range(0, 5)]
 
     @property
+    def use_total_weighted(self):
+        return round(np.mean(self.use_total_weighted_by_year), 4)
+
+    @property
     def use_total_unweighted(self):
         return round(np.mean(self.use_total_unweighted_by_year), 4)
 
@@ -84,8 +88,10 @@ class Scenario(object):
 
     @property
     def use_actual_weighted_by_year(self):
-        # TODO fix
-        return self.use_actual_unweighted_by_year
+        use = {}
+        for group in use_groups:
+            use[group] = [np.sum([journal.use_actual_weighted_by_year[group][year] for journal in self.journals]) for year in range(0, 5)]
+        return use
 
     @property
     def use_unweighted(self):
@@ -96,8 +102,10 @@ class Scenario(object):
 
     @property
     def use_actual_weighted(self):
-        # TODO finish
-        return self.use_unweighted
+        use = {}
+        for group in use_groups:
+            use[group] = int(np.mean(self.use_actual_weighted_by_year[group]))
+        return use
 
     @property
     def cost_by_group(self):
@@ -119,26 +127,23 @@ class Scenario(object):
 
     @property
     def use_instant_by_year(self):
-        # TODO use weighted
-        return [self.use_actual_unweighted_by_year["social_networks"][year] +
-                self.use_actual_unweighted_by_year["backfile"][year] +
-                self.use_actual_unweighted_by_year["subscription"][year] +
-                self.use_actual_unweighted_by_year["oa"][year]
+        return [self.use_actual_weighted_by_year["social_networks"][year] +
+                self.use_actual_weighted_by_year["backfile"][year] +
+                self.use_actual_weighted_by_year["subscription"][year] +
+                self.use_actual_weighted_by_year["oa"][year]
                 for year in self.years]
 
     @property
     def use_instant_percent(self):
-        # TODO use weighted
-        if not self.use_total_unweighted:
+        if not self.use_total_weighted:
             return None
-        return round(float(self.use_instant) / self.use_total_unweighted, 4)
+        return round(float(self.use_instant) / self.use_total_weighted, 4)
 
     @property
     def use_instant_percent_by_year(self):
-        # TODO use weighted
-        if not self.use_total_unweighted:
+        if not self.use_total_weighted:
             return None
-        return [round(float(self.use_instant_by_year[year]) / self.use_total_unweighted_by_year[year], 4) if self.use_total_unweighted_by_year[year] else None for year in self.years]
+        return [round(float(self.use_instant_by_year[year]) / self.use_total_weighted_by_year[year], 4) if self.use_total_weighted_by_year[year] else None for year in self.years]
 
 
 
@@ -172,11 +177,12 @@ class Scenario(object):
         return {"_timing": self.timing_messages,
                 "_settings": self.settings.to_dict(),
                 "_summary": {
-                            "num_journals_subscribed": len(self.subscribed),
-                            "num_journals_total": len(self.journals),
-                            "use_instant_percent_by_year": self.use_instant_percent_by_year,
-                            "use_instant_percent": self.use_instant_percent
-                             },
+                    "cost": self.cost,
+                    "num_journals_subscribed": len(self.subscribed),
+                    "num_journals_total": len(self.journals),
+                    "use_instant_percent_by_year": self.use_instant_percent_by_year,
+                    "use_instant_percent": self.use_instant_percent
+                    },
                 "journals": [j.to_dict_report() for j in self.journals_sorted_use_total[0:pagesize]],
                 "journals_count": len(self.journals),
             }
@@ -185,11 +191,12 @@ class Scenario(object):
         return {"_timing": self.timing_messages,
                 "_settings": self.settings.to_dict(),
                 "_summary": {
-                            "num_journals_subscribed": len(self.subscribed),
-                            "num_journals_total": len(self.journals),
-                            "use_instant_percent_by_year": self.use_instant_percent_by_year,
-                            "use_instant_percent": self.use_instant_percent
-                             },
+                    "cost": self.cost,
+                    "num_journals_subscribed": len(self.subscribed),
+                    "num_journals_total": len(self.journals),
+                    "use_instant_percent_by_year": self.use_instant_percent_by_year,
+                    "use_instant_percent": self.use_instant_percent
+                     },
                 "journals": [j.to_dict_timeline() for j in self.journals_sorted_use_total[0:pagesize]],
                 "journals_count": len(self.journals),
             }
@@ -197,14 +204,15 @@ class Scenario(object):
     def to_dict(self, pagesize):
         return {"_timing": self.timing_messages,
                 "_settings": self.settings.to_dict(),
-                "_summary": {"cost": self.cost,
-                            "num_journals_subscribed": len(self.subscribed),
-                            "num_journals_total": len(self.journals),
-                            "use_unweighted": self.use_actual_unweighted_by_year,
-                            "use_weighted": self.use_actual_weighted_by_year,
-                            "use_instant_percent_by_year": self.use_instant_percent_by_year,
-                            "use_instant_percent": self.use_instant_percent
-                             },
+                "_summary": {
+                    "cost": self.cost,
+                    "num_journals_subscribed": len(self.subscribed),
+                    "num_journals_total": len(self.journals),
+                    "use_instant_percent_by_year": self.use_instant_percent_by_year,
+                    "use_instant_percent": self.use_instant_percent,
+                    "use_unweighted": self.use_actual_unweighted_by_year,
+                    "use_weighted": self.use_actual_weighted_by_year,
+                },
                 "journals": [j.to_dict_timeline() for j in self.journals_sorted_cpu[0:pagesize]],
                 "journals_count": len(self.journals),
             }

@@ -242,6 +242,13 @@ class Journal(object):
         return response
 
     @cached_property
+    def use_actual_weighted(self):
+        response = defaultdict(int)
+        for group in self.use_actual_weighted_by_year:
+            response[group] = round(np.mean(self.use_actual_weighted_by_year[group]), 4)
+        return response
+
+    @cached_property
     def use_actual_unweighted_by_year(self):
         #initialize
         my_dict = {}
@@ -261,6 +268,12 @@ class Journal(object):
 
         return my_dict
 
+    @cached_property
+    def use_actual_weighted_by_year(self):
+        my_dict = {}
+        for group in self.use_actual_unweighted_by_year:
+            my_dict[group] = [int(num * self.use_weight_multiplier) for num in self.use_actual_unweighted_by_year[group]]
+        return my_dict
 
     @cached_property
     def use_total_before_counter_correction(self):
