@@ -122,6 +122,19 @@ class Scenario(object):
         return round(sum([j.cost_actual for j in self.journals_sorted_cpu]), 2)
 
     @property
+    def cost_bigdeal_projected_by_year(self):
+        return [int(((1+self.settings.cost_bigdeal_increase)**year) * self.settings.cost_bigdeal )
+                                            for year in self.years]
+
+    @property
+    def cost_bigdeal_projected(self):
+        return round(np.mean(self.cost_bigdeal_projected_by_year), 4)
+
+    @property
+    def cost_saved_percent(self):
+        return round(float(self.cost_bigdeal_projected - self.cost) / self.cost_bigdeal_projected, 4)
+
+    @property
     def use_instant(self):
         return round(np.mean(self.use_instant_by_year), 4)
 
@@ -154,7 +167,7 @@ class Scenario(object):
         return None
 
     def do_wizardly_things(self, spend):
-        my_max = spend/100.0 * self.settings.cost_bigdeal
+        my_max = spend/100.0 * self.cost_bigdeal_projected
         my_spend_so_far = np.sum([j.cost_ill for j in self.journals])
         for journal in self.journals_sorted_cpu_delta:
             if journal.cost_subscription_minus_ill < 0:
@@ -177,7 +190,7 @@ class Scenario(object):
         return {"_timing": self.timing_messages,
                 "_settings": self.settings.to_dict(),
                 "_summary": {
-                    "cost": self.cost,
+                    "cost_saved_percent": self.cost_saved_percent,
                     "num_journals_subscribed": len(self.subscribed),
                     "num_journals_total": len(self.journals),
                     "use_instant_percent_by_year": self.use_instant_percent_by_year,
@@ -191,7 +204,9 @@ class Scenario(object):
         return {"_timing": self.timing_messages,
                 "_settings": self.settings.to_dict(),
                 "_summary": {
-                    "cost": self.cost,
+                    "cost_scenario": self.cost,
+                    "cost_bigdeal_projected": self.cost_bigdeal_projected,
+                    "cost_saved_percent": self.cost_saved_percent,
                     "num_journals_subscribed": len(self.subscribed),
                     "num_journals_total": len(self.journals),
                     "use_instant_percent_by_year": self.use_instant_percent_by_year,
@@ -205,7 +220,9 @@ class Scenario(object):
         return {"_timing": self.timing_messages,
                 "_settings": self.settings.to_dict(),
                 "_summary": {
-                    "cost": self.cost,
+                    "cost_scenario": self.cost,
+                    "cost_bigdeal_projected": self.cost_bigdeal_projected,
+                    "cost_saved_percent": self.cost_saved_percent,
                     "num_journals_subscribed": len(self.subscribed),
                     "num_journals_total": len(self.journals),
                     "use_instant_percent_by_year": self.use_instant_percent_by_year,
