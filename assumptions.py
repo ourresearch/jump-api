@@ -12,8 +12,8 @@ class Assumptions(object):
         self.cost_bigdeal = 2200000
         self.cost_content_fee_percent = .057
         self.ill_request_percent = 0.1
-        self.weight_citation = 0
-        self.weight_authorship = 0
+        self.weight_citation = 10
+        self.weight_authorship = 100
         self.include_docdel = False
         self.include_bronze = True
         self.include_submitted_version = True

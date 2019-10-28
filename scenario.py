@@ -74,8 +74,13 @@ class Scenario(object):
         return sorted(self.journals, key=lambda k: for_sorting(k.cpu_weighted), reverse=False)
 
     @property
+    def journals_sorted_cpu_delta(self):
+        return sorted(self.journals, key=lambda k: for_sorting(k.cpu_delta_weighted), reverse=False)
+
+    @property
     def journals_sorted_use_total(self):
-        return sorted(self.journals, key=lambda k: for_sorting(k.use_total), reverse=True)
+        return sorted(self.journals, key=lambda k: for_sorting(k.use_total_weighted), reverse=True)
+
 
     @property
     def subscribed(self):
@@ -109,7 +114,7 @@ class Scenario(object):
     def do_wizardly_things(self, spend):
         my_max = spend/100.0 * self.settings.cost_bigdeal
         my_spend_so_far = 0
-        for journal in self.journals_sorted_cpu:
+        for journal in self.journals_sorted_cpu_delta:
             my_spend_so_far += journal.cost_subscription
             if my_spend_so_far > my_max:
                 return

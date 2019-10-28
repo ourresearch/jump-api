@@ -124,8 +124,15 @@ class Journal(object):
 
     @cached_property
     def cpu_weighted(self):
-        # TODO fix
-        return self.cpu_unweighted
+        if not self.use_paywalled_weighted:
+            return None
+        return round(self.cost_subscription/self.use_paywalled_weighted, 6)
+
+    @cached_property
+    def cpu_delta_weighted(self):
+        if not self.use_paywalled_weighted:
+            return None
+        return round(self.cost_subscription_minus_ill/self.use_paywalled_weighted, 6)
 
     @cached_property
     def use_weighted(self):
@@ -168,6 +175,25 @@ class Journal(object):
     def use_subscription_by_year(self):
         # TODO
         return [0 for year in self.years]
+
+
+    @cached_property
+    def use_weight_multiplier(self):
+        if not self.use_total:
+            return 0
+        return float(self.use_total_weighted) / self.use_total
+
+    @cached_property
+    def use_total_weighted_by_year(self):
+        return [int(self.use_total_by_year[year] + self.use_addition_from_weights) for year in self.years]
+
+    @cached_property
+    def use_total_weighted(self):
+        return round(np.mean(self.use_total_weighted_by_year), 4)
+
+    @cached_property
+    def use_paywalled_weighted(self):
+        return round(int(self.use_paywalled * self.use_weight_multiplier), 4)
 
     @cached_property
     def use_social_networks_by_year(self):
@@ -233,6 +259,14 @@ class Journal(object):
     @cached_property
     def use_total_before_counter_correction(self):
         return self.my_scenario_data_row["downloads_total"]
+
+    @cached_property
+    def use_addition_from_weights(self):
+        # using the average on purpose... by year too rough
+        weights_addition = float(self.settings.weight_citation) * self.num_citations
+        weights_addition += float(self.settings.weight_authorship) * self.num_authorships
+        weights_addition = round(weights_addition, 4)
+        return weights_addition
 
     @cached_property
     def use_multiplier_from_counter(self):
@@ -312,7 +346,8 @@ class Journal(object):
                     "year_historical": self.historical_years_by_year,
                     "num_citations_historical_by_year": self.num_citations_historical_by_year,
                     "num_authorships_historical_by_year": self.num_authorships_historical_by_year,
-                    "use_total_by_year": self.use_total_by_year
+                    "use_total_unweighted_by_year": self.use_total_by_year,
+                    "use_total_weighted_by_year": self.use_total_weighted_by_year
         }
         return response
 
@@ -325,7 +360,8 @@ class Journal(object):
                     "year": self.years_by_year,
                     "year_historical": self.historical_years_by_year,
                     "oa_embargo_months": self.oa_embargo_months,
-                    "cost_actual_by_year": self.cost_actual_by_year
+                    "cost_actual_by_year": self.cost_actual_by_year,
+                    "use_total_weighted_by_year": self.use_total_weighted_by_year
         }
         for k, v in self.__dict__.iteritems():
             if k.endswith("by_year") and k not in ["use_unweighted_by_year", "years_by_year", "historical_years_by_year"]:
@@ -352,10 +388,12 @@ class Journal(object):
                 "num_authorships": self.num_authorships,
                 "num_citations": self.num_citations,
                 "use_paywalled_unweighted": self.use_paywalled,
+                "use_paywalled_weighted": self.use_paywalled_weighted,
                 "cost_subscription": self.cost_subscription,
                 "cost_ill": self.cost_ill,
                 "cost_subscription_minus_ill": self.cost_subscription_minus_ill,
                 "cpu_unweighted": self.cpu_unweighted,
+                "cpu_weighted": self.cpu_weighted,
                 "subscribed": self.subscribed
                 }
 
