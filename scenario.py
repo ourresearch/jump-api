@@ -226,7 +226,7 @@ class Scenario(object):
                     "cost_scenario": self.cost,
                     "cost_bigdeal_projected": self.cost_bigdeal_projected,
                     "cost_saved_percent": self.cost_saved_percent
-                }
+                },
                 "journals": [j.to_dict_cost() for j in self.journals_sorted_use_total[0:pagesize]],
                 "journals_count": len(self.journals),
             }
