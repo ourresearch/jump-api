@@ -310,7 +310,9 @@ class Journal(object):
 
     @cached_property
     def oa_status_history(self):
-        return self._scenario_data["oa"][self.issn_l]
+        # return self._scenario_data["oa"][self.issn_l]
+        # TODO
+        return []
 
     @cached_property
     def use_total_fuzzed(self):

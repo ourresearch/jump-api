@@ -16,15 +16,27 @@ from util import for_sorting
 from journal import Journal
 from assumptions import Assumptions
 
+
 class Scenario(object):
     years = range(0, 5)
     
+    def log_timing(self, message):
+        self.timing_messages.append("{: <30} {: >6}s".format(message, elapsed(self.section_time, 2)))
+        self.section_time = time()
+        
     def __init__(self, package, http_request_args=None):
+        self.timing_messages = []; 
+        self.section_time = time()        
         self.settings = Assumptions(http_request_args)
+
         self.data = get_scenario_data_from_db(package)
-        self.data["oa"] = get_oa_data_from_db(package)
+        self.log_timing("get_scenario_data_from_db")
+
+        # self.data["oa"] = get_oa_data_from_db(package)
+        # self.log_timing("get_oa_data_from_db")
+
         self.journals = [Journal(issn_l, self.data, self) for issn_l in self.data["big_view_dict"]]
-        self.timing_messages = []
+        self.log_timing("make all journals")
 
     @property
     def journals_sorted_cppu(self):
@@ -181,7 +193,7 @@ class Scenario(object):
             journal.set_subscribe()
 
     def to_dict_apc(self, pagesize):
-        return {"_timing": self.timing_messages,
+        response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": {
                     "apc_total": None,
@@ -191,9 +203,12 @@ class Scenario(object):
                 "journals": [j.to_dict_apc() for j in self.journals_sorted_use_total[0:pagesize]],
                 "journals_count": len(self.journals),
             }
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
+        return response
 
     def to_dict_fulfillment(self, pagesize):
-        return {"_timing": self.timing_messages,
+        response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": {
                     "use_unweighted": self.use_actual_unweighted_by_year,
@@ -202,25 +217,34 @@ class Scenario(object):
                 "journals": [j.to_dict_fulfillment() for j in self.journals_sorted_use_total[0:pagesize]],
                 "journals_count": len(self.journals),
             }
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
+        return response
 
     def to_dict_impact(self, pagesize):
-        return {"_timing": self.timing_messages,
+        response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": {},
                 "journals": [j.to_dict_impact() for j in self.journals_sorted_use_total[0:pagesize]],
                 "journals_count": len(self.journals),
             }
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
+        return response
 
     def to_dict_journals(self, pagesize):
-        return {"_timing": self.timing_messages,
+        response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": {},
                 "journals": [j.to_dict() for j in self.journals_sorted_use_total[0:pagesize]],
                 "journals_count": len(self.journals),
             }
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
+        return response
 
     def to_dict_cost(self, pagesize):
-        return {"_timing": self.timing_messages,
+        response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": {
                     "cost_scenario": self.cost,
@@ -230,9 +254,12 @@ class Scenario(object):
                 "journals": [j.to_dict_cost() for j in self.journals_sorted_use_total[0:pagesize]],
                 "journals_count": len(self.journals),
             }
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
+        return response
 
     def to_dict_report(self, pagesize):
-        return {"_timing": self.timing_messages,
+        response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": {
                     "cost_saved_percent": self.cost_saved_percent,
@@ -244,9 +271,12 @@ class Scenario(object):
                 "journals": [j.to_dict_report() for j in self.journals_sorted_use_total[0:pagesize]],
                 "journals_count": len(self.journals),
             }
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
+        return response
 
     def to_dict_timeline(self, pagesize):
-        return {"_timing": self.timing_messages,
+        response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": {
                     "use_instant_percent_by_year": self.use_instant_percent_by_year,
@@ -255,9 +285,12 @@ class Scenario(object):
                 "journals": [j.to_dict_timeline() for j in self.journals_sorted_use_total[0:pagesize]],
                 "journals_count": len(self.journals),
             }
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
+        return response
 
     def to_dict_summary(self):
-        return {"_timing": self.timing_messages,
+        response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": {
                     "cost_scenario": self.cost,
@@ -268,9 +301,12 @@ class Scenario(object):
                     "use_instant_percent": self.use_instant_percent
                 }
             }
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
+        return response
 
     def to_dict(self, pagesize):
-        return {"_timing": self.timing_messages,
+        response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": {
                     "cost_scenario": self.cost,
@@ -286,6 +322,9 @@ class Scenario(object):
                 "journals": [j.to_dict() for j in self.journals_sorted_cppu[0:pagesize]],
                 "journals_count": len(self.journals),
             }
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
+        return response
 
     def __repr__(self):
         return u"<{} (n={})>".format(self.__class__.__name__, len(self.journals))
