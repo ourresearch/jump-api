@@ -133,25 +133,26 @@ class Journal(object):
             return None
         return round(self.cost_subscription_minus_ill/self.use_paywalled_weighted, 6)
 
-    @cached_property
-    def use_paywalled(self):
-        return round(np.mean(self.use_paywalled_by_year), 4)
 
     @cached_property
-    def use_total(self):
-        return round(np.mean(self.use_total_by_year), 4)
+    def use_weight_multiplier(self):
+        if not self.use_total:
+            return 0
+        return float(self.use_total_weighted) / self.use_total
+
+
+    @cached_property
+    def use_instant_by_year(self):
+        return [round((self.use_social_networks_by_year[year] +
+                self.use_backfile_by_year[year] +
+                self.use_subscription_by_year[year] +
+                self.use_oa_by_year[year]) * self.use_weight_multiplier, 4)
+                for year in self.years]
 
     @cached_property
     def use_instant(self):
         return round(np.mean(self.use_instant_by_year), 4)
 
-    @cached_property
-    def use_instant_by_year(self):
-        return [self.use_social_networks_by_year[year] +
-                self.use_backfile_by_year[year] +
-                self.use_subscription_by_year[year] +
-                self.use_oa_by_year[year]
-                for year in self.years]
 
     @cached_property
     def use_subscription_by_year(self):
@@ -161,27 +162,19 @@ class Journal(object):
     def use_subscription(self):
         return self.use_paywalled
 
-    @cached_property
-    def use_weight_multiplier(self):
-        if not self.use_total:
-            return 0
-        return float(self.use_total_weighted) / self.use_total
-
-    @cached_property
-    def use_total_weighted_by_year(self):
-        return [int(self.use_total_by_year[year] + self.use_addition_from_weights) for year in self.years]
-
-    @cached_property
-    def use_total_weighted(self):
-        return round(np.mean(self.use_total_weighted_by_year), 4)
-
-    @cached_property
-    def use_paywalled_weighted(self):
-        return round(int(self.use_paywalled * self.use_weight_multiplier), 4)
 
     @cached_property
     def use_social_networks_by_year(self):
         return [int(self.settings.social_networks_percent/float(100) * self.use_total_by_year[year]) for year in self.years]
+
+    @cached_property
+    def use_social_networks(self):
+        return round(np.mean(self.use_social_networks_by_year), 4)
+
+    @cached_property
+    def use_social_networks_weighted(self):
+        return round(int(self.use_social_networks * self.use_weight_multiplier), 4)
+
 
     @cached_property
     def use_ill_by_year(self):
@@ -192,6 +185,11 @@ class Journal(object):
         return round(np.mean(self.use_ill_by_year), 4)
 
     @cached_property
+    def use_ill_weighted(self):
+        return round(int(self.use_ill * self.use_weight_multiplier), 4)
+
+
+    @cached_property
     def use_other_delayed_by_year(self):
         return [self.use_paywalled_by_year[year] - self.use_ill_by_year[year] for year in self.years]
 
@@ -200,12 +198,26 @@ class Journal(object):
         return round(np.mean(self.use_other_delayed_by_year), 4)
 
     @cached_property
+    def use_other_delayed_weighted(self):
+        return round(int(self.use_other_delayed * self.use_weight_multiplier), 4)
+
+
+    @cached_property
     def use_backfile_by_year(self):
         scaled = [self.use_total_by_year[year]
               - (self.use_paywalled_by_year[year] + self.use_oa_by_year[year] + self.use_social_networks_by_year[year])
           for year in self.years]
         scaled = [int(max(0, num)) for num in scaled]
         return scaled
+
+    @cached_property
+    def use_backfile(self):
+        return round(np.mean(self.use_backfile_by_year), 4)
+
+    @cached_property
+    def use_backfile_weighted(self):
+        return round(int(self.use_backfile * self.use_weight_multiplier), 4)
+
 
     @cached_property
     def use_oa_by_year(self):
@@ -217,12 +229,39 @@ class Journal(object):
         return scaled
 
     @cached_property
+    def use_oa(self):
+        return round(np.mean(self.use_oa_by_year), 4)
+
+    @cached_property
+    def use_oa_weighted(self):
+        return round(int(self.use_oa * self.use_weight_multiplier), 4)
+
+
+
+
+    @cached_property
     def use_total_by_year(self):
         use_total_before_counter_correction = [self.my_scenario_data_row["downloads_total"] for year in self.years]
         use_total_before_counter_correction = [val if val else 0 for val in use_total_before_counter_correction]
         use_total_scaled_by_counter = [num * self.use_multiplier_from_counter for num in use_total_before_counter_correction]
         scaled = [int(use_total_scaled_by_counter[year] * self.growth_scaling["downloads"][year]) for year in self.years]
         return scaled
+
+    @cached_property
+    def use_total(self):
+        return round(np.mean(self.use_total_by_year), 4)
+
+
+
+    # used to calculate use_weight_multiplier so it can't use it
+    @cached_property
+    def use_total_weighted_by_year(self):
+        return [int(self.use_total_by_year[year] + self.use_addition_from_weights) for year in self.years]
+
+    @cached_property
+    def use_total_weighted(self):
+        return round(np.mean(self.use_total_weighted_by_year), 4)
+
 
     @cached_property
     def use_paywalled_by_year(self):
@@ -240,6 +279,15 @@ class Journal(object):
                      for age in range(0, year+1)])
         scaled = [int(max(0, num)) for num in scaled]
         return scaled
+
+    @cached_property
+    def use_paywalled(self):
+        return round(np.mean(self.use_paywalled_by_year), 4)
+
+    @cached_property
+    def use_paywalled_weighted(self):
+        return round(int(self.use_paywalled * self.use_weight_multiplier), 4)
+
 
     @cached_property
     def use_actual_unweighted(self):
@@ -340,15 +388,15 @@ class Journal(object):
 
     @cached_property
     def use_instant_percent(self):
-        if not self.use_total:
+        if not self.use_total_weighted:
             return None
-        return 100 * round(float(self.use_instant) / self.use_total, 4)
+        return 100 * round(float(self.use_instant) / self.use_total_weighted, 4)
 
     @cached_property
     def use_instant_percent_by_year(self):
         if not self.use_total:
             return None
-        return [100 * round(float(self.use_instant_by_year[year]) / self.use_total_by_year[year], 4) if self.use_total_by_year[year] else None for year in self.years]
+        return [100 * round(float(self.use_instant_by_year[year]) / self.use_total_weighted_by_year[year], 4) if self.use_total_weighted_by_year[year] else None for year in self.years]
 
     def to_dict_report(self):
         response = {"issn_l": self.issn_l,
