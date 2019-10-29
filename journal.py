@@ -334,13 +334,13 @@ class Journal(object):
     def use_instant_percent(self):
         if not self.use_total:
             return None
-        return round(float(self.use_instant) / self.use_total, 4)
+        return 100 * round(float(self.use_instant) / self.use_total, 4)
 
     @cached_property
     def use_instant_percent_by_year(self):
         if not self.use_total:
             return None
-        return [round(float(self.use_instant_by_year[year]) / self.use_total_by_year[year], 4) if self.use_total_by_year[year] else None for year in self.years]
+        return [100 * round(float(self.use_instant_by_year[year]) / self.use_total_by_year[year], 4) if self.use_total_by_year[year] else None for year in self.years]
 
     def to_dict_report(self):
         response = {"issn_l": self.issn_l,

@@ -145,7 +145,11 @@ class Scenario(object):
 
     @property
     def cost_saved_percent(self):
-        return round(float(self.cost_bigdeal_projected - self.cost) / self.cost_bigdeal_projected, 4)
+        return 100 * round(float(self.cost_bigdeal_projected - self.cost) / self.cost_bigdeal_projected, 4)
+
+    @property
+    def cost_spent_percent(self):
+        return 100 * round(float(self.cost) / self.cost_bigdeal_projected, 4)
 
     @property
     def use_instant(self):
@@ -163,13 +167,13 @@ class Scenario(object):
     def use_instant_percent(self):
         if not self.use_total_weighted:
             return None
-        return round(float(self.use_instant) / self.use_total_weighted, 4)
+        return 100 * round(float(self.use_instant) / self.use_total_weighted, 4)
 
     @property
     def use_instant_percent_by_year(self):
         if not self.use_total_weighted:
             return None
-        return [round(float(self.use_instant_by_year[year]) / self.use_total_weighted_by_year[year], 4) if self.use_total_weighted_by_year[year] else None for year in self.years]
+        return [100 * round(float(self.use_instant_by_year[year]) / self.use_total_weighted_by_year[year], 4) if self.use_total_weighted_by_year[year] else None for year in self.years]
 
 
 
@@ -249,7 +253,7 @@ class Scenario(object):
                 "_summary": {
                     "cost_scenario": self.cost,
                     "cost_bigdeal_projected": self.cost_bigdeal_projected,
-                    "cost_saved_percent": self.cost_saved_percent
+                    "cost_percent": self.cost_spent_percent
                 },
                 "journals": [j.to_dict_cost() for j in self.journals_sorted_use_total[0:pagesize]],
                 "journals_count": len(self.journals),
@@ -262,7 +266,7 @@ class Scenario(object):
         response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": {
-                    "cost_saved_percent": self.cost_saved_percent,
+                    "cost_percent": self.cost_spent_percent,
                     "num_journals_subscribed": len(self.subscribed),
                     "num_journals_total": len(self.journals),
                     "use_instant_percent_by_year": self.use_instant_percent_by_year,
@@ -295,7 +299,7 @@ class Scenario(object):
                 "_summary": {
                     "cost_scenario": self.cost,
                     "cost_bigdeal_projected": self.cost_bigdeal_projected,
-                    "cost_saved_percent": self.cost_saved_percent,
+                    "cost_percent": self.cost_spent_percent,
                     "num_journals_subscribed": len(self.subscribed),
                     "num_journals_total": len(self.journals),
                     "use_instant_percent": self.use_instant_percent
@@ -311,7 +315,7 @@ class Scenario(object):
                 "_summary": {
                     "cost_scenario": self.cost,
                     "cost_bigdeal_projected": self.cost_bigdeal_projected,
-                    "cost_saved_percent": self.cost_saved_percent,
+                    "cost_percent": self.cost_spent_percent,
                     "num_journals_subscribed": len(self.subscribed),
                     "num_journals_total": len(self.journals),
                     "use_instant_percent_by_year": self.use_instant_percent_by_year,
