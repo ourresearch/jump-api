@@ -47,10 +47,11 @@ def favicon():
     return redirect(url_for("static", filename="img/favicon.ico", _external=True, _scheme='https'))
 
 def get_clean_package(http_request_args):
-    package = http_request_args.get("package", "demo")
-    if package == "demo":
-        package = "uva_elsevier"
-    return package
+    return "uva_elsevier"
+    # package = http_request_args.get("package", "demo")
+    # if package == "demo":
+    #     package = "uva_elsevier"
+    # return package
 
 @app.route("/scenario/wizard", methods=["GET", "POST"])
 def jump_wizard_get():
