@@ -93,7 +93,7 @@ def jump_timeline_get():
     scenario = Scenario(package, scenario_input)
     return jsonify_fast(scenario.to_dict_timeline(pagesize))
 
-@app.route("/scenario/apc", methods=["GET", "POST"])
+@app.route("/scenario/apcs", methods=["GET", "POST"])
 def jump_apc_get():
     pagesize = int(request.args.get("pagesize", 100))
     scenario_input = request.get_json()
