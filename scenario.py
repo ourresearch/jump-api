@@ -341,13 +341,9 @@ class Scenario(object):
                     "cost_percent": self.cost_spent_percent,
                     "num_journals_subscribed": len(self.subscribed),
                     "num_journals_total": len(self.journals),
-                    "use_instant_percent_by_year": self.use_instant_percent_by_year,
                     "use_instant_percent": self.use_instant_percent,
-                    "use_unweighted": self.use_actual_unweighted_by_year,
-                    "use_weighted": self.use_actual_weighted_by_year,
                 },
-                "journals": [j.to_dict() for j in self.journals_sorted_cppu_delta],
-                "journals_count": len(self.journals),
+                "journals": [j.to_dict_slider() for j in self.journals_sorted_cppu_delta],
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages

@@ -188,8 +188,16 @@ class Journal(object):
         return [int(self.settings.ill_request_percent_of_delayed/float(100) * self.use_paywalled_by_year[year]) for year in self.years]
 
     @cached_property
+    def use_ill(self):
+        return round(np.mean(self.use_ill_by_year), 4)
+
+    @cached_property
     def use_other_delayed_by_year(self):
         return [self.use_paywalled_by_year[year] - self.use_ill_by_year[year] for year in self.years]
+
+    @cached_property
+    def use_other_delayed(self):
+        return round(np.mean(self.use_other_delayed_by_year), 4)
 
     @cached_property
     def use_backfile_by_year(self):
@@ -421,6 +429,27 @@ class Journal(object):
                 "use_actual_unweighted": self.use_actual_unweighted,
                 "use_actual_weighted": self.use_actual_weighted
                 }
+
+    def to_dict_slider(self):
+        response = {"issn_l": self.issn_l,
+                "title": self.title,
+                "subject": self.subject,
+                "use_instant": self.use_instant,
+                "use_total": self.use_total_weighted,
+                "cost_subscription": self.cost_subscription,
+                "cost_ill": self.cost_ill,
+                "cost_subscription_minus_ill": self.cost_subscription_minus_ill,
+                "cppu_delta_weighted": self.cppu_delta_weighted,
+                "cppu_weighted": self.cppu_weighted,
+                "subscribed": self.subscribed
+                }
+        response["use_groups_free_instant"] = {}
+        for group in use_groups_free_instant:
+            response["use_groups_free_instant"][group] = self.use_actual_weighted[group]
+        response["use_groups_if_subscribed"] = {"subscription": self.use_subscription}
+        response["use_groups_if_not_subscribed"] = {"ill": self.use_ill, "other_delayed": self.use_other_delayed}
+        return response
+
 
     def to_dict(self):
         return {"issn_l": self.issn_l,
