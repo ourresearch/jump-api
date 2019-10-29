@@ -188,18 +188,35 @@ class Scenario(object):
                 return journal
         return None
 
+
+
+
+
+
+
     def do_wizardly_things(self, spend):
         my_max = spend/100.0 * self.cost_bigdeal_projected
+
         my_spend_so_far = np.sum([j.cost_ill for j in self.journals])
+
         for journal in self.journals_sorted_cppu_delta:
             if journal.cost_subscription_minus_ill < 0:
                 my_spend_so_far += journal.cost_subscription_minus_ill
                 journal.set_subscribe()
+
         for journal in self.journals_sorted_cppu_delta:
             my_spend_so_far += journal.cost_subscription_minus_ill
             if my_spend_so_far > my_max:
                 return
             journal.set_subscribe()
+
+
+
+
+
+
+
+
 
     def to_dict_apc(self, pagesize):
         response = {
@@ -310,6 +327,27 @@ class Scenario(object):
                     "num_journals_total": len(self.journals),
                     "use_instant_percent": self.use_instant_percent
                 }
+            }
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
+        return response
+
+    def to_dict_slider(self):
+        response = {
+                "_settings": self.settings.to_dict(),
+                "_summary": {
+                    "cost_scenario": self.cost,
+                    "cost_bigdeal_projected": self.cost_bigdeal_projected,
+                    "cost_percent": self.cost_spent_percent,
+                    "num_journals_subscribed": len(self.subscribed),
+                    "num_journals_total": len(self.journals),
+                    "use_instant_percent_by_year": self.use_instant_percent_by_year,
+                    "use_instant_percent": self.use_instant_percent,
+                    "use_unweighted": self.use_actual_unweighted_by_year,
+                    "use_weighted": self.use_actual_weighted_by_year,
+                },
+                "journals": [j.to_dict() for j in self.journals_sorted_cppu_delta],
+                "journals_count": len(self.journals),
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages

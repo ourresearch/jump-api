@@ -430,9 +430,12 @@ class Journal(object):
                 "num_citations": self.num_citations,
                 "use_paywalled_unweighted": self.use_paywalled,
                 "use_paywalled_weighted": self.use_paywalled_weighted,
+                "use_instant": self.use_instant,
+                "use_total": self.use_total,
                 "cost_subscription": self.cost_subscription,
                 "cost_ill": self.cost_ill,
                 "cost_subscription_minus_ill": self.cost_subscription_minus_ill,
+                "cppu_delta_weighted": self.cppu_delta_weighted,
                 "cppu_unweighted": self.cppu_unweighted,
                 "cppu_weighted": self.cppu_weighted,
                 "subscribed": self.subscribed
