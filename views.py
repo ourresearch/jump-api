@@ -35,7 +35,7 @@ def after_request_stuff(resp):
     return resp
 
 
-@app.route('/', methods=["GET", "POST"])
+@app.route('/', methods=["GET", "POST", "POST"])
 def base_endpoint():
     return jsonify_fast({
         "version": "0.0.1",
@@ -52,7 +52,7 @@ def get_clean_package(http_request_args):
         package = "uva_elsevier"
     return package
 
-@app.route("/scenario/wizard", methods=["GET"])
+@app.route("/scenario/wizard", methods=["GET", "POST"])
 def jump_wizard_get():
     pagesize = int(request.args.get("pagesize", 100))
     package = get_clean_package(request.args)
@@ -62,63 +62,63 @@ def jump_wizard_get():
     return jsonify_fast(scenario.to_dict(pagesize))
 
 
-@app.route("/scenario/summary", methods=["GET"])
+@app.route("/scenario/summary", methods=["GET", "POST"])
 def jump_summary_get():
     package = get_clean_package(request.args)
     scenario = Scenario(package, request.args)
     return jsonify_fast(scenario.to_dict_summary())
 
-@app.route("/scenario", methods=["GET"])
-@app.route("/scenario/slider", methods=["GET"])
+@app.route("/scenario", methods=["GET", "POST"])
+@app.route("/scenario/slider", methods=["GET", "POST"])
 def jump_slider_get():
     pagesize = int(request.args.get("pagesize", 100))
     package = get_clean_package(request.args)
     scenario = Scenario(package, request.args)
     return jsonify_fast(scenario.to_dict(pagesize))
 
-@app.route("/scenario/timeline", methods=["GET"])
+@app.route("/scenario/timeline", methods=["GET", "POST"])
 def jump_timeline_get():
     pagesize = int(request.args.get("pagesize", 100))
     package = get_clean_package(request.args)
     scenario = Scenario(package, request.args)
     return jsonify_fast(scenario.to_dict_timeline(pagesize))
 
-@app.route("/scenario/apc", methods=["GET"])
+@app.route("/scenario/apc", methods=["GET", "POST"])
 def jump_apc_get():
     pagesize = int(request.args.get("pagesize", 100))
     package = get_clean_package(request.args)
     scenario = Scenario(package, request.args)
     return jsonify_fast(scenario.to_dict_apc(pagesize))
 
-@app.route("/scenario/cost", methods=["GET"])
+@app.route("/scenario/cost", methods=["GET", "POST"])
 def jump_cost_get():
     pagesize = int(request.args.get("pagesize", 100))
     package = get_clean_package(request.args)
     scenario = Scenario(package, request.args)
     return jsonify_fast(scenario.to_dict_cost(pagesize))
 
-@app.route("/scenario/journals", methods=["GET"])
+@app.route("/scenario/journals", methods=["GET", "POST"])
 def jump_journals_get():
     pagesize = int(request.args.get("pagesize", 100))
     package = get_clean_package(request.args)
     scenario = Scenario(package, request.args)
     return jsonify_fast(scenario.to_dict_journals(pagesize))
 
-@app.route("/scenario/fulfillment", methods=["GET"])
+@app.route("/scenario/fulfillment", methods=["GET", "POST"])
 def jump_fulfillment_get():
     pagesize = int(request.args.get("pagesize", 100))
     package = get_clean_package(request.args)
     scenario = Scenario(package, request.args)
     return jsonify_fast(scenario.to_dict_fulfillment(pagesize))
 
-@app.route("/scenario/report", methods=["GET"])
+@app.route("/scenario/report", methods=["GET", "POST"])
 def jump_report_get():
     pagesize = int(request.args.get("pagesize", 100))
     package = get_clean_package(request.args)
     scenario = Scenario(package, request.args)
     return jsonify_fast(scenario.to_dict_report(pagesize))
 
-@app.route("/scenario/impact", methods=["GET"])
+@app.route("/scenario/impact", methods=["GET", "POST"])
 def jump_impact_get():
     pagesize = int(request.args.get("pagesize", 100))
     package = get_clean_package(request.args)
@@ -126,7 +126,7 @@ def jump_impact_get():
     return jsonify_fast(scenario.to_dict_impact(pagesize))
 
 
-@app.route("/journal/issn_l/<issn_l>", methods=["GET"])
+@app.route("/journal/issn_l/<issn_l>", methods=["GET", "POST"])
 def jump_issn_get(issn_l):
     package = request.args.get("package", "demo")
     if package == "demo":
