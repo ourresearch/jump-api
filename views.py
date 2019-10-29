@@ -90,6 +90,20 @@ def jump_apc_get():
     pagesize = int(request.args.get("pagesize", 100))
     return jsonify_fast(scenario.to_dict_apc(pagesize))
 
+@app.route("/scenario/cost", methods=["GET"])
+def jump_cost_get():
+    package = get_clean_package(request.args)
+    scenario = Scenario(package, request.args)
+    pagesize = int(request.args.get("pagesize", 100))
+    return jsonify_fast(scenario.to_dict_cost(pagesize))
+
+@app.route("/scenario/journals", methods=["GET"])
+def jump_journals_get():
+    package = get_clean_package(request.args)
+    scenario = Scenario(package, request.args)
+    pagesize = int(request.args.get("pagesize", 100))
+    return jsonify_fast(scenario.to_dict_journals(pagesize))
+
 @app.route("/scenario/fulfillment", methods=["GET"])
 def jump_fulfillment_get():
     package = get_clean_package(request.args)

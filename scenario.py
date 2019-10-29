@@ -27,13 +27,13 @@ class Scenario(object):
         self.timing_messages = []
 
     @property
-    def journals_sorted_cpu(self):
-        self.journals.sort(key=lambda k: for_sorting(k.cpu_weighted), reverse=False)
+    def journals_sorted_cppu(self):
+        self.journals.sort(key=lambda k: for_sorting(k.cppu_weighted), reverse=False)
         return self.journals
 
     @property
-    def journals_sorted_cpu_delta(self):
-        self.journals.sort(key=lambda k: for_sorting(k.cpu_delta_weighted), reverse=False)
+    def journals_sorted_cppu_delta(self):
+        self.journals.sort(key=lambda k: for_sorting(k.cppu_delta_weighted), reverse=False)
         return self.journals
 
     @property
@@ -43,7 +43,7 @@ class Scenario(object):
 
     @cached_property
     def subscribed(self):
-        return [j for j in self.journals_sorted_cpu if j.subscribed]
+        return [j for j in self.journals_sorted_cppu if j.subscribed]
 
     @cached_property
     def num_citations_fuzzed_lookup(self):
@@ -120,7 +120,7 @@ class Scenario(object):
 
     @property
     def cost(self):
-        return round(sum([j.cost_actual for j in self.journals_sorted_cpu]), 2)
+        return round(sum([j.cost_actual for j in self.journals_sorted_cppu]), 2)
 
     @property
     def cost_bigdeal_projected_by_year(self):
@@ -170,11 +170,11 @@ class Scenario(object):
     def do_wizardly_things(self, spend):
         my_max = spend/100.0 * self.cost_bigdeal_projected
         my_spend_so_far = np.sum([j.cost_ill for j in self.journals])
-        for journal in self.journals_sorted_cpu_delta:
+        for journal in self.journals_sorted_cppu_delta:
             if journal.cost_subscription_minus_ill < 0:
                 my_spend_so_far += journal.cost_subscription_minus_ill
                 journal.set_subscribe()
-        for journal in self.journals_sorted_cpu_delta:
+        for journal in self.journals_sorted_cppu_delta:
             my_spend_so_far += journal.cost_subscription_minus_ill
             if my_spend_so_far > my_max:
                 return
@@ -207,6 +207,20 @@ class Scenario(object):
         return {"_timing": self.timing_messages,
                 "_settings": self.settings.to_dict(),
                 "journals": [j.to_dict_impact() for j in self.journals_sorted_use_total[0:pagesize]],
+                "journals_count": len(self.journals),
+            }
+
+    def to_dict_journals(self, pagesize):
+        return {"_timing": self.timing_messages,
+                "_settings": self.settings.to_dict(),
+                "journals": [j.to_dict() for j in self.journals_sorted_use_total[0:pagesize]],
+                "journals_count": len(self.journals),
+            }
+
+    def to_dict_cost(self, pagesize):
+        return {"_timing": self.timing_messages,
+                "_settings": self.settings.to_dict(),
+                "journals": [j.to_dict_cost() for j in self.journals_sorted_use_total[0:pagesize]],
                 "journals_count": len(self.journals),
             }
 
@@ -267,7 +281,7 @@ class Scenario(object):
                     "use_unweighted": self.use_actual_unweighted_by_year,
                     "use_weighted": self.use_actual_weighted_by_year,
                 },
-                "journals": [j.to_dict_timeline() for j in self.journals_sorted_cpu[0:pagesize]],
+                "journals": [j.to_dict() for j in self.journals_sorted_cppu[0:pagesize]],
                 "journals_count": len(self.journals),
             }
 

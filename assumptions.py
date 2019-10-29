@@ -5,7 +5,6 @@ import numpy as np
 
 class Assumptions(object):
     def __init__(self, http_request_args=None):
-        self.cost_docdel = 25
         self.cost_ill = 5
         self.cost_bigdeal_increase = 0.05
         self.cost_alacart_increase = 0.08
@@ -15,7 +14,6 @@ class Assumptions(object):
         self.social_networks_percent = 0.1
         self.weight_citation = 10
         self.weight_authorship = 100
-        self.include_docdel = False
         self.include_bronze = True
         self.include_submitted_version = True
 

@@ -116,19 +116,19 @@ class Journal(object):
         return round(np.mean(self.cost_subscription_by_year), 4)
 
     @cached_property
-    def cpu_unweighted(self):
+    def cppu_unweighted(self):
         if not self.use_paywalled:
             return None
         return round(self.cost_subscription/self.use_paywalled, 6)
 
     @cached_property
-    def cpu_weighted(self):
+    def cppu_weighted(self):
         if not self.use_paywalled_weighted:
             return None
         return round(self.cost_subscription/self.use_paywalled_weighted, 6)
 
     @cached_property
-    def cpu_delta_weighted(self):
+    def cppu_delta_weighted(self):
         if not self.use_paywalled_weighted:
             return None
         return round(self.cost_subscription_minus_ill/self.use_paywalled_weighted, 6)
@@ -406,6 +406,18 @@ class Journal(object):
                 "num_gold": None
                 }
 
+    def to_dict_cost(self):
+        return {"issn_l": self.issn_l,
+                "title": self.title,
+                "subject": self.subject,
+                "cost_subscription": self.cost_subscription,
+                "cost_ill": self.cost_ill,
+                "cost_subscription_minus_ill": self.cost_subscription_minus_ill,
+                "cppu_unweighted": self.cppu_unweighted,
+                "cppu_weighted": self.cppu_weighted,
+                "subscribed": self.subscribed
+                }
+    
     def to_dict_fulfillment(self):
         return {"issn_l": self.issn_l,
                 "title": self.title,
@@ -426,8 +438,8 @@ class Journal(object):
                 "cost_subscription": self.cost_subscription,
                 "cost_ill": self.cost_ill,
                 "cost_subscription_minus_ill": self.cost_subscription_minus_ill,
-                "cpu_unweighted": self.cpu_unweighted,
-                "cpu_weighted": self.cpu_weighted,
+                "cppu_unweighted": self.cppu_unweighted,
+                "cppu_weighted": self.cppu_weighted,
                 "subscribed": self.subscribed
                 }
 
