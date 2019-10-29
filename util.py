@@ -13,7 +13,7 @@ import os
 import collections
 import requests
 import heroku3
-import json
+import simplejson as json
 import copy
 from unidecode import unidecode
 from sqlalchemy import sql
@@ -21,6 +21,8 @@ from sqlalchemy import exc
 from subprocess import call
 from requests.adapters import HTTPAdapter
 import csv
+from flask import current_app
+from simplejson import dumps
 
 def str2bool(v):
   return v.lower() in ("yes", "true", "t", "1")
@@ -599,8 +601,6 @@ def is_same_publisher(publisher1, publisher2):
     return False
 
 
-from flask import current_app
-from json import dumps
 
 # from https://stackoverflow.com/a/50762571/596939
 def jsonify_fast(*args, **kwargs):

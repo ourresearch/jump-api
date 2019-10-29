@@ -14,7 +14,7 @@ import logging
 import sys
 import os
 import requests
-import json
+import simplejson as json
 import random
 import warnings
 import urlparse

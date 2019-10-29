@@ -400,13 +400,6 @@ class Journal(object):
         response["oa_embargo_months"] = self.oa_embargo_months
         return response
 
-    def to_dict_apc(self):
-        return {"issn_l": self.issn_l,
-                "title": self.title,
-                "apc": None,
-                "num_hybrid": None,
-                "num_gold": None
-                }
 
     def to_dict_cost(self):
         return {"issn_l": self.issn_l,

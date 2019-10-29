@@ -8,7 +8,7 @@ from flask import render_template
 from flask import jsonify
 from flask import url_for
 
-import json
+import simplejson as json
 import os
 import sys
 from time import time

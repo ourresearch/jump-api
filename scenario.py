@@ -14,6 +14,7 @@ from util import elapsed
 from util import for_sorting
 
 from journal import Journal
+from apc_journal import ApcJournal
 from assumptions import Assumptions
 
 
@@ -32,10 +33,14 @@ class Scenario(object):
         self.data = get_scenario_data_from_db(package)
         self.log_timing("get_scenario_data_from_db")
 
+        self.data["apc"] = get_apc_data_from_db(package)
+        self.log_timing("get_apc_data_from_db")
+
         # self.data["oa"] = get_oa_data_from_db(package)
         # self.log_timing("get_oa_data_from_db")
 
         self.journals = [Journal(issn_l, self.data, self) for issn_l in self.data["big_view_dict"]]
+        self.apc_journals = [ApcJournal(issn_l, self.data, self) for issn_l in self.data["apc"]]
         self.log_timing("make all journals")
 
     @property
@@ -204,8 +209,9 @@ class Scenario(object):
                     "num_gold_articles": None,
                     "num_hybrid_articles": None
                     },
-                "journals": [j.to_dict_apc() for j in self.journals_sorted_use_total[0:pagesize]],
-                "journals_count": len(self.journals),
+                "data": self.data["apc"],
+                "journals": [j.to_dict_apc() for j in self.apc_journals],
+                "journals_count": len(self.apc_journals),
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
@@ -434,6 +440,18 @@ def get_oa_data_from_db(package):
                     where package='{}'
                     and year >= 2014 and year < 2019
                     group by issn_l, year, fixed.oa_status
+                    """.format(package)
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+    my_dict = defaultdict(list)
+    for row in rows:
+        my_dict[row["issn_l"]] += [row]
+    return my_dict
+
+@file_cache.cache
+def get_apc_data_from_db(package):
+    command = """select * from jump_apc_authorships
                     """.format(package)
     with get_db_cursor() as cursor:
         cursor.execute(command)
