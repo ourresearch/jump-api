@@ -35,7 +35,7 @@ class ApcJournal(object):
 
     @cached_property
     def cost_subscription_2018(self):
-        return float(self.my_scenario_data_row["usa_usd"]) * (1 + self.settings.cost_content_fee_percent)
+        return float(self.my_scenario_data_row["usa_usd"]) * (1 + self.settings.cost_content_fee_percent/float(100))
 
     @cached_property
     def papers_2018(self):
@@ -63,7 +63,7 @@ class ApcJournal(object):
                 # "fractional_authorships_total_by_year": self.fractional_authorships_total_by_year,
                 # "apc_costs_historical_by_year": self.apc_costs_historical_by_year,
                 # "apc_costs_historical": self.apc_costs_historical,
-                # "year_historical": self.historical_years_by_year
+                "year_historical": self.historical_years_by_year
         }
 
     def __repr__(self):

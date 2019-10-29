@@ -48,7 +48,7 @@ class Journal(object):
 
     @cached_property
     def cost_subscription_2018(self):
-        return float(self.my_scenario_data_row["usa_usd"]) * (1 + self.settings.cost_content_fee_percent)
+        return float(self.my_scenario_data_row["usa_usd"]) * (1 + self.settings.cost_content_fee_percent/float(100))
 
     @cached_property
     def papers_2018(self):
@@ -107,7 +107,7 @@ class Journal(object):
 
     @cached_property
     def cost_subscription_by_year(self):
-        response = [int(((1+self.settings.cost_alacart_increase)**year) * self.cost_subscription_2018 )
+        response = [int(((1+self.settings.cost_alacart_increase/float(100))**year) * self.cost_subscription_2018 )
                                             for year in self.years]
         return response
 
@@ -181,11 +181,11 @@ class Journal(object):
 
     @cached_property
     def use_social_networks_by_year(self):
-        return [int(self.settings.social_networks_percent * self.use_total_by_year[year]) for year in self.years]
+        return [int(self.settings.social_networks_percent/float(100) * self.use_total_by_year[year]) for year in self.years]
 
     @cached_property
     def use_ill_by_year(self):
-        return [int(self.settings.ill_request_percent_of_delayed * self.use_paywalled_by_year[year]) for year in self.years]
+        return [int(self.settings.ill_request_percent_of_delayed/float(100) * self.use_paywalled_by_year[year]) for year in self.years]
 
     @cached_property
     def use_other_delayed_by_year(self):
@@ -227,7 +227,7 @@ class Journal(object):
 
         scaled = [0 for year in self.years]
         for year in self.years:
-            scaled[year] = (1 - self.settings.social_networks_percent) *\
+            scaled[year] = (1 - self.settings.social_networks_percent/float(100)) *\
                 sum([(total_use_by_age[age] * self.growth_scaling["downloads"][year] - oa_use_by_age[age] * self.growth_scaling["oa"][year])
                      for age in range(0, year+1)])
         scaled = [int(max(0, num)) for num in scaled]

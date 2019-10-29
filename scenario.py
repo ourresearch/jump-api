@@ -141,7 +141,7 @@ class Scenario(object):
 
     @property
     def cost_bigdeal_projected_by_year(self):
-        return [int(((1+self.settings.cost_bigdeal_increase)**year) * self.settings.cost_bigdeal )
+        return [int(((1+self.settings.cost_bigdeal_increase/float(100))**year) * self.settings.cost_bigdeal )
                                             for year in self.years]
 
     @property
@@ -210,7 +210,7 @@ class Scenario(object):
                     "num_hybrid_articles": None
                     },
                 "data": self.data["apc"],
-                "journals": [j.to_dict_apc() for j in self.apc_journals],
+                # "journals": [j.to_dict() for j in self.apc_journals],
                 "journals_count": len(self.apc_journals),
             }
         self.log_timing("to dict")
@@ -459,4 +459,23 @@ def get_apc_data_from_db(package):
     my_dict = defaultdict(list)
     for row in rows:
         my_dict[row["issn_l"]] += [row]
+
+    df = pd.DataFrame(rows)
+    df["apc"] = df["apc"].astype(float)
+    df.head()
+    df.tail(30)
+    df["authorship_fraction"] = df.num_authors_from_uni/df.num_authors_total
+    df["apc_fraction"] = df.apc * df["authorship_fraction"]
+    df.head()
+    a = df.groupby(["issn_l"]).apc_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'sum': 'foo',
+    'size': 'num_papers', "sum": "dollars"})
+    a["num_per_year"] = a.num_papers/5
+    a["dollars_per_year"] = a.dollars/5
+    print a["dollars_per_year"].sum()
+    # print a
+    print a.loc[a["issn_l"] == "0022-5223"]
+    b = df.groupby(["issn_l", "year"]).apc_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'sum': 'foo',
+    'size': 'num_papers', "sum": "dollars"})
+    print b.loc[b["issn_l"] == "0022-5223"]
+
     return my_dict
