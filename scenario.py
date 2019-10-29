@@ -206,6 +206,7 @@ class Scenario(object):
     def to_dict_impact(self, pagesize):
         return {"_timing": self.timing_messages,
                 "_settings": self.settings.to_dict(),
+                "_summary": {},
                 "journals": [j.to_dict_impact() for j in self.journals_sorted_use_total[0:pagesize]],
                 "journals_count": len(self.journals),
             }
@@ -213,6 +214,7 @@ class Scenario(object):
     def to_dict_journals(self, pagesize):
         return {"_timing": self.timing_messages,
                 "_settings": self.settings.to_dict(),
+                "_summary": {},
                 "journals": [j.to_dict() for j in self.journals_sorted_use_total[0:pagesize]],
                 "journals_count": len(self.journals),
             }
@@ -220,6 +222,11 @@ class Scenario(object):
     def to_dict_cost(self, pagesize):
         return {"_timing": self.timing_messages,
                 "_settings": self.settings.to_dict(),
+                "_summary": {
+                    "cost_scenario": self.cost,
+                    "cost_bigdeal_projected": self.cost_bigdeal_projected,
+                    "cost_saved_percent": self.cost_saved_percent
+                }
                 "journals": [j.to_dict_cost() for j in self.journals_sorted_use_total[0:pagesize]],
                 "journals_count": len(self.journals),
             }
@@ -242,11 +249,6 @@ class Scenario(object):
         return {"_timing": self.timing_messages,
                 "_settings": self.settings.to_dict(),
                 "_summary": {
-                    "cost_scenario": self.cost,
-                    "cost_bigdeal_projected": self.cost_bigdeal_projected,
-                    "cost_saved_percent": self.cost_saved_percent,
-                    "num_journals_subscribed": len(self.subscribed),
-                    "num_journals_total": len(self.journals),
                     "use_instant_percent_by_year": self.use_instant_percent_by_year,
                     "use_instant_percent": self.use_instant_percent
                      },
