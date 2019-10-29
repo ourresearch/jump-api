@@ -21,7 +21,7 @@ class Assumptions(object):
             for key in http_request_args:
                 try:
                     self.set_assumption(key, float(http_request_args.get(key)))
-                except ValueError:
+                except:
                     self.set_assumption(key, http_request_args.get(key))
             self.package = http_request_args.get("package", None)  # so get demo if that's what was used
 
