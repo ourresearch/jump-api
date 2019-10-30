@@ -5,9 +5,9 @@ import numpy as np
 import pandas as pd
 from collections import defaultdict
 import weakref
+from kids.cache import cache
 
 from app import use_groups
-from app import file_cache
 from app import get_db_cursor
 from time import time
 from util import elapsed
@@ -158,11 +158,11 @@ class Scenario(object):
 
     @property
     def cost_saved_percent(self):
-        return 100 * round(float(self.cost_bigdeal_projected - self.cost) / self.cost_bigdeal_projected, 4)
+        return round(100 * float(self.cost_bigdeal_projected - self.cost) / self.cost_bigdeal_projected, 4)
 
     @property
     def cost_spent_percent(self):
-        return 100 * round(float(self.cost) / self.cost_bigdeal_projected, 4)
+        return round(100 * float(self.cost) / self.cost_bigdeal_projected, 4)
 
     @property
     def use_instant(self):
@@ -180,7 +180,7 @@ class Scenario(object):
     def use_instant_percent(self):
         if not self.use_total_weighted:
             return None
-        return 100 * round(float(self.use_instant) / self.use_total_weighted, 4)
+        return round(100 * float(self.use_instant) / self.use_total_weighted, 4)
 
     @property
     def use_instant_percent_by_year(self):
@@ -211,18 +211,74 @@ class Scenario(object):
                 return
             journal.set_subscribe()
 
+    @cached_property
+    def historical_years_by_year(self):
+        return range(2014, 2019)
+
+
+    @property
+    def apc_journals_sorted_fractional_authorship(self):
+        self.apc_journals.sort(key=lambda k: for_sorting(k.fractional_authorships_total), reverse=True)
+        return self.apc_journals
+
+
+    @cached_property
+    def cost_apc_historical_by_year(self):
+        return [round(np.sum([j.cost_apc_historical_by_year[year] for j in self.apc_journals]), 4) for year in self.years]
+
+    @cached_property
+    def cost_apc_historical(self):
+        return round(np.mean(self.cost_apc_historical_by_year), 4)
+
+    @cached_property
+    def cost_apc_historical_hybrid_by_year(self):
+        return [round(np.sum([j.cost_apc_historical_by_year[year] for j in self.apc_journals if j.oa_status=="hybrid"]), 4) for year in self.years]
+
+    @cached_property
+    def cost_apc_historical_hybrid(self):
+        return round(np.mean(self.cost_apc_historical_hybrid_by_year), 4)
+
+    @cached_property
+    def cost_apc_historical_gold_by_year(self):
+        return [round(np.sum([j.cost_apc_historical_by_year[year] for j in self.apc_journals if j.oa_status=="gold"]), 4) for year in self.years]
+
+    @cached_property
+    def cost_apc_historical_gold(self):
+        return round(np.mean(self.cost_apc_historical_gold_by_year), 4)
+
+    @cached_property
+    def num_apc_papers_historical_by_year(self):
+        return [np.sum([j.num_apc_papers_historical_by_year[year] for j in self.apc_journals]) for year in self.years]
+
+    @cached_property
+    def num_apc_papers_historical(self):
+        return np.mean(self.num_apc_papers_historical_by_year)
+
+    @cached_property
+    def fractional_authorships_total_by_year(self):
+        return [round(np.sum([j.fractional_authorships_total_by_year[year] for j in self.apc_journals]), 4) for year in self.years]
+
+    @cached_property
+    def fractional_authorships_total(self):
+        return round(np.mean(self.fractional_authorships_total_by_year), 4)
 
     def to_dict_apc(self, pagesize):
         response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": {
-                    "apc_total": None,
-                    "num_gold_articles": None,
-                    "num_hybrid_articles": None
+                    "cost_apc_historical_by_year": self.cost_apc_historical_by_year,
+                    "cost_apc_historical": self.cost_apc_historical,
+                    "cost_apc_historical_gold_by_year": self.cost_apc_historical_gold_by_year,
+                    "cost_apc_historical_gold": self.cost_apc_historical_gold,
+                    "cost_apc_historical_hybrid_by_year": self.cost_apc_historical_hybrid_by_year,
+                    "cost_apc_historical_hybrid": self.cost_apc_historical_hybrid,
+                    "num_apc_papers_historical_by_year": self.num_apc_papers_historical_by_year,
+                    "num_apc_papers_historical": self.num_apc_papers_historical,
+                    "fractional_authorships_total_by_year": self.fractional_authorships_total_by_year,
+                    "fractional_authorships_total": self.fractional_authorships_total,
+                    "year_historical": self.historical_years_by_year
                     },
-                # "data": self.data["apc"],
-                "journals": [j.to_dict() for j in self.apc_journals],
-                "journals_count": len(self.apc_journals),
+                "journals": [j.to_dict() for j in self.apc_journals_sorted_fractional_authorship]
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
@@ -369,7 +425,7 @@ class Scenario(object):
 
 
 
-@file_cache.cache
+@cache
 def get_issn_ls_for_package(package):
     command = "select issn_l from unpaywall_journals_package_issnl_view"
     if package:
@@ -381,7 +437,7 @@ def get_issn_ls_for_package(package):
     return package_issn_ls
 
 
-@file_cache.cache
+@cache
 def get_scenario_data_from_db(package):
     timing = []
     section_time = time()
@@ -459,7 +515,7 @@ def get_scenario_data_from_db(package):
     return data
 
 
-@file_cache.cache
+@cache
 def get_oa_data_from_db(package):
     command = """select issn_l, year::numeric, fixed.oa_status, count(*) as num_articles 
                     from unpaywall u
@@ -477,7 +533,7 @@ def get_oa_data_from_db(package):
         my_dict[row["issn_l"]] += [row]
     return my_dict
 
-@file_cache.cache
+@cache
 def get_apc_data_from_db(package):
     command = """select * from jump_apc_authorships
                     """.format(package)

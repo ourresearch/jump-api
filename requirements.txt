@@ -8,7 +8,7 @@ gunicorn==19.9.0
 heroku3==3.3.0
 itsdangerous==0.24
 Jinja2==2.8
-joblib==0.14.0
+kids.cache==0.0.7
 monthdelta
 newrelic==4.20.0.120
 nose==1.3.7

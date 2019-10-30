@@ -4,13 +4,11 @@ from cached_property import cached_property
 import numpy as np
 from collections import defaultdict
 import weakref
+from kids.cache import cache
 
 from app import use_groups
 from app import use_groups_free_instant
-from app import file_cache
 from app import get_db_cursor
-
-
 
 
 class Journal(object):
@@ -390,13 +388,13 @@ class Journal(object):
     def use_instant_percent(self):
         if not self.use_total_weighted:
             return None
-        return 100 * round(float(self.use_instant) / self.use_total_weighted, 4)
+        return round(100 * float(self.use_instant) / self.use_total_weighted, 4)
 
     @cached_property
     def use_instant_percent_by_year(self):
         if not self.use_total:
             return None
-        return [100 * round(float(self.use_instant_by_year[year]) / self.use_total_weighted_by_year[year], 4) if self.use_total_weighted_by_year[year] else None for year in self.years]
+        return [round(100 * float(self.use_instant_by_year[year]) / self.use_total_weighted_by_year[year], 4) if self.use_total_weighted_by_year[year] else None for year in self.years]
 
     def to_dict_report(self):
         response = {"issn_l": self.issn_l,
@@ -524,7 +522,7 @@ class Journal(object):
 
 
 
-@file_cache.cache
+@cache
 def get_oa_history_from_db(issn_l):
     command = """select year::numeric, oa_status, count(*) as num_articles from unpaywall 
         where journal_issn_l = '{}'

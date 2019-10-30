@@ -22,7 +22,6 @@ import psycopg2
 import psycopg2.extras # needed though you wouldn't guess it
 from psycopg2.pool import ThreadedConnectionPool
 from contextlib import contextmanager
-import joblib
 
 from util import safe_commit
 from util import elapsed
@@ -66,8 +65,6 @@ for a_library in libraries_to_mum:
 # disable extra warnings
 requests.packages.urllib3.disable_warnings()
 warnings.filterwarnings("ignore", category=DeprecationWarning)
-
-file_cache = joblib.Memory(cachedir='./cache', verbose=2)
 
 app = Flask(__name__)
 
