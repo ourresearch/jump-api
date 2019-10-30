@@ -17,6 +17,9 @@ from journal import Journal
 from apc_journal import ApcJournal
 from assumptions import Assumptions
 
+def get_fresh_journal_list(issn_ls):
+    journals = [Journal(issn_l) for issn_l in issn_ls]
+    return journals
 
 class Scenario(object):
     years = range(0, 5)
@@ -42,15 +45,26 @@ class Scenario(object):
         # self.data["oa"] = get_oa_data_from_db(package)
         # self.log_timing("get_oa_data_from_db")
 
-        self.apc_journals = [ApcJournal(issn_l, self.data, self) for issn_l in self.data["apc"]["df"].issn_l.unique()]
+        self.log_timing("mint apc journals")
 
-        self.journals = [Journal(issn_l, self.data, self) for issn_l in self.data["big_view_dict"]]
+        # self.journals = [Journal(issn_l, self.data, self) for issn_l in self.data["big_view_dict"]]
+
+        self.journals = get_fresh_journal_list(self.data["big_view_dict"])
+        self.log_timing("mint regular journals")
+        [j.set_scenario(self) for j in self.journals]
+        self.log_timing("set self in journals")
+        [j.set_scenario_data(self.data) for j in self.journals]
+        self.log_timing("set data in journals")
+
         self.log_timing("make all journals")
         for journal in self.journals:
             if journal.issn_l in self.starting_subscriptions:
                 journal.set_subscribe()
         self.log_timing("subscribing to all journals")
 
+    @cached_property
+    def apc_journals(self):
+        return [ApcJournal(issn_l, self.data, self) for issn_l in self.data["apc"]["df"].issn_l.unique()]
 
     @cached_property
     def journals_sorted_cppu(self):

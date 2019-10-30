@@ -19,18 +19,26 @@ class Journal(object):
         "oa": [1.16, 1.24, 1.57, 1.83, 2.12]
     }
     
-    def __init__(self, issn_l, scenario_data, scenario):
-        self.scenario = weakref.proxy(scenario)
-        self.settings = self.scenario.settings
+    def __init__(self, issn_l, scenario_data=None, scenario=None):
+        self.set_scenario(scenario)
+        self.set_scenario_data(scenario_data)
         self.issn_l = issn_l
-        self._scenario_data = scenario_data
         self.subscribed = False
-        # dummy = self.to_dict()  # instantiate everything
 
+    def set_scenario(self, scenario):
+        if scenario:
+            self.scenario = weakref.proxy(scenario)
+            self.settings = self.scenario.settings
+        else:
+            self.scenario = None
+            self.settings = None
 
-    @cached_property
+    def set_scenario_data(self, scenario_data):
+        self._scenario_data = scenario_data
+
+    @property
     def my_scenario_data_row(self):
-        return self._scenario_data["big_view_dict"].get(self.issn_l, defaultdict(int))
+        return self._scenario_data["big_view_dict"][self.issn_l]
 
     @cached_property
     def title(self):
@@ -76,6 +84,13 @@ class Journal(object):
 
     def set_subscribe(self):
         self.subscribed = True
+        # invalidate cache
+        for key in self.__dict__:
+            if "actual" in key:
+                del self.__dict__[key]
+
+    def set_unsubscribe(self):
+        self.subscribed = False
         # invalidate cache
         for key in self.__dict__:
             if "actual" in key:
