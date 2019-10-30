@@ -45,23 +45,24 @@ class Scenario(object):
         self.apc_journals = [ApcJournal(issn_l, self.data, self) for issn_l in self.data["apc"]["df"].issn_l.unique()]
 
         self.journals = [Journal(issn_l, self.data, self) for issn_l in self.data["big_view_dict"]]
+        self.log_timing("make all journals")
         for journal in self.journals:
             if journal.issn_l in self.starting_subscriptions:
                 journal.set_subscribe()
+        self.log_timing("subscribing to all journals")
 
-        self.log_timing("make all journals")
 
-    @property
+    @cached_property
     def journals_sorted_cppu(self):
         self.journals.sort(key=lambda k: for_sorting(k.cppu_weighted), reverse=False)
         return self.journals
 
-    @property
+    @cached_property
     def journals_sorted_cppu_delta(self):
         self.journals.sort(key=lambda k: for_sorting(k.cppu_delta_weighted), reverse=False)
         return self.journals
 
-    @property
+    @cached_property
     def journals_sorted_use_total(self):
         self.journals.sort(key=lambda k: for_sorting(k.use_total_weighted), reverse=True)
         return self.journals
@@ -89,19 +90,19 @@ class Scenario(object):
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
 
-    @property
+    @cached_property
     def use_total_weighted_by_year(self):
         return [np.sum([journal.use_total_weighted_by_year[year] for journal in self.journals]) for year in range(0, 5)]
 
-    @property
+    @cached_property
     def use_total_unweighted_by_year(self):
         return [np.sum([journal.use_total_by_year[year] for journal in self.journals]) for year in range(0, 5)]
 
-    @property
+    @cached_property
     def use_total_weighted(self):
         return round(np.mean(self.use_total_weighted_by_year), 4)
 
-    @property
+    @cached_property
     def use_total_unweighted(self):
         return round(np.mean(self.use_total_unweighted_by_year), 4)
 
@@ -112,28 +113,28 @@ class Scenario(object):
             use[group] = [np.sum([journal.use_actual_unweighted_by_year[group][year] for journal in self.journals]) for year in range(0, 5)]
         return use
 
-    @property
+    @cached_property
     def use_actual_weighted_by_year(self):
         use = {}
         for group in use_groups:
             use[group] = [np.sum([journal.use_actual_weighted_by_year[group][year] for journal in self.journals]) for year in range(0, 5)]
         return use
 
-    @property
+    @cached_property
     def use_unweighted(self):
         use = {}
         for group in use_groups:
             use[group] = int(np.mean(self.use_actual_unweighted_by_year[group]))
         return use
 
-    @property
+    @cached_property
     def use_actual_weighted(self):
         use = {}
         for group in use_groups:
             use[group] = int(np.mean(self.use_actual_weighted_by_year[group]))
         return use
 
-    @property
+    @cached_property
     def cost_by_group(self):
         # TODO this needs to be redone by year
         cost = {}
@@ -143,32 +144,32 @@ class Scenario(object):
         cost["ill"] = round(self.use_unweighted["ill"] * self.settings.cost_ill, 2)
         return cost
 
-    @property
+    @cached_property
     def cost(self):
         return round(sum([j.cost_actual for j in self.journals_sorted_cppu]), 2)
 
-    @property
+    @cached_property
     def cost_bigdeal_projected_by_year(self):
         return [int(((1+self.settings.cost_bigdeal_increase/float(100))**year) * self.settings.cost_bigdeal )
                                             for year in self.years]
 
-    @property
+    @cached_property
     def cost_bigdeal_projected(self):
         return round(np.mean(self.cost_bigdeal_projected_by_year), 4)
 
-    @property
+    @cached_property
     def cost_saved_percent(self):
         return round(100 * float(self.cost_bigdeal_projected - self.cost) / self.cost_bigdeal_projected, 4)
 
-    @property
+    @cached_property
     def cost_spent_percent(self):
         return round(100 * float(self.cost) / self.cost_bigdeal_projected, 4)
 
-    @property
+    @cached_property
     def use_instant(self):
         return round(np.mean(self.use_instant_by_year), 4)
 
-    @property
+    @cached_property
     def use_instant_by_year(self):
         return [self.use_actual_weighted_by_year["social_networks"][year] +
                 self.use_actual_weighted_by_year["backfile"][year] +
@@ -176,13 +177,13 @@ class Scenario(object):
                 self.use_actual_weighted_by_year["oa"][year]
                 for year in self.years]
 
-    @property
+    @cached_property
     def use_instant_percent(self):
         if not self.use_total_weighted:
             return None
         return round(100 * float(self.use_instant) / self.use_total_weighted, 4)
 
-    @property
+    @cached_property
     def use_instant_percent_by_year(self):
         if not self.use_total_weighted:
             return None
@@ -216,7 +217,7 @@ class Scenario(object):
         return range(2014, 2019)
 
 
-    @property
+    @cached_property
     def apc_journals_sorted_fractional_authorship(self):
         self.apc_journals.sort(key=lambda k: for_sorting(k.fractional_authorships_total), reverse=True)
         return self.apc_journals

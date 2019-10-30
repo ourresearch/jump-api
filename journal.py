@@ -25,7 +25,7 @@ class Journal(object):
         self.issn_l = issn_l
         self._scenario_data = scenario_data
         self.subscribed = False
-        dummy = self.to_dict()  # instantiate everything
+        # dummy = self.to_dict()  # instantiate everything
 
 
     @cached_property

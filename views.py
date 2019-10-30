@@ -19,10 +19,17 @@ from util import jsonify_fast
 from util import str2bool
 from util import elapsed
 
+def get_clean_package(http_request_args):
+    return "uva_elsevier"
+    # package = http_request_args.get("package", "demo")
+    # if package == "demo":
+    #     package = "uva_elsevier"
+    # return package
+
 # warm the cache
 print "warming the cache"
 start_time = time()
-Scenario("demo")
+Scenario(get_clean_package(None))
 print "done, took {} seconds".format(elapsed(start_time, 2))
 
 @app.after_request
@@ -45,13 +52,6 @@ def base_endpoint():
 @app.route('/favicon.ico')
 def favicon():
     return redirect(url_for("static", filename="img/favicon.ico", _external=True, _scheme='https'))
-
-def get_clean_package(http_request_args):
-    return "uva_elsevier"
-    # package = http_request_args.get("package", "demo")
-    # if package == "demo":
-    #     package = "uva_elsevier"
-    # return package
 
 @app.route("/scenario/wizard", methods=["GET", "POST"])
 def jump_wizard_get():
