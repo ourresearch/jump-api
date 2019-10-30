@@ -29,6 +29,9 @@ class Scenario(object):
         self.timing_messages = []; 
         self.section_time = time()        
         self.settings = Assumptions(http_request_args)
+        self.starting_subscriptions = []
+        if http_request_args:
+            self.starting_subscriptions += http_request_args.get("subrs", []) + http_request_args.get("customSubrs", [])
 
         self.data = get_scenario_data_from_db(package)
         self.log_timing("get_scenario_data_from_db")
@@ -39,8 +42,13 @@ class Scenario(object):
         # self.data["oa"] = get_oa_data_from_db(package)
         # self.log_timing("get_oa_data_from_db")
 
+        self.apc_journals = [ApcJournal(issn_l, self.data, self) for issn_l in self.data["apc"]["df"].issn_l.unique()]
+
         self.journals = [Journal(issn_l, self.data, self) for issn_l in self.data["big_view_dict"]]
-        self.apc_journals = [ApcJournal(issn_l, self.data, self) for issn_l in self.data["apc"]]
+        for journal in self.journals:
+            if journal.issn_l in self.starting_subscriptions:
+                journal.set_subscribe()
+
         self.log_timing("make all journals")
 
     @property
@@ -180,18 +188,11 @@ class Scenario(object):
             return None
         return [100 * round(float(self.use_instant_by_year[year]) / self.use_total_weighted_by_year[year], 4) if self.use_total_weighted_by_year[year] else None for year in self.years]
 
-
-
     def get_journal(self, issn_l):
         for journal in self.journals:
             if journal.issn_l == issn_l:
                 return journal
         return None
-
-
-
-
-
 
 
     def do_wizardly_things(self, spend):
@@ -211,13 +212,6 @@ class Scenario(object):
             journal.set_subscribe()
 
 
-
-
-
-
-
-
-
     def to_dict_apc(self, pagesize):
         response = {
                 "_settings": self.settings.to_dict(),
@@ -226,8 +220,8 @@ class Scenario(object):
                     "num_gold_articles": None,
                     "num_hybrid_articles": None
                     },
-                "data": self.data["apc"],
-                # "journals": [j.to_dict() for j in self.apc_journals],
+                # "data": self.data["apc"],
+                "journals": [j.to_dict() for j in self.apc_journals],
                 "journals_count": len(self.apc_journals),
             }
         self.log_timing("to dict")
@@ -490,26 +484,13 @@ def get_apc_data_from_db(package):
     with get_db_cursor() as cursor:
         cursor.execute(command)
         rows = cursor.fetchall()
-    my_dict = defaultdict(list)
-    for row in rows:
-        my_dict[row["issn_l"]] += [row]
 
     df = pd.DataFrame(rows)
-    df["apc"] = df["apc"].astype(float)
-    df.head()
-    df.tail(30)
+    # df["apc"] = df["apc"].astype(float)
+    df["year"] = df["year"].astype(int)
     df["authorship_fraction"] = df.num_authors_from_uni/df.num_authors_total
-    df["apc_fraction"] = df.apc * df["authorship_fraction"]
-    df.head()
-    a = df.groupby(["issn_l"]).apc_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'sum': 'foo',
-    'size': 'num_papers', "sum": "dollars"})
-    a["num_per_year"] = a.num_papers/5
-    a["dollars_per_year"] = a.dollars/5
-    print a["dollars_per_year"].sum()
-    # print a
-    print a.loc[a["issn_l"] == "0022-5223"]
-    b = df.groupby(["issn_l", "year"]).apc_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'sum': 'foo',
-    'size': 'num_papers', "sum": "dollars"})
-    print b.loc[b["issn_l"] == "0022-5223"]
+    df["apc_fraction"] = df["apc"].astype(float) * df["authorship_fraction"]
+    df_by_issn_l_and_year = df.groupby(["issn_l", "year"]).apc_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'size': 'num_papers', "sum": "dollars"})
 
+    my_dict = {"df": df, "df_by_issn_l_and_year": df_by_issn_l_and_year}
     return my_dict
