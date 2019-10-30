@@ -102,8 +102,8 @@ def jump_apc_get():
     scenario = Scenario(package, scenario_input)
     return jsonify_fast(scenario.to_dict_apc(pagesize))
 
-@app.route("/scenario/cost", methods=["GET", "POST"])
-def jump_cost_get():
+@app.route("/scenario/costs", methods=["GET", "POST"])
+def jump_costs_get():
     pagesize = int(request.args.get("pagesize", 100))
     scenario_input = request.get_json()
     if not scenario_input:
