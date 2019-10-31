@@ -403,13 +403,13 @@ class Journal(object):
     @cached_property
     def use_instant_percent(self):
         if not self.use_total_weighted:
-            return None
+            return 0
         return round(100 * float(self.use_instant) / self.use_total_weighted, 4)
 
     @cached_property
     def use_instant_percent_by_year(self):
         if not self.use_total:
-            return None
+            return 0
         return [round(100 * float(self.use_instant_by_year[year]) / self.use_total_weighted_by_year[year], 4) if self.use_total_weighted_by_year[year] else None for year in self.years]
 
     def to_dict_report(self):
@@ -442,6 +442,20 @@ class Journal(object):
             response["authorships"] = round(self.num_authorships, 1)
         return response
 
+    def to_dict_overview(self):
+        response = OrderedDict()
+        response["meta"] = {"issn_l": self.issn_l,
+                    "title": self.title,
+                    "subject": self.subject,
+                    "subscribed": self.subscribed}
+        if self.cppu_weighted:
+            response["cppu"] = round(self.cppu_weighted, 2)
+        else:
+            response["cppu"] = None
+        response["use"] = int(self.use_total_weighted)
+        response["value"] = int(self.use_instant_percent)
+        response["cost"] = int(self.cost_actual)
+        return response
 
     def to_dict_timeline(self):
         response = {"issn_l": self.issn_l,

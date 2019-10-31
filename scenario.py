@@ -147,6 +147,14 @@ class Scenario(object):
         return use
 
     @cached_property
+    def use_paywalled(self):
+        return self.use_actual_weighted["subscription"] + self.use_actual_weighted["ill"] + self.use_actual_weighted["other_delayed"]
+
+    @cached_property
+    def cppu(self):
+        return round(self.cost / self.use_paywalled, 2)
+
+    @cached_property
     def cost_by_group(self):
         # TODO this needs to be redone by year
         cost = {}
@@ -193,7 +201,7 @@ class Scenario(object):
     def use_instant_percent(self):
         if not self.use_total_weighted:
             return None
-        return round(100 * float(self.use_instant) / self.use_total_weighted, 4)
+        return round(100 * float(self.use_instant) / self.use_total_weighted, 2)
 
     @cached_property
     def use_instant_percent_by_year(self):
@@ -329,6 +337,8 @@ class Scenario(object):
     def to_dict_impact(self, pagesize):
         response = {
                 "_settings": self.settings.to_dict(),
+                "name": "Institutional Value",
+                "description": "Understand journal use by your institution.",
                 "figure": [
                     {"label": "Downloads", "percent": 100*self.use_total_unweighted/self.use_total_weighted},
                     {"label": "Citations", "percent": self.num_citations_weight_percent},
@@ -346,12 +356,19 @@ class Scenario(object):
         response["_timing"] = self.timing_messages
         return response
 
-    def to_dict_journals(self, pagesize):
+    def to_dict_overview(self, pagesize):
         response = {
                 "_settings": self.settings.to_dict(),
-                "_summary": {},
-                "journals": [j.to_dict() for j in self.journals_sorted_use_total[0:pagesize]],
-                "journals_count": len(self.journals),
+                "name": "Overview",
+                "description": "Understand your scenario at the journal level.",
+                "figure": [],
+                "headers": [
+                        {"text": "Cost per paid use", "value": "cppu", "percent": None, "raw": self.cppu},
+                        {"text": "Usage", "value": "use", "percent": None, "raw": self.use_total_weighted},
+                        {"text": "Instant Usage", "value": "instant_use_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent},
+                        {"text": "Cost", "value": "cost", "percent": None, "raw": self.cost},
+                ],
+                "journals": [j.to_dict_overview() for j in self.journals_sorted_use_total[0:pagesize]],
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
