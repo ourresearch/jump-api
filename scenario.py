@@ -336,6 +336,14 @@ class Scenario(object):
     def use_peer_reviewed(self):
         return int(np.sum([j.use_oa_peer_reviewed_weighted for j in self.journals]))
 
+    @cached_property
+    def use_counter_multiplier(self):
+        return round(np.mean([j.use_counter_multiplier for j in self.journals]), 4)
+
+    @cached_property
+    def use_weight_multiplier(self):
+        return round(np.mean([j.use_weight_multiplier for j in self.journals]), 4)
+
 
     def to_dict_fulfillment(self, pagesize):
         response = {
@@ -381,11 +389,11 @@ class Scenario(object):
                 "description": "Understand the Open Access availability of articles in journals.",
                 "figure": [],
                 "headers": [
-                        {"text": "OA Usage Percent", "value": "use_oa_percent", "percent": int(float(100)*self.use_oa/self.use_total_weighted), "raw": self.use_oa},
-                        {"text": "Green", "value": "use_green_percent", "percent": int(float(100)*self.use_green/self.use_total_weighted), "raw": self.use_green},
-                        {"text": "Hybrid", "value": "use_hybrid_percent", "percent": int(float(100)*self.use_hybrid/self.use_total_weighted), "raw": self.use_hybrid},
-                        {"text": "Bronze", "value": "use_bronze_percent", "percent": int(float(100)*self.use_bronze/self.use_total_weighted), "raw": self.use_bronze},
-                        {"text": "Peer-reviewed", "value": "use_peer_reviewed_percent", "percent": int(float(100)*self.use_peer_reviewed/self.use_total_weighted), "raw": self.use_peer_reviewed},
+                        {"text": "Percent of Usage that is OA", "value": "use_oa_percent", "percent": int(float(100)*self.use_oa/self.use_total_weighted), "raw": self.use_oa},
+                        {"text": "Percent of Usage that is Green OA", "value": "use_green_percent", "percent": int(float(100)*self.use_green/self.use_total_weighted), "raw": self.use_green},
+                        {"text": "Percent of Usage that is Hybrid OA", "value": "use_hybrid_percent", "percent": int(float(100)*self.use_hybrid/self.use_total_weighted), "raw": self.use_hybrid},
+                        {"text": "Percent of Usage that is Bronze OA", "value": "use_bronze_percent", "percent": int(float(100)*self.use_bronze/self.use_total_weighted), "raw": self.use_bronze},
+                        {"text": "Percent of Usage that is Peer-reviewed OA", "value": "use_peer_reviewed_percent", "percent": int(float(100)*self.use_peer_reviewed/self.use_total_weighted), "raw": self.use_peer_reviewed},
                 ],
                 "journals": [j.to_dict_oa() for j in self.journals_sorted_use_total[0:pagesize]],
             }
@@ -401,15 +409,14 @@ class Scenario(object):
                 "name": "Institutional Value",
                 "description": "Understand journal use by your institution.",
                 "figure": [
-                    {"label": "Downloads", "percent": 100*self.use_total_unweighted/self.use_total_weighted},
-                    {"label": "Citations", "percent": self.num_citations_weight_percent},
-                    {"label": "Authorships", "percent": self.num_authorships_weight_percent},
                 ],
                 "headers": [
                         {"text": "Total Usage", "value":"total_usage", "percent": 100, "raw": self.use_total_weighted},
                         {"text": "Downloads", "value":"downloads", "percent": 100*self.use_total_unweighted/self.use_total_weighted, "raw": self.use_total_unweighted},
                         {"text": "Citations", "value":"citations", "percent": self.num_citations_weight_percent, "raw": self.num_citations},
                         {"text": "Authorships", "value":"authorships", "percent": self.num_authorships_weight_percent, "raw": self.num_authorships},
+                        {"text": "Multiplier for reading", "value":"use_weight_multiplier", "percent": None, "raw": self.use_weight_multiplier},
+                        {"text": "Multipler for interaction", "value":"use_counter_multiplier", "percent": None, "raw": self.use_counter_multiplier},
                 ],
                 "journals": [j.to_dict_impact() for j in self.journals_sorted_use_total[0:pagesize]],
             }

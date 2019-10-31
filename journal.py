@@ -240,7 +240,7 @@ class Journal(object):
     def use_oa_by_year(self):
         use_oa_before_counter_correction = [self.my_scenario_data_row["downloads_total_oa"] for year in self.years]
         use_oa_before_counter_correction = [val if val else 0 for val in use_oa_before_counter_correction]
-        use_oa_scaled_by_counter = [num * self.use_multiplier_from_counter for num in use_oa_before_counter_correction]
+        use_oa_scaled_by_counter = [num * self.use_counter_multiplier for num in use_oa_before_counter_correction]
         scaled = [int(self.oa_recall_scaling_factor * use_oa_scaled_by_counter[year] * self.growth_scaling["oa"][year]) for year in self.years]
         scaled = [min(self.use_total_by_year[year], scaled[year]) for year in self.years]
         return scaled
@@ -260,7 +260,7 @@ class Journal(object):
     def use_total_by_year(self):
         use_total_before_counter_correction = [self.my_scenario_data_row["downloads_total"] for year in self.years]
         use_total_before_counter_correction = [val if val else 0 for val in use_total_before_counter_correction]
-        use_total_scaled_by_counter = [num * self.use_multiplier_from_counter for num in use_total_before_counter_correction]
+        use_total_scaled_by_counter = [num * self.use_counter_multiplier for num in use_total_before_counter_correction]
         scaled = [int(use_total_scaled_by_counter[year] * self.growth_scaling["downloads"][year]) for year in self.years]
         return scaled
 
@@ -288,7 +288,7 @@ class Journal(object):
     def use_total_by_age(self):
         total_use_by_age_before_counter_correction = [self.my_scenario_data_row["downloads_{}y".format(age)] for age in self.years]
         total_use_by_age_before_counter_correction = [val if val else 0 for val in total_use_by_age_before_counter_correction]
-        use_total_by_age = [num * self.use_multiplier_from_counter for num in total_use_by_age_before_counter_correction]
+        use_total_by_age = [num * self.use_counter_multiplier for num in total_use_by_age_before_counter_correction]
         return use_total_by_age
 
     @cached_property
@@ -301,7 +301,7 @@ class Journal(object):
     def use_paywalled_by_year(self):
         oa_use_by_age_before_counter_correction = [self.my_scenario_data_row["downloads_{}y_oa".format(age)] for age in self.years]
         oa_use_by_age_before_counter_correction = [val if val else 0 for val in oa_use_by_age_before_counter_correction]
-        oa_use_by_age = [num * self.use_multiplier_from_counter for num in oa_use_by_age_before_counter_correction]
+        oa_use_by_age = [num * self.use_counter_multiplier for num in oa_use_by_age_before_counter_correction]
 
         scaled = [0 for year in self.years]
         for year in self.years:
@@ -374,7 +374,7 @@ class Journal(object):
         return weights_addition
 
     @cached_property
-    def use_multiplier_from_counter(self):
+    def use_counter_multiplier(self):
         try:
             counter_for_this_journal = self._scenario_data["counter_dict"][self.issn_l]
             counter_multiplier = float(counter_for_this_journal) / self.use_total_before_counter_correction
@@ -561,6 +561,8 @@ class Journal(object):
             response["authorships"] = int(self.num_authorships)
         else:
             response["authorships"] = round(self.num_authorships, 1)
+        response["use_weight_multiplier"] = self.use_weight_multiplier
+        response["use_counter_multiplier"] = self.use_counter_multiplier            
         return response
 
     def to_dict_overview(self):
@@ -621,6 +623,15 @@ class Journal(object):
         response["use_actual_unweighted_by_year"] = self.use_actual_unweighted_by_year
         response["use_actual_unweighted"] = self.use_actual_unweighted
         response["oa_embargo_months"] = self.oa_embargo_months
+        response["num_papers"] = self.num_papers
+        response["num_green_historical_by_year"] = self.num_green_historical_by_year
+        response["num_green_historical"] = self.num_green_historical
+        response["use_oa_green"] = self.use_oa_green
+        response["use_oa_green_weighted"] = self.use_oa_green_weighted
+        response["use_weight_multiplier"] = self.use_weight_multiplier
+        response["use_counter_multiplier"] = self.use_counter_multiplier
+        response["use_total_by_age"] = self.use_total_by_age
+        response["use_total_per_paper_by_age"] = self.use_total_per_paper_by_age
         return response
 
     def to_dict_oa(self):
@@ -634,16 +645,7 @@ class Journal(object):
         response["use_hybrid_percent"] = int(float(100)*self.use_oa_hybrid_weighted/self.use_total_weighted)
         response["use_bronze_percent"] = int(float(100)*self.use_oa_bronze_weighted/self.use_total_weighted)
         response["use_peer_reviewed_percent"] =  int(float(100)*self.use_oa_peer_reviewed_weighted/self.use_total_weighted)
-        response["use_oa_green_weighted"] = self.use_oa_green_weighted
-        response["use_total_weighted"] = self.use_total_weighted
         response["num_papers"] = self.num_papers
-        response["num_green_historical_by_year"] = self.num_green_historical_by_year
-        response["num_green_historical"] = self.num_green_historical
-        response["use_oa_green"] = self.use_oa_green
-        response["use_oa_green_weighted"] = self.use_oa_green_weighted
-        response["use_weight_multiplier"] = self.use_weight_multiplier
-        response["use_total_by_age"] = self.use_total_by_age
-        response["use_total_per_paper_by_age"] = self.use_total_per_paper_by_age
         return response
 
     def to_dict_fulfillment(self):
