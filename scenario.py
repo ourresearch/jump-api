@@ -202,13 +202,13 @@ class Scenario(object):
     @cached_property
     def use_instant_percent(self):
         if not self.use_total_weighted:
-            return None
+            return 0
         return round(100 * float(self.use_instant) / self.use_total_weighted, 2)
 
     @cached_property
     def use_instant_percent_by_year(self):
         if not self.use_total_weighted:
-            return None
+            return [0 for year in self.years]
         return [100 * round(float(self.use_instant_by_year[year]) / self.use_total_weighted_by_year[year], 4) if self.use_total_weighted_by_year[year] else None for year in self.years]
 
     def get_journal(self, issn_l):
@@ -310,7 +310,10 @@ class Scenario(object):
 
     @cached_property
     def use_subscription(self):
-        return int(np.sum([j.use_actual_weighted["subscription"] for j in self.journals]))
+        response = int(np.sum([j.use_actual_weighted["subscription"] for j in self.journals]))
+        if not response:
+            response = 0.0
+        return response
 
     @cached_property
     def use_ill(self):
@@ -344,22 +347,13 @@ class Scenario(object):
     def use_weight_multiplier(self):
         return round(np.mean([j.use_weight_multiplier for j in self.journals]), 4)
 
+    @cached_property
+    def use_subscription_percent(self):
+        return int(float(100)*self.use_subscription/self.use_total_weighted)
 
-
-    def to_dict_fulfillment(self, pagesize):
-        response = {
-                "_settings": self.settings.to_dict(),
-                "_summary": {
-                    "use_unweighted": self.use_actual_unweighted_by_year,
-                    "use_weighted": self.use_actual_weighted_by_year,
-                    },
-                "journals": [j.to_dict_fulfillment() for j in self.journals_sorted_use_total[0:pagesize]],
-                "journals_count": len(self.journals),
-            }
-        self.log_timing("to dict")
-        response["_timing"] = self.timing_messages
-        return response
-
+    @cached_property
+    def use_free_instant_percent(self):
+        return self.use_instant_percent - self.use_subscription_percent
 
     def to_dict_fulfillment(self, pagesize):
         response = {
@@ -488,7 +482,7 @@ class Scenario(object):
                     "num_journals_subscribed": len(self.subscribed),
                     "num_journals_total": len(self.journals),
                     "use_instant_percent_by_year": self.use_instant_percent_by_year,
-                    "use_instant_percent": self.use_instant_percent
+                    "use_instant_percent": self.use_instant_percent,
                     },
                 "journals": [j.to_dict_report() for j in self.journals_sorted_use_total[0:pagesize]],
                 "journals_count": len(self.journals),
@@ -520,7 +514,9 @@ class Scenario(object):
                     "cost_percent": self.cost_spent_percent,
                     "num_journals_subscribed": len(self.subscribed),
                     "num_journals_total": len(self.journals),
-                    "use_instant_percent": self.use_instant_percent
+                    "use_instant_percent": self.use_instant_percent,
+                    "use_free_instant_percent": self.use_free_instant_percent,
+                    "use_subscription_percent": self.use_subscription_percent
                 }
             }
         self.log_timing("to dict")

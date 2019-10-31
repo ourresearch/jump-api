@@ -6,6 +6,7 @@ from collections import defaultdict
 import weakref
 from kids.cache import cache
 from collections import OrderedDict
+from util import str2bool
 
 from app import use_groups
 from app import use_groups_free_instant
@@ -445,12 +446,12 @@ class Journal(object):
         if only_peer_reviewed:
             submitted = "no_submitted"
         else:
-            if self.settings.include_submitted_version:
+            if str2bool(self.settings.include_submitted_version):
                 submitted = "with_submitted"
             else:
                 submitted = "no_submitted"
 
-        if self.settings.include_bronze:
+        if str2bool(self.settings.include_bronze):
             bronze = "with_bronze"
         else:
             bronze = "no_bronze"
