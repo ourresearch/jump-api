@@ -296,6 +296,42 @@ class Scenario(object):
     def num_authorships_weight_percent(self):
         return (100*self.settings.weight_authorship*self.num_authorships)/self.use_total_weighted
 
+    @cached_property
+    def use_social_networks(self):
+        return int(np.sum([j.use_actual_weighted["social_networks"] for j in self.journals]))
+
+    @cached_property
+    def use_oa(self):
+        return int(np.sum([j.use_actual_weighted["oa"] for j in self.journals]))
+
+    @cached_property
+    def use_backfile(self):
+        return int(np.sum([j.use_actual_weighted["backfile"] for j in self.journals]))
+
+    @cached_property
+    def use_subscription(self):
+        return int(np.sum([j.use_actual_weighted["subscription"] for j in self.journals]))
+
+    @cached_property
+    def use_ill(self):
+        return int(np.sum([j.use_actual_weighted["ill"] for j in self.journals]))
+
+    @cached_property
+    def use_green(self):
+        return int(np.sum([j.use_oa_green_weighted for j in self.journals]))
+
+    @cached_property
+    def use_hybrid(self):
+        return int(np.sum([j.use_oa_hybrid_weighted for j in self.journals]))
+
+    @cached_property
+    def use_bronze(self):
+        return int(np.sum([j.use_oa_bronze_weighted for j in self.journals]))
+
+    @cached_property
+    def use_peer_reviewed(self):
+        return int(np.sum([j.use_oa_peer_reviewed_weighted for j in self.journals]))
+
 
     def to_dict_fulfillment(self, pagesize):
         response = {
@@ -310,6 +346,50 @@ class Scenario(object):
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
         return response
+
+
+    def to_dict_fulfillment(self, pagesize):
+        response = {
+                "_settings": self.settings.to_dict(),
+                "name": "Fulfillment",
+                "description": "Understand how uses will be filled, at the journal level.",
+                "figure": [],
+                "headers": [
+                        {"text": "Instant Usage Percent", "value": "instant_use_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent},
+                        {"text": "ASNs", "value": "use_asns", "percent": int(float(100)*self.use_social_networks/self.use_total_weighted), "raw": self.use_social_networks},
+                        {"text": "Open access", "value": "use_oa", "percent": int(float(100)*self.use_oa/self.use_total_weighted), "raw": self.use_oa},
+                        {"text": "Backfile", "value": "use_backfile", "percent": int(float(100)*self.use_backfile/self.use_total_weighted), "raw": self.use_backfile},
+                        {"text": "Subscription", "value": "use_subscription", "percent": int(float(100)*self.use_subscription/self.use_total_weighted), "raw": self.use_subscription},
+                        {"text": "ILL", "value": "use_ill", "percent": int(float(100)*self.use_ill/self.use_total_weighted), "raw": self.use_ill},
+                        {"text": "Other (delayed)", "value": "use_other_delayed", "percent": int(float(100)*self.use_other_delayed/self.use_total_weighted), "raw": self.use_other_delayed},
+                ],
+                "journals": [j.to_dict_fulfillment() for j in self.journals_sorted_use_total[0:pagesize]],
+            }
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
+        return response
+
+
+    def to_dict_oa(self, pagesize):
+        response = {
+                "_settings": self.settings.to_dict(),
+                "name": "Open Access",
+                "description": "Understand the Open Access availability of articles in journals.",
+                "figure": [],
+                "headers": [
+                        {"text": "OA Usage Percent", "value": "use_oa_percent", "percent": int(float(100)*self.use_oa/self.use_total_weighted), "raw": self.use_oa},
+                        {"text": "Green", "value": "use_green_percent", "percent": int(float(100)*self.use_green/self.use_total_weighted), "raw": self.use_green},
+                        {"text": "Hybrid", "value": "use_hybrid_percent", "percent": int(float(100)*self.use_hybrid/self.use_total_weighted), "raw": self.use_hybrid},
+                        {"text": "Bronze", "value": "use_bronze_percent", "percent": int(float(100)*self.use_bronze/self.use_total_weighted), "raw": self.use_bronze},
+                        {"text": "Peer-reviewed", "value": "use_peer_reviewed_percent", "percent": int(float(100)*self.use_peer_reviewed/self.use_total_weighted), "raw": self.use_peer_reviewed},
+                ],
+                "journals": [j.to_dict_oa() for j in self.journals_sorted_use_total[0:pagesize]],
+            }
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
+        return response
+
+
 
     def to_dict_impact(self, pagesize):
         response = {
@@ -342,7 +422,7 @@ class Scenario(object):
                 "headers": [
                         {"text": "Cost per paid use", "value": "cppu", "percent": None, "raw": self.cppu},
                         {"text": "Usage", "value": "use", "percent": None, "raw": self.use_total_weighted},
-                        {"text": "Instant Usage", "value": "instant_use_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent},
+                        {"text": "Instant Usage Percent", "value": "instant_use_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent},
                         {"text": "Cost", "value": "cost", "percent": None, "raw": self.cost},
                 ],
                 "journals": [j.to_dict_overview() for j in self.journals_sorted_use_total[0:pagesize]],

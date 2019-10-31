@@ -176,6 +176,9 @@ class Journal(object):
     def use_subscription(self):
         return self.use_paywalled
 
+    @cached_property
+    def use_subscription_weighted(self):
+        return self.use_paywalled_weighted
 
     @cached_property
     def use_social_networks_by_year(self):
@@ -274,14 +277,22 @@ class Journal(object):
 
     @cached_property
     def use_total_weighted(self):
-        return round(np.mean(self.use_total_weighted_by_year), 4)
+        response = round(np.mean(self.use_total_weighted_by_year), 4)
+        if response == 0:
+            response = 0.0001
+        return response
+
 
 
     @cached_property
-    def use_paywalled_by_year(self):
+    def use_total_by_age(self):
         total_use_by_age_before_counter_correction = [self.my_scenario_data_row["downloads_{}y".format(age)] for age in self.years]
         total_use_by_age_before_counter_correction = [val if val else 0 for val in total_use_by_age_before_counter_correction]
-        total_use_by_age = [num * self.use_multiplier_from_counter for num in total_use_by_age_before_counter_correction]
+        use_total_by_age = [num * self.use_multiplier_from_counter for num in total_use_by_age_before_counter_correction]
+        return use_total_by_age
+
+    @cached_property
+    def use_paywalled_by_year(self):
         oa_use_by_age_before_counter_correction = [self.my_scenario_data_row["downloads_{}y_oa".format(age)] for age in self.years]
         oa_use_by_age_before_counter_correction = [val if val else 0 for val in oa_use_by_age_before_counter_correction]
         oa_use_by_age = [num * self.use_multiplier_from_counter for num in oa_use_by_age_before_counter_correction]
@@ -289,7 +300,7 @@ class Journal(object):
         scaled = [0 for year in self.years]
         for year in self.years:
             scaled[year] = (1 - self.settings.social_networks_percent/float(100)) *\
-                sum([(total_use_by_age[age] * self.growth_scaling["downloads"][year] - oa_use_by_age[age] * self.growth_scaling["oa"][year])
+                sum([(self.use_total_by_age[age] * self.growth_scaling["downloads"][year] - oa_use_by_age[age] * self.growth_scaling["oa"][year])
                      for age in range(0, year+1)])
         scaled = [int(max(0, num)) for num in scaled]
         return scaled
@@ -412,6 +423,68 @@ class Journal(object):
             return 0
         return [round(100 * float(self.use_instant_by_year[year]) / self.use_total_weighted_by_year[year], 4) if self.use_total_weighted_by_year[year] else None for year in self.years]
 
+
+
+    def get_oa_data(self):
+        if self.settings.include_submitted:
+            submitted = "with_submitted"
+        else:
+            submitted = "no_submitted"
+
+        if self.settings.include_bronze:
+            bronze = "with_bronze"
+        else:
+            bronze = "no_bronze"
+
+        key = u"{}_{}".format(submitted, bronze)
+        my_rows = self._scenario_data["oa"][key][self.issn_l]
+
+        my_dict = defaultdict(dict)
+        for row in my_rows:
+            my_dict[row["fresh_oa_status"]][row["year_int"]] = row["count"]
+        return my_dict
+
+    @cached_property
+    def num_green_historical_by_year(self):
+        my_dict = self.get_oa_data()["green"]
+        return [my_dict.get(year, 0) for year in self.years]
+
+    @cached_property
+    def num_green_historical(self):
+        return round(np.mean(self.num_green_historical_by_year), 4)
+
+    @cached_property
+    def num_green_historical(self):
+        return round(np.mean(self.num_green_historical_by_year), 4)
+
+    @cached_property
+    def use_oa_green(self):
+        return round(np.sum([self.num_green_historical * self.use_total_by_age[age] for age in self.years]), 4)
+
+    @cached_property
+    def use_oa_green_weighted(self):
+        return round(self.use_oa_green * self.use_weight_multiplier, 4)
+
+
+
+
+    @cached_property
+    def use_oa_hybrid_weighted(self):
+        # TODO fix
+        return 42000
+
+    @cached_property
+    def use_oa_bronze_weighted(self):
+        # TODO fix
+        return 42000
+
+    @cached_property
+    def use_oa_peer_reviewed_weighted(self):
+        print self.data["oa"]
+        # TODO fix
+        return 42000
+
+
     def to_dict_report(self):
         response = {"issn_l": self.issn_l,
                     "title": self.title,
@@ -502,17 +575,34 @@ class Journal(object):
         response["oa_embargo_months"] = self.oa_embargo_months
         return response
 
+    def to_dict_oa(self):
+        response = OrderedDict()
+        response["meta"] = {"issn_l": self.issn_l,
+                    "title": self.title,
+                    "subject": self.subject,
+                    "subscribed": self.subscribed}
+        response["use_oa_percent"] = int(float(100)*self.use_actual_weighted["oa"]/self.use_total_weighted)
+        response["use_green_percent"] = int(float(100)*self.use_oa_green_weighted/self.use_total_weighted)
+        response["use_hybrid_percent"] = int(float(100)*self.use_oa_hybrid_weighted/self.use_total_weighted)
+        response["use_bronze_percent"] = int(float(100)*self.use_oa_bronze_weighted/self.use_total_weighted)
+        response["use_peer_reviewed_percent"] =  int(float(100)*self.use_oa_peer_reviewed_weighted/self.use_total_weighted)
+        return response
 
-
-    
     def to_dict_fulfillment(self):
-        return {"issn_l": self.issn_l,
-                "title": self.title,
-                "subject": self.subject,
-                "subscribed": self.subscribed,
-                "use_actual_unweighted": self.use_actual_unweighted,
-                "use_actual_weighted": self.use_actual_weighted
-                }
+        response = OrderedDict()
+        response["meta"] = {"issn_l": self.issn_l,
+                    "title": self.title,
+                    "subject": self.subject,
+                    "subscribed": self.subscribed}
+        response["instant_use_percent"] = int(self.use_instant_percent)
+        response["use_asns"] = int(float(100)*self.use_actual_weighted["social_networks"]/self.use_total_weighted)
+        response["use_oa"] = int(float(100)*self.use_actual_weighted["oa"]/self.use_total_weighted)
+        response["use_backfile"] = int(float(100)*self.use_actual_weighted["backfile"]/self.use_total_weighted)
+        response["use_subscription"] = int(float(100)*self.use_actual_weighted["subscription"]/self.use_total_weighted)
+        response["use_ill"] = int(float(100)*self.use_actual_weighted["ill"]/self.use_total_weighted)
+        response["use_other_delayed"] =  int(float(100)*self.use_actual_weighted["other_delayed"]/self.use_total_weighted)
+        return response
+
 
     def to_dict_slider(self):
         response = {"issn_l": self.issn_l,
