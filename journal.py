@@ -292,6 +292,12 @@ class Journal(object):
         return use_total_by_age
 
     @cached_property
+    def use_total_per_paper_by_age(self):
+        # TODO do separately for each type of OA
+        return [float(num)/self.num_papers for num in self.use_total_by_age]
+    
+    
+    @cached_property
     def use_paywalled_by_year(self):
         oa_use_by_age_before_counter_correction = [self.my_scenario_data_row["downloads_{}y_oa".format(age)] for age in self.years]
         oa_use_by_age_before_counter_correction = [val if val else 0 for val in oa_use_by_age_before_counter_correction]
@@ -425,11 +431,17 @@ class Journal(object):
 
 
 
-    def get_oa_data(self):
-        if self.settings.include_submitted:
-            submitted = "with_submitted"
-        else:
+
+    def get_oa_data(self, only_peer_reviewed=False):
+        # print self.hi
+
+        if only_peer_reviewed:
             submitted = "no_submitted"
+        else:
+            if self.settings.include_submitted_version:
+                submitted = "with_submitted"
+            else:
+                submitted = "no_submitted"
 
         if self.settings.include_bronze:
             bronze = "with_bronze"
@@ -441,17 +453,13 @@ class Journal(object):
 
         my_dict = defaultdict(dict)
         for row in my_rows:
-            my_dict[row["fresh_oa_status"]][row["year_int"]] = row["count"]
+            my_dict[row["fresh_oa_status"]][int(row["year_int"])] = int(row["count"])
         return my_dict
 
     @cached_property
     def num_green_historical_by_year(self):
         my_dict = self.get_oa_data()["green"]
-        return [my_dict.get(year, 0) for year in self.years]
-
-    @cached_property
-    def num_green_historical(self):
-        return round(np.mean(self.num_green_historical_by_year), 4)
+        return [my_dict.get(year, 0) for year in self.historical_years_by_year]
 
     @cached_property
     def num_green_historical(self):
@@ -459,30 +467,70 @@ class Journal(object):
 
     @cached_property
     def use_oa_green(self):
-        return round(np.sum([self.num_green_historical * self.use_total_by_age[age] for age in self.years]), 4)
+        return round(np.sum([self.num_green_historical * self.use_total_per_paper_by_age[age] for age in self.years]), 4)
 
     @cached_property
     def use_oa_green_weighted(self):
         return round(self.use_oa_green * self.use_weight_multiplier, 4)
 
 
+    @cached_property
+    def num_hybrid_historical_by_year(self):
+        my_dict = self.get_oa_data()["hybrid"]
+        return [my_dict.get(year, 0) for year in self.historical_years_by_year]
 
+    @cached_property
+    def num_hybrid_historical(self):
+        return round(np.mean(self.num_hybrid_historical_by_year), 4)
+
+    @cached_property
+    def use_oa_hybrid(self):
+        return round(np.sum([self.num_hybrid_historical * self.use_total_per_paper_by_age[age] for age in self.years]), 4)
 
     @cached_property
     def use_oa_hybrid_weighted(self):
-        # TODO fix
-        return 42000
+        return round(self.use_oa_hybrid * self.use_weight_multiplier, 4)
+
+
+    @cached_property
+    def num_bronze_historical_by_year(self):
+        my_dict = self.get_oa_data()["bronze"]
+        return [my_dict.get(year, 0) for year in self.historical_years_by_year]
+
+    @cached_property
+    def num_bronze_historical(self):
+        return round(np.mean(self.num_bronze_historical_by_year), 4)
+
+    @cached_property
+    def use_oa_bronze(self):
+        return round(np.sum([self.num_bronze_historical * self.use_total_per_paper_by_age[age] for age in self.years]), 4)
 
     @cached_property
     def use_oa_bronze_weighted(self):
-        # TODO fix
-        return 42000
+        return round(self.use_oa_bronze * self.use_weight_multiplier, 4)
+
+
+    @cached_property
+    def num_peer_reviewed_historical_by_year(self):
+        my_dict = self.get_oa_data(only_peer_reviewed=True)
+        response = defaultdict(int)
+        for oa_type in my_dict:
+            for year in self.historical_years_by_year:
+                response[year] += my_dict[oa_type].get(year, 0)
+        return [response[year] for year in self.historical_years_by_year]
+
+    @cached_property
+    def num_peer_reviewed_historical(self):
+        return round(np.mean(self.num_peer_reviewed_historical_by_year), 4)
+
+    @cached_property
+    def use_oa_peer_reviewed(self):
+        return round(np.sum([self.num_peer_reviewed_historical * self.use_total_per_paper_by_age[age] for age in self.years]), 4)
 
     @cached_property
     def use_oa_peer_reviewed_weighted(self):
-        print self.data["oa"]
-        # TODO fix
-        return 42000
+        return round(self.use_oa_peer_reviewed * self.use_weight_multiplier, 4)
+
 
 
     def to_dict_report(self):
@@ -586,6 +634,16 @@ class Journal(object):
         response["use_hybrid_percent"] = int(float(100)*self.use_oa_hybrid_weighted/self.use_total_weighted)
         response["use_bronze_percent"] = int(float(100)*self.use_oa_bronze_weighted/self.use_total_weighted)
         response["use_peer_reviewed_percent"] =  int(float(100)*self.use_oa_peer_reviewed_weighted/self.use_total_weighted)
+        response["use_oa_green_weighted"] = self.use_oa_green_weighted
+        response["use_total_weighted"] = self.use_total_weighted
+        response["num_papers"] = self.num_papers
+        response["num_green_historical_by_year"] = self.num_green_historical_by_year
+        response["num_green_historical"] = self.num_green_historical
+        response["use_oa_green"] = self.use_oa_green
+        response["use_oa_green_weighted"] = self.use_oa_green_weighted
+        response["use_weight_multiplier"] = self.use_weight_multiplier
+        response["use_total_by_age"] = self.use_total_by_age
+        response["use_total_per_paper_by_age"] = self.use_total_per_paper_by_age
         return response
 
     def to_dict_fulfillment(self):
