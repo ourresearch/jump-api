@@ -436,7 +436,10 @@ class Journal(object):
         response["total_usage"] = int(self.use_total_weighted)
         response["downloads"] = int(self.use_total)
         response["citations"] = int(self.num_citations)
-        response["authorships"] = round(self.num_authorships, 1)
+        if self.num_authorships > 1:
+            response["authorships"] = int(self.num_authorships)
+        else:
+            response["authorships"] = round(self.num_authorships, 1)
         return response
 
 

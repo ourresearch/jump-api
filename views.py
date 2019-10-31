@@ -91,8 +91,8 @@ def jump_timeline_get():
         scenario_input = request.args
     package = get_clean_package(scenario_input)
     scenario = Scenario(package, scenario_input)
-    # return jsonify_fast(scenario.to_dict_timeline(pagesize))
-    return jsonify_fast(scenario.to_dict_impact(pagesize))
+    # return jsonify_fast_no_sort(scenario.to_dict_timeline(pagesize))
+    return jsonify_fast_no_sort(scenario.to_dict_impact(pagesize))
 
 @app.route("/scenario/apc", methods=["GET", "POST"])
 def jump_apc_get():
@@ -102,8 +102,8 @@ def jump_apc_get():
         scenario_input = request.args
     package = get_clean_package(scenario_input)
     scenario = Scenario(package, scenario_input)
-    # return jsonify_fast(scenario.to_dict_apc(pagesize))
-    return jsonify_fast(scenario.to_dict_impact(pagesize))
+    # return jsonify_fast_no_sort(scenario.to_dict_apc(pagesize))
+    return jsonify_fast_no_sort(scenario.to_dict_impact(pagesize))
 
 @app.route("/scenario/costs", methods=["GET", "POST"])
 def jump_costs_get():
@@ -113,8 +113,8 @@ def jump_costs_get():
         scenario_input = request.args
     package = get_clean_package(scenario_input)
     scenario = Scenario(package, scenario_input)
-    # return jsonify_fast(scenario.to_dict_cost(pagesize))
-    return jsonify_fast(scenario.to_dict_impact(pagesize))
+    # return jsonify_fast_no_sort(scenario.to_dict_cost(pagesize))
+    return jsonify_fast_no_sort(scenario.to_dict_impact(pagesize))
 
 @app.route("/scenario/oa", methods=["GET", "POST"])
 def jump_oa_get():
@@ -124,8 +124,8 @@ def jump_oa_get():
         scenario_input = request.args
     package = get_clean_package(scenario_input)
     scenario = Scenario(package, scenario_input)
-    # return jsonify_fast(scenario.to_dict_oa(pagesize))
-    return jsonify_fast(scenario.to_dict_impact(pagesize))
+    # return jsonify_fast_no_sort(scenario.to_dict_oa(pagesize))
+    return jsonify_fast_no_sort(scenario.to_dict_impact(pagesize))
 
 @app.route("/scenario/journals", methods=["GET", "POST"])
 @app.route("/scenario/overview", methods=["GET", "POST"])
@@ -136,8 +136,8 @@ def jump_journals_get():
         scenario_input = request.args
     package = get_clean_package(scenario_input)
     scenario = Scenario(package, scenario_input)
-    # return jsonify_fast(scenario.to_dict_journals(pagesize))
-    return jsonify_fast(scenario.to_dict_impact(pagesize))
+    # return jsonify_fast_no_sort(scenario.to_dict_journals(pagesize))
+    return jsonify_fast_no_sort(scenario.to_dict_impact(pagesize))
 
 @app.route("/scenario/fulfillment", methods=["GET", "POST"])
 def jump_fulfillment_get():
@@ -147,8 +147,8 @@ def jump_fulfillment_get():
         scenario_input = request.args
     package = get_clean_package(scenario_input)
     scenario = Scenario(package, scenario_input)
-    # return jsonify_fast(scenario.to_dict_fulfillment(pagesize))
-    return jsonify_fast(scenario.to_dict_impact(pagesize))
+    # return jsonify_fast_no_sort(scenario.to_dict_fulfillment(pagesize))
+    return jsonify_fast_no_sort(scenario.to_dict_impact(pagesize))
 
 @app.route("/scenario/report", methods=["GET", "POST"])
 def jump_report_get():
@@ -158,7 +158,7 @@ def jump_report_get():
         scenario_input = request.args
     package = get_clean_package(scenario_input)
     scenario = Scenario(package, scenario_input)
-    return jsonify_fast(scenario.to_dict_report(pagesize))
+    return jsonify_fast_no_sort(scenario.to_dict_report(pagesize))
 
 @app.route("/scenario/impact", methods=["GET", "POST"])
 def jump_impact_get():
