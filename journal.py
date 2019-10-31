@@ -151,7 +151,7 @@ class Journal(object):
     @cached_property
     def use_weight_multiplier(self):
         if not self.use_total:
-            return 1
+            return 1.0
         return float(self.use_total_weighted) / self.use_total
 
 
@@ -260,7 +260,7 @@ class Journal(object):
     def use_total_by_year(self):
         use_total_before_counter_correction_by_year = [max(1, self.my_scenario_data_row["downloads_total"]) for year in self.years]
         use_total_before_counter_correction_by_year = [val if val else 0 for val in use_total_before_counter_correction_by_year]
-        use_total_scaled_by_counter = [num * self.use_counter_multiplier for num in use_total_before_counter_correction]
+        use_total_scaled_by_counter = [num * self.use_counter_multiplier for num in use_total_before_counter_correction_by_year]
         scaled = [int(use_total_scaled_by_counter[year] * self.growth_scaling["downloads"][year]) for year in self.years]
         return scaled
 
