@@ -317,6 +317,10 @@ class Scenario(object):
         return int(np.sum([j.use_actual_weighted["ill"] for j in self.journals]))
 
     @cached_property
+    def use_other_delayed(self):
+        return int(np.sum([j.use_actual_weighted["other_delayed"] for j in self.journals]))
+
+    @cached_property
     def use_green(self):
         return int(np.sum([j.use_oa_green_weighted for j in self.journals]))
 
