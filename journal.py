@@ -457,6 +457,23 @@ class Journal(object):
         response["cost"] = int(self.cost_actual)
         return response
 
+    def to_dict_cost(self):
+        response = OrderedDict()
+        response["meta"] = {"issn_l": self.issn_l,
+                    "title": self.title,
+                    "subject": self.subject,
+                    "subscribed": self.subscribed}
+        response["scenario_cost"] = int(self.cost_actual)
+        response["real_cost"] = int(self.cost_subscription_minus_ill)
+        response["ill_cost"] = int(self.cost_ill)
+        response["subscription_cost"] = int(self.cost_subscription)
+        if self.cppu_weighted:
+            response["cppu"] = round(self.cppu_weighted, 2)
+        else:
+            response["cppu"] = None
+        return response
+
+
     def to_dict_timeline(self):
         response = {"issn_l": self.issn_l,
                     "title": self.title,
@@ -486,17 +503,7 @@ class Journal(object):
         return response
 
 
-    def to_dict_cost(self):
-        return {"issn_l": self.issn_l,
-                "title": self.title,
-                "subject": self.subject,
-                "cost_subscription": self.cost_subscription,
-                "cost_ill": self.cost_ill,
-                "cost_subscription_minus_ill": self.cost_subscription_minus_ill,
-                "cppu_unweighted": self.cppu_unweighted,
-                "cppu_weighted": self.cppu_weighted,
-                "subscribed": self.subscribed
-                }
+
     
     def to_dict_fulfillment(self):
         return {"issn_l": self.issn_l,

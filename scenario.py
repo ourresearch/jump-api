@@ -155,18 +155,20 @@ class Scenario(object):
         return round(self.cost / self.use_paywalled, 2)
 
     @cached_property
-    def cost_by_group(self):
-        # TODO this needs to be redone by year
-        cost = {}
-        for group in use_groups:
-            cost[group] = 0
-        # now overwrite for ILL
-        cost["ill"] = round(self.use_unweighted["ill"] * self.settings.cost_ill, 2)
-        return cost
+    def cost_ill(self):
+        return int(sum([j.cost_ill for j in self.journals]))
+
+    @cached_property
+    def cost_subscription(self):
+        return int(sum([j.cost_subscription for j in self.journals]))
+
+    @cached_property
+    def cost_subscription_minus_ill(self):
+        return int(sum([j.cost_subscription_minus_ill for j in self.journals]))
 
     @cached_property
     def cost(self):
-        return round(sum([j.cost_actual for j in self.journals_sorted_cppu]), 2)
+        return round(sum([j.cost_actual for j in self.journals]), 2)
 
     @cached_property
     def cost_bigdeal_projected_by_year(self):
@@ -377,17 +379,22 @@ class Scenario(object):
     def to_dict_cost(self, pagesize):
         response = {
                 "_settings": self.settings.to_dict(),
-                "_summary": {
-                    "cost_scenario": self.cost,
-                    "cost_bigdeal_projected": self.cost_bigdeal_projected,
-                    "cost_percent": self.cost_spent_percent
-                },
+                "name": "Read Cost",
+                "description": "Understand the cost of your subscriptions and ILL requests.",
+                "figure": [],
+                "headers": [
+                        {"text": "Scenario Cost", "value": "scenario_cost", "percent": None, "raw": self.cost},
+                        {"text": "Real Subscription Cost", "value": "real_cost", "percent": None, "raw": self.cost_subscription_minus_ill},
+                        {"text": "ILL Cost", "value": "ill_cost", "percent": None, "raw": self.cost_ill},
+                        {"text": "Subscription Cost", "value": "subscription_cost", "percent": None, "raw": self.cost_subscription},
+                        {"text": "Cost per paid use", "value": "cppu", "percent": None, "raw": self.cppu},
+                ],
                 "journals": [j.to_dict_cost() for j in self.journals_sorted_use_total[0:pagesize]],
-                "journals_count": len(self.journals),
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
         return response
+
 
     def to_dict_report(self, pagesize):
         response = {

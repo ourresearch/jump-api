@@ -113,8 +113,7 @@ def jump_costs_get():
         scenario_input = request.args
     package = get_clean_package(scenario_input)
     scenario = Scenario(package, scenario_input)
-    # return jsonify_fast_no_sort(scenario.to_dict_cost(pagesize))
-    return jsonify_fast_no_sort(scenario.to_dict_impact(pagesize))
+    return jsonify_fast_no_sort(scenario.to_dict_cost(pagesize))
 
 @app.route("/scenario/oa", methods=["GET", "POST"])
 def jump_oa_get():
