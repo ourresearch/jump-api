@@ -345,6 +345,7 @@ class Scenario(object):
         return round(np.mean([j.use_weight_multiplier for j in self.journals]), 4)
 
 
+
     def to_dict_fulfillment(self, pagesize):
         response = {
                 "_settings": self.settings.to_dict(),

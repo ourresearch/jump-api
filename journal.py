@@ -319,6 +319,13 @@ class Journal(object):
     def use_paywalled_weighted(self):
         return round(int(self.use_paywalled * self.use_weight_multiplier), 4)
 
+    @cached_property
+    def use_counter_multiplier_normalized(self):
+        return round(self.use_counter_multiplier / self.scenario.use_counter_multiplier, 4)
+
+    @cached_property
+    def use_weight_multiplier_normalized(self):
+        return round(self.use_weight_multiplier / self.scenario.use_weight_multiplier, 4)
 
     @cached_property
     def use_actual_unweighted(self):
@@ -561,8 +568,8 @@ class Journal(object):
             response["authorships"] = int(self.num_authorships)
         else:
             response["authorships"] = round(self.num_authorships, 1)
-        response["use_weight_multiplier"] = self.use_weight_multiplier
-        response["use_counter_multiplier"] = self.use_counter_multiplier            
+        response["use_weight_multiplier"] = self.use_weight_multiplier_normalized
+        response["use_counter_multiplier"] = self.use_counter_multiplier_normalized
         return response
 
     def to_dict_overview(self):
@@ -628,8 +635,8 @@ class Journal(object):
         response["num_green_historical"] = self.num_green_historical
         response["use_oa_green"] = self.use_oa_green
         response["use_oa_green_weighted"] = self.use_oa_green_weighted
-        response["use_weight_multiplier"] = self.use_weight_multiplier
-        response["use_counter_multiplier"] = self.use_counter_multiplier
+        response["use_weight_multiplier"] = self.use_weight_multiplier_normalized
+        response["use_counter_multiplier"] = self.use_counter_multiplier_normalized
         response["use_total_by_age"] = self.use_total_by_age
         response["use_total_per_paper_by_age"] = self.use_total_per_paper_by_age
         return response
