@@ -114,11 +114,11 @@ class Scenario(object):
 
     @cached_property
     def use_total_weighted(self):
-        return round(np.mean(self.use_total_weighted_by_year), 4)
+        return round(1 + np.mean(self.use_total_weighted_by_year), 4)
 
     @cached_property
     def use_total_unweighted(self):
-        return round(np.mean(self.use_total_unweighted_by_year), 4)
+        return round(1 + np.mean(self.use_total_unweighted_by_year), 4)
 
     @cached_property
     def use_actual_unweighted_by_year(self):
@@ -236,6 +236,13 @@ class Scenario(object):
         self.apc_journals.sort(key=lambda k: for_sorting(k.fractional_authorships_total), reverse=True)
         return self.apc_journals
 
+    @cached_property
+    def num_citations(self):
+        return round(np.sum([j.num_citations for j in self.journals]), 4)
+
+    @cached_property
+    def num_authorships(self):
+        return round(np.sum([j.num_authorships for j in self.journals]), 4)
 
     @cached_property
     def cost_apc_historical_by_year(self):
@@ -313,12 +320,29 @@ class Scenario(object):
         response["_timing"] = self.timing_messages
         return response
 
+    @cached_property
+    def num_citations_weight_percent(self):
+        return (100*self.settings.weight_citation*self.num_citations)/self.use_total_weighted
+
+    @cached_property
+    def num_authorships_weight_percent(self):
+        return (100*self.settings.weight_authorship*self.num_authorships)/self.use_total_weighted
+
     def to_dict_impact(self, pagesize):
         response = {
                 "_settings": self.settings.to_dict(),
-                "_summary": {},
+                "figure": [
+                    {"label": "Downloads", "percent": 100*self.use_total_unweighted/self.use_total_weighted},
+                    {"label": "Citations", "percent": self.num_citations_weight_percent},
+                    {"label": "Authorships", "percent": self.num_authorships_weight_percent},
+                ],
+                "headers": [
+                        {"text": "Total Usage", "value":"total_usage", "percent": 100, "raw": self.use_total_weighted},
+                        {"text": "Downloads", "value":"downloads", "percent": 100*self.use_total_unweighted/self.use_total_weighted, "raw": self.use_total_unweighted},
+                        {"text": "Citations", "value":"citations", "percent": self.num_citations_weight_percent, "raw": self.num_citations},
+                        {"text": "Authorships", "value":"authorships", "percent": self.num_authorships_weight_percent, "raw": self.num_authorships},
+                ],
                 "journals": [j.to_dict_impact() for j in self.journals_sorted_use_total[0:pagesize]],
-                "journals_count": len(self.journals),
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages

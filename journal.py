@@ -427,16 +427,15 @@ class Journal(object):
         return response
 
     def to_dict_impact(self):
-        response = {"issn_l": self.issn_l,
+        response = {
+            "meta": {"issn_l": self.issn_l,
                     "title": self.title,
                     "subject": self.subject,
-                    "subscribed": self.subscribed,
-                    "year": self.years_by_year,
-                    "year_historical": self.historical_years_by_year,
-                    "num_citations_historical_by_year": self.num_citations_historical_by_year,
-                    "num_authorships_historical_by_year": self.num_authorships_historical_by_year,
-                    "use_total_unweighted_by_year": self.use_total_by_year,
-                    "use_total_weighted_by_year": self.use_total_weighted_by_year
+                    "subscribed": self.subscribed},
+            "total_usage": self.use_total_weighted,
+            "downloads": self.use_total,
+            "citations": self.num_citations,
+            "authorships": self.num_authorships
         }
         return response
 
