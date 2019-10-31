@@ -4,6 +4,7 @@ from cached_property import cached_property
 import numpy as np
 from collections import defaultdict
 import weakref
+from collections import OrderedDict
 
 class ApcJournal(object):
     years = range(0, 5)
@@ -75,20 +76,24 @@ class ApcJournal(object):
     def historical_years_by_year(self):
         return range(2014, 2019)
 
-
     def to_dict(self):
-        return {"issn_l": self.issn_l,
-                "title": self.title,
-                "apc_2019": self.apc_2019,
-                "oa_status": self.oa_status,
-                "num_apc_papers_historical_by_year": self.num_apc_papers_historical_by_year,
-                "num_apc_papers_historical": self.num_apc_papers_historical,
-                "cost_apc_historical_by_year": self.cost_apc_historical_by_year,
-                "cost_apc_historical": self.cost_apc_historical,
-                "fractional_authorships_total_by_year": self.fractional_authorships_total_by_year,
-                "fractional_authorships_total": self.fractional_authorships_total,
-                "year_historical": self.historical_years_by_year
-        }
+        response = OrderedDict()
+        response["meta"] = {"issn_l": self.issn_l,
+                    "title": self.title,
+                    "subject": None,
+                    "subscribed": None
+                            }
+        response["cost_apc"] = int(self.cost_apc_historical)
+        if self.oa_status == "gold":
+            response["cost_apc_hybrid"] = 0
+        else:
+            response["cost_apc_hybrid"] = int(self.cost_apc_historical)
+        if self.apc_2019:
+            response["apc_price"] = int(self.apc_2019)
+        else:
+            response["apc_price"] = None
+        response["fractional_authorship"] = round(self.fractional_authorships_total, 1)
+        return response
 
     def __repr__(self):
         return u"<{} ({}) {}>".format(self.__class__.__name__, self.issn_l, self.title)

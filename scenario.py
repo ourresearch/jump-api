@@ -254,11 +254,11 @@ class Scenario(object):
 
     @cached_property
     def cost_apc_historical_by_year(self):
-        return [round(np.sum([j.cost_apc_historical_by_year[year] for j in self.apc_journals]), 4) for year in self.years]
+        return [int(np.sum([j.cost_apc_historical_by_year[year] for j in self.apc_journals])) for year in self.years]
 
     @cached_property
     def cost_apc_historical(self):
-        return round(np.mean(self.cost_apc_historical_by_year), 4)
+        return int(np.mean(self.cost_apc_historical_by_year))
 
     @cached_property
     def cost_apc_historical_hybrid_by_year(self):
@@ -266,7 +266,7 @@ class Scenario(object):
 
     @cached_property
     def cost_apc_historical_hybrid(self):
-        return round(np.mean(self.cost_apc_historical_hybrid_by_year), 4)
+        return int(np.mean(self.cost_apc_historical_hybrid_by_year))
 
     @cached_property
     def cost_apc_historical_gold_by_year(self):
@@ -274,15 +274,7 @@ class Scenario(object):
 
     @cached_property
     def cost_apc_historical_gold(self):
-        return round(np.mean(self.cost_apc_historical_gold_by_year), 4)
-
-    @cached_property
-    def num_apc_papers_historical_by_year(self):
-        return [np.sum([j.num_apc_papers_historical_by_year[year] for j in self.apc_journals]) for year in self.years]
-
-    @cached_property
-    def num_apc_papers_historical(self):
-        return np.mean(self.num_apc_papers_historical_by_year)
+        return int(np.mean(self.cost_apc_historical_gold_by_year))
 
     @cached_property
     def fractional_authorships_total_by_year(self):
@@ -290,29 +282,20 @@ class Scenario(object):
 
     @cached_property
     def fractional_authorships_total(self):
-        return round(np.mean(self.fractional_authorships_total_by_year), 4)
+        return round(np.mean(self.fractional_authorships_total_by_year), 2)
 
-    def to_dict_apc(self, pagesize):
-        response = {
-                "_settings": self.settings.to_dict(),
-                "_summary": {
-                    "cost_apc_historical_by_year": self.cost_apc_historical_by_year,
-                    "cost_apc_historical": self.cost_apc_historical,
-                    "cost_apc_historical_gold_by_year": self.cost_apc_historical_gold_by_year,
-                    "cost_apc_historical_gold": self.cost_apc_historical_gold,
-                    "cost_apc_historical_hybrid_by_year": self.cost_apc_historical_hybrid_by_year,
-                    "cost_apc_historical_hybrid": self.cost_apc_historical_hybrid,
-                    "num_apc_papers_historical_by_year": self.num_apc_papers_historical_by_year,
-                    "num_apc_papers_historical": self.num_apc_papers_historical,
-                    "fractional_authorships_total_by_year": self.fractional_authorships_total_by_year,
-                    "fractional_authorships_total": self.fractional_authorships_total,
-                    "year_historical": self.historical_years_by_year
-                    },
-                "journals": [j.to_dict() for j in self.apc_journals_sorted_fractional_authorship]
-            }
-        self.log_timing("to dict")
-        response["_timing"] = self.timing_messages
-        return response
+    @cached_property
+    def apc_price(self):
+        return np.max([j.apc_2019 for j in self.apc_journals])
+
+    @cached_property
+    def num_citations_weight_percent(self):
+        return (100*self.settings.weight_citation*self.num_citations)/self.use_total_weighted
+
+    @cached_property
+    def num_authorships_weight_percent(self):
+        return (100*self.settings.weight_authorship*self.num_authorships)/self.use_total_weighted
+
 
     def to_dict_fulfillment(self, pagesize):
         response = {
@@ -327,14 +310,6 @@ class Scenario(object):
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
         return response
-
-    @cached_property
-    def num_citations_weight_percent(self):
-        return (100*self.settings.weight_citation*self.num_citations)/self.use_total_weighted
-
-    @cached_property
-    def num_authorships_weight_percent(self):
-        return (100*self.settings.weight_authorship*self.num_authorships)/self.use_total_weighted
 
     def to_dict_impact(self, pagesize):
         response = {
@@ -395,6 +370,23 @@ class Scenario(object):
         response["_timing"] = self.timing_messages
         return response
 
+    def to_dict_apc(self, pagesize):
+        response = {
+                "_settings": self.settings.to_dict(),
+                "name": "APC Cost",
+                "description": "Understand how much your institution spends on APCs with this publisher.",
+                "figure": [],
+                "headers": [
+                        {"text": "APC Dollars Spent", "value": "cost_apc", "percent": None, "raw": self.cost_apc_historical},
+                        {"text": "APC Dollars Hybrid", "value": "cost_apc_hybrid", "percent": None, "raw": self.cost_apc_historical_hybrid},
+                        {"text": "APC price", "value": "apc_price", "percent": None, "raw": self.apc_price},
+                        {"text": "Total fractional authorship", "value": "fractional_authorship", "percent": None, "raw": self.fractional_authorships_total},
+                ],
+                "journals": [j.to_dict() for j in self.apc_journals[0:pagesize]],
+            }
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
+        return response
 
     def to_dict_report(self, pagesize):
         response = {
