@@ -432,10 +432,10 @@ class Journal(object):
                     "title": self.title,
                     "subject": self.subject,
                     "subscribed": self.subscribed},
-            "total_usage": self.use_total_weighted,
-            "downloads": self.use_total,
-            "citations": self.num_citations,
-            "authorships": self.num_authorships
+            "total_usage": int(self.use_total_weighted),
+            "downloads": int(self.use_total),
+            "citations": int(self.num_citations),
+            "authorships": round(self.num_authorships), 1)
         }
         return response
 

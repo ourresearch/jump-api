@@ -42,12 +42,10 @@ class Scenario(object):
         self.data["apc"] = get_apc_data_from_db(package)
         self.log_timing("get_apc_data_from_db")
 
-        # self.data["oa"] = get_oa_data_from_db(package)
-        # self.log_timing("get_oa_data_from_db")
+        self.data["oa"] = get_oa_data_from_db(package)
+        self.log_timing("get_oa_data_from_db")
 
         self.log_timing("mint apc journals")
-
-        # self.journals = [Journal(issn_l, self.data, self) for issn_l in self.data["big_view_dict"]]
 
         self.journals = get_fresh_journal_list(self.data["big_view_dict"])
         self.log_timing("mint regular journals")
@@ -556,21 +554,20 @@ def get_scenario_data_from_db(package):
 
 @cache
 def get_oa_data_from_db(package):
-    command = """select issn_l, year::numeric, fixed.oa_status, count(*) as num_articles 
-                    from unpaywall u
-                    join unpaywall_updates_view fixed on fixed.doi=u.doi
-                    join jump_counter counter on u.journal_issn_l = counter.issn_l
-                    where package='{}'
-                    and year >= 2014 and year < 2019
-                    group by issn_l, year, fixed.oa_status
-                    """.format(package)
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
-    my_dict = defaultdict(list)
-    for row in rows:
-        my_dict[row["issn_l"]] += [row]
-    return my_dict
+    oa_dict = {}
+    for submitted in ["with_submitted", "no_submitted"]:
+        for bronze in ["with_bronze", "no_bronze"]:
+            key = "{}_{}".format(submitted, bronze)
+            command = """select * from jump_oa_{}_elsevier
+                            """.format(key)
+            with get_db_cursor() as cursor:
+                cursor.execute(command)
+                rows = cursor.fetchall()
+            lookup_dict = defaultdict(list)
+            for row in rows:
+                lookup_dict[row["issn_l"]] += [row]
+            oa_dict[key] = lookup_dict
+    return oa_dict
 
 @cache
 def get_apc_data_from_db(package):

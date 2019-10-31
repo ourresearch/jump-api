@@ -49,9 +49,9 @@ def base_endpoint():
         "msg": "Don't panic"
     })
 
-@app.route('/favicon.ico')
-def favicon():
-    return redirect(url_for("static", filename="img/favicon.ico", _external=True, _scheme='https'))
+# @app.route('/favicon.ico')
+# def favicon():
+#     return redirect(url_for("static", filename="img/favicon.ico", _external=True, _scheme='https'))
 
 @app.route("/scenario/wizard", methods=["GET", "POST"])
 def jump_wizard_get():
