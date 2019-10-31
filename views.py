@@ -16,6 +16,7 @@ from app import app
 from app import logger
 from scenario import Scenario
 from util import jsonify_fast
+from util import jsonify_fast_no_sort
 from util import str2bool
 from util import elapsed
 
@@ -167,7 +168,7 @@ def jump_impact_get():
         scenario_input = request.args
     package = get_clean_package(scenario_input)
     scenario = Scenario(package, scenario_input)
-    return jsonify_fast(scenario.to_dict_impact(pagesize))
+    return jsonify_fast_no_sort(scenario.to_dict_impact(pagesize))
 
 
 @app.route("/journal/issn_l/<issn_l>", methods=["GET", "POST"])

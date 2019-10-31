@@ -5,6 +5,7 @@ import numpy as np
 from collections import defaultdict
 import weakref
 from kids.cache import cache
+from collections import OrderedDict
 
 from app import use_groups
 from app import use_groups_free_instant
@@ -427,16 +428,15 @@ class Journal(object):
         return response
 
     def to_dict_impact(self):
-        response = {
-            "meta": {"issn_l": self.issn_l,
+        response = OrderedDict()
+        response["meta"] = {"issn_l": self.issn_l,
                     "title": self.title,
                     "subject": self.subject,
-                    "subscribed": self.subscribed},
-            "total_usage": int(self.use_total_weighted),
-            "downloads": int(self.use_total),
-            "citations": int(self.num_citations),
-            "authorships": round(self.num_authorships, 1)
-        }
+                    "subscribed": self.subscribed}
+        response["total_usage"] = int(self.use_total_weighted)
+        response["downloads"] = int(self.use_total)
+        response["citations"] = int(self.num_citations)
+        response["authorships"] = round(self.num_authorships, 1)
         return response
 
 

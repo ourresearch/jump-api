@@ -601,6 +601,31 @@ def is_same_publisher(publisher1, publisher2):
     return False
 
 
+# from https://stackoverflow.com/a/50762571/596939
+def jsonify_fast_no_sort(*args, **kwargs):
+    if args and kwargs:
+        raise TypeError('jsonify() behavior undefined when passed both args and kwargs')
+    elif len(args) == 1:  # single args are passed directly to dumps()
+        data = args[0]
+    else:
+        data = args or kwargs
+
+    # turn this to False to be even faster, but warning then responses may not cache
+    sort_keys = False
+
+    return current_app.response_class(
+        dumps(data,
+              skipkeys=True,
+              ensure_ascii=True,
+              check_circular=False,
+              allow_nan=True,
+              cls=None,
+              indent=None,
+              # separators=None,
+              default=None,
+              sort_keys=sort_keys) + u'\n', mimetype=current_app.config['JSONIFY_MIMETYPE']
+    )
+
 
 # from https://stackoverflow.com/a/50762571/596939
 def jsonify_fast(*args, **kwargs):
