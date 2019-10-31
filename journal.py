@@ -435,7 +435,7 @@ class Journal(object):
             "total_usage": int(self.use_total_weighted),
             "downloads": int(self.use_total),
             "citations": int(self.num_citations),
-            "authorships": round(self.num_authorships), 1)
+            "authorships": round(self.num_authorships, 1)
         }
         return response
 
