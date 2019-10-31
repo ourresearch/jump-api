@@ -115,6 +115,17 @@ def jump_costs_get():
     # return jsonify_fast(scenario.to_dict_cost(pagesize))
     return jsonify_fast(scenario.to_dict_impact(pagesize))
 
+@app.route("/scenario/oa", methods=["GET", "POST"])
+def jump_oa_get():
+    pagesize = int(request.args.get("pagesize", 100))
+    scenario_input = request.get_json()
+    if not scenario_input:
+        scenario_input = request.args
+    package = get_clean_package(scenario_input)
+    scenario = Scenario(package, scenario_input)
+    # return jsonify_fast(scenario.to_dict_oa(pagesize))
+    return jsonify_fast(scenario.to_dict_impact(pagesize))
+
 @app.route("/scenario/journals", methods=["GET", "POST"])
 @app.route("/scenario/overview", methods=["GET", "POST"])
 def jump_journals_get():
