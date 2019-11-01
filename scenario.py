@@ -45,6 +45,12 @@ class Scenario(object):
         self.data["oa"] = get_oa_data_from_db(package)
         self.log_timing("get_oa_data_from_db")
 
+        self.data["social_networks"] = get_social_networks_data_from_db(package)
+        self.log_timing("get_social_networks_data_from_db")
+
+        self.data["oa_adjustment"] = get_oa_adjustment_data_from_db(package)
+        self.log_timing("get_oa_adjustment_data_from_db")
+
         self.log_timing("mint apc journals")
 
         self.journals = get_fresh_journal_list(self.data["big_view_dict"])
@@ -349,11 +355,15 @@ class Scenario(object):
 
     @cached_property
     def use_subscription_percent(self):
-        return int(float(100)*self.use_subscription/self.use_total_weighted)
+        return round(float(100)*self.use_subscription/self.use_total_weighted, 1)
+
+    @cached_property
+    def use_ill_percent(self):
+        return round(float(100)*self.use_ill/self.use_total_weighted, 1)
 
     @cached_property
     def use_free_instant_percent(self):
-        return self.use_instant_percent - self.use_subscription_percent
+        return round(self.use_instant_percent - self.use_subscription_percent, 1)
 
     def to_dict_fulfillment(self, pagesize):
         response = {
@@ -516,7 +526,8 @@ class Scenario(object):
                     "num_journals_total": len(self.journals),
                     "use_instant_percent": self.use_instant_percent,
                     "use_free_instant_percent": self.use_free_instant_percent,
-                    "use_subscription_percent": self.use_subscription_percent
+                    "use_subscription_percent": self.use_subscription_percent,
+                    "use_ill_percent": self.use_ill_percent
                 }
             }
         self.log_timing("to dict")
@@ -690,3 +701,38 @@ def get_apc_data_from_db(package):
 
     my_dict = {"df": df, "df_by_issn_l_and_year": df_by_issn_l_and_year}
     return my_dict
+
+
+@cache
+def get_social_networks_data_from_db(package):
+    command = """select issn_l, asn_only_rate::float from jump_mturk_asn_rates
+                    """
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+    lookup_dict = {}
+    for row in rows:
+        lookup_dict[row["issn_l"]] = row["asn_only_rate"]
+    return lookup_dict
+
+@cache
+def get_oa_adjustment_data_from_db(package):
+    command = """select issn_l, 
+            max(mturk.max_oa_rate::float) as mturk_max_oa_rate, 
+            count(*) as num_papers_3_years,
+            sum(case when u.oa_status = 'closed' then 0 else 1 end) as num_papers_3_years_oa, 
+            round(sum(case when u.oa_status = 'closed' then 0 else 1 end)/count(*)::float, 3) as unpaywall_measured_fraction_3_years_oa
+            from jump_mturk_oa_rates mturk
+            join unpaywall u on mturk.issn_l = u.journal_issn_l
+            where year >= 2016 and year <= 2018
+            and genre='journal-article'
+            group by issn_l
+                    """
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+    lookup_dict = {}
+    for row in rows:
+        lookup_dict[row["issn_l"]] = row
+    return lookup_dict
+

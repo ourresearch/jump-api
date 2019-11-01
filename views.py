@@ -174,7 +174,7 @@ def jump_issn_get(issn_l):
     package = get_clean_package(scenario_input)
     scenario = Scenario(package, scenario_input)
     my_journal = scenario.get_journal(issn_l)
-    return jsonify(my_journal.to_dict_details())
+    return jsonify({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
 
 
 if __name__ == "__main__":
