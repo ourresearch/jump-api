@@ -30,17 +30,19 @@ class Assumptions(object):
             self.package = http_request_args.get("package", None)  # so get demo if that's what was used
 
     def set_assumption(self, key, value):
-        try:
-            self.__setattr__(key, float(value))
-        except:
-            self.__setattr__(key, value)
-
-        # overwrite with boolean if we can
         if key.startswith("include_"):
+            if isinstance(value, int):
+                self.__setattr__(key, value != 0)
+            else:
+                try:
+                    self.__setattr__(key, str2bool(value))
+                except:
+                    self.__setattr__(key, value)
+        else:
             try:
-                self.__setattr__(key, str2bool(value))
+                self.__setattr__(key, float(value))
             except:
-                pass
+                self.__setattr__(key, value)
 
 
     def to_dict(self):
