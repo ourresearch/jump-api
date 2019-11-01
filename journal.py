@@ -696,31 +696,31 @@ class Journal(object):
         response["num_papers"] = self.num_papers
         response["use_weight_multiplier"] = self.use_weight_multiplier_normalized
         response["use_counter_multiplier"] = self.use_counter_multiplier_normalized
-        response["use_total_by_age"] = self.use_total_by_age
+        # response["use_total_by_age"] = self.use_total_by_age
         response["use_total_per_paper_by_age"] = self.use_total_per_paper_by_age
-        response["use_oa_by_age"] = self.use_oa_by_age
+        # response["use_oa_by_age"] = self.use_oa_by_age
         response["use_instant_by_year"] = self.use_instant_by_year
         response["use_instant_percent_by_year"] = self.use_instant_percent_by_year
-        response["use_oa_by_year"] = self.use_oa_by_year
-        response["use_total_by_year"] = self.use_total_by_year
-        response["use_backfile_by_year"] = self.use_backfile_by_year
-        response["use_social_networks_by_year"] = self.use_social_networks_by_year
+        # response["use_oa_by_year"] = self.use_oa_by_year
+        # response["use_total_by_year"] = self.use_total_by_year
+        # response["use_backfile_by_year"] = self.use_backfile_by_year
+        # response["use_social_networks_by_year"] = self.use_social_networks_by_year
 
         response["use_actual_weighted_by_year"] = self.use_actual_weighted_by_year
-        response["use_actual_unweighted_by_year"] = self.use_actual_unweighted_by_year
+        # response["use_actual_unweighted_by_year"] = self.use_actual_unweighted_by_year
         response["use_actual_weighted"] = self.use_actual_weighted
-        response["use_actual_unweighted"] = self.use_actual_unweighted
+        # response["use_actual_unweighted"] = self.use_actual_unweighted
 
-        response["num_green_historical_by_year"] = self.num_green_historical_by_year
-        response["num_green_historical"] = self.num_green_historical
+        # response["num_green_historical_by_year"] = self.num_green_historical_by_year
+        # response["num_green_historical"] = self.num_green_historical
         response["use_oa_green"] = self.use_oa_green
         response["use_oa_green_weighted"] = self.use_oa_green_weighted
         response["use_oa_hybrid"] = self.use_oa_hybrid
         response["use_oa_hybrid_weighted"] = self.use_oa_hybrid_weighted
         response["use_oa_bronze"] = self.use_oa_bronze
         response["use_oa_bronze_weighted"] = self.use_oa_bronze_weighted
-        response["num_bronze_historical_by_year"] = self.num_bronze_historical_by_year
-        response["num_bronze_historical"] = self.num_bronze_historical
+        # response["num_bronze_historical_by_year"] = self.num_bronze_historical_by_year
+        # response["num_bronze_historical"] = self.num_bronze_historical
 
         return response
 
