@@ -368,6 +368,7 @@ class Scenario(object):
     def to_dict_fulfillment(self, pagesize):
         response = {
                 "_settings": self.settings.to_dict(),
+                "_summary": self.to_dict_summary_dict(),
                 "name": "Fulfillment",
                 "description": "Understand how uses will be filled, at the journal level.",
                 "figure": [],
@@ -391,6 +392,7 @@ class Scenario(object):
         response = {
                 "_settings": self.settings.to_dict(),
                 "name": "Open Access",
+                "_summary": self.to_dict_summary_dict(),
                 "description": "Understand the Open Access availability of articles in journals.",
                 "figure": [],
                 "headers": [
@@ -411,6 +413,7 @@ class Scenario(object):
     def to_dict_impact(self, pagesize):
         response = {
                 "_settings": self.settings.to_dict(),
+                "_summary": self.to_dict_summary_dict(),
                 "name": "Institutional Value",
                 "description": "Understand journal use by your institution.",
                 "figure": [
@@ -433,6 +436,7 @@ class Scenario(object):
         response = {
                 "_settings": self.settings.to_dict(),
                 "name": "Overview",
+                "_summary": self.to_dict_summary_dict(),
                 "description": "Understand your scenario at the journal level.",
                 "figure": [],
                 "headers": [
@@ -450,6 +454,7 @@ class Scenario(object):
     def to_dict_cost(self, pagesize):
         response = {
                 "_settings": self.settings.to_dict(),
+                "_summary": self.to_dict_summary_dict(),
                 "name": "Read Cost",
                 "description": "Understand the cost of your subscriptions and ILL requests.",
                 "figure": [],
@@ -469,6 +474,7 @@ class Scenario(object):
     def to_dict_apc(self, pagesize):
         response = {
                 "_settings": self.settings.to_dict(),
+                "_summary": self.to_dict_summary_dict(),
                 "name": "APC Cost",
                 "description": "Understand how much your institution spends on APCs with this publisher.",
                 "figure": [],
@@ -504,10 +510,7 @@ class Scenario(object):
     def to_dict_timeline(self, pagesize):
         response = {
                 "_settings": self.settings.to_dict(),
-                "_summary": {
-                    "use_instant_percent_by_year": self.use_instant_percent_by_year,
-                    "use_instant_percent": self.use_instant_percent
-                     },
+                "_summary": self.to_dict_summary_dict(),
                 "journals": [j.to_dict_timeline() for j in self.journals_sorted_use_total[0:pagesize]],
                 "journals_count": len(self.journals),
             }
@@ -518,7 +521,24 @@ class Scenario(object):
     def to_dict_summary(self):
         response = {
                 "_settings": self.settings.to_dict(),
-                "_summary": {
+                "_summary": self.to_dict_summary_dict(),
+            }
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
+        return response
+
+    def to_dict_slider(self):
+        response = {
+                "_settings": self.settings.to_dict(),
+                "_summary": self.to_dict_summary_dict(),
+                "journals": [j.to_dict_slider() for j in self.journals_sorted_cppu_delta],
+            }
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
+        return response
+
+    def to_dict_summary_dict(self):
+        response = {
                     "cost_scenario": self.cost,
                     "cost_bigdeal_projected": self.cost_bigdeal_projected,
                     "cost_percent": self.cost_spent_percent,
@@ -528,43 +548,13 @@ class Scenario(object):
                     "use_free_instant_percent": self.use_free_instant_percent,
                     "use_subscription_percent": self.use_subscription_percent,
                     "use_ill_percent": self.use_ill_percent
-                }
-            }
-        self.log_timing("to dict")
-        response["_timing"] = self.timing_messages
-        return response
-
-    def to_dict_slider(self):
-        response = {
-                "_settings": self.settings.to_dict(),
-                "_summary": {
-                    "cost_scenario": self.cost,
-                    "cost_bigdeal_projected": self.cost_bigdeal_projected,
-                    "cost_percent": self.cost_spent_percent,
-                    "num_journals_subscribed": len(self.subscribed),
-                    "num_journals_total": len(self.journals),
-                    "use_instant_percent": self.use_instant_percent,
-                },
-                "journals": [j.to_dict_slider() for j in self.journals_sorted_cppu_delta],
-            }
-        self.log_timing("to dict")
-        response["_timing"] = self.timing_messages
+        }
         return response
 
     def to_dict(self, pagesize):
         response = {
                 "_settings": self.settings.to_dict(),
-                "_summary": {
-                    "cost_scenario": self.cost,
-                    "cost_bigdeal_projected": self.cost_bigdeal_projected,
-                    "cost_percent": self.cost_spent_percent,
-                    "num_journals_subscribed": len(self.subscribed),
-                    "num_journals_total": len(self.journals),
-                    "use_instant_percent_by_year": self.use_instant_percent_by_year,
-                    "use_instant_percent": self.use_instant_percent,
-                    "use_unweighted": self.use_actual_unweighted_by_year,
-                    "use_weighted": self.use_actual_weighted_by_year,
-                },
+                "_summary": self.to_dict_summary_dict(),
                 "journals": [j.to_dict() for j in self.journals_sorted_cppu[0:pagesize]],
                 "journals_count": len(self.journals),
             }
