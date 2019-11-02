@@ -191,7 +191,7 @@ class Journal(object):
     @cached_property
     def use_social_networks_by_year(self):
         response = [self.use_total_by_year[year] * self.use_social_network_multiplier for year in self.years]
-        response = [min(response[year], self.use_total_by_year[year] - self.use_oa_by_year[year]) for year in self.years]
+        response = [min(response[year], self.use_total_by_year[year] - self.use_oa_by_year[year] - self.use_backfile_by_year[year]) for year in self.years]
         response = [max(response[year], 0) for year in self.years]
         return response
 
@@ -240,7 +240,6 @@ class Journal(object):
                 for age in range(year, 5):
                     scaled[year] += (self.use_total_by_age[age] * self.growth_scaling["downloads"][year]) - (self.use_oa_by_age[age] * self.growth_scaling["oa"][year])
                 scaled[year] += self.use_total_older_than_five_years
-                scaled[year] -= self.use_social_networks_by_year[year]
             scaled = [int(max(0, num)) for num in scaled]
             return scaled
         else:
