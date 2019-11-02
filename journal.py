@@ -131,29 +131,29 @@ class Journal(object):
         return round(np.mean(self.cost_subscription_by_year), 4)
 
     @cached_property
-    def cppu_unweighted(self):
+    def cppu_downloads(self):
+        if not self.downloads_paywalled:
+            return None
+        return round(self.cost_subscription/self.downloads_paywalled, 6)
+
+    @cached_property
+    def cppu_use(self):
         if not self.use_paywalled:
             return None
         return round(self.cost_subscription/self.use_paywalled, 6)
 
     @cached_property
-    def cppu_weighted(self):
-        if not self.use_paywalled_weighted:
+    def cppu_use_delta(self):
+        if not self.use_paywalled:
             return None
-        return round(self.cost_subscription/self.use_paywalled_weighted, 6)
-
-    @cached_property
-    def cppu_delta_weighted(self):
-        if not self.use_paywalled_weighted:
-            return None
-        return round(self.cost_subscription_minus_ill/self.use_paywalled_weighted, 6)
+        return round(self.cost_subscription_minus_ill/self.use_paywalled, 6)
 
 
     @cached_property
     def use_weight_multiplier(self):
-        if not self.use_total:
+        if not self.downloads_total:
             return 1.0
-        return float(self.use_total_weighted) / self.use_total
+        return float(self.use_total) / self.downloads_total
 
 
     @cached_property
@@ -161,7 +161,7 @@ class Journal(object):
         response = [0 for year in self.years]
         for group in use_groups_free_instant + ["subscription"]:
             for year in self.years:
-                response[year] += self.use_actual_weighted_by_year[group][year]
+                response[year] += self.use_actual_by_year[group][year]
         return response
 
     @cached_property
@@ -170,76 +170,76 @@ class Journal(object):
 
 
     @cached_property
-    def use_subscription_by_year(self):
-        return self.use_paywalled_by_year
+    def downloads_subscription_by_year(self):
+        return self.downloads_paywalled_by_year
+
+    @cached_property
+    def downloads_subscription(self):
+        return self.downloads_paywalled
 
     @cached_property
     def use_subscription(self):
         return self.use_paywalled
 
     @cached_property
-    def use_subscription_weighted(self):
-        return self.use_paywalled_weighted
-
-    @cached_property
-    def use_social_network_multiplier(self):
+    def downloads_social_network_multiplier(self):
         if self.settings.include_social_networks:
             return self._scenario_data["social_networks"].get(self.issn_l, 0)
         else:
             return 0.0
 
     @cached_property
-    def use_social_networks_by_year(self):
-        response = [self.use_total_by_year[year] * self.use_social_network_multiplier for year in self.years]
-        response = [min(response[year], self.use_total_by_year[year] - self.use_oa_by_year[year] - self.use_backfile_by_year[year]) for year in self.years]
+    def downloads_social_networks_by_year(self):
+        response = [self.downloads_total_by_year[year] * self.downloads_social_network_multiplier for year in self.years]
+        response = [min(response[year], self.downloads_total_by_year[year] - self.downloads_oa_by_year[year] - self.downloads_backfile_by_year[year]) for year in self.years]
         response = [max(response[year], 0) for year in self.years]
         return response
 
     @cached_property
+    def downloads_social_networks(self):
+        return round(np.mean(self.downloads_social_networks_by_year), 4)
+
+
+    @cached_property
     def use_social_networks(self):
-        return round(np.mean(self.use_social_networks_by_year), 4)
+        return round(int(self.downloads_social_networks * self.use_weight_multiplier), 4)
 
 
     @cached_property
-    def use_social_networks_weighted(self):
-        return round(int(self.use_social_networks * self.use_weight_multiplier), 4)
-
+    def downloads_ill_by_year(self):
+        return [int(self.settings.ill_request_percent_of_delayed/float(100) * self.downloads_paywalled_by_year[year]) for year in self.years]
 
     @cached_property
-    def use_ill_by_year(self):
-        return [int(self.settings.ill_request_percent_of_delayed/float(100) * self.use_paywalled_by_year[year]) for year in self.years]
+    def downloads_ill(self):
+        return round(np.mean(self.downloads_ill_by_year), 4)
 
     @cached_property
     def use_ill(self):
-        return round(np.mean(self.use_ill_by_year), 4)
-
-    @cached_property
-    def use_ill_weighted(self):
-        return round(int(self.use_ill * self.use_weight_multiplier), 4)
+        return round(int(self.downloads_ill * self.use_weight_multiplier), 4)
 
 
     @cached_property
-    def use_other_delayed_by_year(self):
-        return [self.use_paywalled_by_year[year] - self.use_ill_by_year[year] for year in self.years]
+    def downloads_other_delayed_by_year(self):
+        return [self.downloads_paywalled_by_year[year] - self.downloads_ill_by_year[year] for year in self.years]
+
+    @cached_property
+    def downloads_other_delayed(self):
+        return round(np.mean(self.downloads_other_delayed_by_year), 4)
 
     @cached_property
     def use_other_delayed(self):
-        return round(np.mean(self.use_other_delayed_by_year), 4)
-
-    @cached_property
-    def use_other_delayed_weighted(self):
-        return round(int(self.use_other_delayed * self.use_weight_multiplier), 4)
+        return round(int(self.downloads_other_delayed * self.use_weight_multiplier), 4)
 
 
     @cached_property
-    def use_backfile_by_year(self):
+    def downloads_backfile_by_year(self):
         if self.settings.include_backfile:
             scaled = [0 for year in self.years]
             for year in self.years:
                 scaled[year] = 0
                 for age in range(year, 5):
-                    scaled[year] += (self.use_total_by_age[age] * self.growth_scaling["downloads"][year]) - (self.use_oa_by_age[age] * self.growth_scaling["oa"][year])
-                scaled[year] += self.use_total_older_than_five_years
+                    scaled[year] += (self.downloads_total_by_age[age] * self.growth_scaling["downloads"][year]) - (self.downloads_oa_by_age[age] * self.growth_scaling["oa"][year])
+                scaled[year] += self.downloads_total_older_than_five_years
             scaled = [int(max(0, num)) for num in scaled]
             return scaled
         else:
@@ -247,33 +247,12 @@ class Journal(object):
 
 
     @cached_property
-    def use_backfile(self):
-        return round(np.mean(self.use_backfile_by_year), 4)
+    def downloads_backfile(self):
+        return round(np.mean(self.downloads_backfile_by_year), 4)
 
     @cached_property
-    def use_backfile_weighted(self):
-        return round(int(self.use_backfile * self.use_weight_multiplier), 4)
-
-
-    # @cached_property
-    # def use_oa_by_year(self):
-    #     use_oa_before_counter_correction = [self.my_scenario_data_row["downloads_total_oa"] for year in self.years]
-    #     use_oa_before_counter_correction = [val if val else 0 for val in use_oa_before_counter_correction]
-    #     use_oa_scaled_by_counter = [num * self.use_counter_multiplier for num in use_oa_before_counter_correction]
-    #     scaled = [int(self.oa_recall_scaling_factor * use_oa_scaled_by_counter[year] * self.growth_scaling["oa"][year]) for year in self.years]
-    #     scaled = [min(self.use_total_by_year[year], scaled[year]) for year in self.years]
-    #     return scaled
-    #
-    # @cached_property
-    # def use_oa(self):
-    #     return round(np.mean(self.use_oa_by_year), 4)
-    #
-    # @cached_property
-    # def use_oa_weighted(self):
-    #     return round(int(self.use_oa * self.use_weight_multiplier), 4)
-
-
-
+    def use_backfile(self):
+        return round(int(self.downloads_backfile * self.use_weight_multiplier), 4)
 
     @cached_property
     def num_oa_historical_by_year(self):
@@ -289,46 +268,46 @@ class Journal(object):
         return [self.num_oa_historical for year in self.years]
 
     @cached_property
-    def use_oa(self):
-        return round(np.sum([self.num_oa_historical * self.use_total_per_paper_by_age[age] for age in self.years]), 4)
+    def downloads_oa(self):
+        return round(np.sum([self.num_oa_historical * self.downloads_total_per_paper_by_age[age] for age in self.years]), 4)
 
     @cached_property
-    def use_oa_by_year(self):
+    def downloads_oa_by_year(self):
         # TODO add some growth by using num_oa_by_year instead of num_oa_by_year_historical
-        response = [self.use_oa for year in self.years]
+        response = [self.downloads_oa for year in self.years]
         return response
 
     @cached_property
-    def use_oa_weighted(self):
-        return round(self.use_oa * self.use_weight_multiplier, 4)
+    def use_oa(self):
+        return round(self.downloads_oa * self.use_weight_multiplier, 4)
 
     @cached_property
-    def use_oa_weighted_by_year(self):
-        return [self.use_oa_weighted for year in self.years]
+    def use_oa_by_year(self):
+        return [self.use_oa for year in self.years]
 
 
     @cached_property
-    def use_total_by_year(self):
-        use_total_before_counter_correction_by_year = [max(1.0, self.my_scenario_data_row["downloads_total"]) for year in self.years]
-        use_total_before_counter_correction_by_year = [val if val else 0.0 for val in use_total_before_counter_correction_by_year]
-        use_total_scaled_by_counter = [num * self.use_counter_multiplier for num in use_total_before_counter_correction_by_year]
-        scaled = [int(use_total_scaled_by_counter[year] * self.growth_scaling["downloads"][year]) for year in self.years]
+    def downloads_total_by_year(self):
+        downloads_total_before_counter_correction_by_year = [max(1.0, self.my_scenario_data_row["downloads_total"]) for year in self.years]
+        downloads_total_before_counter_correction_by_year = [val if val else 0.0 for val in downloads_total_before_counter_correction_by_year]
+        downloads_total_scaled_by_counter = [num * self.downloads_counter_multiplier for num in downloads_total_before_counter_correction_by_year]
+        scaled = [int(downloads_total_scaled_by_counter[year] * self.growth_scaling["downloads"][year]) for year in self.years]
         return scaled
 
     @cached_property
-    def use_total(self):
-        return round(np.mean(self.use_total_by_year), 4)
+    def downloads_total(self):
+        return round(np.mean(self.downloads_total_by_year), 4)
 
 
 
     # used to calculate use_weight_multiplier so it can't use it
     @cached_property
-    def use_total_weighted_by_year(self):
-        return [int(self.use_total_by_year[year] + self.use_addition_from_weights) for year in self.years]
+    def use_total_by_year(self):
+        return [int(self.downloads_total_by_year[year] + self.use_addition_from_weights) for year in self.years]
 
     @cached_property
-    def use_total_weighted(self):
-        response = round(np.mean(self.use_total_weighted_by_year), 4)
+    def use_total(self):
+        response = round(np.mean(self.use_total_by_year), 4)
         if response == 0:
             response = 0.0001
         return response
@@ -336,71 +315,71 @@ class Journal(object):
 
 
     @cached_property
-    def use_total_by_age(self):
-        total_use_by_age_before_counter_correction = [self.my_scenario_data_row["downloads_{}y".format(age)] for age in self.years]
-        total_use_by_age_before_counter_correction = [val if val else 0 for val in total_use_by_age_before_counter_correction]
-        use_total_by_age = [num * self.use_counter_multiplier for num in total_use_by_age_before_counter_correction]
-        return use_total_by_age
+    def downloads_total_by_age(self):
+        total_downloads_by_age_before_counter_correction = [self.my_scenario_data_row["downloads_{}y".format(age)] for age in self.years]
+        total_downloads_by_age_before_counter_correction = [val if val else 0 for val in total_downloads_by_age_before_counter_correction]
+        downloads_total_by_age = [num * self.downloads_counter_multiplier for num in total_downloads_by_age_before_counter_correction]
+        return downloads_total_by_age
 
     @cached_property
-    def use_total_older_than_five_years(self):
-        return self.use_total - np.sum(self.use_total_by_age)
+    def downloads_total_older_than_five_years(self):
+        return self.downloads_total - np.sum(self.downloads_total_by_age)
 
     @cached_property
-    def use_total_per_paper_by_age(self):
+    def downloads_total_per_paper_by_age(self):
         # TODO do separately for each type of OA
-        return [float(num)/self.num_papers for num in self.use_total_by_age]
+        return [float(num)/self.num_papers for num in self.downloads_total_by_age]
 
     @cached_property
-    def use_oa_by_age(self):
+    def downloads_oa_by_age(self):
         # TODO do separately for each type of OA and each year
-        response = [(float(self.use_total_per_paper_by_age[year])*self.num_oa_historical) for year in self.years]
+        response = [(float(self.downloads_total_per_paper_by_age[year])*self.num_oa_historical) for year in self.years]
         if self.oa_embargo_months:
             for age in self.years:
                 if age*12 >= self.oa_embargo_months:
-                    response[age] = self.use_total_by_age[age]
+                    response[age] = self.downloads_total_by_age[age]
         return response
 
     @cached_property
-    def use_paywalled_by_year(self):
-        scaled = [self.use_total_by_year[year]
-              - (self.use_backfile_by_year[year] + self.use_oa_by_year[year] + self.use_social_networks_by_year[year])
+    def downloads_paywalled_by_year(self):
+        scaled = [self.downloads_total_by_year[year]
+              - (self.downloads_backfile_by_year[year] + self.downloads_oa_by_year[year] + self.downloads_social_networks_by_year[year])
           for year in self.years]
         scaled = [int(max(0, num)) for num in scaled]
         return scaled
 
     @cached_property
+    def downloads_paywalled(self):
+        return round(np.mean(self.downloads_paywalled_by_year), 4)
+
+    @cached_property
     def use_paywalled(self):
-        return round(np.mean(self.use_paywalled_by_year), 4)
+        return round(int(self.downloads_paywalled * self.use_weight_multiplier), 4)
 
     @cached_property
-    def use_paywalled_weighted(self):
-        return round(int(self.use_paywalled * self.use_weight_multiplier), 4)
-
-    @cached_property
-    def use_counter_multiplier_normalized(self):
-        return round(self.use_counter_multiplier / self.scenario.use_counter_multiplier, 4)
+    def downloads_counter_multiplier_normalized(self):
+        return round(self.downloads_counter_multiplier / self.scenario.downloads_counter_multiplier, 4)
 
     @cached_property
     def use_weight_multiplier_normalized(self):
         return round(self.use_weight_multiplier / self.scenario.use_weight_multiplier, 4)
 
     @cached_property
-    def use_actual_unweighted(self):
+    def downloads_actual(self):
         response = defaultdict(int)
-        for group in self.use_actual_unweighted_by_year:
-            response[group] = round(np.mean(self.use_actual_unweighted_by_year[group]), 4)
+        for group in self.downloads_actual_by_year:
+            response[group] = round(np.mean(self.downloads_actual_by_year[group]), 4)
         return response
 
     @cached_property
-    def use_actual_weighted(self):
+    def use_actual(self):
         response = defaultdict(int)
-        for group in self.use_actual_weighted_by_year:
-            response[group] = round(np.mean(self.use_actual_weighted_by_year[group]), 4)
+        for group in self.use_actual_by_year:
+            response[group] = round(np.mean(self.use_actual_by_year[group]), 4)
         return response
 
     @cached_property
-    def use_actual_unweighted_by_year(self):
+    def downloads_actual_by_year(self):
         #initialize
         my_dict = {}
         for group in use_groups:
@@ -408,26 +387,26 @@ class Journal(object):
 
         # true regardless
         for group in use_groups_free_instant + ["total"]:
-            my_dict[group] = self.__getattribute__("use_{}_by_year".format(group))
+            my_dict[group] = self.__getattribute__("downloads_{}_by_year".format(group))
 
         # depends
         if self.subscribed:
-            my_dict["subscription"] = self.use_subscription_by_year
+            my_dict["subscription"] = self.downloads_subscription_by_year
         else:
-            my_dict["ill"] = self.use_ill_by_year
-            my_dict["other_delayed"] = self.use_other_delayed_by_year
+            my_dict["ill"] = self.downloads_ill_by_year
+            my_dict["other_delayed"] = self.downloads_other_delayed_by_year
 
         return my_dict
 
     @cached_property
-    def use_actual_weighted_by_year(self):
+    def use_actual_by_year(self):
         my_dict = {}
-        for group in self.use_actual_unweighted_by_year:
-            my_dict[group] = [int(num * self.use_weight_multiplier) for num in self.use_actual_unweighted_by_year[group]]
+        for group in self.downloads_actual_by_year:
+            my_dict[group] = [int(num * self.use_weight_multiplier) for num in self.downloads_actual_by_year[group]]
         return my_dict
 
     @cached_property
-    def use_total_before_counter_correction(self):
+    def downloads_total_before_counter_correction(self):
         return max(1, self.my_scenario_data_row["downloads_total"])
 
     @cached_property
@@ -439,10 +418,10 @@ class Journal(object):
         return weights_addition
 
     @cached_property
-    def use_counter_multiplier(self):
+    def downloads_counter_multiplier(self):
         try:
             counter_for_this_journal = self._scenario_data["counter_dict"][self.issn_l]
-            counter_multiplier = float(counter_for_this_journal) / self.use_total_before_counter_correction
+            counter_multiplier = float(counter_for_this_journal) / self.downloads_total_before_counter_correction
         except:
             counter_multiplier = float(0)
         return counter_multiplier
@@ -454,7 +433,7 @@ class Journal(object):
 
     @cached_property
     def cost_ill_by_year(self):
-        return [round(self.use_ill_by_year[year] * self.settings.cost_ill, 4) for year in self.years]
+        return [round(self.downloads_ill_by_year[year] * self.settings.cost_ill, 4) for year in self.years]
 
     @cached_property
     def cost_subscription_minus_ill(self):
@@ -478,15 +457,15 @@ class Journal(object):
 
     @cached_property
     def use_instant_percent(self):
-        if not self.use_total_weighted:
+        if not self.use_total:
             return 0
-        return round(100 * float(self.use_instant) / self.use_total_weighted, 4)
+        return round(100 * float(self.use_instant) / self.use_total, 4)
 
     @cached_property
     def use_instant_percent_by_year(self):
-        if not self.use_total:
+        if not self.downloads_total:
             return 0
-        return [round(100 * float(self.use_instant_by_year[year]) / self.use_total_weighted_by_year[year], 4) if self.use_total_weighted_by_year[year] else None for year in self.years]
+        return [round(100 * float(self.use_instant_by_year[year]) / self.use_total_by_year[year], 4) if self.use_total_by_year[year] else None for year in self.years]
 
 
 
@@ -534,12 +513,12 @@ class Journal(object):
         return round(np.mean(self.num_green_historical_by_year), 4)
 
     @cached_property
-    def use_oa_green(self):
-        return round(np.sum([self.num_green_historical * self.use_total_per_paper_by_age[age] for age in self.years]), 4)
+    def downloads_oa_green(self):
+        return round(np.sum([self.num_green_historical * self.downloads_total_per_paper_by_age[age] for age in self.years]), 4)
 
     @cached_property
-    def use_oa_green_weighted(self):
-        return round(self.use_oa_green * self.use_weight_multiplier, 4)
+    def use_oa_green(self):
+        return round(self.downloads_oa_green * self.use_weight_multiplier, 4)
 
 
     @cached_property
@@ -552,12 +531,12 @@ class Journal(object):
         return round(np.mean(self.num_hybrid_historical_by_year), 4)
 
     @cached_property
-    def use_oa_hybrid(self):
-        return round(np.sum([self.num_hybrid_historical * self.use_total_per_paper_by_age[age] for age in self.years]), 4)
+    def downloads_oa_hybrid(self):
+        return round(np.sum([self.num_hybrid_historical * self.downloads_total_per_paper_by_age[age] for age in self.years]), 4)
 
     @cached_property
-    def use_oa_hybrid_weighted(self):
-        return round(self.use_oa_hybrid * self.use_weight_multiplier, 4)
+    def use_oa_hybrid(self):
+        return round(self.downloads_oa_hybrid * self.use_weight_multiplier, 4)
 
 
     @cached_property
@@ -571,13 +550,13 @@ class Journal(object):
         return round(np.mean(self.num_bronze_historical_by_year), 4)
 
     @cached_property
-    def use_oa_bronze(self):
-        return round(np.sum([self.num_bronze_historical * self.use_total_per_paper_by_age[age] for age in self.years]), 4)
+    def downloads_oa_bronze(self):
+        return round(np.sum([self.num_bronze_historical * self.downloads_total_per_paper_by_age[age] for age in self.years]), 4)
 
 
     @cached_property
-    def use_oa_bronze_weighted(self):
-        return round(self.use_oa_bronze * self.use_weight_multiplier, 4)
+    def use_oa_bronze(self):
+        return round(self.downloads_oa_bronze * self.use_weight_multiplier, 4)
 
 
     @cached_property
@@ -594,12 +573,12 @@ class Journal(object):
         return round(np.mean(self.num_peer_reviewed_historical_by_year), 4)
 
     @cached_property
-    def use_oa_peer_reviewed(self):
-        return round(np.sum([self.num_peer_reviewed_historical * self.use_total_per_paper_by_age[age] for age in self.years]), 4)
+    def downloads_oa_peer_reviewed(self):
+        return round(np.sum([self.num_peer_reviewed_historical * self.downloads_total_per_paper_by_age[age] for age in self.years]), 4)
 
     @cached_property
-    def use_oa_peer_reviewed_weighted(self):
-        return round(self.use_oa_peer_reviewed * self.use_weight_multiplier, 4)
+    def use_oa_peer_reviewed(self):
+        return round(self.downloads_oa_peer_reviewed * self.use_weight_multiplier, 4)
 
 
 
@@ -624,15 +603,15 @@ class Journal(object):
                     "title": self.title,
                     "subject": self.subject,
                     "subscribed": self.subscribed}
-        response["total_usage"] = int(self.use_total_weighted)
-        response["downloads"] = int(self.use_total)
+        response["total_usage"] = int(self.use_total)
+        response["downloads"] = int(self.downloads_total)
         response["citations"] = int(self.num_citations)
         if self.num_authorships > 1:
             response["authorships"] = int(self.num_authorships)
         else:
             response["authorships"] = round(self.num_authorships, 1)
         response["use_weight_multiplier"] = self.use_weight_multiplier_normalized
-        response["use_counter_multiplier"] = self.use_counter_multiplier_normalized
+        response["downloads_counter_multiplier"] = self.downloads_counter_multiplier_normalized
         return response
 
     def to_dict_overview(self):
@@ -641,11 +620,11 @@ class Journal(object):
                     "title": self.title,
                     "subject": self.subject,
                     "subscribed": self.subscribed}
-        if self.cppu_weighted:
-            response["cppu"] = round(self.cppu_weighted, 2)
+        if self.cppu_use:
+            response["cppu"] = round(self.cppu_use, 2)
         else:
             response["cppu"] = None
-        response["use"] = int(self.use_total_weighted)
+        response["use"] = int(self.use_total)
         response["value"] = int(self.use_instant_percent)
         response["cost"] = int(self.cost_actual)
         return response
@@ -660,8 +639,8 @@ class Journal(object):
         response["real_cost"] = int(self.cost_subscription_minus_ill)
         response["ill_cost"] = int(self.cost_ill)
         response["subscription_cost"] = int(self.cost_subscription)
-        if self.cppu_weighted:
-            response["cppu"] = round(self.cppu_weighted, 2)
+        if self.cppu_use:
+            response["cppu"] = round(self.cppu_use, 2)
         else:
             response["cppu"] = None
         return response
@@ -676,7 +655,7 @@ class Journal(object):
                     "year_historical": self.historical_years_by_year,
                     "oa_embargo_months": self.oa_embargo_months,
                     "cost_actual_by_year": self.cost_actual_by_year,
-                    "use_total_weighted_by_year": self.use_total_weighted_by_year
+                    "use_total_by_year": self.use_total_by_year
         }
         for k, v in vars(self).iteritems():
             if k.endswith("by_year") and not k.endswith("years_by_year") and ("weighted_by_year" not in k):
@@ -694,17 +673,17 @@ class Journal(object):
         response["oa_embargo_months"] = self.oa_embargo_months
         response["num_papers"] = self.num_papers
         response["use_weight_multiplier"] = self.use_weight_multiplier_normalized
-        response["use_counter_multiplier"] = self.use_counter_multiplier_normalized
-        response["use_total_per_paper_by_age"] = self.use_total_per_paper_by_age
+        response["downloads_counter_multiplier"] = self.downloads_counter_multiplier_normalized
+        response["downloads_total_per_paper_by_age"] = self.downloads_total_per_paper_by_age
         response["use_instant_by_year"] = self.use_instant_by_year
         response["use_instant_percent_by_year"] = self.use_instant_percent_by_year
-        response["use_actual_weighted_by_year"] = self.use_actual_weighted_by_year
-        response["use_actual_weighted"] = self.use_actual_weighted
-        response["use_oa_green_weighted"] = self.use_oa_green_weighted
-        response["use_oa_hybrid_weighted"] = self.use_oa_hybrid_weighted
-        response["use_oa_bronze_weighted"] = self.use_oa_bronze_weighted
-        response["use_oa_peer_reviewed_weighted"] = self.use_oa_peer_reviewed_weighted
-        response["use_oa_weighted"] = self.use_oa_weighted
+        response["use_actual_by_year"] = self.use_actual_by_year
+        response["use_actual"] = self.use_actual
+        response["use_oa_green"] = self.use_oa_green
+        response["use_oa_hybrid"] = self.use_oa_hybrid
+        response["use_oa_bronze"] = self.use_oa_bronze
+        response["use_oa_peer_reviewed"] = self.use_oa_peer_reviewed
+        response["use_oa"] = self.use_oa
         response["debug"] = {}
 
         return response
@@ -715,12 +694,12 @@ class Journal(object):
                     "title": self.title,
                     "subject": self.subject,
                     "subscribed": self.subscribed}
-        response["use_oa_percent"] = int(float(100)*self.use_actual_weighted["oa"]/self.use_total_weighted)
-        response["use_green_percent"] = int(float(100)*self.use_oa_green_weighted/self.use_total_weighted)
-        response["use_hybrid_percent"] = int(float(100)*self.use_oa_hybrid_weighted/self.use_total_weighted)
-        response["use_bronze_percent"] = int(float(100)*self.use_oa_bronze_weighted/self.use_total_weighted)
-        response["use_peer_reviewed_percent"] =  int(float(100)*self.use_oa_peer_reviewed_weighted/self.use_total_weighted)
-        response["num_papers"] = self.num_papers
+        response["use_oa_percent"] = int(float(100)*self.use_actual["oa"]/self.use_total)
+        response["use_green_percent"] = int(float(100)*self.use_oa_green/self.use_total)
+        response["use_hybrid_percent"] = int(float(100)*self.use_oa_hybrid/self.use_total)
+        response["use_bronze_percent"] = int(float(100)*self.use_oa_bronze/self.use_total)
+        response["use_peer_reviewed_percent"] =  int(float(100)*self.use_oa_peer_reviewed/self.use_total)
+        # response["num_papers"] = self.num_papers
         return response
 
     def to_dict_fulfillment(self):
@@ -730,12 +709,12 @@ class Journal(object):
                     "subject": self.subject,
                     "subscribed": self.subscribed}
         response["instant_use_percent"] = int(self.use_instant_percent)
-        response["use_asns"] = int(float(100)*self.use_actual_weighted["social_networks"]/self.use_total_weighted)
-        response["use_oa"] = int(float(100)*self.use_actual_weighted["oa"]/self.use_total_weighted)
-        response["use_backfile"] = int(float(100)*self.use_actual_weighted["backfile"]/self.use_total_weighted)
-        response["use_subscription"] = int(float(100)*self.use_actual_weighted["subscription"]/self.use_total_weighted)
-        response["use_ill"] = int(float(100)*self.use_actual_weighted["ill"]/self.use_total_weighted)
-        response["use_other_delayed"] =  int(float(100)*self.use_actual_weighted["other_delayed"]/self.use_total_weighted)
+        response["use_asns"] = int(float(100)*self.use_actual["social_networks"]/self.use_total)
+        response["use_oa"] = int(float(100)*self.use_actual["oa"]/self.use_total)
+        response["use_backfile"] = int(float(100)*self.use_actual["backfile"]/self.use_total)
+        response["use_subscription"] = int(float(100)*self.use_actual["subscription"]/self.use_total)
+        response["use_ill"] = int(float(100)*self.use_actual["ill"]/self.use_total)
+        response["use_other_delayed"] =  int(float(100)*self.use_actual["other_delayed"]/self.use_total)
         return response
 
 
@@ -744,14 +723,20 @@ class Journal(object):
                 "title": self.title,
                 "subject": self.subject,
                 "use_instant": self.use_instant,
-                "use_total": self.use_total_weighted,
+                "downloads_total": self.use_total,
+                "use_total": self.use_total, # replace with above
                 "cost_subscription": self.cost_subscription,
                 "cost_ill": self.cost_ill,
                 "cost_subscription_minus_ill": self.cost_subscription_minus_ill,
-                "cppu_delta_weighted": self.cppu_delta_weighted,
-                "cppu_weighted": self.cppu_weighted,
+                "cppu_use_delta": self.cppu_use_delta,
+                "cppu_delta_weighted": self.cppu_use_delta, # replace with above
+
+                "cppu_use": self.cppu_use,
+                "cppu_weighted": self.cppu_use, # replace with above
+
                 "subscribed": self.subscribed,
-                "use_actual_weighted_by_year": self.use_actual_weighted_by_year,
+                "use_actual_by_year": self.use_actual_by_year,
+                "use_actual_weighted_by_year": self.use_actual_by_year, #replace with above
                 "use_instant_by_year": self.use_instant_by_year,
                 "use_instant": self.use_instant,
                 "use_instant_percent_by_year": self.use_instant_percent_by_year,
@@ -760,9 +745,9 @@ class Journal(object):
                 }
         response["use_groups_free_instant"] = {}
         for group in use_groups_free_instant:
-            response["use_groups_free_instant"][group] = self.use_actual_weighted[group]
-        response["use_groups_if_subscribed"] = {"subscription": self.use_subscription}
-        response["use_groups_if_not_subscribed"] = {"ill": self.use_ill, "other_delayed": self.use_other_delayed}
+            response["use_groups_free_instant"][group] = self.use_actual[group]
+        response["use_groups_if_subscribed"] = {"subscription": self.downloads_subscription}
+        response["use_groups_if_not_subscribed"] = {"ill": self.downloads_ill, "other_delayed": self.downloads_other_delayed}
         return response
 
 
@@ -772,16 +757,17 @@ class Journal(object):
                 "subject": self.subject,
                 "num_authorships": self.num_authorships,
                 "num_citations": self.num_citations,
-                "use_paywalled_unweighted": self.use_paywalled,
-                "use_paywalled_weighted": self.use_paywalled_weighted,
+                "downloads_paywalled": self.downloads_paywalled,
+                "use_paywalled": self.use_paywalled,
+                "use_paywalled_weighted": self.use_paywalled, # replace with above
                 "use_instant": self.use_instant,
-                "use_total": self.use_total,
+                "downloads_total": self.downloads_total,
                 "cost_subscription": self.cost_subscription,
                 "cost_ill": self.cost_ill,
                 "cost_subscription_minus_ill": self.cost_subscription_minus_ill,
-                "cppu_delta_weighted": self.cppu_delta_weighted,
-                "cppu_unweighted": self.cppu_unweighted,
-                "cppu_weighted": self.cppu_weighted,
+                "cppu_use_delta": self.cppu_use_delta,
+                "cppu_downloads": self.cppu_downloads,
+                "cppu_use": self.cppu_use,
                 "subscribed": self.subscribed
                 }
 

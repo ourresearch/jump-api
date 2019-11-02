@@ -72,17 +72,17 @@ class Scenario(object):
 
     @cached_property
     def journals_sorted_cppu(self):
-        self.journals.sort(key=lambda k: for_sorting(k.cppu_weighted), reverse=False)
+        self.journals.sort(key=lambda k: for_sorting(k.cppu_use), reverse=False)
         return self.journals
 
     @cached_property
     def journals_sorted_cppu_delta(self):
-        self.journals.sort(key=lambda k: for_sorting(k.cppu_delta_weighted), reverse=False)
+        self.journals.sort(key=lambda k: for_sorting(k.cppu_use_delta), reverse=False)
         return self.journals
 
     @cached_property
     def journals_sorted_use_total(self):
-        self.journals.sort(key=lambda k: for_sorting(k.use_total_weighted), reverse=True)
+        self.journals.sort(key=lambda k: for_sorting(k.use_total), reverse=True)
         return self.journals
 
     @cached_property
@@ -109,52 +109,52 @@ class Scenario(object):
 
 
     @cached_property
-    def use_total_weighted_by_year(self):
-        return [np.sum([journal.use_total_weighted_by_year[year] for journal in self.journals]) for year in range(0, 5)]
-
-    @cached_property
-    def use_total_unweighted_by_year(self):
+    def use_total_by_year(self):
         return [np.sum([journal.use_total_by_year[year] for journal in self.journals]) for year in range(0, 5)]
 
     @cached_property
-    def use_total_weighted(self):
-        return round(1 + np.mean(self.use_total_weighted_by_year), 4)
+    def downloads_total_by_year(self):
+        return [np.sum([journal.downloads_total_by_year[year] for journal in self.journals]) for year in range(0, 5)]
 
     @cached_property
-    def use_total_unweighted(self):
-        return round(1 + np.mean(self.use_total_unweighted_by_year), 4)
+    def use_total(self):
+        return round(1 + np.mean(self.use_total_by_year), 4)
 
     @cached_property
-    def use_actual_unweighted_by_year(self):
+    def downloads_total(self):
+        return round(1 + np.mean(self.downloads_total_by_year), 4)
+
+    @cached_property
+    def downloads_actual_by_year(self):
         use = {}
         for group in use_groups:
-            use[group] = [np.sum([journal.use_actual_unweighted_by_year[group][year] for journal in self.journals]) for year in range(0, 5)]
+            use[group] = [np.sum([journal.downloads_actual_by_year[group][year] for journal in self.journals]) for year in range(0, 5)]
         return use
 
     @cached_property
-    def use_actual_weighted_by_year(self):
+    def use_actual_by_year(self):
         use = {}
         for group in use_groups:
-            use[group] = [np.sum([journal.use_actual_weighted_by_year[group][year] for journal in self.journals]) for year in range(0, 5)]
+            use[group] = [np.sum([journal.use_actual_by_year[group][year] for journal in self.journals]) for year in range(0, 5)]
         return use
 
     @cached_property
-    def use_unweighted(self):
+    def downloads(self):
         use = {}
         for group in use_groups:
-            use[group] = int(np.mean(self.use_actual_unweighted_by_year[group]))
+            use[group] = int(np.mean(self.downloads_actual_by_year[group]))
         return use
 
     @cached_property
-    def use_actual_weighted(self):
+    def use_actual(self):
         use = {}
         for group in use_groups:
-            use[group] = int(np.mean(self.use_actual_weighted_by_year[group]))
+            use[group] = int(np.mean(self.use_actual_by_year[group]))
         return use
 
     @cached_property
     def use_paywalled(self):
-        return self.use_actual_weighted["subscription"] + self.use_actual_weighted["ill"] + self.use_actual_weighted["other_delayed"]
+        return self.use_actual["subscription"] + self.use_actual["ill"] + self.use_actual["other_delayed"]
 
     @cached_property
     def cppu(self):
@@ -208,23 +208,23 @@ class Scenario(object):
 
     @cached_property
     def use_instant_by_year(self):
-        return [self.use_actual_weighted_by_year["social_networks"][year] +
-                self.use_actual_weighted_by_year["backfile"][year] +
-                self.use_actual_weighted_by_year["subscription"][year] +
-                self.use_actual_weighted_by_year["oa"][year]
+        return [self.use_actual_by_year["social_networks"][year] +
+                self.use_actual_by_year["backfile"][year] +
+                self.use_actual_by_year["subscription"][year] +
+                self.use_actual_by_year["oa"][year]
                 for year in self.years]
 
     @cached_property
     def use_instant_percent(self):
-        if not self.use_total_weighted:
+        if not self.use_total:
             return 0
-        return round(100 * float(self.use_instant) / self.use_total_weighted, 2)
+        return round(100 * float(self.use_instant) / self.use_total, 2)
 
     @cached_property
     def use_instant_percent_by_year(self):
-        if not self.use_total_weighted:
+        if not self.use_total:
             return [0 for year in self.years]
-        return [100 * round(float(self.use_instant_by_year[year]) / self.use_total_weighted_by_year[year], 4) if self.use_total_weighted_by_year[year] else None for year in self.years]
+        return [100 * round(float(self.use_instant_by_year[year]) / self.use_total_by_year[year], 4) if self.use_total_by_year[year] else None for year in self.years]
 
     def get_journal(self, issn_l):
         for journal in self.journals:
@@ -305,58 +305,58 @@ class Scenario(object):
 
     @cached_property
     def num_citations_weight_percent(self):
-        return (100*self.settings.weight_citation*self.num_citations)/self.use_total_weighted
+        return (100*self.settings.weight_citation*self.num_citations)/self.use_total
 
     @cached_property
     def num_authorships_weight_percent(self):
-        return (100*self.settings.weight_authorship*self.num_authorships)/self.use_total_weighted
+        return (100*self.settings.weight_authorship*self.num_authorships)/self.use_total
 
     @cached_property
     def use_social_networks(self):
-        return int(np.sum([j.use_actual_weighted["social_networks"] for j in self.journals]))
+        return int(np.sum([j.use_actual["social_networks"] for j in self.journals]))
 
     @cached_property
     def use_oa(self):
-        return int(np.sum([j.use_actual_weighted["oa"] for j in self.journals]))
+        return int(np.sum([j.use_actual["oa"] for j in self.journals]))
 
     @cached_property
     def use_backfile(self):
-        return int(np.sum([j.use_actual_weighted["backfile"] for j in self.journals]))
+        return int(np.sum([j.use_actual["backfile"] for j in self.journals]))
 
     @cached_property
     def use_subscription(self):
-        response = int(np.sum([j.use_actual_weighted["subscription"] for j in self.journals]))
+        response = int(np.sum([j.use_actual["subscription"] for j in self.journals]))
         if not response:
             response = 0.0
         return response
 
     @cached_property
     def use_ill(self):
-        return int(np.sum([j.use_actual_weighted["ill"] for j in self.journals]))
+        return int(np.sum([j.use_actual["ill"] for j in self.journals]))
 
     @cached_property
     def use_other_delayed(self):
-        return int(np.sum([j.use_actual_weighted["other_delayed"] for j in self.journals]))
+        return int(np.sum([j.use_actual["other_delayed"] for j in self.journals]))
 
     @cached_property
     def use_green(self):
-        return int(np.sum([j.use_oa_green_weighted for j in self.journals]))
+        return int(np.sum([j.use_oa_green for j in self.journals]))
 
     @cached_property
     def use_hybrid(self):
-        return int(np.sum([j.use_oa_hybrid_weighted for j in self.journals]))
+        return int(np.sum([j.use_oa_hybrid for j in self.journals]))
 
     @cached_property
     def use_bronze(self):
-        return int(np.sum([j.use_oa_bronze_weighted for j in self.journals]))
+        return int(np.sum([j.use_oa_bronze for j in self.journals]))
 
     @cached_property
     def use_peer_reviewed(self):
-        return int(np.sum([j.use_oa_peer_reviewed_weighted for j in self.journals]))
+        return int(np.sum([j.use_oa_peer_reviewed for j in self.journals]))
 
     @cached_property
-    def use_counter_multiplier(self):
-        return round(np.mean([j.use_counter_multiplier for j in self.journals]), 4)
+    def downloads_counter_multiplier(self):
+        return round(np.mean([j.downloads_counter_multiplier for j in self.journals]), 4)
 
     @cached_property
     def use_weight_multiplier(self):
@@ -364,11 +364,11 @@ class Scenario(object):
 
     @cached_property
     def use_subscription_percent(self):
-        return round(float(100)*self.use_subscription/self.use_total_weighted, 1)
+        return round(float(100)*self.use_subscription/self.use_total, 1)
 
     @cached_property
     def use_ill_percent(self):
-        return round(float(100)*self.use_ill/self.use_total_weighted, 1)
+        return round(float(100)*self.use_ill/self.use_total, 1)
 
     @cached_property
     def use_free_instant_percent(self):
@@ -383,12 +383,12 @@ class Scenario(object):
                 "figure": [],
                 "headers": [
                         {"text": "Instant Usage Percent", "value": "instant_use_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent},
-                        {"text": "ASNs", "value": "use_asns", "percent": int(float(100)*self.use_social_networks/self.use_total_weighted), "raw": self.use_social_networks},
-                        {"text": "Open access", "value": "use_oa", "percent": int(float(100)*self.use_oa/self.use_total_weighted), "raw": self.use_oa},
-                        {"text": "Backfile", "value": "use_backfile", "percent": int(float(100)*self.use_backfile/self.use_total_weighted), "raw": self.use_backfile},
-                        {"text": "Subscription", "value": "use_subscription", "percent": int(float(100)*self.use_subscription/self.use_total_weighted), "raw": self.use_subscription},
-                        {"text": "ILL", "value": "use_ill", "percent": int(float(100)*self.use_ill/self.use_total_weighted), "raw": self.use_ill},
-                        {"text": "Other (delayed)", "value": "use_other_delayed", "percent": int(float(100)*self.use_other_delayed/self.use_total_weighted), "raw": self.use_other_delayed},
+                        {"text": "ASNs", "value": "use_asns", "percent": int(float(100)*self.use_social_networks/self.use_total), "raw": self.use_social_networks},
+                        {"text": "Open access", "value": "use_oa", "percent": int(float(100)*self.use_oa/self.use_total), "raw": self.use_oa},
+                        {"text": "Backfile", "value": "use_backfile", "percent": int(float(100)*self.use_backfile/self.use_total), "raw": self.use_backfile},
+                        {"text": "Subscription", "value": "use_subscription", "percent": int(float(100)*self.use_subscription/self.use_total), "raw": self.use_subscription},
+                        {"text": "ILL", "value": "use_ill", "percent": int(float(100)*self.use_ill/self.use_total), "raw": self.use_ill},
+                        {"text": "Other (delayed)", "value": "use_other_delayed", "percent": int(float(100)*self.use_other_delayed/self.use_total), "raw": self.use_other_delayed},
                 ],
                 "journals": [j.to_dict_fulfillment() for j in self.journals_sorted_use_total[0:pagesize]],
             }
@@ -405,11 +405,11 @@ class Scenario(object):
                 "description": "Understand the Open Access availability of articles in journals.",
                 "figure": [],
                 "headers": [
-                        {"text": "Percent of Usage that is OA", "value": "use_oa_percent", "percent": int(float(100)*self.use_oa/self.use_total_weighted), "raw": self.use_oa},
-                        {"text": "Percent of Usage that is Green OA", "value": "use_green_percent", "percent": int(float(100)*self.use_green/self.use_total_weighted), "raw": self.use_green},
-                        {"text": "Percent of Usage that is Hybrid OA", "value": "use_hybrid_percent", "percent": int(float(100)*self.use_hybrid/self.use_total_weighted), "raw": self.use_hybrid},
-                        {"text": "Percent of Usage that is Bronze OA", "value": "use_bronze_percent", "percent": int(float(100)*self.use_bronze/self.use_total_weighted), "raw": self.use_bronze},
-                        {"text": "Percent of Usage that is Peer-reviewed OA", "value": "use_peer_reviewed_percent", "percent": int(float(100)*self.use_peer_reviewed/self.use_total_weighted), "raw": self.use_peer_reviewed},
+                        {"text": "Percent of Usage that is OA", "value": "use_oa_percent", "percent": int(float(100)*self.use_oa/self.use_total), "raw": self.use_oa},
+                        {"text": "Percent of Usage that is Green OA", "value": "use_green_percent", "percent": int(float(100)*self.use_green/self.use_total), "raw": self.use_green},
+                        {"text": "Percent of Usage that is Hybrid OA", "value": "use_hybrid_percent", "percent": int(float(100)*self.use_hybrid/self.use_total), "raw": self.use_hybrid},
+                        {"text": "Percent of Usage that is Bronze OA", "value": "use_bronze_percent", "percent": int(float(100)*self.use_bronze/self.use_total), "raw": self.use_bronze},
+                        {"text": "Percent of Usage that is Peer-reviewed OA", "value": "use_peer_reviewed_percent", "percent": int(float(100)*self.use_peer_reviewed/self.use_total), "raw": self.use_peer_reviewed},
                 ],
                 "journals": [j.to_dict_oa() for j in self.journals_sorted_use_total[0:pagesize]],
             }
@@ -428,12 +428,12 @@ class Scenario(object):
                 "figure": [
                 ],
                 "headers": [
-                        {"text": "Total Usage", "value":"total_usage", "percent": 100, "raw": self.use_total_weighted},
-                        {"text": "Downloads", "value":"downloads", "percent": 100*self.use_total_unweighted/self.use_total_weighted, "raw": self.use_total_unweighted},
+                        {"text": "Total Usage", "value":"total_usage", "percent": 100, "raw": self.use_total},
+                        {"text": "Downloads", "value":"downloads", "percent": 100*self.downloads_total/self.use_total, "raw": self.downloads_total},
                         {"text": "Citations", "value":"citations", "percent": self.num_citations_weight_percent, "raw": self.num_citations},
                         {"text": "Authorships", "value":"authorships", "percent": self.num_authorships_weight_percent, "raw": self.num_authorships},
-                        {"text": "Multiplier for reading", "value":"use_weight_multiplier", "percent": None, "raw": self.use_weight_multiplier},
-                        {"text": "Multipler for interaction", "value":"use_counter_multiplier", "percent": None, "raw": self.use_counter_multiplier},
+                        # {"text": "Multiplier for reading", "value":"use_weight_multiplier", "percent": None, "raw": self.use_weight_multiplier},
+                        # {"text": "Multipler for interaction", "value":"downloads_counter_multiplier", "percent": None, "raw": self.downloads_counter_multiplier},
                 ],
                 "journals": [j.to_dict_impact() for j in self.journals_sorted_use_total[0:pagesize]],
             }
@@ -449,8 +449,8 @@ class Scenario(object):
                 "description": "Understand your scenario at the journal level.",
                 "figure": [],
                 "headers": [
-                        {"text": "Cost per paid use", "value": "cppu", "percent": None, "raw": self.cppu},
-                        {"text": "Usage", "value": "use", "percent": None, "raw": self.use_total_weighted},
+                        {"text": "Subscription cost per paid use", "value": "cppu", "percent": None, "raw": self.cppu},
+                        {"text": "Usage", "value": "use", "percent": None, "raw": self.use_total},
                         {"text": "Instant Usage Percent", "value": "instant_use_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent},
                         {"text": "Cost", "value": "cost", "percent": None, "raw": self.cost},
                 ],
@@ -472,7 +472,7 @@ class Scenario(object):
                         {"text": "Real Subscription Cost", "value": "real_cost", "percent": None, "raw": self.cost_subscription_minus_ill},
                         {"text": "ILL Cost", "value": "ill_cost", "percent": None, "raw": self.cost_ill},
                         {"text": "Subscription Cost", "value": "subscription_cost", "percent": None, "raw": self.cost_subscription},
-                        {"text": "Cost per paid use", "value": "cppu", "percent": None, "raw": self.cppu},
+                        {"text": "Subscription cost per paid use", "value": "cppu", "percent": None, "raw": self.cppu},
                 ],
                 "journals": [j.to_dict_cost() for j in self.journals_sorted_use_total[0:pagesize]],
             }
