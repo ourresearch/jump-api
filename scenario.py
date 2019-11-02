@@ -177,6 +177,15 @@ class Scenario(object):
         return round(sum([j.cost_actual for j in self.journals]), 2)
 
     @cached_property
+    def cost_actual_ill(self):
+        return round(sum([j.cost_actual for j in self.journals if not j.subscribed]), 2)
+
+    @cached_property
+    def cost_actual_subscription(self):
+        return round(sum([j.cost_actual for j in self.journals if j.subscribed]), 2)
+
+
+    @cached_property
     def cost_bigdeal_projected_by_year(self):
         return [int(((1+self.settings.cost_bigdeal_increase/float(100))**year) * self.settings.cost_bigdeal )
                                             for year in self.years]
@@ -540,6 +549,8 @@ class Scenario(object):
     def to_dict_summary_dict(self):
         response = {
                     "cost_scenario": self.cost,
+                    "cost_scenario_ill": self.cost_actual_ill,
+                    "cost_scenario_subscription": self.cost_actual_subscription,
                     "cost_bigdeal_projected": self.cost_bigdeal_projected,
                     "cost_percent": self.cost_spent_percent,
                     "num_journals_subscribed": len(self.subscribed),
