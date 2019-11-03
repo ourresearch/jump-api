@@ -671,7 +671,8 @@ class Journal(object):
         return response
 
     def to_dict_details(self):
-        response = {}
+        response = OrderedDict()
+
         response["top"] = {
                 "issn_l": self.issn_l,
                 "title": self.title,
@@ -730,13 +731,27 @@ class Journal(object):
         }
 
 
+        cost_list = []
+        for cost_type in ["cost_actual_by_year", "cost_subscription_by_year", "cost_ill_by_year", "cost_subscription_minus_ill_by_year"]:
+            cost_dict = OrderedDict()
+            cost_dict["cost_type"] = cost_type
+            costs = self.__getattribute__(cost_type)
+            for year in self.years:
+                cost_dict["year_"+str(2020 + year)] = costs[year]
+            cost_list += [cost_dict]
         response["cost"] = {
             "subscribed": self.subscribed,
-            "cost_actual_by_year": self.cost_actual_by_year,
-            "cost_subscription_by_year": self.cost_subscription_by_year,
-            "cost_ill_by_year": self.cost_ill_by_year,
-            "cost_subscription_minus_ill_by_year": self.cost_subscription_minus_ill_by_year
-        }
+            "headers": [
+                {"text": "Cost Type", "value": "cost_type"},
+                {"text": "2020", "value": "year_2020"},
+                {"text": "2021", "value": "year_2021"},
+                {"text": "2022", "value": "year_2022"},
+                {"text": "2023", "value": "year_2023"},
+                {"text": "2024", "value": "year_2024"},
+            ],
+            "data": cost_list
+            }
+
         response["apc"] = {
             "apc_price": None, #self.apc_price,
             "cost_apc_historical": None, # self.cost_apc_historical,
