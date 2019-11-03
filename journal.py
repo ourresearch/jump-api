@@ -688,7 +688,7 @@ class Journal(object):
                 "cost_subscription": format_currency(self.cost_subscription),
                 "cost_ill": format_currency(self.cost_ill),
                 "cost_actual": format_currency(self.cost_actual),
-                "url_api_journal_raw_default_settings": "https://unpaywall-jump-api.herokuapp.com/journal/issn_l/{}".format(self.issn_l),
+                "api_journal_raw_default_settings": "https://unpaywall-jump-api.herokuapp.com/journal/issn_l/{}".format(self.issn_l),
                 "scenario_settings": self.settings.to_dict()
         }
 
