@@ -10,7 +10,7 @@ class Assumptions(object):
         self.cost_ill = 5
         self.cost_bigdeal_increase = 5 #percent
         self.cost_alacart_increase = 8 #percent
-        self.cost_bigdeal = 2200000
+        self.cost_bigdeal = 2100000
         self.cost_content_fee_percent = 5.7
         self.ill_request_percent_of_delayed = 10
         self.weight_citation = 10

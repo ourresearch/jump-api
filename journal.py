@@ -704,9 +704,9 @@ class Journal(object):
         response["fulfillment"] = {
             "headers": [
                 {"text": "Type", "value": "group"},
-                {"text": "Usage total", "value": "usage"},
-                {"text": "Usage total (percent)", "value": "usage_percent"},
-                {"text": "Predicted usage 2020", "value": "year_2020"},
+                {"text": "Usage (predicted annual)", "value": "usage"},
+                {"text": "Usage (percent)", "value": "usage_percent"},
+                {"text": "Usage predicted 2020", "value": "year_2020"},
                 {"text": "2021", "value": "year_2021"},
                 {"text": "2022", "value": "year_2022"},
                 {"text": "2023", "value": "year_2023"},
@@ -745,11 +745,11 @@ class Journal(object):
                          ("raw", format_with_commas(self.downloads_total)),
                          ("weight", 1),
                          ("contribution", format_with_commas(self.downloads_total))]),
-            OrderedDict([("impact", "Citations"),
+            OrderedDict([("impact", "Citations to papers in this journal"),
                          ("raw", format_with_commas(self.num_citations, 1)),
                          ("weight", self.settings.weight_citation),
                          ("contribution", format_with_commas(self.num_citations * self.settings.weight_citation))]),
-            OrderedDict([("impact", "Authorships"),
+            OrderedDict([("impact", "Authored papers in this journal"),
                          ("raw", format_with_commas(self.num_authorships, 1)),
                          ("weight", self.settings.weight_authorship),
                          ("contribution", format_with_commas(self.num_authorships * self.settings.weight_authorship))]),
@@ -762,7 +762,7 @@ class Journal(object):
             "usage_total": self.use_total,
             "headers": [
                 {"text": "Impact", "value": "impact"},
-                {"text": "Raw", "value": "raw"},
+                {"text": "Raw (predicted annual)", "value": "raw"},
                 {"text": "Weight", "value": "weight"},
                 {"text": "Usage contribution", "value": "contribution"},
             ],
@@ -789,13 +789,13 @@ class Journal(object):
             "cppu_delta": format_currency(self.cppu_use_delta, True),
             "headers": [
                 {"text": "Cost Type", "value": "cost_type"},
-                {"text": "Predicted for 2020", "value": "year_2020"},
+                {"text": "Cost (predicted annual)", "value": "cost_avg"},
+                {"text": "Cost per paid use (CPPU)", "value": "cost_per_use"},
+                {"text": "Cost predicted 2020", "value": "year_2020"},
                 {"text": "2021", "value": "year_2021"},
                 {"text": "2022", "value": "year_2022"},
                 {"text": "2023", "value": "year_2023"},
                 {"text": "2024", "value": "year_2024"},
-                {"text": "Predicted average cost", "value": "cost_avg"},
-                {"text": "Cost per paid use (CPPU)", "value": "cost_per_use"},
             ],
             "data": cost_list
             }
