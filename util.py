@@ -744,10 +744,16 @@ def format_currency(amount, cents=False):
     return my_string
 
 
-def format_percent(amount, decimals=0):
-    my_string = u"{:0,." + str(decimals) + u"f}%"
+def format_percent(amount, num_decimals=0):
+    my_string = u"{:0." + str(num_decimals) + u"f}%"
     my_string = my_string.format(amount)
     return my_string
 
-def format_with_commas(amount):
-    return locale.format(u'%d', amount, True)
+def format_with_commas(amount, num_decimals=0):
+    try:
+        my_string = u"{:0,." + str(num_decimals) + u"f}"
+        my_string = my_string.format(amount)
+        return my_string
+    except:
+        return locale.format(u'%d', amount, True)
+

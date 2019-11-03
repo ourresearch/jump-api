@@ -143,12 +143,12 @@ def get_db_cursor(commit=False):
           pass
 
 use_groups_lookup = OrderedDict()
-use_groups_lookup["total"] = {"display": "Total", "free_instant": False}
 use_groups_lookup["oa"] = {"display": "OA", "free_instant": True}
 use_groups_lookup["social_networks"] = {"display": "ASNs", "free_instant": True}
 use_groups_lookup["backfile"] = {"display": "Backfile", "free_instant": True}
 use_groups_lookup["subscription"] = {"display": "Subscription", "free_instant": False}
 use_groups_lookup["ill"] = {"display": "ILL", "free_instant": False}
 use_groups_lookup["other_delayed"] = {"display": "Other", "free_instant": False}
+use_groups_lookup["total"] = {"display": "*Total*", "free_instant": False}
 use_groups = use_groups_lookup.keys()
 use_groups_free_instant = [k for k, v in use_groups_lookup.iteritems() if v["free_instant"]]

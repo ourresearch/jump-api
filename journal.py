@@ -687,7 +687,9 @@ class Journal(object):
                 "num_papers": self.num_papers,
                 "cost_subscription": format_currency(self.cost_subscription),
                 "cost_ill": format_currency(self.cost_ill),
-                "cost_actual": format_currency(self.cost_actual)
+                "cost_actual": format_currency(self.cost_actual),
+                "url_api_journal_raw_default_settings": "https://unpaywall-jump-api.herokuapp.com/journal/issn_l/{}".format(self.issn_l),
+                "scenario_settings": self.settings.to_dict()
         }
 
         group_list = []
@@ -724,7 +726,7 @@ class Journal(object):
             oa_dict["usage"] = format_with_commas(use)
             oa_dict["usage_percent"] = format_percent(int(float(100)*use/self.use_total))
             oa_list += [oa_dict]
-        oa_list += [OrderedDict([("oa_status", "Total"),
+        oa_list += [OrderedDict([("oa_status", "*Total*"),
                                 ("num_papers", int(self.num_oa_historical)),
                                 ("usage", format_with_commas(self.use_oa)),
                                 ("usage_percent", format_percent(int(100*float(self.use_oa)/self.use_total)))])]
@@ -745,14 +747,14 @@ class Journal(object):
                          ("weight", 1),
                          ("contribution", format_with_commas(self.downloads_total))]),
             OrderedDict([("impact", "Citations"),
-                         ("raw", format_with_commas(self.num_citations)),
+                         ("raw", format_with_commas(self.num_citations, 1)),
                          ("weight", self.settings.weight_citation),
                          ("contribution", format_with_commas(self.num_citations * self.settings.weight_citation))]),
             OrderedDict([("impact", "Authorships"),
-                         ("raw", format_with_commas(self.num_authorships)),
+                         ("raw", format_with_commas(self.num_authorships, 1)),
                          ("weight", self.settings.weight_authorship),
                          ("contribution", format_with_commas(self.num_authorships * self.settings.weight_authorship))]),
-            OrderedDict([("impact", "Total"),
+            OrderedDict([("impact", "*Total*"),
                          ("raw", "-"),
                          ("weight", "-"),
                          ("contribution", format_with_commas(self.use_total))])
