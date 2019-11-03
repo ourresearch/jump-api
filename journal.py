@@ -723,13 +723,30 @@ class Journal(object):
             "data": oa_list
             }
 
+        impact_list = [
+            OrderedDict([("impact", "downloads"),
+                         ("raw", self.downloads_total),
+                         ("weight", 1),
+                         ("contribution", self.downloads_total)]),
+            OrderedDict([("impact", "citations"),
+                         ("raw", self.num_citations),
+                         ("weight", self.settings.weight_citation),
+                         ("contribution", self.num_citations * self.settings.weight_citation)]),
+            OrderedDict([("impact", "authorships"),
+                         ("raw", self.num_authorships),
+                         ("weight", self.settings.weight_authorship),
+                         ("contribution", self.num_authorships * self.settings.weight_authorship)])
+            ]
         response["impact"] = {
-            "total_usage": int(self.use_total),
-            "downloads": int(self.downloads_total),
-            "citations": int(self.num_citations),
-            "authorships": round(self.num_authorships, 1)
-        }
-
+            "use_total": self.use_total,
+            "headers": [
+                {"text": "Impact", "value": "impact"},
+                {"text": "Raw", "value": "raw"},
+                {"text": "Weight", "value": "weight"},
+                {"text": "Contribution", "value": "contribution"},
+            ],
+            "data": impact_list
+            }
 
         cost_list = []
         for cost_type in ["cost_actual_by_year", "cost_subscription_by_year", "cost_ill_by_year", "cost_subscription_minus_ill_by_year"]:
