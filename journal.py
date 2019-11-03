@@ -744,23 +744,24 @@ class Journal(object):
 
         }
 
-        response["use_instant_percent"] = self.use_instant_percent
-        response["use_instant_percent_by_year"] = self.use_instant_percent_by_year
-        response["oa_embargo_months"] = self.oa_embargo_months
-        response["num_papers"] = self.num_papers
-        response["use_weight_multiplier"] = self.use_weight_multiplier_normalized
-        response["downloads_counter_multiplier"] = self.downloads_counter_multiplier_normalized
-        response["downloads_total_per_paper_by_age"] = self.downloads_total_per_paper_by_age
-        response["use_instant_by_year"] = self.use_instant_by_year
-        response["use_instant_percent_by_year"] = self.use_instant_percent_by_year
-        response["use_actual_by_year"] = self.use_actual_by_year
-        response["use_actual"] = self.use_actual
-        response["use_oa_green"] = self.use_oa_green
-        response["use_oa_hybrid"] = self.use_oa_hybrid
-        response["use_oa_bronze"] = self.use_oa_bronze
-        response["use_oa_peer_reviewed"] = self.use_oa_peer_reviewed
-        response["use_oa"] = self.use_oa
-        response["debug"] = {}
+        response_debug = {}
+        response_debug["use_instant_percent"] = self.use_instant_percent
+        response_debug["use_instant_percent_by_year"] = self.use_instant_percent_by_year
+        response_debug["oa_embargo_months"] = self.oa_embargo_months
+        response_debug["num_papers"] = self.num_papers
+        response_debug["use_weight_multiplier"] = self.use_weight_multiplier_normalized
+        response_debug["downloads_counter_multiplier"] = self.downloads_counter_multiplier_normalized
+        response_debug["downloads_total_per_paper_by_age"] = self.downloads_total_per_paper_by_age
+        response_debug["use_instant_by_year"] = self.use_instant_by_year
+        response_debug["use_instant_percent_by_year"] = self.use_instant_percent_by_year
+        response_debug["use_actual_by_year"] = self.use_actual_by_year
+        response_debug["use_actual"] = self.use_actual
+        response_debug["use_oa_green"] = self.use_oa_green
+        response_debug["use_oa_hybrid"] = self.use_oa_hybrid
+        response_debug["use_oa_bronze"] = self.use_oa_bronze
+        response_debug["use_oa_peer_reviewed"] = self.use_oa_peer_reviewed
+        response_debug["use_oa"] = self.use_oa
+        response["debug"] = response_debug
 
         return response
 
