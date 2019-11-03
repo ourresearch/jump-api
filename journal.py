@@ -781,17 +781,21 @@ class Journal(object):
             for year in self.years:
                 cost_dict["year_"+str(2020 + year)] = format_currency(costs[year])
             cost_list += [cost_dict]
+            cost_dict["cost_avg"] = format_currency(self.__getattribute__(cost_type.replace("_by_year", "")))
+            cost_dict["cost_per_use"] = format_currency(self.__getattribute__(cost_type.replace("_by_year", "")) / float(self.use_paywalled), True)
         response["cost"] = {
             "subscribed": self.subscribed,
             "cppu": format_currency(self.cppu_use, True),
             "cppu_delta": format_currency(self.cppu_use_delta, True),
             "headers": [
                 {"text": "Cost Type", "value": "cost_type"},
-                {"text": "2020", "value": "year_2020"},
+                {"text": "Predicted for 2020", "value": "year_2020"},
                 {"text": "2021", "value": "year_2021"},
                 {"text": "2022", "value": "year_2022"},
                 {"text": "2023", "value": "year_2023"},
                 {"text": "2024", "value": "year_2024"},
+                {"text": "Predicted average cost", "value": "cost_avg"},
+                {"text": "Cost per paid use (CPPU)", "value": "cost_per_use"},
             ],
             "data": cost_list
             }
