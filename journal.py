@@ -9,6 +9,7 @@ from collections import OrderedDict
 
 from app import use_groups
 from app import use_groups_free_instant
+from app import use_groups_lookup
 from app import get_db_cursor
 from util import format_currency
 from util import format_percent
@@ -692,8 +693,8 @@ class Journal(object):
         group_list = []
         for group in use_groups:
             group_dict = OrderedDict()
-            group_dict["group"] = group
-            group_dict["usage"] = self.use_actual[group]
+            group_dict["group"] = use_groups_lookup[group]["display"]
+            group_dict["usage"] = round(self.use_actual[group])
             group_dict["usage_percent"] = format_percent(int(float(100)*self.use_actual[group]/self.use_total))
             group_dict["timeline"] = u",".join([format_with_commas(self.use_actual_by_year[group][year]) for year in self.years])
             group_list += [group_dict]
@@ -712,21 +713,21 @@ class Journal(object):
             oa_dict = OrderedDict()
             use = self.__getattribute__("use_oa_{}".format(oa_type))
             oa_dict["oa_status"] = oa_type.title()
-            oa_dict["num_papers"] = self.__getattribute__("num_{}_historical".format(oa_type))
+            oa_dict["num_papers"] = int(self.__getattribute__("num_{}_historical".format(oa_type)))
             oa_dict["usage"] = format_with_commas(use)
             oa_dict["usage_percent"] = format_percent(int(float(100)*use/self.use_total))
             oa_list += [oa_dict]
-        oa_list += OrderedDict([("oa_status", "Total"),
+        oa_list += [OrderedDict([("oa_status", "Total"),
                                 ("num_papers", self.num_oa_historical),
                                 ("usage", format_with_commas(self.use_oa)),
-                                ("usage_percent", format_percent(100*self.use_oa))])
+                                ("usage_percent", format_percent(100*self.use_oa))])]
         response["oa"] = {
             "oa_embargo_months": self.oa_embargo_months,
             "headers": [
                 {"text": "OA Type", "value": "oa_status"},
                 {"text": "Number of papers", "value": "num_papers"},
                 {"text": "Usage", "value": "usage"},
-                {"text": "OA percent", "value": "usage_percent"},
+                {"text": "Percent of all usage", "value": "usage_percent"},
             ],
             "data": oa_list
             }
