@@ -436,6 +436,10 @@ class Journal(object):
         return [round(self.downloads_ill_by_year[year] * self.settings.cost_ill, 4) for year in self.years]
 
     @cached_property
+    def cost_subscription_minus_ill_by_year(self):
+        return [self.cost_subscription_by_year[year] - self.cost_ill_by_year[year] for year in self.years]
+
+    @cached_property
     def cost_subscription_minus_ill(self):
         return round(self.cost_subscription - self.cost_ill, 4)
 
@@ -667,7 +671,79 @@ class Journal(object):
         return response
 
     def to_dict_details(self):
-        response = self.to_dict()
+        response = {}
+        response["top"] = {
+                "issn_l": self.issn_l,
+                "title": self.title,
+                "subject": self.subject,
+                "publisher": "Elsevier",
+                "is_society_journal": False,
+                "num_papers": self.num_papers,
+                "cost_subscription": self.cost_subscription,
+                "cost_ill": self.cost_ill,
+                "cost_actual": self.cost_actual
+        }
+
+        group_list = []
+        for group in use_groups:
+            group_dict = OrderedDict()
+            group_dict["group"] = group
+            group_dict["use"] = self.use_actual[group]
+            group_dict["use_percent"] = int(float(100)*self.use_actual["group"]/self.use_total)
+            group_dict["timeline"] = self.use_actual_by_year[group]
+            group_list += [group_dict]
+        response["fulfillment"] = {
+            "headers": [
+                {"text": "Type", "value": "group"},
+                {"text": "Use", "value": "use"},
+                {"text": "Use percent", "value": "use_percent"},
+                {"text": "Timeline", "value": "timeline"},
+            ],
+            "data": group_list
+            }
+
+        oa_list = []
+        for oa_type in ["green", "hybrid", "bronze"]:
+            oa_dict = OrderedDict()
+            use = self.__getattribute__("use_oa_{}".format(oa_type))
+            oa_dict["oa_status"] = oa_type
+            oa_dict["num_papers"] = self.__getattribute__("num_{}_historical".format(oa_type))
+            oa_dict["use"] = use
+            oa_dict["use_percent"] = int(float(100)*use/self.use_total)
+            oa_list += [oa_dict]
+        response["oa"] = {
+            "oa_embargo_months": self.oa_embargo_months,
+            "headers": [
+                {"text": "OA Type", "value": "oa_status"},
+                {"text": "Number of papers", "value": "num_papers"},
+                {"text": "Use", "value": "use"},
+                {"text": "OA percent", "value": "use_percent"},
+            ],
+            "data": oa_list
+            }
+
+        response["impact"] = {
+            "total_usage": int(self.use_total),
+            "downloads": int(self.downloads_total),
+            "citations": int(self.num_citations),
+            "authorships": round(self.num_authorships, 1)
+        }
+
+
+        response["cost"] = {
+            "subscribed": self.subscribed,
+            "cost_actual_by_year": self.cost_actual_by_year,
+            "cost_subscription_by_year": self.cost_subscription_by_year,
+            "cost_ill_by_year": self.cost_ill_by_year,
+            "cost_subscription_minus_ill_by_year": self.cost_subscription_minus_ill_by_year
+        }
+        response["apc"] = {
+            "apc_price": None, #self.apc_price,
+            "cost_apc_historical": None, # self.cost_apc_historical,
+            "fractional_authorship": None, # self.fractional_authorship,
+
+        }
+
         response["use_instant_percent"] = self.use_instant_percent
         response["use_instant_percent_by_year"] = self.use_instant_percent_by_year
         response["oa_embargo_months"] = self.oa_embargo_months

@@ -76,12 +76,21 @@ class ApcJournal(object):
     def historical_years_by_year(self):
         return range(2014, 2019)
 
+    @cached_property
+    def subscribed(self):
+        return None
+
+    @cached_property
+    def is_in_package(self):
+        return None
+
     def to_dict(self):
         response = OrderedDict()
         response["meta"] = {"issn_l": self.issn_l,
                     "title": self.title,
                     "subject": None,
-                    "subscribed": None
+                    "subscribed": self.subscribed,
+                    "is_in_package": self.is_in_package
                             }
         response["cost_apc"] = int(self.cost_apc_historical)
         if self.oa_status == "gold":
