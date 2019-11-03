@@ -23,6 +23,12 @@ from requests.adapters import HTTPAdapter
 import csv
 from flask import current_app
 from simplejson import dumps
+import locale
+
+try:
+    locale.setlocale(locale.LC_ALL, 'en_US.UTF-8') #use locale.format for commafication
+except locale.Error:
+    locale.setlocale(locale.LC_ALL, '') #set to default locale (works on windows)
 
 def str2bool(v):
   return v.lower() in ("yes", "true", "t", "1")
@@ -727,3 +733,21 @@ def abort_json(status_code, msg):
     response = make_response(response_json, status_code)
     response.mimetype = "application/json"
     abort(response)
+
+def format_currency(amount, cents=False):
+    if not cents:
+        amount = int(round(amount))
+        my_string = locale.currency(amount, grouping=True)
+        my_string = my_string.replace(".00", "")
+    else:
+        my_string = locale.currency(amount, grouping=True)
+    return my_string
+
+
+def format_percent(amount, decimals=0):
+    my_string = u"{:0,." + str(decimals) + u"f}%"
+    my_string = my_string.format(amount)
+    return my_string
+
+def format_with_commas(amount):
+    return locale.format(u'%d', amount, True)

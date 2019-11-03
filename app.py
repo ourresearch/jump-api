@@ -27,8 +27,6 @@ from util import safe_commit
 from util import elapsed
 from util import HTTPMethodOverrideMiddleware
 
-
-
 HEROKU_APP_NAME = "jump-api"
 
 # set up logging

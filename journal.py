@@ -10,6 +10,9 @@ from collections import OrderedDict
 from app import use_groups
 from app import use_groups_free_instant
 from app import get_db_cursor
+from util import format_currency
+from util import format_percent
+from util import format_with_commas
 
 
 class Journal(object):
@@ -677,28 +680,29 @@ class Journal(object):
                 "issn_l": self.issn_l,
                 "title": self.title,
                 "subject": self.subject,
-                "publisher": "Elsevier",
-                "is_society_journal": False,
+                "publisher": self.publisher,
+                "is_society_journal": False,  ## todo
+                "subscribed": self.subscribed,
                 "num_papers": self.num_papers,
-                "cost_subscription": self.cost_subscription,
-                "cost_ill": self.cost_ill,
-                "cost_actual": self.cost_actual
+                "cost_subscription": format_currency(self.cost_subscription),
+                "cost_ill": format_currency(self.cost_ill),
+                "cost_actual": format_currency(self.cost_actual)
         }
 
         group_list = []
         for group in use_groups:
             group_dict = OrderedDict()
             group_dict["group"] = group
-            group_dict["use"] = self.use_actual[group]
-            group_dict["use_percent"] = int(float(100)*self.use_actual["group"]/self.use_total)
-            group_dict["timeline"] = self.use_actual_by_year[group]
+            group_dict["usage"] = self.use_actual[group]
+            group_dict["usage_percent"] = format_percent(int(float(100)*self.use_actual[group]/self.use_total))
+            group_dict["timeline"] = u",".join([format_with_commas(self.use_actual_by_year[group][year]) for year in self.years])
             group_list += [group_dict]
         response["fulfillment"] = {
             "headers": [
                 {"text": "Type", "value": "group"},
-                {"text": "Use", "value": "use"},
-                {"text": "Use percent", "value": "use_percent"},
-                {"text": "Timeline", "value": "timeline"},
+                {"text": "Usage", "value": "usage"},
+                {"text": "Usage percent", "value": "usage_percent"},
+                {"text": "Usage by year", "value": "timeline"},
             ],
             "data": group_list
             }
@@ -707,38 +711,46 @@ class Journal(object):
         for oa_type in ["green", "hybrid", "bronze"]:
             oa_dict = OrderedDict()
             use = self.__getattribute__("use_oa_{}".format(oa_type))
-            oa_dict["oa_status"] = oa_type
+            oa_dict["oa_status"] = oa_type.title()
             oa_dict["num_papers"] = self.__getattribute__("num_{}_historical".format(oa_type))
-            oa_dict["use"] = use
-            oa_dict["use_percent"] = int(float(100)*use/self.use_total)
+            oa_dict["usage"] = format_with_commas(use)
+            oa_dict["usage_percent"] = format_percent(int(float(100)*use/self.use_total))
             oa_list += [oa_dict]
+        oa_list += OrderedDict([("oa_status", "Total"),
+                                ("num_papers", self.num_oa_historical),
+                                ("usage", format_with_commas(self.use_oa)),
+                                ("usage_percent", format_percent(100*self.use_oa))])
         response["oa"] = {
             "oa_embargo_months": self.oa_embargo_months,
             "headers": [
                 {"text": "OA Type", "value": "oa_status"},
                 {"text": "Number of papers", "value": "num_papers"},
-                {"text": "Use", "value": "use"},
-                {"text": "OA percent", "value": "use_percent"},
+                {"text": "Usage", "value": "usage"},
+                {"text": "OA percent", "value": "usage_percent"},
             ],
             "data": oa_list
             }
 
         impact_list = [
             OrderedDict([("impact", "downloads"),
-                         ("raw", self.downloads_total),
+                         ("raw", format_with_commas(self.downloads_total)),
                          ("weight", 1),
-                         ("contribution", self.downloads_total)]),
+                         ("contribution", format_with_commas(self.downloads_total))]),
             OrderedDict([("impact", "citations"),
-                         ("raw", self.num_citations),
+                         ("raw", format_with_commas(self.num_citations)),
                          ("weight", self.settings.weight_citation),
-                         ("contribution", self.num_citations * self.settings.weight_citation)]),
+                         ("contribution", format_with_commas(self.num_citations * self.settings.weight_citation))]),
             OrderedDict([("impact", "authorships"),
-                         ("raw", self.num_authorships),
+                         ("raw", format_with_commas(self.num_authorships)),
                          ("weight", self.settings.weight_authorship),
-                         ("contribution", self.num_authorships * self.settings.weight_authorship)])
+                         ("contribution", format_with_commas(self.num_authorships * self.settings.weight_authorship))]),
+            OrderedDict([("impact", "total"),
+                         ("raw", None),
+                         ("weight", None),
+                         ("contribution", format_with_commas(self.use_total))])
             ]
         response["impact"] = {
-            "use_total": self.use_total,
+            "usage_total": self.use_total,
             "headers": [
                 {"text": "Impact", "value": "impact"},
                 {"text": "Raw", "value": "raw"},
@@ -751,13 +763,18 @@ class Journal(object):
         cost_list = []
         for cost_type in ["cost_actual_by_year", "cost_subscription_by_year", "cost_ill_by_year", "cost_subscription_minus_ill_by_year"]:
             cost_dict = OrderedDict()
-            cost_dict["cost_type"] = cost_type
+            if cost_type == "cost_actual_by_year":
+                cost_dict["cost_type"] = "Your scenario cost"
+            else:
+                cost_dict["cost_type"] = cost_type.replace("cost_", "").replace("_", " ").title()
             costs = self.__getattribute__(cost_type)
             for year in self.years:
-                cost_dict["year_"+str(2020 + year)] = costs[year]
+                cost_dict["year_"+str(2020 + year)] = format_currency(costs[year])
             cost_list += [cost_dict]
         response["cost"] = {
             "subscribed": self.subscribed,
+            "cppu": format_currency(self.cppu_use, True),
+            "cppu_delta": format_currency(self.cppu_use_delta, True),
             "headers": [
                 {"text": "Cost Type", "value": "cost_type"},
                 {"text": "2020", "value": "year_2020"},
