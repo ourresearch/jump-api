@@ -9,12 +9,21 @@ from collections import OrderedDict
 class ApcJournal(object):
     years = range(0, 5)
 
-    def __init__(self, issn_l, scenario_data, scenario):
-        self.scenario = weakref.proxy(scenario)
-        self.settings = self.scenario.settings
+    def __init__(self, issn_l, scenario_data, scenario=None):
         self.issn_l = issn_l
+        self.have_data = False
+        self.is_in_package = False
+        self.subscribed = False
+        self.scenario = None
+        if scenario:
+            self.scenario = weakref.proxy(scenario)
+            matching_journal = self.scenario.get_journal(self.issn_l)
+            if matching_journal:
+                self.is_in_package = True
+                self.subscribed = matching_journal.subscribed
         self._scenario_data = scenario_data
-        dummy = self.to_dict()  # instantiate everything
+        if self.issn_l in [str(issn) for issn in self._scenario_data["apc"]["df_by_issn_l_and_year"].issn_l]:
+            self.have_data = True
 
 
     @cached_property
@@ -39,6 +48,12 @@ class ApcJournal(object):
         return self.first_df["oa_status"]
 
     @cached_property
+    def apc_price_display(self):
+        if not self.have_data:
+            return "unknown"
+        return self.apc_2019
+
+    @cached_property
     def apc_2019(self):
         return self.first_df["apc"]
 
@@ -52,10 +67,14 @@ class ApcJournal(object):
 
     @cached_property
     def num_apc_papers_historical(self):
+        if not self.have_data:
+            return 0
         return round(np.mean(self.num_apc_papers_historical_by_year), 4)
 
     @cached_property
     def cost_apc_historical(self):
+        if not self.have_data:
+            return 0
         return round(np.mean(self.cost_apc_historical_by_year), 4)
 
     @cached_property
@@ -70,19 +89,13 @@ class ApcJournal(object):
 
     @cached_property
     def fractional_authorships_total(self):
+        if not self.have_data:
+            return 0
         return round(np.mean(self.fractional_authorships_total_by_year), 4)
 
     @cached_property
     def historical_years_by_year(self):
         return range(2014, 2019)
-
-    @cached_property
-    def subscribed(self):
-        return None
-
-    @cached_property
-    def is_in_package(self):
-        return None
 
     def to_dict(self):
         response = OrderedDict()
@@ -91,12 +104,9 @@ class ApcJournal(object):
                     "subject": None,
                     "subscribed": self.subscribed,
                     "is_in_package": self.is_in_package
-                            }
+            }
+        response["oa_status"] = self.oa_status
         response["cost_apc"] = int(self.cost_apc_historical)
-        if self.oa_status == "gold":
-            response["cost_apc_hybrid"] = 0
-        else:
-            response["cost_apc_hybrid"] = int(self.cost_apc_historical)
         if self.apc_2019:
             response["apc_price"] = int(self.apc_2019)
         else:

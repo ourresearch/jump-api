@@ -6,6 +6,7 @@ import pandas as pd
 from collections import defaultdict
 import weakref
 from kids.cache import cache
+import pickle
 
 from app import use_groups
 from app import get_db_cursor
@@ -50,6 +51,13 @@ class Scenario(object):
 
         self.data["oa_adjustment"] = get_oa_adjustment_data_from_db(package)
         self.log_timing("get_oa_adjustment_data_from_db")
+
+        # pickle_out = open("dict.pickle","wb")
+        # pickle.dump(self.data, pickle_out)
+        # pickle_out.close()
+        #
+        # pickle_in = open("dict.pickle","rb")
+        # self.data = pickle.load(pickle_in)
 
         self.log_timing("mint apc journals")
 
@@ -488,8 +496,8 @@ class Scenario(object):
                 "description": "Understand how much your institution spends on APCs with this publisher.",
                 "figure": [],
                 "headers": [
+                        {"text": "OA type", "value": "oa_status", "percent": None, "raw": None},
                         {"text": "APC Dollars Spent", "value": "cost_apc", "percent": None, "raw": self.cost_apc_historical},
-                        {"text": "APC Dollars Hybrid", "value": "cost_apc_hybrid", "percent": None, "raw": self.cost_apc_historical_hybrid},
                         {"text": "APC price", "value": "apc_price", "percent": None, "raw": self.apc_price},
                         {"text": "Total fractional authorship", "value": "fractional_authorship", "percent": None, "raw": self.fractional_authorships_total},
                 ],

@@ -718,6 +718,7 @@ class Journal(object):
             "data": group_list
             }
         response["fulfillment"]["use_actual_by_year"] = self.use_actual_by_year
+        response["fulfillment"]["downloads_per_paper_by_age"] = self.downloads_total_per_paper_by_age
 
         oa_list = []
         for oa_type in ["green", "hybrid", "bronze"]:
@@ -736,8 +737,8 @@ class Journal(object):
             "oa_embargo_months": self.oa_embargo_months,
             "headers": [
                 {"text": "OA Type", "value": "oa_status"},
-                {"text": "Number of papers", "value": "num_papers"},
-                {"text": "Usage", "value": "usage"},
+                {"text": "Number of papers (annual)", "value": "num_papers"},
+                {"text": "Usage (predicted annual)", "value": "usage"},
                 {"text": "Percent of all usage", "value": "usage_percent"},
             ],
             "data": oa_list
@@ -806,11 +807,13 @@ class Journal(object):
             "data": cost_list
             }
 
+        from apc_journal import ApcJournal
+        my_apc_journal = ApcJournal(self.issn_l, self._scenario_data)
         response["apc"] = {
-            "apc_price": None, #self.apc_price,
-            "cost_apc_historical": None, # self.cost_apc_historical,
-            "fractional_authorship": None, # self.fractional_authorship,
-
+            "apc_price": my_apc_journal.apc_price_display,
+            "annual_predicted_cost": my_apc_journal.cost_apc_historical,
+            "annual_predicted_fractional_authorship": my_apc_journal.fractional_authorships_total,
+            "annual_predicted_num_papers": my_apc_journal.num_apc_papers_historical,
         }
 
         response_debug = {}
@@ -821,7 +824,6 @@ class Journal(object):
         response_debug["num_papers"] = self.num_papers
         response_debug["use_weight_multiplier"] = self.use_weight_multiplier_normalized
         response_debug["downloads_counter_multiplier"] = self.downloads_counter_multiplier_normalized
-        response_debug["downloads_total_per_paper_by_age"] = self.downloads_total_per_paper_by_age
         response_debug["use_instant_by_year"] = self.use_instant_by_year
         response_debug["use_instant_percent_by_year"] = self.use_instant_percent_by_year
         response_debug["use_actual_by_year"] = self.use_actual_by_year
