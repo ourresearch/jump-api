@@ -782,7 +782,10 @@ class Journal(object):
                 cost_dict["year_"+str(2020 + year)] = format_currency(costs[year])
             cost_list += [cost_dict]
             cost_dict["cost_avg"] = format_currency(self.__getattribute__(cost_type.replace("_by_year", "")))
-            cost_dict["cost_per_use"] = format_currency(self.__getattribute__(cost_type.replace("_by_year", "")) / float(self.use_paywalled), True)
+            if self.use_paywalled:
+                cost_dict["cost_per_use"] = format_currency(self.__getattribute__(cost_type.replace("_by_year", "")) / float(self.use_paywalled), True)
+            else:
+                cost_dict["cost_per_use"] = "N/A"
         response["cost"] = {
             "subscribed": self.subscribed,
             "cppu": format_currency(self.cppu_use, True),

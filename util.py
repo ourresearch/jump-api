@@ -735,6 +735,9 @@ def abort_json(status_code, msg):
     abort(response)
 
 def format_currency(amount, cents=False):
+    if not amount:
+        return None
+
     if not cents:
         amount = int(round(amount))
         my_string = locale.currency(amount, grouping=True)
@@ -745,11 +748,17 @@ def format_currency(amount, cents=False):
 
 
 def format_percent(amount, num_decimals=0):
+    if not amount:
+        return None
+
     my_string = u"{:0." + str(num_decimals) + u"f}%"
     my_string = my_string.format(amount)
     return my_string
 
 def format_with_commas(amount, num_decimals=0):
+    if not amount:
+        return None
+
     try:
         my_string = u"{:0,." + str(num_decimals) + u"f}"
         my_string = my_string.format(amount)
