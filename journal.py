@@ -695,11 +695,11 @@ class Journal(object):
         for group in use_groups:
             group_dict = OrderedDict()
             group_dict["group"] = use_groups_lookup[group]["display"]
-            group_dict["usage"] = round(self.use_actual[group])
+            group_dict["usage"] = format_with_commas(round(self.use_actual[group]))
             group_dict["usage_percent"] = format_percent(int(float(100)*self.use_actual[group]/self.use_total))
             # group_dict["timeline"] = u",".join(["{:>7}".format(self.use_actual_by_year[group][year]) for year in self.years])
             for year in self.years:
-                group_dict["year_"+str(2020 + year)] = self.use_actual_by_year[group][year]
+                group_dict["year_"+str(2020 + year)] = format_with_commas(round(self.use_actual_by_year[group][year]))
             group_list += [group_dict]
         response["fulfillment"] = {
             "headers": [
@@ -773,7 +773,7 @@ class Journal(object):
         for cost_type in ["cost_actual_by_year", "cost_subscription_by_year", "cost_ill_by_year", "cost_subscription_minus_ill_by_year"]:
             cost_dict = OrderedDict()
             if cost_type == "cost_actual_by_year":
-                cost_dict["cost_type"] = "Your scenario cost"
+                cost_dict["cost_type"] = "*Your scenario cost*"
             else:
                 cost_dict["cost_type"] = cost_type.replace("cost_", "").replace("_", " ").title()
                 cost_dict["cost_type"] = cost_dict["cost_type"].replace("Ill", "ILL")
