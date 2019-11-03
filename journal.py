@@ -688,8 +688,7 @@ class Journal(object):
                 "cost_subscription": format_currency(self.cost_subscription),
                 "cost_ill": format_currency(self.cost_ill),
                 "cost_actual": format_currency(self.cost_actual),
-                "api_journal_raw_default_settings": "https://unpaywall-jump-api.herokuapp.com/journal/issn_l/{}".format(self.issn_l),
-                "scenario_settings": self.settings.to_dict()
+                "api_journal_raw_default_settings": "https://unpaywall-jump-api.herokuapp.com/journal/issn_l/{}?email=YOUR_EMAIL_ADDRESS_PLEASE".format(self.issn_l)
         }
 
         group_list = []
@@ -805,6 +804,7 @@ class Journal(object):
         }
 
         response_debug = {}
+        response_debug["scenario_settings"] = self.settings.to_dict()
         response_debug["use_instant_percent"] = self.use_instant_percent
         response_debug["use_instant_percent_by_year"] = self.use_instant_percent_by_year
         response_debug["oa_embargo_months"] = self.oa_embargo_months
