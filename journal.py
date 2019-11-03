@@ -211,7 +211,10 @@ class Journal(object):
 
     @cached_property
     def downloads_ill_by_year(self):
-        return [int(self.settings.ill_request_percent_of_delayed/float(100) * self.downloads_paywalled_by_year[year]) for year in self.years]
+        response = [int(self.settings.ill_request_percent_of_delayed/float(100) * self.downloads_paywalled_by_year[year]) for year in self.years]
+        response = [num if num else 0 for num in response]
+        return response
+
 
     @cached_property
     def downloads_ill(self):
@@ -631,7 +634,7 @@ class Journal(object):
         if self.cppu_use:
             response["cppu"] = round(self.cppu_use, 2)
         else:
-            response["cppu"] = None
+            response["cppu"] = "no paywalled usage"
         response["use"] = int(self.use_total)
         response["value"] = int(self.use_instant_percent)
         response["cost"] = int(self.cost_actual)
@@ -650,7 +653,7 @@ class Journal(object):
         if self.cppu_use:
             response["cppu"] = round(self.cppu_use, 2)
         else:
-            response["cppu"] = None
+            response["cppu"] = "no paywalled usage"
         return response
 
 
@@ -688,7 +691,7 @@ class Journal(object):
                 "cost_subscription": format_currency(self.cost_subscription),
                 "cost_ill": format_currency(self.cost_ill),
                 "cost_actual": format_currency(self.cost_actual),
-                "api_journal_raw_default_settings": "https://unpaywall-jump-api.herokuapp.com/journal/issn_l/{}?email=YOUR_EMAIL_ADDRESS_PLEASE".format(self.issn_l)
+                "api_journal_raw_default_settings": "https://unpaywall-jump-api.herokuapp.com/journal/issn_l/{}?email=YOUR_EMAIL_ADDRESS".format(self.issn_l)
         }
 
         group_list = []
@@ -785,7 +788,7 @@ class Journal(object):
             if self.use_paywalled:
                 cost_dict["cost_per_use"] = format_currency(self.__getattribute__(cost_type.replace("_by_year", "")) / float(self.use_paywalled), True)
             else:
-                cost_dict["cost_per_use"] = "N/A"
+                cost_dict["cost_per_use"] = "no paywalled usage"
         response["cost"] = {
             "subscribed": self.subscribed,
             "cppu": format_currency(self.cppu_use, True),

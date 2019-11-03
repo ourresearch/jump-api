@@ -46,7 +46,10 @@ class Assumptions(object):
 
 
     def to_dict(self):
-        return self.__dict__
+        my_dict = self.__dict__
+        if "email" in my_dict:
+            del my_dict["email"]
+        return my_dict
 
     def __repr__(self):
         return u"{}".format(self.__class__.__name__)
