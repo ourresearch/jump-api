@@ -704,6 +704,7 @@ def get_oa_data_from_db(package):
         for bronze in ["with_bronze", "no_bronze"]:
             key = "{}_{}".format(submitted, bronze)
             command = """select * from jump_oa_{}_elsevier
+                        where year_int >= 2015
                             """.format(key)
             with get_db_cursor() as cursor:
                 cursor.execute(command)

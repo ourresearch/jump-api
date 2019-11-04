@@ -109,7 +109,7 @@ class Journal(object):
     @cached_property
     def historical_years_by_year(self):
         # used for citation, authorship lookup
-        return range(2014, 2019)
+        return range(2015, 2019+1)
 
     @cached_property
     def cost_actual_by_year(self):
