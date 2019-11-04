@@ -242,13 +242,19 @@ class Journal(object):
     def downloads_backfile_by_year(self):
         if self.settings.include_backfile:
             scaled = [0 for year in self.years]
+            print self.num_papers, self.downloads_by_age
+            print self.num_oa_historical, self.downloads_oa_by_age
             for year in self.years:
                 age = year
-                new = 0.5 * ((self.downloads_total_by_age[age] * self.growth_scaling["downloads"][year]) - (self.downloads_oa_by_age[age] * self.growth_scaling["oa"][year]))
+                new = 0.5 * ((self.downloads_by_age[age] * self.growth_scaling["downloads"][year]) - (self.downloads_oa_by_age[year][age] * self.growth_scaling["oa"][year]))
+                print age, year, new
                 scaled[year] = max(new, 0)
                 for age in range(year+1, 5):
-                    new = (self.downloads_total_by_age[age] * self.growth_scaling["downloads"][year]) - (self.downloads_oa_by_age[age] * self.growth_scaling["oa"][year])
-                    scaled[year] += max(new, 0)
+                    by_age = (self.downloads_by_age[age] * self.growth_scaling["downloads"][year]) - (self.downloads_oa_by_age[year][age] * self.growth_scaling["oa"][year])
+                    print age, year, new
+                    by_age += max(new, 0)
+                print year, by_age
+                scaled[year] += by_age
                 scaled[year] += self.downloads_total_older_than_five_years
                 scaled[year] -= self.downloads_social_networks_by_year[year]
             scaled = [int(max(0, num)) for num in scaled]
@@ -286,7 +292,7 @@ class Journal(object):
 
     @cached_property
     def downloads_oa(self):
-        return round(np.sum([self.num_oa_historical * self.downloads_total_per_paper_by_age[age] for age in self.years]), 4)
+        return round(np.sum([self.num_oa_for_convolving[age] * self.downloads_per_paper_by_age[age] for age in self.years]), 4)
 
     @cached_property
     def downloads_oa_by_year(self):
@@ -332,31 +338,50 @@ class Journal(object):
 
 
     @cached_property
-    def downloads_total_by_age(self):
+    def downloads_by_age(self):
         total_downloads_by_age_before_counter_correction = [self.my_scenario_data_row["downloads_{}y".format(age)] for age in self.years]
         total_downloads_by_age_before_counter_correction = [val if val else 0 for val in total_downloads_by_age_before_counter_correction]
-        downloads_total_by_age = [num * self.downloads_counter_multiplier for num in total_downloads_by_age_before_counter_correction]
-        return downloads_total_by_age
+        downloads_by_age = [num * self.downloads_counter_multiplier for num in total_downloads_by_age_before_counter_correction]
+        return downloads_by_age
 
     @cached_property
     def downloads_total_older_than_five_years(self):
-        return self.downloads_total - np.sum(self.downloads_total_by_age)
+        return self.downloads_total - np.sum(self.downloads_by_age)
 
     @cached_property
-    def downloads_total_per_paper_by_age(self):
+    def downloads_per_paper_by_age(self):
         # TODO do separately for each type of OA
-        # print [[float(num), self.num_papers, self.num_oa_historical] for num in self.downloads_total_by_age]
+        # print [[float(num), self.num_papers, self.num_oa_historical] for num in self.downloads_by_age]
 
-        return [float(num)/self.num_papers for num in self.downloads_total_by_age]
+        return [float(num)/self.num_papers for num in self.downloads_by_age]
+
+    @cached_property
+    def downloads_per_paper(self):
+        downloads_total_before_counter_correction_by_year = [max(1.0, self.my_scenario_data_row["downloads_total"]) for year in self.years]
+        downloads_total_before_counter_correction_by_year = [val if val else 0.0 for val in downloads_total_before_counter_correction_by_year]
+        downloads_total_scaled_by_counter = [num * self.downloads_counter_multiplier for num in downloads_total_before_counter_correction_by_year]
+        per_paper = float(downloads_total_scaled_by_counter)/self.num_papers
+        return per_paper
+
+
+
+    @cached_property
+    def num_oa_for_convolving(self):
+        oa_in_order = self.num_oa_historical_by_year
+        # oa_in_order.reverse()
+        print "\nself.num_oa_historical_by_year", self.num_papers, oa_in_order
+        return [min(self.num_papers, self.num_oa_historical_by_year[year]) for year in self.years]
 
     @cached_property
     def downloads_oa_by_age(self):
         # TODO do separately for each type of OA and each year
-        response = [(float(self.downloads_total_per_paper_by_age[year])*self.num_oa_historical) for year in self.years]
-        if self.oa_embargo_months:
-            for age in self.years:
-                if age*12 >= self.oa_embargo_months:
-                    response[age] = self.downloads_total_by_age[age]
+        response = {}
+        for year in self.years:
+            response[year] = [(float(self.downloads_per_paper_by_age[age])*self.num_oa_for_convolving[age]) for age in self.years]
+            if self.oa_embargo_months:
+                for age in self.years:
+                    if age*12 >= self.oa_embargo_months:
+                        response[year][age] = self.downloads_by_age[age]
         return response
 
     @cached_property
@@ -540,7 +565,7 @@ class Journal(object):
 
     @cached_property
     def downloads_oa_green(self):
-        return round(np.sum([self.num_green_historical * self.downloads_total_per_paper_by_age[age] for age in self.years]), 4)
+        return round(np.sum([self.num_green_historical * self.downloads_per_paper_by_age[age] for age in self.years]), 4)
 
     @cached_property
     def use_oa_green(self):
@@ -558,7 +583,7 @@ class Journal(object):
 
     @cached_property
     def downloads_oa_hybrid(self):
-        return round(np.sum([self.num_hybrid_historical * self.downloads_total_per_paper_by_age[age] for age in self.years]), 4)
+        return round(np.sum([self.num_hybrid_historical * self.downloads_per_paper_by_age[age] for age in self.years]), 4)
 
     @cached_property
     def use_oa_hybrid(self):
@@ -569,6 +594,10 @@ class Journal(object):
     def num_bronze_historical_by_year(self):
         my_dict = self.get_oa_data()["bronze"]
         response = [my_dict.get(year, 0) for year in self.historical_years_by_year]
+        if self.oa_embargo_months:
+            for age in self.years:
+                if age*12 < self.oa_embargo_months:
+                    response[age] = 0
         return response
 
     @cached_property
@@ -577,7 +606,7 @@ class Journal(object):
 
     @cached_property
     def downloads_oa_bronze(self):
-        return round(np.sum([self.num_bronze_historical * self.downloads_total_per_paper_by_age[age] for age in self.years]), 4)
+        return round(np.sum([self.num_bronze_historical * self.downloads_per_paper_by_age[age] for age in self.years]), 4)
 
 
     @cached_property
@@ -600,7 +629,7 @@ class Journal(object):
 
     @cached_property
     def downloads_oa_peer_reviewed(self):
-        return round(np.sum([self.num_peer_reviewed_historical * self.downloads_total_per_paper_by_age[age] for age in self.years]), 4)
+        return round(np.sum([self.num_peer_reviewed_historical * self.downloads_per_paper_by_age[age] for age in self.years]), 4)
 
     @cached_property
     def use_oa_peer_reviewed(self):
@@ -636,8 +665,8 @@ class Journal(object):
             response["authorships"] = int(self.num_authorships)
         else:
             response["authorships"] = round(self.num_authorships, 1)
-        response["use_weight_multiplier"] = self.use_weight_multiplier_normalized
-        response["downloads_counter_multiplier"] = self.downloads_counter_multiplier_normalized
+        # response["use_weight_multiplier"] = self.use_weight_multiplier_normalized
+        # response["downloads_counter_multiplier"] = self.downloads_counter_multiplier_normalized
         return response
 
     def to_dict_overview(self):
@@ -706,6 +735,9 @@ class Journal(object):
                 "cost_subscription": format_currency(self.cost_subscription),
                 "cost_ill": format_currency(self.cost_ill),
                 "cost_actual": format_currency(self.cost_actual),
+                "cost_subscription_minus_ill": format_currency(self.cost_subscription_minus_ill),
+                "cppu": format_currency(self.cppu_use, True),
+                "use_instant_percent": self.use_instant_percent,
                 "api_journal_raw_default_settings": "https://unpaywall-jump-api.herokuapp.com/journal/issn_l/{}?email=YOUR_EMAIL_ADDRESS".format(self.issn_l)
         }
 
@@ -733,7 +765,7 @@ class Journal(object):
             "data": group_list
             }
         response["fulfillment"]["use_actual_by_year"] = self.use_actual_by_year
-        response["fulfillment"]["downloads_per_paper_by_age"] = self.downloads_total_per_paper_by_age
+        response["fulfillment"]["downloads_per_paper_by_age"] = self.downloads_per_paper_by_age
 
         oa_list = []
         for oa_type in ["green", "hybrid", "bronze"]:

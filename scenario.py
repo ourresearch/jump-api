@@ -19,7 +19,8 @@ from apc_journal import ApcJournal
 from assumptions import Assumptions
 
 def get_fresh_journal_list(issn_ls):
-    journals = [Journal(issn_l) for issn_l in issn_ls]
+    journals_to_exclude = ["0370-2693"]
+    journals = [Journal(issn_l) for issn_l in issn_ls if issn_l not in journals_to_exclude]
     return journals
 
 class Scenario(object):
@@ -438,8 +439,8 @@ class Scenario(object):
                 "headers": [
                         {"text": "Total Usage", "value":"total_usage", "percent": 100, "raw": self.use_total},
                         {"text": "Downloads", "value":"downloads", "percent": 100*self.downloads_total/self.use_total, "raw": self.downloads_total},
-                        {"text": "Citations", "value":"citations", "percent": self.num_citations_weight_percent, "raw": self.num_citations},
-                        {"text": "Authorships", "value":"authorships", "percent": self.num_authorships_weight_percent, "raw": self.num_authorships},
+                        {"text": "Citations to papers", "value":"citations", "percent": self.num_citations_weight_percent, "raw": self.num_citations},
+                        {"text": "Authored papers", "value":"authorships", "percent": self.num_authorships_weight_percent, "raw": self.num_authorships},
                         # {"text": "Multiplier for reading", "value":"use_weight_multiplier", "percent": None, "raw": self.use_weight_multiplier},
                         # {"text": "Multipler for interaction", "value":"downloads_counter_multiplier", "percent": None, "raw": self.downloads_counter_multiplier},
                 ],
