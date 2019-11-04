@@ -919,6 +919,8 @@ class Journal(object):
         response["use_subscription"] = int(float(100)*self.use_actual["subscription"]/self.use_total)
         response["use_ill"] = int(float(100)*self.use_actual["ill"]/self.use_total)
         response["use_other_delayed"] =  int(float(100)*self.use_actual["other_delayed"]/self.use_total)
+        response["bin"] = int(self.instant_use_percent)/10
+
         return response
 
 
