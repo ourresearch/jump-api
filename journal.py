@@ -30,6 +30,7 @@ class Journal(object):
         self.set_scenario_data(scenario_data)
         self.issn_l = issn_l
         self.subscribed = False
+        self.use_default_download_curve = False
 
     def set_scenario(self, scenario):
         if scenario:
@@ -314,10 +315,8 @@ class Journal(object):
 
     @cached_property
     def downloads_total_by_year(self):
-        downloads_total_before_counter_correction_by_year = [max(1.0, self.my_scenario_data_row["downloads_total"]) for year in self.years]
-        downloads_total_before_counter_correction_by_year = [val if val else 0.0 for val in downloads_total_before_counter_correction_by_year]
-        downloads_total_scaled_by_counter = [num * self.downloads_counter_multiplier for num in downloads_total_before_counter_correction_by_year]
-        scaled = [round(downloads_total_scaled_by_counter[year] * self.growth_scaling["downloads"][year]) for year in self.years]
+        scaled = [round(self.downloads_scaled_by_counter_by_year[year] * self.growth_scaling["downloads"][year]) for year in self.years]
+
         return scaled
 
     @cached_property
@@ -342,11 +341,24 @@ class Journal(object):
 
     @cached_property
     def downloads_by_age(self):
+        use_default_curve = False
+
         total_downloads_by_age_before_counter_correction = [self.my_scenario_data_row["downloads_{}y".format(age)] for age in self.years]
         total_downloads_by_age_before_counter_correction = [val if val else 0 for val in total_downloads_by_age_before_counter_correction]
+        # print total_downloads_by_age_before_counter_correction
 
         sum_total_downloads_by_age_before_counter_correction = np.sum(total_downloads_by_age_before_counter_correction)
+
+        download_curve_diff = np.array(total_downloads_by_age_before_counter_correction)
+
+        # should mostly be strictly negative slope.  if it is very positive, use default instead
+        if np.max(download_curve_diff) > 0.075:
+            self.use_default_download_curve = True
+
         if sum_total_downloads_by_age_before_counter_correction < 25:
+            self.use_default_download_curve = True
+
+        if self.use_default_download_curve:
             # from future of OA paper, modified to be just elsevier, all colours
             default_download_by_age = [0.371269, 0.137739, 0.095896, 0.072885, 0.058849]
             total_downloads_by_age_before_counter_correction = [num*sum_total_downloads_by_age_before_counter_correction for num in default_download_by_age]
@@ -366,11 +378,16 @@ class Journal(object):
         return [float(num)/self.num_papers for num in self.downloads_by_age]
 
     @cached_property
-    def downloads_per_paper(self):
+    def downloads_scaled_by_counter_by_year(self):
+        # TODO is flat right now
         downloads_total_before_counter_correction_by_year = [max(1.0, self.my_scenario_data_row["downloads_total"]) for year in self.years]
         downloads_total_before_counter_correction_by_year = [val if val else 0.0 for val in downloads_total_before_counter_correction_by_year]
         downloads_total_scaled_by_counter = [num * self.downloads_counter_multiplier for num in downloads_total_before_counter_correction_by_year]
-        per_paper = float(downloads_total_scaled_by_counter)/self.num_papers
+        return downloads_total_scaled_by_counter
+
+    @cached_property
+    def downloads_per_paper(self):
+        per_paper = float(self.downloads_scaled_by_counter_by_year)/self.num_papers
         return per_paper
 
 
@@ -784,7 +801,6 @@ class Journal(object):
         response["fulfillment"]["downloads_per_paper_by_age"] = self.downloads_per_paper_by_age
 
         oa_list = []
-        print "green, total", self.use_oa_green, self.use_oa
         for oa_type in ["green", "hybrid", "bronze"]:
             oa_dict = OrderedDict()
             use = self.__getattribute__("use_oa_{}".format(oa_type))
@@ -897,6 +913,8 @@ class Journal(object):
         response_debug["use_oa_bronze"] = self.use_oa_bronze
         response_debug["use_oa_peer_reviewed"] = self.use_oa_peer_reviewed
         response_debug["use_oa"] = self.use_oa
+        response_debug["downloads_scaled_by_counter_by_year"] = self.downloads_scaled_by_counter_by_year
+        response_debug["use_default_download_curve"] = self.use_default_download_curve
         response["debug"] = response_debug
 
         return response
