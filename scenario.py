@@ -47,6 +47,9 @@ class Scenario(object):
         self.data["oa"] = get_oa_data_from_db(package)
         self.log_timing("get_oa_data_from_db")
 
+        self.data["oa_recent"] = get_oa_recent_data_from_db(package)
+        self.log_timing("get_oa_data_from_db")
+
         self.data["social_networks"] = get_social_networks_data_from_db(package)
         self.log_timing("get_social_networks_data_from_db")
 
@@ -676,6 +679,23 @@ def get_scenario_data_from_db(package):
 
     return data
 
+
+@cache
+def get_oa_recent_data_from_db(package):
+    oa_dict = {}
+    for submitted in ["with_submitted", "no_submitted"]:
+        for bronze in ["with_bronze", "no_bronze"]:
+            key = "{}_{}".format(submitted, bronze)
+            command = """select * from jump_oa_recent_{}_elsevier
+                            """.format(key)
+            with get_db_cursor() as cursor:
+                cursor.execute(command)
+                rows = cursor.fetchall()
+            lookup_dict = defaultdict(list)
+            for row in rows:
+                lookup_dict[row["issn_l"]] += [row]
+            oa_dict[key] = lookup_dict
+    return oa_dict
 
 @cache
 def get_oa_data_from_db(package):

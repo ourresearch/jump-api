@@ -242,18 +242,18 @@ class Journal(object):
     def downloads_backfile_by_year(self):
         if self.settings.include_backfile:
             scaled = [0 for year in self.years]
-            print self.num_papers, self.downloads_by_age
-            print self.num_oa_historical, self.downloads_oa_by_age
+            # print self.num_papers, self.downloads_by_age
+            # print self.num_oa_historical, self.downloads_oa_by_age
             for year in self.years:
                 age = year
                 new = 0.5 * ((self.downloads_by_age[age] * self.growth_scaling["downloads"][year]) - (self.downloads_oa_by_age[year][age] * self.growth_scaling["oa"][year]))
-                print age, year, new
+                # print age, year, new
                 scaled[year] = max(new, 0)
                 for age in range(year+1, 5):
                     by_age = (self.downloads_by_age[age] * self.growth_scaling["downloads"][year]) - (self.downloads_oa_by_age[year][age] * self.growth_scaling["oa"][year])
-                    print age, year, new
+                    # print age, year, new
                     by_age += max(new, 0)
-                print year, by_age
+                # print year, by_age
                 scaled[year] += by_age
                 scaled[year] += self.downloads_total_older_than_five_years
                 scaled[year] -= self.downloads_social_networks_by_year[year]
@@ -369,7 +369,7 @@ class Journal(object):
     def num_oa_for_convolving(self):
         oa_in_order = self.num_oa_historical_by_year
         # oa_in_order.reverse()
-        print "\nself.num_oa_historical_by_year", self.num_papers, oa_in_order
+        # print "\nself.num_oa_historical_by_year", self.num_papers, oa_in_order
         return [min(self.num_papers, self.num_oa_historical_by_year[year]) for year in self.years]
 
     @cached_property
@@ -542,15 +542,21 @@ class Journal(object):
         else:
             bronze = "no_bronze"
 
+        my_dict = defaultdict(dict)
+
         key = u"{}_{}".format(submitted, bronze)
         my_rows = self._scenario_data["oa"][key][self.issn_l]
+        my_recent_rows = self._scenario_data["oa_recent"][key][self.issn_l]
 
-        my_dict = defaultdict(dict)
         for row in my_rows:
-            # heather
             my_dict[row["fresh_oa_status"]][int(row["year_int"])] = int(row["count"])
             # my_dict[row["fresh_oa_status"]][int(row["year_int"])] = int(row["count"]) * self.num_oa_papers_multiplier
 
+        for row in my_recent_rows:
+            my_dict[row["fresh_oa_status"]][2019] = int(row["count"])
+            # my_dict[row["fresh_oa_status"]][int(row["year_int"])] = int(row["count"]) * self.num_oa_papers_multiplier
+
+        print my_dict
         return my_dict
 
 
@@ -676,12 +682,12 @@ class Journal(object):
                     "subject": self.subject,
                     "subscribed": self.subscribed}
         if self.cppu_use:
-            response["cppu"] = round(self.cppu_use, 2)
+            response["cppu"] = format_currency(self.cppu_use, True)
         else:
             response["cppu"] = "no paywalled usage"
-        response["use"] = int(self.use_total)
-        response["value"] = int(self.use_instant_percent)
-        response["cost"] = int(self.cost_actual)
+        response["use"] = format_with_commas(self.use_total)
+        response["value"] = format_percent(self.use_instant_percent)
+        response["cost"] = format_currency(self.cost_actual)
         return response
 
     def to_dict_cost(self):
@@ -895,6 +901,8 @@ class Journal(object):
         response["use_hybrid_percent"] = int(float(100)*self.use_oa_hybrid/self.use_total)
         response["use_bronze_percent"] = int(float(100)*self.use_oa_bronze/self.use_total)
         response["use_peer_reviewed_percent"] =  int(float(100)*self.use_oa_peer_reviewed/self.use_total)
+        response["bin"] = int(float(100)*self.use_actual["oa"]/self.use_total)/10
+
         # response["num_papers"] = self.num_papers
         return response
 
