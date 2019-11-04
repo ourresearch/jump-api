@@ -760,9 +760,9 @@ class Journal(object):
         response["fulfillment"] = {
             "headers": [
                 {"text": "Type", "value": "group"},
-                {"text": "Usage (predicted annual)", "value": "usage"},
+                {"text": "Usage (projected annual)", "value": "usage"},
                 {"text": "Usage (percent)", "value": "usage_percent"},
-                {"text": "Usage predicted 2020", "value": "year_2020"},
+                {"text": "Usage projected 2020", "value": "year_2020"},
                 {"text": "2021", "value": "year_2021"},
                 {"text": "2022", "value": "year_2022"},
                 {"text": "2023", "value": "year_2023"},
@@ -791,7 +791,7 @@ class Journal(object):
             "headers": [
                 {"text": "OA Type", "value": "oa_status"},
                 {"text": "Number of papers (annual)", "value": "num_papers"},
-                {"text": "Usage (predicted annual)", "value": "usage"},
+                {"text": "Usage (projected annual)", "value": "usage"},
                 {"text": "Percent of all usage", "value": "usage_percent"},
             ],
             "data": oa_list
@@ -819,7 +819,7 @@ class Journal(object):
             "usage_total": self.use_total,
             "headers": [
                 {"text": "Impact", "value": "impact"},
-                {"text": "Raw (predicted annual)", "value": "raw"},
+                {"text": "Raw (projected annual)", "value": "raw"},
                 {"text": "Weight", "value": "weight"},
                 {"text": "Usage contribution", "value": "contribution"},
             ],
@@ -849,9 +849,9 @@ class Journal(object):
             "cppu_delta": format_currency(self.cppu_use_delta, True),
             "headers": [
                 {"text": "Cost Type", "value": "cost_type"},
-                {"text": "Cost (predicted annual)", "value": "cost_avg"},
+                {"text": "Cost (projected annual)", "value": "cost_avg"},
                 {"text": "Cost per paid use (CPPU)", "value": "cost_per_use"},
-                {"text": "Cost predicted 2020", "value": "year_2020"},
+                {"text": "Cost projected 2020", "value": "year_2020"},
                 {"text": "2021", "value": "year_2021"},
                 {"text": "2022", "value": "year_2022"},
                 {"text": "2023", "value": "year_2023"},
@@ -864,9 +864,9 @@ class Journal(object):
         my_apc_journal = ApcJournal(self.issn_l, self._scenario_data)
         response["apc"] = {
             "apc_price": my_apc_journal.apc_price_display,
-            "annual_predicted_cost": my_apc_journal.cost_apc_historical,
-            "annual_predicted_fractional_authorship": my_apc_journal.fractional_authorships_total,
-            "annual_predicted_num_papers": my_apc_journal.num_apc_papers_historical,
+            "annual_projected_cost": my_apc_journal.cost_apc_historical,
+            "annual_projected_fractional_authorship": my_apc_journal.fractional_authorships_total,
+            "annual_projected_num_papers": my_apc_journal.num_apc_papers_historical,
         }
 
         response_debug = {}
