@@ -341,6 +341,13 @@ class Journal(object):
     def downloads_by_age(self):
         total_downloads_by_age_before_counter_correction = [self.my_scenario_data_row["downloads_{}y".format(age)] for age in self.years]
         total_downloads_by_age_before_counter_correction = [val if val else 0 for val in total_downloads_by_age_before_counter_correction]
+
+        sum_total_downloads_by_age_before_counter_correction = np.sum(total_downloads_by_age_before_counter_correction)
+        if sum_total_downloads_by_age_before_counter_correction < 25:
+            # from future of OA paper, modified to be just elsevier, all colours
+            default_download_by_age = [0.371269, 0.137739, 0.095896, 0.072885, 0.058849]
+            total_downloads_by_age_before_counter_correction = [num*sum_total_downloads_by_age_before_counter_correction for num in default_download_by_age]
+
         downloads_by_age = [num * self.downloads_counter_multiplier for num in total_downloads_by_age_before_counter_correction]
         return downloads_by_age
 
