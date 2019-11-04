@@ -7,12 +7,12 @@ from util import str2bool
 
 class Assumptions(object):
     def __init__(self, http_request_args=None):
-        self.cost_ill = 5
+        self.cost_ill = 17
         self.cost_bigdeal_increase = 5 #percent
-        self.cost_alacart_increase = 8 #percent
+        self.cost_alacart_increase = 5 #percent
         self.cost_bigdeal = 2100000
         self.cost_content_fee_percent = 5.7
-        self.ill_request_percent_of_delayed = 10
+        self.ill_request_percent_of_delayed = 5
         self.weight_citation = 10
         self.weight_authorship = 100
         self.include_bronze = True

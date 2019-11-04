@@ -195,7 +195,7 @@ class Journal(object):
     @cached_property
     def downloads_social_networks_by_year(self):
         response = [self.downloads_total_by_year[year] * self.downloads_social_network_multiplier for year in self.years]
-        response = [min(response[year], self.downloads_total_by_year[year] - self.downloads_oa_by_year[year] - self.downloads_backfile_by_year[year]) for year in self.years]
+        response = [min(response[year], self.downloads_total_by_year[year] - self.downloads_oa_by_year[year]) for year in self.years]
         response = [max(response[year], 0) for year in self.years]
         return response
 
@@ -243,10 +243,14 @@ class Journal(object):
         if self.settings.include_backfile:
             scaled = [0 for year in self.years]
             for year in self.years:
-                scaled[year] = 0
-                for age in range(year, 5):
-                    scaled[year] += (self.downloads_total_by_age[age] * self.growth_scaling["downloads"][year]) - (self.downloads_oa_by_age[age] * self.growth_scaling["oa"][year])
+                age = year
+                new = 0.5 * ((self.downloads_total_by_age[age] * self.growth_scaling["downloads"][year]) - (self.downloads_oa_by_age[age] * self.growth_scaling["oa"][year]))
+                scaled[year] = max(new, 0)
+                for age in range(year+1, 5):
+                    new = (self.downloads_total_by_age[age] * self.growth_scaling["downloads"][year]) - (self.downloads_oa_by_age[age] * self.growth_scaling["oa"][year])
+                    scaled[year] += max(new, 0)
                 scaled[year] += self.downloads_total_older_than_five_years
+                scaled[year] -= self.downloads_social_networks_by_year[year]
             scaled = [int(max(0, num)) for num in scaled]
             return scaled
         else:
@@ -263,6 +267,12 @@ class Journal(object):
 
     @cached_property
     def num_oa_historical_by_year(self):
+        # print "num_oa_historical_by_year", self.num_papers, [self.num_green_historical_by_year[year]+self.num_bronze_historical_by_year[year]+self.num_hybrid_historical_by_year[year] for year in self.years]
+        # print "parts", self.num_papers
+        # print "green", self.num_green_historical_by_year
+        # print "bronze", self.num_bronze_historical_by_year
+        # print "hybrid", self.num_hybrid_historical_by_year
+
         return [self.num_green_historical_by_year[year]+self.num_bronze_historical_by_year[year]+self.num_hybrid_historical_by_year[year] for year in self.years]
 
     @cached_property
@@ -335,6 +345,8 @@ class Journal(object):
     @cached_property
     def downloads_total_per_paper_by_age(self):
         # TODO do separately for each type of OA
+        # print [[float(num), self.num_papers, self.num_oa_historical] for num in self.downloads_total_by_age]
+
         return [float(num)/self.num_papers for num in self.downloads_total_by_age]
 
     @cached_property
@@ -488,6 +500,7 @@ class Journal(object):
         if not oa_adjustment_dict["unpaywall_measured_fraction_3_years_oa"]:
             return 1.0
         response = float(oa_adjustment_dict["mturk_max_oa_rate"]) / (oa_adjustment_dict["unpaywall_measured_fraction_3_years_oa"])
+        # print "num_oa_papers_multiplier", response, float(oa_adjustment_dict["mturk_max_oa_rate"]), (oa_adjustment_dict["unpaywall_measured_fraction_3_years_oa"])
         return response
 
     def get_oa_data(self, only_peer_reviewed=False):
@@ -509,7 +522,9 @@ class Journal(object):
 
         my_dict = defaultdict(dict)
         for row in my_rows:
-            my_dict[row["fresh_oa_status"]][int(row["year_int"])] = int(row["count"]) * self.num_oa_papers_multiplier
+            # heather
+            my_dict[row["fresh_oa_status"]][int(row["year_int"])] = int(row["count"])
+            # my_dict[row["fresh_oa_status"]][int(row["year_int"])] = int(row["count"]) * self.num_oa_papers_multiplier
 
         return my_dict
 
