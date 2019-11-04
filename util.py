@@ -159,7 +159,7 @@ def conversational_number(number):
         return round(number, 2)
 
     elif number < 1000:
-        return int(math.floor(number))
+        return round(math.floor(number))
 
     elif number < 1000000:
         divided = number / 1000.0
@@ -739,7 +739,7 @@ def format_currency(amount, cents=False):
         return None
 
     if not cents:
-        amount = int(round(amount))
+        amount = round(round(amount))
         my_string = locale.currency(amount, grouping=True)
         my_string = my_string.replace(".00", "")
     else:

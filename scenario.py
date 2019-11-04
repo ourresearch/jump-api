@@ -154,14 +154,14 @@ class Scenario(object):
     def downloads(self):
         use = {}
         for group in use_groups:
-            use[group] = int(np.mean(self.downloads_actual_by_year[group]))
+            use[group] = round(np.mean(self.downloads_actual_by_year[group]))
         return use
 
     @cached_property
     def use_actual(self):
         use = {}
         for group in use_groups:
-            use[group] = int(np.mean(self.use_actual_by_year[group]))
+            use[group] = round(np.mean(self.use_actual_by_year[group]))
         return use
 
     @cached_property
@@ -174,15 +174,15 @@ class Scenario(object):
 
     @cached_property
     def cost_ill(self):
-        return int(sum([j.cost_ill for j in self.journals]))
+        return round(sum([j.cost_ill for j in self.journals]))
 
     @cached_property
     def cost_subscription(self):
-        return int(sum([j.cost_subscription for j in self.journals]))
+        return round(sum([j.cost_subscription for j in self.journals]))
 
     @cached_property
     def cost_subscription_minus_ill(self):
-        return int(sum([j.cost_subscription_minus_ill for j in self.journals]))
+        return round(sum([j.cost_subscription_minus_ill for j in self.journals]))
 
     @cached_property
     def cost(self):
@@ -199,7 +199,7 @@ class Scenario(object):
 
     @cached_property
     def cost_bigdeal_projected_by_year(self):
-        return [int(((1+self.settings.cost_bigdeal_increase/float(100))**year) * self.settings.cost_bigdeal )
+        return [round(((1+self.settings.cost_bigdeal_increase/float(100))**year) * self.settings.cost_bigdeal )
                                             for year in self.years]
 
     @cached_property
@@ -281,11 +281,11 @@ class Scenario(object):
 
     @cached_property
     def cost_apc_historical_by_year(self):
-        return [int(np.sum([j.cost_apc_historical_by_year[year] for j in self.apc_journals])) for year in self.years]
+        return [round(np.sum([j.cost_apc_historical_by_year[year] for j in self.apc_journals])) for year in self.years]
 
     @cached_property
     def cost_apc_historical(self):
-        return int(np.mean(self.cost_apc_historical_by_year))
+        return round(np.mean(self.cost_apc_historical_by_year))
 
     @cached_property
     def cost_apc_historical_hybrid_by_year(self):
@@ -293,7 +293,7 @@ class Scenario(object):
 
     @cached_property
     def cost_apc_historical_hybrid(self):
-        return int(np.mean(self.cost_apc_historical_hybrid_by_year))
+        return round(np.mean(self.cost_apc_historical_hybrid_by_year))
 
     @cached_property
     def cost_apc_historical_gold_by_year(self):
@@ -301,7 +301,7 @@ class Scenario(object):
 
     @cached_property
     def cost_apc_historical_gold(self):
-        return int(np.mean(self.cost_apc_historical_gold_by_year))
+        return round(np.mean(self.cost_apc_historical_gold_by_year))
 
     @cached_property
     def fractional_authorships_total_by_year(self):
@@ -325,46 +325,46 @@ class Scenario(object):
 
     @cached_property
     def use_social_networks(self):
-        return int(np.sum([j.use_actual["social_networks"] for j in self.journals]))
+        return round(np.sum([j.use_actual["social_networks"] for j in self.journals]))
 
     @cached_property
     def use_oa(self):
-        return int(np.sum([j.use_actual["oa"] for j in self.journals]))
+        return round(np.sum([j.use_actual["oa"] for j in self.journals]))
 
     @cached_property
     def use_backfile(self):
-        return int(np.sum([j.use_actual["backfile"] for j in self.journals]))
+        return round(np.sum([j.use_actual["backfile"] for j in self.journals]))
 
     @cached_property
     def use_subscription(self):
-        response = int(np.sum([j.use_actual["subscription"] for j in self.journals]))
+        response = round(np.sum([j.use_actual["subscription"] for j in self.journals]))
         if not response:
             response = 0.0
         return response
 
     @cached_property
     def use_ill(self):
-        return int(np.sum([j.use_actual["ill"] for j in self.journals]))
+        return round(np.sum([j.use_actual["ill"] for j in self.journals]))
 
     @cached_property
     def use_other_delayed(self):
-        return int(np.sum([j.use_actual["other_delayed"] for j in self.journals]))
+        return round(np.sum([j.use_actual["other_delayed"] for j in self.journals]))
 
     @cached_property
     def use_green(self):
-        return int(np.sum([j.use_oa_green for j in self.journals]))
+        return round(np.sum([j.use_oa_green for j in self.journals]))
 
     @cached_property
     def use_hybrid(self):
-        return int(np.sum([j.use_oa_hybrid for j in self.journals]))
+        return round(np.sum([j.use_oa_hybrid for j in self.journals]))
 
     @cached_property
     def use_bronze(self):
-        return int(np.sum([j.use_oa_bronze for j in self.journals]))
+        return round(np.sum([j.use_oa_bronze for j in self.journals]))
 
     @cached_property
     def use_peer_reviewed(self):
-        return int(np.sum([j.use_oa_peer_reviewed for j in self.journals]))
+        return round(np.sum([j.use_oa_peer_reviewed for j in self.journals]))
 
     @cached_property
     def downloads_counter_multiplier(self):
@@ -395,12 +395,12 @@ class Scenario(object):
                 "figure": [],
                 "headers": [
                         {"text": "Instant Usage Percent", "value": "instant_use_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent},
-                        {"text": "ASNs", "value": "use_asns", "percent": int(float(100)*self.use_social_networks/self.use_total), "raw": self.use_social_networks},
-                        {"text": "Open access", "value": "use_oa", "percent": int(float(100)*self.use_oa/self.use_total), "raw": self.use_oa},
-                        {"text": "Backfile", "value": "use_backfile", "percent": int(float(100)*self.use_backfile/self.use_total), "raw": self.use_backfile},
-                        {"text": "Subscription", "value": "use_subscription", "percent": int(float(100)*self.use_subscription/self.use_total), "raw": self.use_subscription},
-                        {"text": "ILL", "value": "use_ill", "percent": int(float(100)*self.use_ill/self.use_total), "raw": self.use_ill},
-                        {"text": "Other (delayed)", "value": "use_other_delayed", "percent": int(float(100)*self.use_other_delayed/self.use_total), "raw": self.use_other_delayed},
+                        {"text": "ASNs", "value": "use_asns", "percent": round(float(100)*self.use_social_networks/self.use_total), "raw": self.use_social_networks},
+                        {"text": "Open access", "value": "use_oa", "percent": round(float(100)*self.use_oa/self.use_total), "raw": self.use_oa},
+                        {"text": "Backfile", "value": "use_backfile", "percent": round(float(100)*self.use_backfile/self.use_total), "raw": self.use_backfile},
+                        {"text": "Subscription", "value": "use_subscription", "percent": round(float(100)*self.use_subscription/self.use_total), "raw": self.use_subscription},
+                        {"text": "ILL", "value": "use_ill", "percent": round(float(100)*self.use_ill/self.use_total), "raw": self.use_ill},
+                        {"text": "Other (delayed)", "value": "use_other_delayed", "percent": round(float(100)*self.use_other_delayed/self.use_total), "raw": self.use_other_delayed},
                 ],
                 "journals": [j.to_dict_fulfillment() for j in self.journals_sorted_use_total[0:pagesize]],
             }
@@ -417,11 +417,11 @@ class Scenario(object):
                 "description": "Understand the Open Access availability of articles in journals.",
                 "figure": [],
                 "headers": [
-                        {"text": "Percent of Usage that is OA", "value": "use_oa_percent", "percent": int(float(100)*self.use_oa/self.use_total), "raw": self.use_oa},
-                        {"text": "Percent of Usage that is Green OA", "value": "use_green_percent", "percent": int(float(100)*self.use_green/self.use_total), "raw": self.use_green},
-                        {"text": "Percent of Usage that is Hybrid OA", "value": "use_hybrid_percent", "percent": int(float(100)*self.use_hybrid/self.use_total), "raw": self.use_hybrid},
-                        {"text": "Percent of Usage that is Bronze OA", "value": "use_bronze_percent", "percent": int(float(100)*self.use_bronze/self.use_total), "raw": self.use_bronze},
-                        {"text": "Percent of Usage that is Peer-reviewed OA", "value": "use_peer_reviewed_percent", "percent": int(float(100)*self.use_peer_reviewed/self.use_total), "raw": self.use_peer_reviewed},
+                        {"text": "Percent of Usage that is OA", "value": "use_oa_percent", "percent": round(float(100)*self.use_oa/self.use_total), "raw": self.use_oa},
+                        {"text": "Percent of Usage that is Green OA", "value": "use_green_percent", "percent": round(float(100)*self.use_green/self.use_total), "raw": self.use_green},
+                        {"text": "Percent of Usage that is Hybrid OA", "value": "use_hybrid_percent", "percent": round(float(100)*self.use_hybrid/self.use_total), "raw": self.use_hybrid},
+                        {"text": "Percent of Usage that is Bronze OA", "value": "use_bronze_percent", "percent": round(float(100)*self.use_bronze/self.use_total), "raw": self.use_bronze},
+                        {"text": "Percent of Usage that is Peer-reviewed OA", "value": "use_peer_reviewed_percent", "percent": round(float(100)*self.use_peer_reviewed/self.use_total), "raw": self.use_peer_reviewed},
                 ],
                 "journals": [j.to_dict_oa() for j in self.journals_sorted_use_total[0:pagesize]],
             }
@@ -624,7 +624,7 @@ def get_scenario_data_from_db(package):
     with get_db_cursor() as cursor:
         cursor.execute(command)
         embargo_rows = cursor.fetchall()
-    embargo_dict = dict((a["issn_l"], int(a["embargo"])) for a in embargo_rows)
+    embargo_dict = dict((a["issn_l"], round(a["embargo"])) for a in embargo_rows)
 
     timing.append(("time from db: journal_delayed_oa_active", elapsed(section_time, 2)))
     section_time = time()
@@ -638,7 +638,7 @@ def get_scenario_data_from_db(package):
         citation_rows = cursor.fetchall()
     citation_dict = defaultdict(dict)
     for row in citation_rows:
-        citation_dict[row["issn_l"]][int(row["year"])] = int(row["num_citations"])
+        citation_dict[row["issn_l"]][round(row["year"])] = round(row["num_citations"])
 
     timing.append(("time from db: citation_rows", elapsed(section_time, 2)))
     section_time = time()
@@ -652,7 +652,7 @@ def get_scenario_data_from_db(package):
         authorship_rows = cursor.fetchall()
     authorship_dict = defaultdict(dict)
     for row in authorship_rows:
-        authorship_dict[row["issn_l"]][int(row["year"])] = int(row["num_authorships"])
+        authorship_dict[row["issn_l"]][round(row["year"])] = round(row["num_authorships"])
 
     timing.append(("time from db: authorship_rows", elapsed(section_time, 2)))
     section_time = time()

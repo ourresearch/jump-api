@@ -106,9 +106,9 @@ class ApcJournal(object):
                     "is_in_package": self.is_in_package
             }
         response["oa_status"] = self.oa_status
-        response["cost_apc"] = int(self.cost_apc_historical)
+        response["cost_apc"] = round(self.cost_apc_historical)
         if self.apc_2019:
-            response["apc_price"] = int(self.apc_2019)
+            response["apc_price"] = round(self.apc_2019)
         else:
             response["apc_price"] = None
         response["fractional_authorship"] = round(self.fractional_authorships_total, 1)

@@ -56,8 +56,8 @@ def base_endpoint():
 
 @app.route("/scenario/wizard", methods=["GET", "POST"])
 def jump_wizard_get():
-    pagesize = int(request.args.get("pagesize", 100))
-    spend = int(request.args.get("spend", 0))
+    pagesize = round(request.args.get("pagesize", 100))
+    spend = round(request.args.get("spend", 0))
     package = get_clean_package(request.args)
     scenario = Scenario(package, request.args)
     scenario.do_wizardly_things(spend)
@@ -85,7 +85,7 @@ def jump_slider_get():
 
 @app.route("/scenario/timeline", methods=["GET", "POST"])
 def jump_timeline_get():
-    pagesize = int(request.args.get("pagesize", 4000))
+    pagesize = round(request.args.get("pagesize", 4000))
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
@@ -96,7 +96,7 @@ def jump_timeline_get():
 
 @app.route("/scenario/apc", methods=["GET", "POST"])
 def jump_apc_get():
-    pagesize = int(request.args.get("pagesize", 4000))
+    pagesize = round(request.args.get("pagesize", 4000))
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
@@ -106,7 +106,7 @@ def jump_apc_get():
 
 @app.route("/scenario/costs", methods=["GET", "POST"])
 def jump_costs_get():
-    pagesize = int(request.args.get("pagesize", 4000))
+    pagesize = round(request.args.get("pagesize", 4000))
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
@@ -116,7 +116,7 @@ def jump_costs_get():
 
 @app.route("/scenario/oa", methods=["GET", "POST"])
 def jump_oa_get():
-    pagesize = int(request.args.get("pagesize", 4000))
+    pagesize = round(request.args.get("pagesize", 4000))
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
@@ -127,7 +127,7 @@ def jump_oa_get():
 @app.route("/scenario/journals", methods=["GET", "POST"])
 @app.route("/scenario/overview", methods=["GET", "POST"])
 def jump_journals_get():
-    pagesize = int(request.args.get("pagesize", 4000))
+    pagesize = round(request.args.get("pagesize", 4000))
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
@@ -137,7 +137,7 @@ def jump_journals_get():
 
 @app.route("/scenario/fulfillment", methods=["GET", "POST"])
 def jump_fulfillment_get():
-    pagesize = int(request.args.get("pagesize", 4000))
+    pagesize = round(request.args.get("pagesize", 4000))
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
@@ -147,7 +147,7 @@ def jump_fulfillment_get():
 
 @app.route("/scenario/report", methods=["GET", "POST"])
 def jump_report_get():
-    pagesize = int(request.args.get("pagesize", 4000))
+    pagesize = round(request.args.get("pagesize", 4000))
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
@@ -157,7 +157,7 @@ def jump_report_get():
 
 @app.route("/scenario/impact", methods=["GET", "POST"])
 def jump_impact_get():
-    pagesize = int(request.args.get("pagesize", 4000))
+    pagesize = round(request.args.get("pagesize", 4000))
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
