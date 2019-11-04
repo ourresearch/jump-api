@@ -556,7 +556,7 @@ class Journal(object):
             my_dict[row["fresh_oa_status"]][2019] = int(row["count"])
             # my_dict[row["fresh_oa_status"]][int(row["year_int"])] = int(row["count"]) * self.num_oa_papers_multiplier
 
-        print my_dict
+        # print my_dict
         return my_dict
 
 
