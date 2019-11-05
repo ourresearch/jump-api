@@ -482,9 +482,9 @@ class Scenario(object):
                 "figure": [],
                 "headers": [
                         {"text": "Scenario Cost", "value": "scenario_cost", "percent": None, "raw": self.cost, "display": "currency_int"},
-                        {"text": "Real Subscription Cost", "value": "real_cost", "percent": None, "raw": self.cost_subscription_minus_ill, "display": "currency_int"},
-                        {"text": "ILL Cost", "value": "ill_cost", "percent": None, "raw": self.cost_ill, "display": "currency_int"},
                         {"text": "Subscription Cost", "value": "subscription_cost", "percent": None, "raw": self.cost_subscription, "display": "currency_int"},
+                        {"text": "ILL Cost", "value": "ill_cost", "percent": None, "raw": self.cost_ill, "display": "currency_int"},
+                        {"text": "Subscription minus ILL Cost", "value": "real_cost", "percent": None, "raw": self.cost_subscription_minus_ill, "display": "currency_int"},
                         {"text": "Subscription cost per paid use", "value": "cppu", "percent": None, "raw": self.cppu, "display": "currency"},
                 ],
                 "journals": [j.to_dict_cost() for j in self.journals_sorted_use_total[0:pagesize]],

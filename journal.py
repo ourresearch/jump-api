@@ -727,9 +727,9 @@ class Journal(object):
                     "subscribed": self.subscribed}
         table_row = OrderedDict()
         table_row["scenario_cost"] = round(self.cost_actual)
-        table_row["real_cost"] = round(self.cost_subscription_minus_ill)
-        table_row["ill_cost"] = round(self.cost_ill)
         table_row["subscription_cost"] = round(self.cost_subscription)
+        table_row["ill_cost"] = round(self.cost_ill)
+        table_row["real_cost"] = round(self.cost_subscription_minus_ill)
         if self.cppu_use:
             table_row["cppu"] = round(self.cppu_use, 2)
         else:
