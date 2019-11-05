@@ -75,8 +75,6 @@ def jump_summary_get():
 
 @app.route("/scenario", methods=["GET", "POST"])
 @app.route("/scenario/slider", methods=["GET", "POST"])
-@app.route("/scenario/journals", methods=["GET", "POST"])
-@app.route("/scenario/overview", methods=["GET", "POST"])
 def jump_slider_get():
     scenario_input = request.get_json()
     if not scenario_input:
@@ -125,6 +123,17 @@ def jump_oa_get():
     package = get_clean_package(scenario_input)
     scenario = Scenario(package, scenario_input)
     return jsonify_fast_no_sort(scenario.to_dict_oa(pagesize))
+
+@app.route("/scenario/journals", methods=["GET", "POST"])
+@app.route("/scenario/overview", methods=["GET", "POST"])
+def jump_journals_get():
+    pagesize = round(request.args.get("pagesize", 4000))
+    scenario_input = request.get_json()
+    if not scenario_input:
+        scenario_input = request.args
+    package = get_clean_package(scenario_input)
+    scenario = Scenario(package, scenario_input)
+    return jsonify_fast_no_sort(scenario.to_dict_overview(pagesize))
 
 @app.route("/scenario/fulfillment", methods=["GET", "POST"])
 def jump_fulfillment_get():
