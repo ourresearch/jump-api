@@ -717,12 +717,12 @@ class Journal(object):
                     "subject": self.subject,
                     "subscribed": self.subscribed}
         if self.cppu_use:
-            response["cppu"] = format_currency(self.cppu_use, True)
+            response["cppu"] = self.cppu_use
         else:
             response["cppu"] = "no paywalled usage"
-        response["use"] = format_with_commas(self.use_total)
-        response["value"] = format_percent(self.use_instant_percent)
-        response["cost"] = format_currency(self.cost_actual)
+        response["use"] = self.use_total
+        response["value"] = self.use_instant_percent
+        response["cost"] = self.cost_actual
         return response
 
     def to_dict_cost(self):
@@ -939,8 +939,6 @@ class Journal(object):
         response["use_bronze_percent"] = round(float(100)*self.use_oa_bronze/self.use_total)
         response["use_peer_reviewed_percent"] =  round(float(100)*self.use_oa_peer_reviewed/self.use_total)
         response["bin"] = round(float(100)*self.use_actual["oa"]/self.use_total)/10
-
-        # response["num_papers"] = self.num_papers
         return response
 
     def to_dict_fulfillment(self):
