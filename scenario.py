@@ -56,6 +56,9 @@ class Scenario(object):
         self.data["oa_adjustment"] = get_oa_adjustment_data_from_db(package)
         self.log_timing("get_oa_adjustment_data_from_db")
 
+        self.data["society"] = get_society_data_from_db(package)
+        self.log_timing("get_society_data_from_db")
+
         # pickle_out = open("dict.pickle","wb")
         # pickle.dump(self.data, pickle_out)
         # pickle_out.close()
@@ -712,6 +715,18 @@ def get_oa_data_from_db(package):
                 lookup_dict[row["issn_l"]] += [row]
             oa_dict[key] = lookup_dict
     return oa_dict
+
+@cache
+def get_society_data_from_db(package):
+    command = "select issn_l, is_society_journal from jump_society_journals_input where is_society_journal is not null"
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+    lookup_dict = defaultdict(list)
+    for row in rows:
+        lookup_dict[row["issn_l"]] = row["is_society_journal"]
+    return lookup_dict
+
 
 @cache
 def get_apc_data_from_db(package):

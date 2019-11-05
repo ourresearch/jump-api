@@ -663,7 +663,10 @@ class Journal(object):
     def use_oa_peer_reviewed(self):
         return round(self.downloads_oa_peer_reviewed * self.use_weight_multiplier, 4)
 
-
+    @cached_property
+    def is_society_journal(self):
+        is_society_journal = self._scenario_data["society"].get(self.issn_l, "YES")
+        return is_society_journal == "YES"
 
     def to_dict_report(self):
         response = {"issn_l": self.issn_l,
@@ -763,7 +766,7 @@ class Journal(object):
                 "title": self.title,
                 "subject": self.subject,
                 "publisher": self.publisher,
-                "is_society_journal": False,  ## todo
+                "is_society_journal": self.is_society_journal,
                 "subscribed": self.subscribed,
                 "num_papers": self.num_papers,
                 "cost_subscription": format_currency(self.cost_subscription),
