@@ -714,7 +714,6 @@ class Journal(object):
         response["table_row"] = table_row
 
         for k, v in self.to_dict_slider().iteritems():
-            if k != table_row:
                 response[k] = v
 
         return response
@@ -955,6 +954,8 @@ class Journal(object):
         table_row["use_other_delayed"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
         response["table_row"] = table_row
         response["bin"] = int(self.use_instant_percent)/10
+        for k, v in self.to_dict_slider().iteritems():
+                response[k] = v
 
         return response
 

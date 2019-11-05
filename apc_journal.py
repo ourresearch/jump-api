@@ -105,14 +105,14 @@ class ApcJournal(object):
                     "subscribed": self.subscribed,
                     "is_in_package": self.is_in_package
             }
-        table_row = {}
+        table_row = OrderedDict()
         table_row["oa_status"] = self.oa_status
-        table_row["cost_apc"] = round(self.cost_apc_historical)
         if self.apc_2019:
             table_row["apc_price"] = round(self.apc_2019)
         else:
             table_row["apc_price"] = None
         table_row["fractional_authorship"] = round(self.fractional_authorships_total, 1)
+        table_row["cost_apc"] = round(self.cost_apc_historical)
         response["table_row"] = table_row
         return response
 
