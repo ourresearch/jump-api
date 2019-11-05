@@ -462,10 +462,10 @@ class Scenario(object):
                 "description": "Understand your scenario at the journal level.",
                 "figure": [],
                 "headers": [
+                        {"text": "Subscription cost per paid use", "value": "cppu", "percent": None, "raw": self.cppu, "display": "currency"},
+                        {"text": "Cost", "value": "cost", "percent": None, "raw": self.cost, "display": "currency_int"},
                         {"text": "Usage", "value": "use", "percent": None, "raw": self.use_total, "display": "number"},
                         {"text": "Instant Usage Percent", "value": "instant_usage_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent, "display": "percent"},
-                        {"text": "Cost", "value": "cost", "percent": None, "raw": self.cost, "display": "currency_int"},
-                        {"text": "Subscription cost per paid use", "value": "cppu", "percent": None, "raw": self.cppu, "display": "currency"},
                 ],
                 "journals": [j.to_dict_overview() for j in self.journals_sorted_use_total[0:pagesize]],
             }
