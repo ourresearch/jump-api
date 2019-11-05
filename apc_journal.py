@@ -105,13 +105,15 @@ class ApcJournal(object):
                     "subscribed": self.subscribed,
                     "is_in_package": self.is_in_package
             }
-        response["oa_status"] = self.oa_status
-        response["cost_apc"] = round(self.cost_apc_historical)
+        table_row = {}
+        table_row["oa_status"] = self.oa_status
+        table_row["cost_apc"] = round(self.cost_apc_historical)
         if self.apc_2019:
-            response["apc_price"] = round(self.apc_2019)
+            table_row["apc_price"] = round(self.apc_2019)
         else:
-            response["apc_price"] = None
-        response["fractional_authorship"] = round(self.fractional_authorships_total, 1)
+            table_row["apc_price"] = None
+        table_row["fractional_authorship"] = round(self.fractional_authorships_total, 1)
+        response["table_row"] = table_row
         return response
 
     def __repr__(self):

@@ -706,9 +706,13 @@ class Journal(object):
         else:
             table_row["cppu"] = "no paywalled usage"
         table_row["use"] = self.use_total
-        table_row["value"] = self.use_instant_percent
+        table_row["instant_usage_percent"] = self.use_instant_percent
         table_row["cost"] = self.cost_actual
         response["table_row"] = table_row
+
+        for k, v in self.to_dict_slider().iteritems():
+            response[k] = v
+
         return response
 
     def to_dict_cost(self):
@@ -938,7 +942,7 @@ class Journal(object):
                     "subject": self.subject,
                     "subscribed": self.subscribed}
         table_row = {}
-        table_row["instant_use_percent"] = round(self.use_instant_percent)
+        table_row["instant_usage_percent"] = round(self.use_instant_percent)
         table_row["use_asns"] = round(float(100)*self.use_actual["social_networks"]/self.use_total)
         table_row["use_oa"] = round(float(100)*self.use_actual["oa"]/self.use_total)
         table_row["use_backfile"] = round(float(100)*self.use_actual["backfile"]/self.use_total)
@@ -955,7 +959,6 @@ class Journal(object):
         response = {"issn_l": self.issn_l,
                 "title": self.title,
                 "subject": self.subject,
-                "use_instant": self.use_instant,
                 "downloads_total": self.use_total,
                 "use_total": self.use_total, # replace with above
                 "cost_subscription": self.cost_subscription,
@@ -963,18 +966,11 @@ class Journal(object):
                 "cost_subscription_minus_ill": self.cost_subscription_minus_ill,
                 "cppu_use_delta": self.cppu_use_delta,
                 "cppu_delta_weighted": self.cppu_use_delta, # replace with above
-
                 "cppu_use": self.cppu_use,
                 "cppu_weighted": self.cppu_use, # replace with above
-
                 "subscribed": self.subscribed,
-                "use_actual_by_year": self.use_actual_by_year,
-                "use_actual_weighted_by_year": self.use_actual_by_year, #replace with above
-                "use_instant_by_year": self.use_instant_by_year,
                 "use_instant": self.use_instant,
-                "use_instant_percent_by_year": self.use_instant_percent_by_year,
                 "use_instant_percent": self.use_instant_percent,
-                "oa_embargo_months": self.oa_embargo_months,
                 }
         response["use_groups_free_instant"] = {}
         for group in use_groups_free_instant:

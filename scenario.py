@@ -394,7 +394,7 @@ class Scenario(object):
                 "description": "Understand how uses will be filled, at the journal level.",
                 "figure": [],
                 "headers": [
-                        {"text": "Instant Usage Percent", "value": "instant_use_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent, "display": "number"},
+                        {"text": "Instant Usage Percent", "value": "instant_usage_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent, "display": "number"},
                         {"text": "ASNs", "value": "use_asns", "percent": round(float(100)*self.use_social_networks/self.use_total), "raw": self.use_social_networks, "display": "number"},
                         {"text": "Open access", "value": "use_oa", "percent": round(float(100)*self.use_oa/self.use_total), "raw": self.use_oa, "display": "number"},
                         {"text": "Backfile", "value": "use_backfile", "percent": round(float(100)*self.use_backfile/self.use_total), "raw": self.use_backfile, "display": "number"},
@@ -461,7 +461,7 @@ class Scenario(object):
                 "headers": [
                         {"text": "Subscription cost per paid use", "value": "cppu", "percent": None, "raw": self.cppu, "display": "currency"},
                         {"text": "Usage", "value": "use", "percent": None, "raw": self.use_total, "display": "number"},
-                        {"text": "Instant Usage Percent", "value": "instant_use_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent, "display": "percent"},
+                        {"text": "Instant Usage Percent", "value": "instant_usage_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent, "display": "percent"},
                         {"text": "Cost", "value": "cost", "percent": None, "raw": self.cost, "display": "currency_int"},
                 ],
                 "journals": [j.to_dict_overview() for j in self.journals_sorted_use_total[0:pagesize]],
