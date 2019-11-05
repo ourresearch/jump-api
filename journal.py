@@ -686,12 +686,12 @@ class Journal(object):
                     "title": self.title,
                     "subject": self.subject,
                     "subscribed": self.subscribed}
-        response["total_usage"] = round(self.use_total)
-        response["downloads"] = round(self.downloads_total)
-        response["citations"] = round(self.num_citations, 1)
-        response["authorships"] = round(self.num_authorships, 1)
-        # response["use_weight_multiplier"] = self.use_weight_multiplier_normalized
-        # response["downloads_counter_multiplier"] = self.downloads_counter_multiplier_normalized
+        table_row = {}
+        table_row["total_usage"] = round(self.use_total)
+        table_row["downloads"] = round(self.downloads_total)
+        table_row["citations"] = round(self.num_citations, 1)
+        table_row["authorships"] = round(self.num_authorships, 1)
+        response["table_row"] = table_row
         return response
 
     def to_dict_overview(self):
@@ -700,13 +700,15 @@ class Journal(object):
                     "title": self.title,
                     "subject": self.subject,
                     "subscribed": self.subscribed}
+        table_row = {}
         if self.cppu_use:
-            response["cppu"] = self.cppu_use
+            table_row["cppu"] = self.cppu_use
         else:
-            response["cppu"] = "no paywalled usage"
-        response["use"] = self.use_total
-        response["value"] = self.use_instant_percent
-        response["cost"] = self.cost_actual
+            table_row["cppu"] = "no paywalled usage"
+        table_row["use"] = self.use_total
+        table_row["value"] = self.use_instant_percent
+        table_row["cost"] = self.cost_actual
+        response["table_row"] = table_row
         return response
 
     def to_dict_cost(self):
@@ -715,14 +717,16 @@ class Journal(object):
                     "title": self.title,
                     "subject": self.subject,
                     "subscribed": self.subscribed}
-        response["scenario_cost"] = round(self.cost_actual)
-        response["real_cost"] = round(self.cost_subscription_minus_ill)
-        response["ill_cost"] = round(self.cost_ill)
-        response["subscription_cost"] = round(self.cost_subscription)
+        table_row = {}
+        table_row["scenario_cost"] = round(self.cost_actual)
+        table_row["real_cost"] = round(self.cost_subscription_minus_ill)
+        table_row["ill_cost"] = round(self.cost_ill)
+        table_row["subscription_cost"] = round(self.cost_subscription)
         if self.cppu_use:
-            response["cppu"] = round(self.cppu_use, 2)
+            table_row["cppu"] = round(self.cppu_use, 2)
         else:
-            response["cppu"] = "no paywalled usage"
+            table_row["cppu"] = "no paywalled usage"
+        response["table_row"] = table_row
         return response
 
 
@@ -917,12 +921,14 @@ class Journal(object):
                     "title": self.title,
                     "subject": self.subject,
                     "subscribed": self.subscribed}
-        response["use_oa_percent"] = round(float(100)*self.use_actual["oa"]/self.use_total)
-        response["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
-        response["use_hybrid_percent"] = round(float(100)*self.use_oa_hybrid/self.use_total)
-        response["use_bronze_percent"] = round(float(100)*self.use_oa_bronze/self.use_total)
-        response["use_peer_reviewed_percent"] =  round(float(100)*self.use_oa_peer_reviewed/self.use_total)
-        response["bin"] = round(float(100)*self.use_actual["oa"]/self.use_total)/10
+        table_row = {}
+        table_row["use_oa_percent"] = round(float(100)*self.use_actual["oa"]/self.use_total)
+        table_row["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
+        table_row["use_hybrid_percent"] = round(float(100)*self.use_oa_hybrid/self.use_total)
+        table_row["use_bronze_percent"] = round(float(100)*self.use_oa_bronze/self.use_total)
+        table_row["use_peer_reviewed_percent"] =  round(float(100)*self.use_oa_peer_reviewed/self.use_total)
+        response["table_row"] = table_row
+        response["bin"] = int(float(100)*self.use_actual["oa"]/self.use_total)/10
         return response
 
     def to_dict_fulfillment(self):
@@ -931,14 +937,16 @@ class Journal(object):
                     "title": self.title,
                     "subject": self.subject,
                     "subscribed": self.subscribed}
-        response["instant_use_percent"] = round(self.use_instant_percent)
-        response["use_asns"] = round(float(100)*self.use_actual["social_networks"]/self.use_total)
-        response["use_oa"] = round(float(100)*self.use_actual["oa"]/self.use_total)
-        response["use_backfile"] = round(float(100)*self.use_actual["backfile"]/self.use_total)
-        response["use_subscription"] = round(float(100)*self.use_actual["subscription"]/self.use_total)
-        response["use_ill"] = round(float(100)*self.use_actual["ill"]/self.use_total)
-        response["use_other_delayed"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
-        response["bin"] = round(self.use_instant_percent)/10
+        table_row = {}
+        table_row["instant_use_percent"] = round(self.use_instant_percent)
+        table_row["use_asns"] = round(float(100)*self.use_actual["social_networks"]/self.use_total)
+        table_row["use_oa"] = round(float(100)*self.use_actual["oa"]/self.use_total)
+        table_row["use_backfile"] = round(float(100)*self.use_actual["backfile"]/self.use_total)
+        table_row["use_subscription"] = round(float(100)*self.use_actual["subscription"]/self.use_total)
+        table_row["use_ill"] = round(float(100)*self.use_actual["ill"]/self.use_total)
+        table_row["use_other_delayed"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
+        table_row["table_row"] = table_row
+        response["bin"] = int(self.use_instant_percent)/10
 
         return response
 

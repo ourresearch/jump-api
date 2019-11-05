@@ -8,6 +8,7 @@ from flask import render_template
 from flask import jsonify
 from flask import url_for
 from flask import Response
+from flask import send_file
 
 import simplejson as json
 import os
@@ -169,7 +170,6 @@ def jump_issn_get(issn_l):
     scenario = Scenario(package, scenario_input)
     my_journal = scenario.get_journal(issn_l)
     return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
-
 
 
 @app.route("/scenario/export.csv", methods=["GET"])
