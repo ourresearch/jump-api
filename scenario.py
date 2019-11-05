@@ -101,6 +101,11 @@ class Scenario(object):
         return self.journals
 
     @cached_property
+    def apc_journals_sorted_spend(self):
+        self.apc_journals.sort(key=lambda k: for_sorting(k.cost_apc_historical), reverse=True)
+        return self.apc_journals
+
+    @cached_property
     def subscribed(self):
         return [j for j in self.journals_sorted_cppu if j.subscribed]
 
@@ -467,7 +472,7 @@ class Scenario(object):
                         {"text": "Usage", "value": "use", "percent": None, "raw": self.use_total, "display": "number"},
                         {"text": "Instant Usage Percent", "value": "instant_usage_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent, "display": "percent"},
                 ],
-                "journals": [j.to_dict_overview() for j in self.journals_sorted_use_total[0:pagesize]],
+                "journals": [j.to_dict_overview() for j in self.journals_sorted_cppu_delta[0:pagesize]],
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
@@ -487,7 +492,7 @@ class Scenario(object):
                         {"text": "Subscription minus ILL Cost", "value": "real_cost", "percent": None, "raw": self.cost_subscription_minus_ill, "display": "currency_int"},
                         {"text": "Subscription cost per paid use", "value": "cppu", "percent": None, "raw": self.cppu, "display": "currency"},
                 ],
-                "journals": [j.to_dict_cost() for j in self.journals_sorted_use_total[0:pagesize]],
+                "journals": [j.to_dict_cost() for j in self.journals_sorted_cppu_delta[0:pagesize]],
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
@@ -506,7 +511,7 @@ class Scenario(object):
                         {"text": "Total fractional authorship", "value": "fractional_authorship", "percent": None, "raw": self.fractional_authorships_total, "display": "float1"},
                         {"text": "APC Dollars Spent", "value": "cost_apc", "percent": None, "raw": self.cost_apc_historical, "display": "currency_int"},
                 ],
-                "journals": [j.to_dict() for j in self.apc_journals[0:pagesize]],
+                "journals": [j.to_dict() for j in self.apc_journals_sorted_spend[0:pagesize]],
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
@@ -579,7 +584,7 @@ class Scenario(object):
         response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": self.to_dict_summary_dict(),
-                "journals": [j.to_dict() for j in self.journals_sorted_cppu[0:pagesize]],
+                "journals": [j.to_dict() for j in self.journals_sorted_cppu_delta[0:pagesize]],
                 "journals_count": len(self.journals),
             }
         self.log_timing("to dict")
