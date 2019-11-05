@@ -2,4 +2,4 @@
 
 API for Unpaywall Journals.
 
-Docs TBD.
+Docs coming soon.
