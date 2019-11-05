@@ -253,7 +253,7 @@ class Journal(object):
                 scaled[year] += by_age
                 if scaled[year]:
                     scaled[year] += self.downloads_total_older_than_five_years
-                scaled[year] -= self.downloads_social_networks_by_year[year]
+                scaled[year] *= (1 - self.downloads_social_network_multiplier)
             scaled = [round(max(0, num)) for num in scaled]
             return scaled
         else:
