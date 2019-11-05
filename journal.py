@@ -324,14 +324,7 @@ class Journal(object):
     # used to calculate use_weight_multiplier so it can't use it
     @cached_property
     def use_total_by_year(self):
-        # don't allow a use to be >0 unless downloads were >0
-        response = []
-        for year in self.years:
-            if self.downloads_total_by_year[year]:
-                response += [self.downloads_total_by_year[year] + self.use_addition_from_weights]
-            else:
-                response += [0]
-        return response
+        return [round(self.downloads_total_by_year[year] + self.use_addition_from_weights) for year in self.years]
 
     @cached_property
     def use_total(self):
@@ -382,13 +375,10 @@ class Journal(object):
     @cached_property
     def downloads_scaled_by_counter_by_year(self):
         # TODO is flat right now
-        if self.downloads_by_age:
-            downloads_total_before_counter_correction_by_year = [max(1.0, self.my_scenario_data_row["downloads_total"]) for year in self.years]
-            downloads_total_before_counter_correction_by_year = [val if val else 0.0 for val in downloads_total_before_counter_correction_by_year]
-            downloads_total_scaled_by_counter = [num * self.downloads_counter_multiplier for num in downloads_total_before_counter_correction_by_year]
-            return downloads_total_scaled_by_counter
-        else:
-            return [0 for year in self.years]
+        downloads_total_before_counter_correction_by_year = [max(1.0, self.my_scenario_data_row["downloads_total"]) for year in self.years]
+        downloads_total_before_counter_correction_by_year = [val if val else 0.0 for val in downloads_total_before_counter_correction_by_year]
+        downloads_total_scaled_by_counter = [num * self.downloads_counter_multiplier for num in downloads_total_before_counter_correction_by_year]
+        return downloads_total_scaled_by_counter
 
     @cached_property
     def downloads_per_paper(self):
@@ -483,10 +473,7 @@ class Journal(object):
 
     @cached_property
     def downloads_total_before_counter_correction(self):
-        if self.downloads_by_age:
-            return max(0, self.my_scenario_data_row["downloads_total"])
-        else:
-            return 0
+        return max(1, self.my_scenario_data_row["downloads_total"])
 
     @cached_property
     def use_addition_from_weights(self):

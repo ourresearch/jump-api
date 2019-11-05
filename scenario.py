@@ -442,8 +442,8 @@ class Scenario(object):
                 "headers": [
                         {"text": "Total Usage", "value":"total_usage", "percent": 100, "raw": self.use_total, "display": "number"},
                         {"text": "Downloads", "value":"downloads", "percent": 100*self.downloads_total/self.use_total, "raw": self.downloads_total, "display": "number"},
-                        {"text": "Citations to papers", "value":"citations", "percent": self.num_citations_weight_percent, "raw": self.num_citations, "display": "float"},
-                        {"text": "Authored papers", "value":"authorships", "percent": self.num_authorships_weight_percent, "raw": self.num_authorships, "display": "float"},
+                        {"text": "Citations to papers", "value":"citations", "percent": self.num_citations_weight_percent, "raw": self.num_citations, "display": "float1"},
+                        {"text": "Authored papers", "value":"authorships", "percent": self.num_authorships_weight_percent, "raw": self.num_authorships, "display": "float1"},
                 ],
                 "journals": [j.to_dict_impact() for j in self.journals_sorted_use_total[0:pagesize]],
             }
@@ -501,7 +501,7 @@ class Scenario(object):
                         {"text": "OA type", "value": "oa_status", "percent": None, "raw": None, "display": "text"},
                         {"text": "APC Dollars Spent", "value": "cost_apc", "percent": None, "raw": self.cost_apc_historical, "display": "currency_int"},
                         {"text": "APC price", "value": "apc_price", "percent": None, "raw": self.apc_price, "display": "currency_int"},
-                        {"text": "Total fractional authorship", "value": "fractional_authorship", "percent": None, "raw": self.fractional_authorships_total, "display": "float"},
+                        {"text": "Total fractional authorship", "value": "fractional_authorship", "percent": None, "raw": self.fractional_authorships_total, "display": "float1"},
                 ],
                 "journals": [j.to_dict() for j in self.apc_journals[0:pagesize]],
             }
