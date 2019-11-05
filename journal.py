@@ -688,11 +688,8 @@ class Journal(object):
                     "subscribed": self.subscribed}
         response["total_usage"] = round(self.use_total)
         response["downloads"] = round(self.downloads_total)
-        response["citations"] = round(self.num_citations)
-        if self.num_authorships > 1:
-            response["authorships"] = round(self.num_authorships)
-        else:
-            response["authorships"] = round(self.num_authorships, 1)
+        response["citations"] = round(self.num_citations, 1)
+        response["authorships"] = round(self.num_authorships, 1)
         # response["use_weight_multiplier"] = self.use_weight_multiplier_normalized
         # response["downloads_counter_multiplier"] = self.downloads_counter_multiplier_normalized
         return response
