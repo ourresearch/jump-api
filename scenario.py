@@ -474,7 +474,7 @@ class Scenario(object):
         response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": self.to_dict_summary_dict(),
-                "name": "Read Cost",
+                "name": "Subscription Cost",
                 "description": "Understand the cost of your subscriptions and ILL requests.",
                 "figure": [],
                 "headers": [

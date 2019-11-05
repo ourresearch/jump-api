@@ -686,7 +686,7 @@ class Journal(object):
                     "title": self.title,
                     "subject": self.subject,
                     "subscribed": self.subscribed}
-        table_row = {}
+        table_row = OrderedDict()
         table_row["total_usage"] = round(self.use_total)
         table_row["downloads"] = round(self.downloads_total)
         table_row["citations"] = round(self.num_citations, 1)
@@ -700,7 +700,7 @@ class Journal(object):
                     "title": self.title,
                     "subject": self.subject,
                     "subscribed": self.subscribed}
-        table_row = {}
+        table_row = OrderedDict()
         if self.cppu_use:
             table_row["cppu"] = self.cppu_use
         else:
@@ -711,7 +711,8 @@ class Journal(object):
         response["table_row"] = table_row
 
         for k, v in self.to_dict_slider().iteritems():
-            response[k] = v
+            if k != table_row:
+                response[k] = v
 
         return response
 
@@ -721,7 +722,7 @@ class Journal(object):
                     "title": self.title,
                     "subject": self.subject,
                     "subscribed": self.subscribed}
-        table_row = {}
+        table_row = OrderedDict()
         table_row["scenario_cost"] = round(self.cost_actual)
         table_row["real_cost"] = round(self.cost_subscription_minus_ill)
         table_row["ill_cost"] = round(self.cost_ill)
@@ -925,7 +926,7 @@ class Journal(object):
                     "title": self.title,
                     "subject": self.subject,
                     "subscribed": self.subscribed}
-        table_row = {}
+        table_row = OrderedDict()
         table_row["use_oa_percent"] = round(float(100)*self.use_actual["oa"]/self.use_total)
         table_row["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
         table_row["use_hybrid_percent"] = round(float(100)*self.use_oa_hybrid/self.use_total)
@@ -941,7 +942,7 @@ class Journal(object):
                     "title": self.title,
                     "subject": self.subject,
                     "subscribed": self.subscribed}
-        table_row = {}
+        table_row = OrderedDict()
         table_row["instant_usage_percent"] = round(self.use_instant_percent)
         table_row["use_asns"] = round(float(100)*self.use_actual["social_networks"]/self.use_total)
         table_row["use_oa"] = round(float(100)*self.use_actual["oa"]/self.use_total)
@@ -949,7 +950,7 @@ class Journal(object):
         table_row["use_subscription"] = round(float(100)*self.use_actual["subscription"]/self.use_total)
         table_row["use_ill"] = round(float(100)*self.use_actual["ill"]/self.use_total)
         table_row["use_other_delayed"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
-        table_row["table_row"] = table_row
+        response["table_row"] = table_row
         response["bin"] = int(self.use_instant_percent)/10
 
         return response
