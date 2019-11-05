@@ -704,13 +704,13 @@ class Journal(object):
                     "subject": self.subject,
                     "subscribed": self.subscribed}
         table_row = OrderedDict()
+        table_row["use"] = self.use_total
+        table_row["instant_usage_percent"] = self.use_instant_percent
+        table_row["cost"] = self.cost_actual
         if self.cppu_use:
             table_row["cppu"] = self.cppu_use
         else:
             table_row["cppu"] = "no paywalled usage"
-        table_row["use"] = self.use_total
-        table_row["instant_usage_percent"] = self.use_instant_percent
-        table_row["cost"] = self.cost_actual
         response["table_row"] = table_row
 
         for k, v in self.to_dict_slider().iteritems():
