@@ -529,7 +529,7 @@ class Journal(object):
     def use_instant_percent(self):
         if not self.use_total:
             return 0
-        return max(1.0, round(100 * float(self.use_instant) / self.use_total, 4))
+        return min(100.0, round(100 * float(self.use_instant) / self.use_total, 4))
 
     @cached_property
     def use_instant_percent_by_year(self):
