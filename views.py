@@ -85,7 +85,7 @@ def jump_overview_get():
         scenario_input = request.args
     package = get_clean_package(scenario_input)
     scenario = Scenario(package, scenario_input)
-    return jsonify_fast(scenario.to_dict_overview(pagesize))
+    return jsonify_fast_no_sort(scenario.to_dict_overview(pagesize))
 
 @app.route("/scenario", methods=["GET", "POST"])
 @app.route("/scenario/slider", methods=["GET", "POST"])
@@ -95,7 +95,7 @@ def jump_slider_get():
         scenario_input = request.args
     package = get_clean_package(scenario_input)
     scenario = Scenario(package, scenario_input)
-    return jsonify_fast(scenario.to_dict_slider())
+    return jsonify_fast_no_sort(scenario.to_dict_slider())
 
 @app.route("/scenario/timeline", methods=["GET", "POST"])
 def jump_timeline_get():
