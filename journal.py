@@ -148,7 +148,7 @@ class Journal(object):
         return round(self.cost_subscription/self.use_paywalled, 6)
 
     @cached_property
-    def cppu_use_delta(self):
+    def ncppu(self):
         if not self.use_paywalled:
             return None
         return round(self.cost_subscription_minus_ill/self.use_paywalled, 6)
@@ -705,9 +705,9 @@ class Journal(object):
                     "subscribed": self.subscribed}
         table_row = OrderedDict()
         if self.cppu_use:
-            table_row["cppu"] = self.cppu_use
+            table_row["ncppu"] = self.ncppu
         else:
-            table_row["cppu"] = "no paywalled usage"
+            table_row["ncppu"] = "no paywalled usage"
         table_row["cost"] = self.cost_actual
         table_row["use"] = self.use_total
         table_row["instant_usage_percent"] = self.use_instant_percent
@@ -725,14 +725,14 @@ class Journal(object):
                     "subject": self.subject,
                     "subscribed": self.subscribed}
         table_row = OrderedDict()
+        if self.cppu_use:
+            table_row["ncppu"] = round(self.ncppu, 2)
+        else:
+            table_row["ncppu"] = "no paywalled usage"
         table_row["scenario_cost"] = round(self.cost_actual)
         table_row["subscription_cost"] = round(self.cost_subscription)
         table_row["ill_cost"] = round(self.cost_ill)
         table_row["real_cost"] = round(self.cost_subscription_minus_ill)
-        if self.cppu_use:
-            table_row["cppu"] = round(self.cppu_use, 2)
-        else:
-            table_row["cppu"] = "no paywalled usage"
         response["table_row"] = table_row
         return response
 
@@ -875,12 +875,11 @@ class Journal(object):
                 cost_dict["cost_per_use"] = "no paywalled usage"
         response["cost"] = {
             "subscribed": self.subscribed,
-            "cppu": format_currency(self.cppu_use, True),
-            "cppu_delta": format_currency(self.cppu_use_delta, True),
+            "ncppu": format_currency(self.ncppu, True),
             "headers": [
                 {"text": "Cost Type", "value": "cost_type"},
                 {"text": "Cost (projected annual)", "value": "cost_avg"},
-                {"text": "Cost per paid use (CPPU)", "value": "cost_per_use"},
+                {"text": "Non-net cost per paid use", "value": "cost_per_use"},
                 {"text": "Cost projected 2020", "value": "year_2020"},
                 {"text": "2021", "value": "year_2021"},
                 {"text": "2022", "value": "year_2022"},
@@ -969,8 +968,9 @@ class Journal(object):
                 "cost_subscription": self.cost_subscription,
                 "cost_ill": self.cost_ill,
                 "cost_subscription_minus_ill": self.cost_subscription_minus_ill,
-                "cppu_use_delta": self.cppu_use_delta,
-                "cppu_delta_weighted": self.cppu_use_delta, # replace with above
+                "cppu_use_delta": self.ncppu,  #use below
+                "cppu_delta_weighted": self.ncppu, # replace with above
+                "ncppu": self.ncppu, # use this to replace the two above it
                 "cppu_use": self.cppu_use,
                 "cppu_weighted": self.cppu_use, # replace with above
                 "subscribed": self.subscribed,
@@ -999,7 +999,8 @@ class Journal(object):
                 "cost_subscription": self.cost_subscription,
                 "cost_ill": self.cost_ill,
                 "cost_subscription_minus_ill": self.cost_subscription_minus_ill,
-                "cppu_use_delta": self.cppu_use_delta,
+                "cppu_use_delta": self.ncppu,
+                "ncppu": self.ncppu,  #replace above with this
                 "cppu_downloads": self.cppu_downloads,
                 "cppu_use": self.cppu_use,
                 "subscribed": self.subscribed

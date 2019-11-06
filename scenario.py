@@ -86,13 +86,8 @@ class Scenario(object):
         return [ApcJournal(issn_l, self.data, self) for issn_l in self.data["apc"]["df"].issn_l.unique()]
 
     @cached_property
-    def journals_sorted_cppu(self):
-        self.journals.sort(key=lambda k: for_sorting(k.cppu_use), reverse=False)
-        return self.journals
-
-    @cached_property
-    def journals_sorted_cppu_delta(self):
-        self.journals.sort(key=lambda k: for_sorting(k.cppu_use_delta), reverse=False)
+    def journals_sorted_ncppu(self):
+        self.journals.sort(key=lambda k: for_sorting(k.ncppu), reverse=False)
         return self.journals
 
     @cached_property
@@ -107,7 +102,7 @@ class Scenario(object):
 
     @cached_property
     def subscribed(self):
-        return [j for j in self.journals_sorted_cppu if j.subscribed]
+        return [j for j in self.journals_sorted_ncppu if j.subscribed]
 
     @cached_property
     def num_citations_fuzzed_lookup(self):
@@ -178,6 +173,10 @@ class Scenario(object):
 
     @cached_property
     def cppu(self):
+        return round(self.cost / self.use_paywalled, 2)
+
+    @cached_property
+    def ncppu(self):
         return round(self.cost / self.use_paywalled, 2)
 
     @cached_property
@@ -258,12 +257,12 @@ class Scenario(object):
 
         my_spend_so_far = np.sum([j.cost_ill for j in self.journals])
 
-        for journal in self.journals_sorted_cppu_delta:
+        for journal in self.journals_sorted_ncppu:
             if journal.cost_subscription_minus_ill < 0:
                 my_spend_so_far += journal.cost_subscription_minus_ill
                 journal.set_subscribe()
 
-        for journal in self.journals_sorted_cppu_delta:
+        for journal in self.journals_sorted_ncppu:
             my_spend_so_far += journal.cost_subscription_minus_ill
             if my_spend_so_far > my_max:
                 return
@@ -467,12 +466,12 @@ class Scenario(object):
                 "description": "Understand your scenario at the journal level.",
                 "figure": [],
                 "headers": [
-                        {"text": "Subscription cost per paid use", "value": "cppu", "percent": None, "raw": self.cppu, "display": "currency"},
+                        {"text": "Net cost per paid use", "value": "ncppu", "percent": None, "raw": self.ncppu, "display": "currency"},
                         {"text": "Cost", "value": "cost", "percent": None, "raw": self.cost, "display": "currency_int"},
                         {"text": "Usage", "value": "use", "percent": None, "raw": self.use_total, "display": "number"},
                         {"text": "Instant Usage Percent", "value": "instant_usage_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent, "display": "percent"},
                 ],
-                "journals": [j.to_dict_overview() for j in self.journals_sorted_cppu_delta[0:pagesize]],
+                "journals": [j.to_dict_overview() for j in self.journals_sorted_ncppu[0:pagesize]],
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
@@ -486,13 +485,13 @@ class Scenario(object):
                 "description": "Understand the cost of your subscriptions and ILL requests.",
                 "figure": [],
                 "headers": [
+                        {"text": "Net cost per paid use (NCPPU)", "value": "ncppu", "percent": None, "raw": self.ncppu, "display": "currency"},
                         {"text": "Scenario Cost", "value": "scenario_cost", "percent": None, "raw": self.cost, "display": "currency_int"},
                         {"text": "Subscription Cost", "value": "subscription_cost", "percent": None, "raw": self.cost_subscription, "display": "currency_int"},
                         {"text": "ILL Cost", "value": "ill_cost", "percent": None, "raw": self.cost_ill, "display": "currency_int"},
                         {"text": "Subscription minus ILL Cost", "value": "real_cost", "percent": None, "raw": self.cost_subscription_minus_ill, "display": "currency_int"},
-                        {"text": "Subscription cost per paid use", "value": "cppu", "percent": None, "raw": self.cppu, "display": "currency"},
                 ],
-                "journals": [j.to_dict_cost() for j in self.journals_sorted_cppu_delta[0:pagesize]],
+                "journals": [j.to_dict_cost() for j in self.journals_sorted_ncppu[0:pagesize]],
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
@@ -558,7 +557,7 @@ class Scenario(object):
         response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": self.to_dict_summary_dict(),
-                "journals": [j.to_dict_slider() for j in self.journals_sorted_cppu_delta],
+                "journals": [j.to_dict_slider() for j in self.journals_sorted_ncppu],
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
@@ -584,7 +583,7 @@ class Scenario(object):
         response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": self.to_dict_summary_dict(),
-                "journals": [j.to_dict() for j in self.journals_sorted_cppu_delta[0:pagesize]],
+                "journals": [j.to_dict() for j in self.journals_sorted_ncppu[0:pagesize]],
                 "journals_count": len(self.journals),
             }
         self.log_timing("to dict")
