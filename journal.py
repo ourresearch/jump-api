@@ -204,6 +204,9 @@ class Journal(object):
     def downloads_social_networks(self):
         return round(np.mean(self.downloads_social_networks_by_year), 4)
 
+    @cached_property
+    def use_social_networks_by_year(self):
+        return [round(round(self.downloads_social_networks * self.use_weight_multiplier), 4) for year in self.years]
 
     @cached_property
     def use_social_networks(self):
