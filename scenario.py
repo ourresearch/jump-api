@@ -458,6 +458,27 @@ class Scenario(object):
         response["_timing"] = self.timing_messages
         return response
 
+
+    def to_dict_table(self, pagesize):
+        response = {
+                "_settings": self.settings.to_dict(),
+                "name": "Overview",
+                "_summary": self.to_dict_summary_dict(),
+                "description": "Understand your scenario at the journal level.",
+                "figure": [],
+                "headers": [
+                        {"text": "Net cost per paid use", "value": "ncppu", "percent": None, "raw": self.ncppu, "display": "currency"},
+                        {"text": "Cost", "value": "cost", "percent": None, "raw": self.cost, "display": "currency_int"},
+                        {"text": "Usage", "value": "use", "percent": None, "raw": self.use_total, "display": "number"},
+                        {"text": "Instant Usage Percent", "value": "instant_usage_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent, "display": "percent"},
+                ],
+                "journals": [j.to_dict_table() for j in self.journals_sorted_ncppu[0:pagesize]],
+            }
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
+        return response
+
+
     def to_dict_overview(self, pagesize):
         response = {
                 "_settings": self.settings.to_dict(),

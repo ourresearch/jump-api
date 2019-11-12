@@ -721,6 +721,25 @@ class Journal(object):
 
         return response
 
+    def to_dict_table(self):
+        response = OrderedDict()
+        response["meta"] = {"issn_l": self.issn_l,
+                    "title": self.title,
+                    "subject": self.subject,
+                    "subscribed": self.subscribed}
+        table_row = OrderedDict()
+        if self.cppu_use:
+            table_row["ncppu"] = self.ncppu
+        else:
+            table_row["ncppu"] = "no paywalled usage"
+        table_row["cost"] = self.cost_actual
+        table_row["use"] = self.use_total
+        table_row["instant_usage_percent"] = self.use_instant_percent
+        response["table_row"] = table_row
+
+        return response
+
+
     def to_dict_cost(self):
         response = OrderedDict()
         response["meta"] = {"issn_l": self.issn_l,

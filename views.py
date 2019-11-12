@@ -77,7 +77,6 @@ def jump_summary_get():
     return jsonify_fast(scenario.to_dict_summary())
 
 @app.route("/scenario/journals", methods=["GET", "POST"])
-@app.route("/scenario/table", methods=["GET", "POST"])
 @app.route("/scenario/overview", methods=["GET", "POST"])
 def jump_overview_get():
     pagesize = int(request.args.get("pagesize", 4000))
@@ -87,6 +86,16 @@ def jump_overview_get():
     package = get_clean_package(scenario_input)
     scenario = Scenario(package, scenario_input)
     return jsonify_fast_no_sort(scenario.to_dict_overview(pagesize))
+
+@app.route("/scenario/table", methods=["GET", "POST"])
+def jump_table_get():
+    pagesize = int(request.args.get("pagesize", 4000))
+    scenario_input = request.get_json()
+    if not scenario_input:
+        scenario_input = request.args
+    package = get_clean_package(scenario_input)
+    scenario = Scenario(package, scenario_input)
+    return jsonify_fast_no_sort(scenario.to_dict_table(pagesize))
 
 @app.route("/scenario", methods=["GET", "POST"])
 @app.route("/scenario/slider", methods=["GET", "POST"])
