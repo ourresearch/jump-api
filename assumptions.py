@@ -19,6 +19,7 @@ class Assumptions(object):
         self.include_submitted_version = True
         self.include_social_networks = True
         self.include_backfile = True
+        self.package = "demo"  # remove after API not counting on it
 
         if http_request_args:
             if "configs" in http_request_args:
