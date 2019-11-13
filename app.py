@@ -68,10 +68,11 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 app = Flask(__name__)
 
-# auth stuff
-# Setup the Flask-JWT-Extended extension
+# authorization
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 app.config['SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = False # doesn't expire
+app.config['JWT_REFRESH_TOKEN_EXPIRES'] = False # doesn't expire
 jwt = JWTManager(app)
 
 # database stuff
@@ -80,7 +81,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True  # as instructed, to suppres
 app.config['SQLALCHEMY_ECHO'] = (os.getenv("SQLALCHEMY_ECHO", False) == "True")
 # app.config['SQLALCHEMY_ECHO'] = True
 
-app.config["SQLALCHEMY_DATABASE_URI"] = None  # don't use this though, default is unclear, use binds
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL_REDSHIFT")
 app.config["SQLALCHEMY_BINDS"] = {
     "redshift_db": os.getenv("DATABASE_URL_REDSHIFT")
 }
