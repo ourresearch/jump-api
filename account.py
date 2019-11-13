@@ -32,6 +32,39 @@ class Account(db.Model):
         # TODO FIX
         return None
 
+    @property
+    def default_package_id(self):
+        # TODO FIX
+        return "demo-pkg-123"
+
+    @property
+    def default_scenario_id(self):
+        # TODO FIX
+        return "1"
+
+    @property
+    def default_package_name(self):
+        # TODO FIX
+        if self.is_demo_account:
+            return "my Elsevier Freedom Package"
+        return "{}'s Elsevier Package".format(self.display_name)
+
+    @property
+    def default_scenario_name(self):
+        # TODO FIX
+        if self.is_demo_account:
+            return "My First Scenario"
+        return "{}'s First Scenario".format(self.display_name)
+
+    @property
+    def active_package(self):
+        # TODO FIX
+        return None
+
+    @property
+    def is_demo_account(self):
+        return self.username == "demo"
+
     def __repr__(self):
         return u"<{} ({}) {}>".format(self.__class__.__name__, self.id, self.display_name)
 
