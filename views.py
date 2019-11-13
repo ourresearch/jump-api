@@ -295,7 +295,7 @@ def account_get():
             "configs": scenario.settings.to_dict()
         }]
     }
-    return jsonify_fast_no_sort(account_dict)
+    return jsonify_fast(account_dict)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5004))
