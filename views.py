@@ -268,9 +268,7 @@ def protected():
 def account_get():
     demo_package = get_clean_package(None)
     current_user_id = get_jwt_identity()
-    print "current_user_id", current_user_id
     my_account = Account.query.get(current_user_id)
-    print "my_account", my_account
 
     scenario = Scenario(my_account.active_package)
 
@@ -278,16 +276,16 @@ def account_get():
         "id": my_account.id,
         "name": my_account.display_name,
         "packages": [{
-                "id": "demo-pkg-123",
-                "name": "my Elsevier Freedom Package",
+                "id": my_account.default_package_id,
+                "name": my_account.default_package_name,
                 "hasCounterData": len(scenario.journals) > 0,
                 "numJournals": len(scenario.journals),
                 "numPerpAccessJournals": len(scenario.journals)
             }],
         "scenarios": [{
-            "id": "1",
-            "name": "My First Scenario",
-            "pkgId": "demo-pkg-123",
+            "id": my_account.default_scenario_id,
+            "name": my_account.default_scenario_name,
+            "pkgId": my_account.default_package_id,
             "summary": {
                 "cost_percent": scenario.cost_spent_percent,
                 "use_instant_percent": scenario.use_instant_percent,
