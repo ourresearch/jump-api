@@ -11,6 +11,7 @@ from flask import Response
 from flask import send_file
 from flask_jwt_extended import jwt_required, jwt_optional, create_access_token, get_jwt_identity
 from werkzeug.security import safe_str_cmp
+from werkzeug.security import generate_password_hash, check_password_hash
 
 import simplejson as json
 import os
@@ -20,6 +21,7 @@ import unicodecsv as csv
 from app import app
 from app import logger
 from app import jwt
+from app import db
 from scenario import Scenario
 from account import Account
 from util import jsonify_fast
@@ -27,6 +29,7 @@ from util import jsonify_fast_no_sort
 from util import str2bool
 from util import elapsed
 from util import abort_json
+from util import safe_commit
 
 def get_clean_package(http_request_args):
     return "uva_elsevier"
@@ -239,7 +242,7 @@ def login():
         return abort_json(400, "Missing password parameter")
 
     my_account = Account.query.filter(Account.username == username).first()
-    if not my_account or not safe_str_cmp(my_account.password, password):
+    if not my_account or not check_password_hash(my_account.password_hash, password):
         return abort_json(401, "Bad username or password")
 
     # Identity can be any data that is json serializable
@@ -297,6 +300,21 @@ def account_get():
     }
     return jsonify_fast(account_dict)
 
+
+@app.route('/register', methods=['GET'])
+def register_user():
+    secret = request.args.get('secret', None)
+    if not safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
+        abort_json(500, "Secret doesn't match, not saving user in database")
+
+    new_account = Account()
+    new_account.username = request.args.get('username')
+    new_account.password_hash = generate_password_hash(request.args.get('password'))
+    new_account.display_name = request.args.get('name',  None)
+    db.session.add(new_account)
+    safe_commit(db)
+
+    return jsonify({'message': 'User registered successfully'})
 
 
 if __name__ == "__main__":
