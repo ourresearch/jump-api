@@ -9,7 +9,7 @@ from flask import jsonify
 from flask import url_for
 from flask import Response
 from flask import send_file
-from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
+from flask_jwt_extended import jwt_required, jwt_optional, create_access_token, get_jwt_identity
 
 import simplejson as json
 import os
@@ -232,11 +232,16 @@ def login():
     if not password:
         return jsonify({"msg": "Missing password parameter"}), 400
 
-    if username != 'test' or password != 'test':
+    if password != 'password':
         return jsonify({"msg": "Bad username or password"}), 401
 
+    my_identity = {
+        "id": username,
+        "name": "User {}".format(username.title()),
+        "package": get_clean_package(username)
+    }
     # Identity can be any data that is json serializable
-    access_token = create_access_token(identity=username)
+    access_token = create_access_token(identity=my_identity)
     return jsonify(access_token=access_token), 200
 
 
@@ -250,8 +255,47 @@ def login():
 def protected():
     # Access the identity of the current user with get_jwt_identity
     current_user = get_jwt_identity()
-    return jsonify(logged_in_as=current_user), 200
+    return jsonify(logged_in_as=current_user["id"]), 200
 
+@app.route('/account', methods=['GET'])
+@jwt_optional
+def account_get():
+    demo_package = get_clean_package(None)
+    current_user = get_jwt_identity()
+    if not current_user:
+        current_user = {
+            "id": "demo",
+            "name": "Demo User",
+            "package": get_clean_package(None)
+        }
+
+    scenario = Scenario(current_user["package"])
+
+    account_dict = {
+        "id": current_user["id"],
+        "name": current_user["name"],
+        "packages": [{
+                "id": "demo-pkg-123",
+                "name": "my Elsevier Freedom Package",
+                "hasCounterData": True,
+                "numJournals": len(scenario.journals),
+                "numPerpAccessJournals": len(scenario.journals)
+            }],
+        "scenarios": [{
+            "id": "1",
+            "name": "My First Scenario",
+            "pkgId": "demo-pkg-123",
+            "summary": {
+                "cost_percent": 0,
+                "use_instant_percent": 0,
+                "num_journals_subscribed": 0,
+            },
+            "subrs": [],
+            "customSubrs": [],
+            "configs": scenario.settings.to_dict()
+        }]
+    }
+    return jsonify_fast_no_sort(account_dict)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5004))
