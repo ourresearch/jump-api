@@ -227,6 +227,11 @@ def login():
 
     username = request.json.get('username', None)
     password = request.json.get('password', None)
+
+    print "in login"
+    print "username", username
+    print "password", password
+
     if not username:
         return jsonify({"msg": "Missing username parameter"}), 400
     if not password:
@@ -242,6 +247,8 @@ def login():
     }
     # Identity can be any data that is json serializable
     access_token = create_access_token(identity=my_identity)
+    print "access_token", access_token
+
     return jsonify(access_token=access_token), 200
 
 
@@ -277,7 +284,7 @@ def account_get():
         "packages": [{
                 "id": "demo-pkg-123",
                 "name": "my Elsevier Freedom Package",
-                "hasCounterData": True,
+                "hasCounterData": len(scenario.journals) > 0,
                 "numJournals": len(scenario.journals),
                 "numPerpAccessJournals": len(scenario.journals)
             }],
@@ -286,9 +293,9 @@ def account_get():
             "name": "My First Scenario",
             "pkgId": "demo-pkg-123",
             "summary": {
-                "cost_percent": 0,
-                "use_instant_percent": 0,
-                "num_journals_subscribed": 0,
+                "cost_percent": scenario.cost_spent_percent,
+                "use_instant_percent": scenario.use_instant_percent,
+                "num_journals_subscribed": len(scenario.subscribed),
             },
             "subrs": [],
             "customSubrs": [],
