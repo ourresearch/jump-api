@@ -44,7 +44,9 @@ def after_request_stuff(resp):
     #support CORS
     resp.headers['Access-Control-Allow-Origin'] = "*"
     resp.headers['Access-Control-Allow-Methods'] = "POST, GET, OPTIONS, PUT, DELETE, PATCH"
-    resp.headers['Access-Control-Allow-Headers'] = "origin, content-type, accept, x-requested-with"
+    resp.headers['Access-Control-Allow-Headers'] = "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+    resp.headers['Access-Control-Expose-Headers'] = "Authorization"
+    resp.headers['Access-Control-Allow-Credentials'] = "true"
     return resp
 
 
