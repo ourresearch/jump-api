@@ -4,6 +4,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_compress import Compress
 from flask_debugtoolbar import DebugToolbarExtension
+from flask_jwt_extended import JWTManager
 
 from sqlalchemy import exc
 from sqlalchemy import event
@@ -66,6 +67,12 @@ requests.packages.urllib3.disable_warnings()
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 app = Flask(__name__)
+
+# auth stuff
+# Setup the Flask-JWT-Extended extension
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
+app.config['SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
+jwt = JWTManager(app)
 
 # database stuff
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True  # as instructed, to suppress warning

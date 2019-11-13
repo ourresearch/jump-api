@@ -9,6 +9,7 @@ from flask import jsonify
 from flask import url_for
 from flask import Response
 from flask import send_file
+from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
 
 import simplejson as json
 import os
@@ -17,6 +18,7 @@ from time import time
 import unicodecsv as csv
 from app import app
 from app import logger
+from app import jwt
 from scenario import Scenario
 from util import jsonify_fast
 from util import jsonify_fast_no_sort
@@ -212,6 +214,43 @@ def jump_export_csv():
 
     # return Response(contents, mimetype="text/text")
     return Response(contents, mimetype="text/csv")
+
+
+
+# Provide a method to create access tokens. The create_access_token()
+# function is used to actually generate the token, and you can return
+# it to the caller however you choose.
+@app.route('/login', methods=['POST'])
+def login():
+    if not request.is_json:
+        return jsonify({"msg": "Missing JSON in request"}), 400
+
+    username = request.json.get('username', None)
+    password = request.json.get('password', None)
+    if not username:
+        return jsonify({"msg": "Missing username parameter"}), 400
+    if not password:
+        return jsonify({"msg": "Missing password parameter"}), 400
+
+    if username != 'test' or password != 'test':
+        return jsonify({"msg": "Bad username or password"}), 401
+
+    # Identity can be any data that is json serializable
+    access_token = create_access_token(identity=username)
+    return jsonify(access_token=access_token), 200
+
+
+# TOKEN=$(curl -s -X POST -H 'Accept: application/json' -H 'Content-Type: application/json' --data '{"username":"test","password":"test","rememberMe":false}' http://localhost:5004/login | jq -r '.id_token')
+#curl -H 'Accept: application/json' -H "Authorization: Bearer ${TOKEN}" http://localhost:5004/protected
+
+# Protect a view with jwt_required, which requires a valid access token
+# in the request to access.
+@app.route('/protected', methods=['GET'])
+@jwt_required
+def protected():
+    # Access the identity of the current user with get_jwt_identity
+    current_user = get_jwt_identity()
+    return jsonify(logged_in_as=current_user), 200
 
 
 if __name__ == "__main__":
