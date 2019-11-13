@@ -10,6 +10,7 @@ from flask import url_for
 from flask import Response
 from flask import send_file
 from flask_jwt_extended import jwt_required, jwt_optional, create_access_token, get_jwt_identity
+from werkzeug.security import safe_str_cmp
 
 import simplejson as json
 import os
@@ -20,10 +21,12 @@ from app import app
 from app import logger
 from app import jwt
 from scenario import Scenario
+from account import Account
 from util import jsonify_fast
 from util import jsonify_fast_no_sort
 from util import str2bool
 from util import elapsed
+from util import abort_json
 
 def get_clean_package(http_request_args):
     return "uva_elsevier"
@@ -83,7 +86,7 @@ def jump_summary_get():
 @app.route("/scenario/journals", methods=["GET", "POST"])
 @app.route("/scenario/overview", methods=["GET", "POST"])
 def jump_overview_get():
-    pagesize = int(request.args.get("pagesize", 4000))
+    pagesize = int(request.args.get("pagesize", 5000))
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
@@ -93,7 +96,7 @@ def jump_overview_get():
 
 @app.route("/scenario/table", methods=["GET", "POST"])
 def jump_table_get():
-    pagesize = int(request.args.get("pagesize", 4000))
+    pagesize = int(request.args.get("pagesize", 5000))
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
@@ -113,7 +116,7 @@ def jump_slider_get():
 
 @app.route("/scenario/timeline", methods=["GET", "POST"])
 def jump_timeline_get():
-    pagesize = int(request.args.get("pagesize", 4000))
+    pagesize = int(request.args.get("pagesize", 5000))
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
@@ -123,7 +126,7 @@ def jump_timeline_get():
 
 @app.route("/scenario/apc", methods=["GET", "POST"])
 def jump_apc_get():
-    pagesize = int(request.args.get("pagesize", 4000))
+    pagesize = int(request.args.get("pagesize", 5000))
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
@@ -133,7 +136,7 @@ def jump_apc_get():
 
 @app.route("/scenario/costs", methods=["GET", "POST"])
 def jump_costs_get():
-    pagesize = int(request.args.get("pagesize", 4000))
+    pagesize = int(request.args.get("pagesize", 5000))
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
@@ -143,7 +146,7 @@ def jump_costs_get():
 
 @app.route("/scenario/oa", methods=["GET", "POST"])
 def jump_oa_get():
-    pagesize = int(request.args.get("pagesize", 4000))
+    pagesize = int(request.args.get("pagesize", 5000))
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
@@ -154,7 +157,7 @@ def jump_oa_get():
 
 @app.route("/scenario/fulfillment", methods=["GET", "POST"])
 def jump_fulfillment_get():
-    pagesize = int(request.args.get("pagesize", 4000))
+    pagesize = int(request.args.get("pagesize", 5000))
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
@@ -164,7 +167,7 @@ def jump_fulfillment_get():
 
 @app.route("/scenario/report", methods=["GET", "POST"])
 def jump_report_get():
-    pagesize = int(request.args.get("pagesize", 4000))
+    pagesize = int(request.args.get("pagesize", 5000))
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
@@ -174,7 +177,7 @@ def jump_report_get():
 
 @app.route("/scenario/impact", methods=["GET", "POST"])
 def jump_impact_get():
-    pagesize = int(request.args.get("pagesize", 4000))
+    pagesize = int(request.args.get("pagesize", 5000))
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
@@ -225,36 +228,27 @@ def jump_export_csv():
 @app.route('/login', methods=['POST'])
 def login():
     if not request.is_json:
-        return jsonify({"msg": "Missing JSON in request"}), 400
+        return abort_json(400, "Missing JSON in request")
 
     username = request.json.get('username', None)
     password = request.json.get('password', None)
 
-    print "in login"
-    print "username", username
-    print "password", password
-
     if not username:
-        return jsonify({"msg": "Missing username parameter"}), 400
+        return abort_json(400, "Missing username parameter")
     if not password:
-        return jsonify({"msg": "Missing password parameter"}), 400
+        return abort_json(400, "Missing password parameter")
 
-    if password != 'password':
-        return jsonify({"msg": "Bad username or password"}), 401
+    my_account = Account.query.filter(Account.username == username).first()
+    if not my_account or not safe_str_cmp(my_account.password, password):
+        return abort_json(401, "Bad username or password")
 
-    my_identity = {
-        "id": username,
-        "name": "User {}".format(username.title()),
-        "package": get_clean_package(username)
-    }
     # Identity can be any data that is json serializable
-    access_token = create_access_token(identity=my_identity)
-    print "access_token", access_token
+    access_token = create_access_token(identity=my_account.id)
 
-    return jsonify(access_token=access_token), 200
+    return jsonify({"access_token": access_token})
 
 
-# TOKEN=$(curl -s -X POST -H 'Accept: application/json' -H 'Content-Type: application/json' --data '{"username":"test","password":"test","rememberMe":false}' http://localhost:5004/login | jq -r '.id_token')
+# curl -s -X POST -H 'Accept: application/json' -H 'Content-Type: application/json' --data '{"username":"test","password":"password","rememberMe":false}' http://localhost:5004/login
 #curl -H 'Accept: application/json' -H "Authorization: Bearer ${TOKEN}" http://localhost:5004/protected
 
 # Protect a view with jwt_required, which requires a valid access token
@@ -264,25 +258,22 @@ def login():
 def protected():
     # Access the identity of the current user with get_jwt_identity
     current_user = get_jwt_identity()
-    return jsonify(logged_in_as=current_user["id"]), 200
+    return jsonify({"logged_in_as": current_user["id"]})
 
 @app.route('/account', methods=['GET'])
-@jwt_optional
+@jwt_required
 def account_get():
     demo_package = get_clean_package(None)
-    current_user = get_jwt_identity()
-    if not current_user:
-        current_user = {
-            "id": "demo",
-            "name": "Demo User",
-            "package": get_clean_package(None)
-        }
+    current_user_id = get_jwt_identity()
+    print "current_user_id", current_user_id
+    my_account = Account.query.get(current_user_id)
+    print "my_account", my_account
 
-    scenario = Scenario(current_user["package"])
+    scenario = Scenario(my_account.active_package)
 
     account_dict = {
-        "id": current_user["id"],
-        "name": current_user["name"],
+        "id": my_account.id,
+        "name": my_account.display_name,
         "packages": [{
                 "id": "demo-pkg-123",
                 "name": "my Elsevier Freedom Package",
@@ -305,6 +296,8 @@ def account_get():
         }]
     }
     return jsonify_fast(account_dict)
+
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5004))
