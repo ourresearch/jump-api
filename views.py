@@ -353,7 +353,54 @@ def scenario_id_get(scenario_id):
 
     return jsonify_fast(response)
 
+@app.route('/scenario/<scenario_id>/summary', methods=['GET', 'POST'])
+def scenario_id_summary_get(scenario_id):
+    return jump_summary_get()
 
+@app.route('/scenario/<scenario_id>/journals', methods=['GET', 'POST'])
+@app.route('/scenario/<scenario_id>/overview', methods=['GET', 'POST'])
+def scenario_id_overview_get(scenario_id):
+    return jump_overview_get()
+
+@app.route('/scenario/<scenario_id>/table', methods=['GET', 'POST'])
+def scenario_id_table_get(scenario_id):
+    return jump_table_get()
+
+@app.route('/scenario/<scenario_id>/slider', methods=['GET', 'POST'])
+def scenario_id_slider_get(scenario_id):
+    return jump_slider_get()
+
+@app.route('/scenario/<scenario_id>/timeline', methods=['GET', 'POST'])
+def scenario_id_timeline_get(scenario_id):
+    return jump_timeline_get()
+
+@app.route('/scenario/<scenario_id>/apc', methods=['GET', 'POST'])
+def scenario_id_apc_get(scenario_id):
+    return jump_apc_get()
+
+@app.route('/scenario/<scenario_id>/costs', methods=['GET', 'POST'])
+def scenario_id_costs_get(scenario_id):
+    return jump_costs_get()
+
+@app.route('/scenario/<scenario_id>/oa', methods=['GET', 'POST'])
+def scenario_id_oa_get(scenario_id):
+    return jump_oa_get()
+
+@app.route('/scenario/<scenario_id>/fulfillment', methods=['GET', 'POST'])
+def scenario_id_fulfillment_get(scenario_id):
+    return jump_fulfillment_get()
+
+@app.route('/scenario/<scenario_id>/report', methods=['GET', 'POST'])
+def scenario_id_report_get(scenario_id):
+    return jump_report_get()
+
+@app.route('/scenario/<scenario_id>/impact', methods=['GET', 'POST'])
+def scenario_id_impact_get(scenario_id):
+    return jump_impact_get()
+
+@app.route('/scenario/<scenario_id>/export.csv', methods=['GET', 'POST'])
+def scenario_id_export_csv_get(scenario_id):
+    return jump_export_csv()
 
 @app.route('/register', methods=['GET'])
 def register_user():
