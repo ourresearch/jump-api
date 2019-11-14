@@ -7,19 +7,21 @@ import weakref
 from collections import OrderedDict
 import datetime
 import shortuuid
+from package import Package
 
 from app import db
 
 class Account(db.Model):
     __tablename__ = 'jump_account'
 
-    id = db.Column(db.Text, primary_key = True)
+    id = db.Column(db.Text, primary_key=True)
     username = db.Column(db.Text)
     display_name = db.Column(db.Text)
     password_hash = db.Column(db.Text)
     created = db.Column(db.DateTime)
     is_consortium = db.Column(db.Boolean)
     consortium_id = db.Column(db.Text)
+    packages = db.relationship('Package', lazy='subquery')
 
     def __init__(self, **kwargs):
         self.id = shortuuid.uuid()[0:8]
@@ -35,7 +37,7 @@ class Account(db.Model):
     @property
     def default_package_id(self):
         # TODO FIX
-        return "demo-pkg-123"
+        return "demo-pkg"
 
     @property
     def default_scenario_id(self):

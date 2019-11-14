@@ -24,12 +24,14 @@ from app import jwt
 from app import db
 from scenario import Scenario
 from account import Account
+from package import Package
 from util import jsonify_fast
 from util import jsonify_fast_no_sort
 from util import str2bool
 from util import elapsed
 from util import abort_json
 from util import safe_commit
+from util import TimingMessages
 
 def get_clean_package(http_request_args):
     return "uva_elsevier"
@@ -225,11 +227,14 @@ def jump_export_csv():
 
 
 
+
 # Provide a method to create access tokens. The create_access_token()
 # function is used to actually generate the token, and you can return
 # it to the caller however you choose.
 @app.route('/login', methods=['POST'])
 def login():
+    my_timing = TimingMessages()
+
     if not request.is_json:
         return abort_json(400, "Missing JSON in request")
 
@@ -242,13 +247,17 @@ def login():
         return abort_json(400, "Missing password parameter")
 
     my_account = Account.query.filter(Account.username == username).first()
+    my_timing.log_timing("after db get for account")
+
     if not my_account or not check_password_hash(my_account.password_hash, password):
         return abort_json(401, "Bad username or password")
 
     # Identity can be any data that is json serializable
     access_token = create_access_token(identity=my_account.id)
 
-    return jsonify({"access_token": access_token})
+    my_timing.log_timing("after create_access_token")
+
+    return jsonify({"access_token": access_token, "_timing": my_timing.to_dict()})
 
 
 # curl -s -X POST -H 'Accept: application/json' -H 'Content-Type: application/json' --data '{"username":"test","password":"password","rememberMe":false}' http://localhost:5004/login
@@ -266,37 +275,78 @@ def protected():
 @app.route('/account', methods=['GET'])
 @jwt_required
 def account_get():
-    demo_package = get_clean_package(None)
-    current_user_id = get_jwt_identity()
-    my_account = Account.query.get(current_user_id)
+    my_timing = TimingMessages()
 
-    scenario = Scenario(my_account.active_package)
+    jwt_account_id = get_jwt_identity()
+    my_account = Account.query.get(jwt_account_id)
+    my_timing.log_timing("after getting account")
+
+    # scenario = Scenario(my_account.active_package)
+    # my_timing.log_timing("after creating scenario")
 
     account_dict = {
         "id": my_account.id,
         "name": my_account.display_name,
-        "packages": [{
-                "id": my_account.default_package_id,
-                "name": my_account.default_package_name,
-                "hasCounterData": len(scenario.journals) > 0,
-                "numJournals": len(scenario.journals),
-                "numPerpAccessJournals": len(scenario.journals)
-            }],
-        "scenarios": [{
-            "id": my_account.default_scenario_id,
-            "name": my_account.default_scenario_name,
-            "pkgId": my_account.default_package_id,
-            "summary": {
-                "cost_percent": scenario.cost_spent_percent,
-                "use_instant_percent": scenario.use_instant_percent,
-                "num_journals_subscribed": len(scenario.subscribed),
-            },
-            "subrs": [],
-            "customSubrs": [],
-            "configs": scenario.settings.to_dict()
-        }]
+        "packages": [package.to_dict_summary() for package in my_account.packages],
+        # "scenarios": [{
+        #     "id": my_account.default_scenario_id,
+        #     "name": my_account.default_scenario_name,
+        #     "pkgId": my_account.default_package_id,
+        #     "summary": {
+        #         "cost_percent": scenario.cost_spent_percent,
+        #         "use_instant_percent": scenario.use_instant_percent,
+        #         "num_journals_subscribed": len(scenario.subscribed),
+        #     },
+        #     "subrs": [],
+        #     "customSubrs": [],
+        #     "configs": scenario.settings.to_dict()
+        # }]
     }
+    my_timing.log_timing("after to_dict()")
+    account_dict["_timing"] = my_timing.to_dict()
+
     return jsonify_fast(account_dict)
+
+
+@app.route('/package/<package_id>', methods=['GET'])
+@jwt_required
+def package_id_get(package_id):
+    my_timing = TimingMessages()
+
+    jwt_account_id = get_jwt_identity()
+    my_package = Package.query.get(package_id)
+    if not my_package:
+        abort_json(404, "Package not found")
+
+    if my_package.account_id != jwt_account_id:
+        abort_json(401, "Not authorized to view this package")
+
+    my_timing.log_timing("after getting package")
+
+    package_dict = my_package.to_dict_summary()
+    package_dict["scenarios"] = [scenario.to_dict_definition() for scenario in my_package.scenarios]
+        # {
+        # "id": my_account.id,
+        # "name": my_account.display_name,
+        # "packages": [package.to_dict_summary() for package in my_account.packages],
+        # "scenarios": [{
+        #     "id": my_account.default_scenario_id,
+        #     "name": my_account.default_scenario_name,
+        #     "pkgId": my_account.default_package_id,
+        #     "summary": {
+        #         "cost_percent": scenario.cost_spent_percent,
+        #         "use_instant_percent": scenario.use_instant_percent,
+        #         "num_journals_subscribed": len(scenario.subscribed),
+        #     },
+        #     "subrs": [],
+        #     "customSubrs": [],
+        #     "configs": scenario.settings.to_dict()
+        # }]
+    # }
+    my_timing.log_timing("after to_dict()")
+    package_dict["_timing"] = my_timing.to_dict()
+
+    return jsonify_fast(package_dict)
 
 
 @app.route('/register', methods=['GET'])
@@ -312,7 +362,8 @@ def register_user():
     db.session.add(new_account)
     safe_commit(db)
 
-    return jsonify({'message': 'User registered successfully'})
+    return jsonify({'message': 'User registered successfully',
+                    "username": request.args.get('username')})
 
 
 if __name__ == "__main__":
