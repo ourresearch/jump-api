@@ -9,7 +9,7 @@ import datetime
 import shortuuid
 
 from app import db
-from scenario import Scenario
+from saved_scenario import SavedScenario
 
 class Package(db.Model):
     __tablename__ = 'jump_account_package'
@@ -18,6 +18,7 @@ class Package(db.Model):
     publisher = db.Column(db.Text)
     package_name = db.Column(db.Text)
     created = db.Column(db.DateTime)
+    scenarios = db.relationship('SavedScenario', lazy='subquery', backref=db.backref("package", lazy="subquery"))
 
     def __init__(self, **kwargs):
         self.id = shortuuid.uuid()[0:8]
@@ -37,13 +38,6 @@ class Package(db.Model):
     @property
     def is_demo_account(self):
         return self.account_id == "demo"
-
-    @property
-    def scenarios(self):
-        # TODO
-        my_scenario = Scenario("uva_elsevier")
-        my_scenario.package_id = self.package_id
-        return [my_scenario]
 
     def to_dict_summary(self):
         return {

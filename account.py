@@ -21,7 +21,7 @@ class Account(db.Model):
     created = db.Column(db.DateTime)
     is_consortium = db.Column(db.Boolean)
     consortium_id = db.Column(db.Text)
-    packages = db.relationship('Package', lazy='subquery')
+    packages = db.relationship('Package', lazy='subquery', backref=db.backref("account", lazy="subquery"))
 
     def __init__(self, **kwargs):
         self.id = shortuuid.uuid()[0:8]

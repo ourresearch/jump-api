@@ -25,6 +25,7 @@ from app import db
 from scenario import Scenario
 from account import Account
 from package import Package
+from saved_scenario import SavedScenario
 from util import jsonify_fast
 from util import jsonify_fast_no_sort
 from util import str2bool
@@ -325,28 +326,33 @@ def package_id_get(package_id):
 
     package_dict = my_package.to_dict_summary()
     package_dict["scenarios"] = [scenario.to_dict_definition() for scenario in my_package.scenarios]
-        # {
-        # "id": my_account.id,
-        # "name": my_account.display_name,
-        # "packages": [package.to_dict_summary() for package in my_account.packages],
-        # "scenarios": [{
-        #     "id": my_account.default_scenario_id,
-        #     "name": my_account.default_scenario_name,
-        #     "pkgId": my_account.default_package_id,
-        #     "summary": {
-        #         "cost_percent": scenario.cost_spent_percent,
-        #         "use_instant_percent": scenario.use_instant_percent,
-        #         "num_journals_subscribed": len(scenario.subscribed),
-        #     },
-        #     "subrs": [],
-        #     "customSubrs": [],
-        #     "configs": scenario.settings.to_dict()
-        # }]
-    # }
     my_timing.log_timing("after to_dict()")
     package_dict["_timing"] = my_timing.to_dict()
 
     return jsonify_fast(package_dict)
+
+@app.route('/scenario/<scenario_id>', methods=['GET'])
+@jwt_required
+def scenario_id_get(scenario_id):
+    my_timing = TimingMessages()
+
+    jwt_account_id = get_jwt_identity()
+    my_saved_scenario = SavedScenario.query.get(scenario_id)
+    if not my_saved_scenario:
+        abort_json(404, "Scenario not found")
+
+    if my_saved_scenario.package.account_id != jwt_account_id:
+        abort_json(401, "Not authorized to view this package")
+
+    my_timing.log_timing("after getting scenario")
+
+    response = my_saved_scenario.to_dict_definition()
+
+    my_timing.log_timing("after to_dict()")
+    response["_timing"] = my_timing.to_dict()
+
+    return jsonify_fast(response)
+
 
 
 @app.route('/register', methods=['GET'])
