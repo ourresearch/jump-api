@@ -611,6 +611,32 @@ class Scenario(object):
         response["_timing"] = self.timing_messages
         return response
 
+    @property
+    def id(self):
+        # TODO
+        return "1"
+
+    @property
+    def display_name(self):
+        # TODO
+        return "my Elsevier Freedom Package"
+
+    def to_dict_definition(self):
+        response = {
+            "id": self.id,
+            "name": self.display_name,
+            "pkgId": self.package_id,
+            "summary": {
+                "cost_percent": self.cost_spent_percent,
+                "use_instant_percent": self.use_instant_percent,
+                "num_journals_subscribed": len(self.subscribed),
+            },
+            "subrs": self.subscribed,
+            "customSubrs": [],
+            "configs": self.settings.to_dict()
+        }
+        return response
+
     def __repr__(self):
         return u"<{} (n={})>".format(self.__class__.__name__, len(self.journals))
 

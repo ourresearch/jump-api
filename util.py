@@ -36,6 +36,30 @@ def str2bool(v):
 class NoDoiException(Exception):
     pass
 
+class TimingMessages(object):
+    def __init__(self):
+        self.start_time = time.time()
+        self.section_time = time.time()
+        self.messages = []
+
+    def format_timing_message(self, message, use_start_time=False):
+        my_elapsed = elapsed(self.section_time, 2)
+        if use_start_time:
+            my_elapsed = elapsed(self.start_time, 2)
+
+        # now reset section time
+        self.section_time = time.time()
+
+        return "{: <30} {: >6}s".format(message, my_elapsed)
+
+    def log_timing(self, message):
+        self.messages.append(self.format_timing_message(message))
+
+    def to_dict(self):
+        self.messages.append(self.format_timing_message("TOTAL", use_start_time=True))
+        return self.messages
+
+
 class DelayedAdapter(HTTPAdapter):
     def send(self, request, stream=False, timeout=None, verify=True, cert=None, proxies=None):
         # logger.info(u"in DelayedAdapter getting {}, sleeping for 2 seconds".format(request.url))
