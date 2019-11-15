@@ -322,7 +322,7 @@ def package_id_get(package_id):
 
     return jsonify_fast(package_dict)
 
-@app.route('/scenario/<scenario_id>', methods=['GET'])
+@app.route('/scenario/<scenario_id>', methods=['GET', 'POST'])
 @jwt_required
 def scenario_id_get(scenario_id):
     my_timing = TimingMessages()
@@ -342,12 +342,15 @@ def scenario_id_get(scenario_id):
 
     my_timing.log_timing("after getting scenario")
 
+    my_saved_scenario.save_to_db()
+
     response = my_saved_scenario.to_dict_definition()
 
     my_timing.log_timing("after to_dict()")
     response["_timing"] = my_timing.to_dict()
 
     return jsonify_fast(response)
+
 
 @app.route('/scenario/<scenario_id>/summary', methods=['GET', 'POST'])
 def scenario_id_summary_get(scenario_id):
