@@ -35,7 +35,10 @@ def get_latest_scenario(scenario_id):
     if rows:
         scenario_data = json.loads(rows[0]["scenario_json"])
 
-    old_package_id = package_lookup.get(scenario_data["pkgId"], scenario_data["pkgId"])
+    if scenario_data:
+        old_package_id = package_lookup.get(scenario_data["pkgId"], scenario_data["pkgId"])
+    else:
+        old_package_id = "uva_elsevier"
     my_scenario = Scenario(old_package_id, scenario_data)
     return my_scenario
 
@@ -74,7 +77,15 @@ class SavedScenario(db.Model):
 
     @property
     def is_demo_account(self):
-        return self.package.is_demo_account
+        return self.package_real.is_demo_account
+
+    @property
+    def package_real(self):
+        from package import Package
+
+        if self.package:
+            return self.package
+        return Package.query.get("demo")
 
     @property
     def package_id_old(self):
@@ -99,7 +110,7 @@ class SavedScenario(db.Model):
             "customSubrs": [],
             "configs": self.live_scenario.settings.to_dict(),
             "_debug": {
-                "package_name": self.package.package_name
+                "package_name": self.package_real.package_name
             }
         }
         return response
