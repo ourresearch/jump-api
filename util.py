@@ -790,3 +790,11 @@ def format_with_commas(amount, num_decimals=0):
     except:
         return locale.format(u'%d', amount, True)
 
+def get_ip(request):
+    # from http://stackoverflow.com/a/12771438/596939
+    if request.headers.getlist("X-Forwarded-For"):
+       ip = request.headers.getlist("X-Forwarded-For")[0]
+    else:
+       ip = request.remote_addr
+    return ip
+

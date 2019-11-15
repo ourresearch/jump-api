@@ -30,14 +30,14 @@ class Package(db.Model):
         lookup = {
             "658349d9": "uva_elsevier",
             "15d18dca": "suny_elsevier",
-            "00cbd1bb": "uva_elsevier", #demo
+            "demo": "uva_elsevier", #demo
             "51e8103d":	"mit_elsevier"
         }
         return lookup.get(self.package_id, self.package_id)
 
     @property
     def is_demo_account(self):
-        return self.account_id == "demo"
+        return self.package_id == "demo"
 
     def to_dict_summary(self):
         return {
