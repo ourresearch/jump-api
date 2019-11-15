@@ -18,10 +18,9 @@ class Package(db.Model):
     publisher = db.Column(db.Text)
     package_name = db.Column(db.Text)
     created = db.Column(db.DateTime)
-    scenarios = db.relationship('SavedScenario', lazy='subquery', backref=db.backref("package", lazy="subquery"))
+    saved_scenarios = db.relationship('SavedScenario', lazy='subquery', backref=db.backref("package", lazy="subquery"))
 
     def __init__(self, **kwargs):
-        self.id = shortuuid.uuid()[0:8]
         self.created = datetime.datetime.utcnow().isoformat()
         super(Package, self).__init__(**kwargs)
 
@@ -36,8 +35,19 @@ class Package(db.Model):
         return lookup.get(self.package_id, self.package_id)
 
     @property
+    def unique_saved_scenarios(self):
+        if self.is_demo_account:
+            unique_saved_scenarios = self.saved_scenarios
+            unique_key = self.package_id.replace("demo", "")
+            for my_scenario in unique_saved_scenarios:
+                my_scenario.package_id = self.package_id
+                my_scenario.scenario_id = u"demo{}".format(unique_key)
+            return unique_saved_scenarios
+        return self.saved_scenarios
+
+    @property
     def is_demo_account(self):
-        return self.package_id == "demo"
+        return self.package_id.startswith("demo")
 
     @property
     def has_counter_data(self):
@@ -45,7 +55,7 @@ class Package(db.Model):
 
     @property
     def num_journals(self):
-        return len(self.scenarios[0].journals)
+        return len(self.saved_scenarios[0].journals)
 
     @property
     def num_perpetual_access_journals(self):
