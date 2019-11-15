@@ -337,7 +337,7 @@ def scenario_id_get(scenario_id):
     if not my_saved_scenario:
         abort_json(404, "Scenario not found")
 
-    if my_saved_scenario.package.account_id != jwt_account_id:
+    if my_saved_scenario.package_real.account_id != jwt_account_id:
         abort_json(401, "Not authorized to view this package")
 
     my_timing.log_timing("after getting scenario")
@@ -355,7 +355,7 @@ def scenario_id_summary_get(scenario_id):
     is_demo = (jwt_account_id == "demo")
     scenario_input = request.get_json()
     my_saved_scenario = SavedScenario(is_demo, scenario_id, scenario_input)
-    my_saved_scenario.save_scenario()
+    my_saved_scenario.save_to_db()
     return jump_summary_get()
 
 @app.route('/scenario/<scenario_id>/journals', methods=['GET', 'POST'])

@@ -465,6 +465,34 @@ class Scenario(object):
                         {"text": "Cost", "value": "cost", "percent": None, "raw": self.cost, "display": "currency_int"},
                         {"text": "Usage", "value": "use", "percent": None, "raw": self.use_total, "display": "number"},
                         {"text": "Instant Usage Percent", "value": "instant_usage_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent, "display": "percent"},
+
+                        # cost
+                        {"text": "Scenario Cost", "value": "scenario_cost", "percent": None, "raw": self.cost, "display": "currency_int"},
+                        {"text": "Subscription Cost", "value": "subscription_cost", "percent": None, "raw": self.cost_subscription, "display": "currency_int"},
+                        {"text": "ILL Cost", "value": "ill_cost", "percent": None, "raw": self.cost_ill, "display": "currency_int"},
+                        {"text": "Subscription minus ILL Cost", "value": "real_cost", "percent": None, "raw": self.cost_subscription_minus_ill, "display": "currency_int"},
+
+                        # fulfillment
+                        {"text": "ASNs", "value": "use_asns", "percent": round(float(100)*self.use_social_networks/self.use_total), "raw": self.use_social_networks, "display": "number"},
+                        {"text": "Open access", "value": "use_oa", "percent": round(float(100)*self.use_oa/self.use_total), "raw": self.use_oa, "display": "number"},
+                        {"text": "Backfile", "value": "use_backfile", "percent": round(float(100)*self.use_backfile/self.use_total), "raw": self.use_backfile, "display": "number"},
+                        {"text": "Subscription", "value": "use_subscription", "percent": round(float(100)*self.use_subscription/self.use_total), "raw": self.use_subscription, "display": "number"},
+                        {"text": "ILL", "value": "use_ill", "percent": round(float(100)*self.use_ill/self.use_total), "raw": self.use_ill, "display": "number"},
+                        {"text": "Other (delayed)", "value": "use_other_delayed", "percent": round(float(100)*self.use_other_delayed/self.use_total), "raw": self.use_other_delayed, "display": "number"},
+
+                        # oa
+                        {"text": "Percent of Usage that is OA", "value": "use_oa_percent", "percent": round(float(100)*self.use_oa/self.use_total), "raw": self.use_oa, "display": "percent"},
+                        {"text": "Percent of Usage that is Green OA", "value": "use_green_percent", "percent": round(float(100)*self.use_green/self.use_total), "raw": self.use_green, "display": "percent"},
+                        {"text": "Percent of Usage that is Hybrid OA", "value": "use_hybrid_percent", "percent": round(float(100)*self.use_hybrid/self.use_total), "raw": self.use_hybrid, "display": "percent"},
+                        {"text": "Percent of Usage that is Bronze OA", "value": "use_bronze_percent", "percent": round(float(100)*self.use_bronze/self.use_total), "raw": self.use_bronze, "display": "percent"},
+                        {"text": "Percent of Usage that is Peer-reviewed OA", "value": "use_peer_reviewed_percent", "percent": round(float(100)*self.use_peer_reviewed/self.use_total), "raw": self.use_peer_reviewed, "display": "percent"},
+
+                        # impact
+                        {"text": "Total Usage", "value":"total_usage", "percent": 100, "raw": self.use_total, "display": "number"},
+                        {"text": "Downloads", "value":"downloads", "percent": 100*self.downloads_total/self.use_total, "raw": self.downloads_total, "display": "number"},
+                        {"text": "Citations to papers", "value":"citations", "percent": self.num_citations_weight_percent, "raw": self.num_citations, "display": "float1"},
+                        {"text": "Authored papers", "value":"authorships", "percent": self.num_authorships_weight_percent, "raw": self.num_authorships, "display": "float1"},
+
                 ],
                 "journals": [j.to_dict_table() for j in self.journals_sorted_ncppu[0:pagesize]],
             }
