@@ -29,11 +29,24 @@ class Account(db.Model):
         self.id = shortuuid.uuid()[0:8]
         self.created = datetime.datetime.utcnow().isoformat()
         self.is_consortium = False
+        self.login_uuid = ""
         super(Account, self).__init__(**kwargs)
 
     @property
     def is_demo_account(self):
         return self.username == "demo"
+
+    def make_unique_demo_packages(self, login_uuid):
+        self.login_uuid = login_uuid
+
+    @property
+    def unique_packages(self):
+        if self.is_demo_account:
+            unique_packages = self.packages
+            for package in unique_packages:
+                package.package_id = u"{}{}".format(package.package_id, self.login_uuid)
+            return unique_packages
+        return self.packages
 
     @property
     def grid_ids(self):
