@@ -12,12 +12,14 @@ from flask import send_file
 from flask_jwt_extended import jwt_required, jwt_optional, create_access_token, get_jwt_identity
 from werkzeug.security import safe_str_cmp
 from werkzeug.security import generate_password_hash, check_password_hash
-
 import simplejson as json
 import os
 import sys
 from time import time
 import unicodecsv as csv
+import shortuuid
+import datetime
+
 from app import app
 from app import logger
 from app import jwt
@@ -260,8 +262,14 @@ def login():
     if not my_account or not check_password_hash(my_account.password_hash, password):
         return abort_json(401, "Bad username or password")
 
-    # Identity can be any data that is json serializable
-    access_token = create_access_token(identity=my_account.id)
+    # Identity can be any data that is json serializable.  Include timestamp so is unique for each demo start.
+    identity_dict = {
+        "account_id": my_account.id,
+        "login_uuid": shortuuid.uuid()[0:10],
+        "created": datetime.datetime.utcnow(),
+        "is_demo": my_account.is_demo_account
+    }
+    access_token = create_access_token(identity=identity_dict)
 
     my_timing.log_timing("after create_access_token")
 
@@ -277,22 +285,24 @@ def login():
 @jwt_required
 def protected():
     # Access the identity of the current user with get_jwt_identity
-    current_user = get_jwt_identity()
-    return jsonify({"logged_in_as": current_user["id"]})
+    identity_dict = get_jwt_identity()
+    return jsonify({"logged_in_as": identity_dict["account_id"]})
 
 @app.route('/account', methods=['GET'])
 @jwt_required
 def account_get():
     my_timing = TimingMessages()
 
-    jwt_account_id = get_jwt_identity()
-    my_account = Account.query.get(jwt_account_id)
+    identity_dict = get_jwt_identity()
+    my_account = Account.query.get(identity_dict["account_id"])
+    if identity_dict["is_demo"]:
+        my_account.make_unique_demo_packages(identity_dict["login_uuid"])
     my_timing.log_timing("after getting account")
 
     account_dict = {
         "id": my_account.id,
         "name": my_account.display_name,
-        "packages": [package.to_dict_summary() for package in my_account.packages],
+        "packages": [package.to_dict_summary() for package in my_account.unique_packages],
     }
     my_timing.log_timing("after to_dict()")
     account_dict["_timing"] = my_timing.to_dict()
@@ -305,12 +315,15 @@ def account_get():
 def package_id_get(package_id):
     my_timing = TimingMessages()
 
-    jwt_account_id = get_jwt_identity()
-    my_package = Package.query.get(package_id)
+    identity_dict = get_jwt_identity()
+    package_id_lookup = package_id
+    if package_id.startswith("demo"):
+        package_id_lookup = "demo"
+    my_package = Package.query.get(package_id_lookup)
     if not my_package:
         abort_json(404, "Package not found")
 
-    if my_package.account_id != jwt_account_id:
+    if my_package.account_id != identity_dict["account_id"]:
         abort_json(401, "Not authorized to view this package")
 
     my_timing.log_timing("after getting package")
@@ -327,8 +340,8 @@ def package_id_get(package_id):
 def scenario_id_get(scenario_id):
     my_timing = TimingMessages()
 
-    jwt_account_id = get_jwt_identity()
-    is_demo = (jwt_account_id == "demo")
+    identity_dict = get_jwt_identity()
+    is_demo = (identity_dict["account_id"] == "demo")
     if is_demo:
         my_saved_scenario = SavedScenario.query.get("demo")
         my_saved_scenario.scenario_id = scenario_id
@@ -337,7 +350,7 @@ def scenario_id_get(scenario_id):
     if not my_saved_scenario:
         abort_json(404, "Scenario not found")
 
-    if my_saved_scenario.package_real.account_id != jwt_account_id:
+    if my_saved_scenario.package_real.account_id != identity_dict["account_id"]:
         abort_json(401, "Not authorized to view this package")
 
     my_timing.log_timing("after getting scenario")
@@ -354,8 +367,8 @@ def scenario_id_get(scenario_id):
 
 @app.route('/scenario/<scenario_id>/summary', methods=['GET', 'POST'])
 def scenario_id_summary_get(scenario_id):
-    jwt_account_id = get_jwt_identity()
-    is_demo = (jwt_account_id == "demo")
+    identity_dict = get_jwt_identity()
+    is_demo = (identity_dict["account_id"] == "demo")
     scenario_input = request.get_json()
     my_saved_scenario = SavedScenario(is_demo, scenario_id, scenario_input)
     my_saved_scenario.save_to_db()
