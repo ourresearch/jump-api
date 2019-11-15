@@ -269,6 +269,7 @@ def login():
         "created": datetime.datetime.utcnow(),
         "is_demo": my_account.is_demo_account
     }
+    print u"login with {}".format(identity_dict)
     access_token = create_access_token(identity=identity_dict)
 
     my_timing.log_timing("after create_access_token")
@@ -316,10 +317,13 @@ def package_id_get(package_id):
     my_timing = TimingMessages()
 
     identity_dict = get_jwt_identity()
-    package_id_lookup = package_id
+
     if package_id.startswith("demo"):
-        package_id_lookup = "demo"
-    my_package = Package.query.get(package_id_lookup)
+        my_package = Package.query.get("demo")
+        my_package.package_id = package_id
+    else:
+        my_package = Package.query.get(package_id)
+
     if not my_package:
         abort_json(404, "Package not found")
 
@@ -329,7 +333,7 @@ def package_id_get(package_id):
     my_timing.log_timing("after getting package")
 
     package_dict = my_package.to_dict_summary()
-    package_dict["scenarios"] = [scenario.to_dict_definition() for scenario in my_package.scenarios]
+    package_dict["scenarios"] = [scenario.to_dict_definition() for scenario in my_package.unique_saved_scenarios]
     my_timing.log_timing("after to_dict()")
     package_dict["_timing"] = my_timing.to_dict()
 

@@ -104,10 +104,8 @@ class SavedScenario(db.Model):
         if not hasattr(self, "live_scenario") or not self.live_scenario:
             self.live_scenario = get_latest_scenario(self.scenario_id)
 
-        scenario_id_to_return = self.scenario_id
-
         response = {
-            "id": scenario_id_to_return,
+            "id": self.scenario_id,
             "name": self.scenario_name,
             "pkgId": self.package_id,
             "summary": {
