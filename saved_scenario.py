@@ -88,6 +88,15 @@ class SavedScenario(db.Model):
         return Package.query.get("demo")
 
     @property
+    def journals(self):
+        return self.set_live_scenario().journals
+
+    def set_live_scenario(self):
+        if not hasattr(self, "live_scenario") or not self.live_scenario:
+            self.live_scenario = get_latest_scenario(self.scenario_id)
+        return self.live_scenario
+
+    @property
     def package_id_old(self):
         return package_lookup.get(self.package_id, self.package_id)
 

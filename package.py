@@ -39,13 +39,26 @@ class Package(db.Model):
     def is_demo_account(self):
         return self.package_id == "demo"
 
+    @property
+    def has_counter_data(self):
+        return self.num_journals > 0
+
+    @property
+    def num_journals(self):
+        return len(self.scenarios[0].journals)
+
+    @property
+    def num_perpetual_access_journals(self):
+        # self TODO
+        return self.num_journals
+
     def to_dict_summary(self):
         return {
                 "id": self.package_id,
                 "name": self.package_name,
-                "hasCounterData": True,  #TODO
-                "numJournals": 42, #TODO
-                "numPerpAccessJournals": 42 #TODO
+                "hasCounterData": self.has_counter_data,
+                "numJournals": self.num_journals,
+                "numPerpAccessJournals": self.num_perpetual_access_journals
         }
 
     def __repr__(self):
