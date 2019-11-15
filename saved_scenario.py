@@ -1,15 +1,45 @@
 # coding: utf-8
 
 from cached_property import cached_property
-import numpy as np
-from collections import defaultdict
-import weakref
-from collections import OrderedDict
+import simplejson as json
 import datetime
 import shortuuid
 
 from app import db
+from app import get_db_cursor
 from scenario import Scenario
+
+package_lookup = {
+    "658349d9": "uva_elsevier",
+    "15d18dca": "suny_elsevier",
+    "demo": "uva_elsevier", #demo
+    "51e8103d":	"mit_elsevier"
+}
+
+def get_latest_scenario(scenario_id):
+    if scenario_id.startswith("demo"):
+        tablename = "jump_scenario_details_demo"
+    else:
+        tablename = "jump_scenario_details_paid"
+    rows = None
+    with get_db_cursor() as cursor:
+        command = u"""select scenario_json from {} where scenario_id='{}' order by updated desc limit 1;""".format(
+            tablename, scenario_id
+        )
+        # print command
+        cursor.execute(command)
+        rows = cursor.fetchall()
+
+    scenario_data = None
+
+    if rows:
+        scenario_data = json.loads(rows[0]["scenario_json"])
+
+    old_package_id = package_lookup.get(scenario_data["pkgId"], scenario_data["pkgId"])
+    my_scenario = Scenario(old_package_id, scenario_data)
+    return my_scenario
+
+
 
 class SavedScenario(db.Model):
     __tablename__ = 'jump_package_scenario'
@@ -18,36 +48,59 @@ class SavedScenario(db.Model):
     scenario_name = db.Column(db.Text)
     created = db.Column(db.DateTime)
 
-    def __init__(self, **kwargs):
-        self.scenario_id = shortuuid.uuid()[0:8]
+    def __init__(self, is_demo, scenario_id, scenario_input):
         self.created = datetime.datetime.utcnow().isoformat()
-        super(SavedScenario, self).__init__(**kwargs)
+        self.scenario_input = scenario_input
+        self.live_scenario = None
+
+    def save_to_db(self, ip=""):
+        if not self.scenario_id or self.scenario_id=="demo":
+            if self.is_demo_account:
+                self.scenario_id = "demo"+shortuuid.uuid()[0:20]
+            else:
+                self.scenario_id = shortuuid.uuid()[0:8]
+
+        if self.is_demo_account:
+            tablename = "jump_scenario_details_demo"
+        else:
+            tablename = "jump_scenario_details_paid"
+        scenario_json = json.dumps(self.to_dict_definition())
+        with get_db_cursor() as cursor:
+            command = u"""INSERT INTO {} (scenario_id, updated, ip, scenario_json) values ('{}', sysdate, '{}', '{}');""".format(
+                tablename, self.scenario_id, ip, scenario_json
+            )
+            # print command
+            cursor.execute(command)
+
+    @property
+    def is_demo_account(self):
+        return self.package.is_demo_account
 
     @property
     def package_id_old(self):
-        lookup = {
-            "658349d9": "uva_elsevier",
-            "15d18dca": "suny_elsevier",
-            "00cbd1bb": "uva_elsevier", #demo
-            "51e8103d":	"mit_elsevier"
-        }
-        return lookup.get(self.package_id, self.package_id)
+        return package_lookup.get(self.package_id, self.package_id)
 
     def to_dict_definition(self):
-        live_scenario = Scenario("uva_elsevier") #TODO
+        if not hasattr(self, "live_scenario") or not self.live_scenario:
+            self.live_scenario = get_latest_scenario(self.scenario_id)
+
+        scenario_id_to_return = self.scenario_id
 
         response = {
-            "id": self.scenario_id,
+            "id": scenario_id_to_return,
             "name": self.scenario_name,
             "pkgId": self.package_id,
             "summary": {
-                "cost_percent": live_scenario.cost_spent_percent,
-                "use_instant_percent": live_scenario.use_instant_percent,
-                "num_journals_subscribed": len(live_scenario.subscribed),
+                "cost_percent": self.live_scenario.cost_spent_percent,
+                "use_instant_percent": self.live_scenario.use_instant_percent,
+                "num_journals_subscribed": len(self.live_scenario.subscribed),
             },
-            "subrs": live_scenario.subscribed,
+            "subrs": [j.issn_l for j in self.live_scenario.subscribed],
             "customSubrs": [],
-            "configs": live_scenario.settings.to_dict()
+            "configs": self.live_scenario.settings.to_dict(),
+            "_debug": {
+                "package_name": self.package.package_name
+            }
         }
         return response
 

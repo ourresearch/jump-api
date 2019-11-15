@@ -35,6 +35,7 @@ class Scenario(object):
         self.section_time = time()        
         self.settings = Assumptions(http_request_args)
         self.starting_subscriptions = []
+
         if http_request_args:
             self.starting_subscriptions += http_request_args.get("subrs", []) + http_request_args.get("customSubrs", [])
 
@@ -58,13 +59,6 @@ class Scenario(object):
 
         self.data["society"] = get_society_data_from_db(package)
         self.log_timing("get_society_data_from_db")
-
-        # pickle_out = open("dict.pickle","wb")
-        # pickle.dump(self.data, pickle_out)
-        # pickle_out.close()
-        #
-        # pickle_in = open("dict.pickle","rb")
-        # self.data = pickle.load(pickle_in)
 
         self.log_timing("mint apc journals")
 

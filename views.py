@@ -33,6 +33,7 @@ from util import elapsed
 from util import abort_json
 from util import safe_commit
 from util import TimingMessages
+from util import get_ip
 
 def get_clean_package(http_request_args):
     return "uva_elsevier"
@@ -72,11 +73,17 @@ def base_endpoint():
 
 @app.route("/scenario/wizard", methods=["GET", "POST"])
 def jump_wizard_get():
+
     pagesize = int(request.args.get("pagesize", 100))
-    spend = round(request.args.get("spend", 0))
+    spend = int(request.args.get("spend"))
     package = get_clean_package(request.args)
     scenario = Scenario(package, request.args)
     scenario.do_wizardly_things(spend)
+
+    my_saved_scenario = SavedScenario.query.get("demo")
+    my_saved_scenario.live_scenario = scenario
+    my_saved_scenario.save_to_db(get_ip(request))
+
     return jsonify_fast(scenario.to_dict(pagesize))
 
 
@@ -282,26 +289,10 @@ def account_get():
     my_account = Account.query.get(jwt_account_id)
     my_timing.log_timing("after getting account")
 
-    # scenario = Scenario(my_account.active_package)
-    # my_timing.log_timing("after creating scenario")
-
     account_dict = {
         "id": my_account.id,
         "name": my_account.display_name,
         "packages": [package.to_dict_summary() for package in my_account.packages],
-        # "scenarios": [{
-        #     "id": my_account.default_scenario_id,
-        #     "name": my_account.default_scenario_name,
-        #     "pkgId": my_account.default_package_id,
-        #     "summary": {
-        #         "cost_percent": scenario.cost_spent_percent,
-        #         "use_instant_percent": scenario.use_instant_percent,
-        #         "num_journals_subscribed": len(scenario.subscribed),
-        #     },
-        #     "subrs": [],
-        #     "customSubrs": [],
-        #     "configs": scenario.settings.to_dict()
-        # }]
     }
     my_timing.log_timing("after to_dict()")
     account_dict["_timing"] = my_timing.to_dict()
@@ -337,7 +328,12 @@ def scenario_id_get(scenario_id):
     my_timing = TimingMessages()
 
     jwt_account_id = get_jwt_identity()
-    my_saved_scenario = SavedScenario.query.get(scenario_id)
+    is_demo = (jwt_account_id == "demo")
+    if is_demo:
+        my_saved_scenario = SavedScenario.query.get("demo")
+        my_saved_scenario.scenario_id = scenario_id
+    else:
+        my_saved_scenario = SavedScenario.query.get(scenario_id)
     if not my_saved_scenario:
         abort_json(404, "Scenario not found")
 
@@ -355,6 +351,11 @@ def scenario_id_get(scenario_id):
 
 @app.route('/scenario/<scenario_id>/summary', methods=['GET', 'POST'])
 def scenario_id_summary_get(scenario_id):
+    jwt_account_id = get_jwt_identity()
+    is_demo = (jwt_account_id == "demo")
+    scenario_input = request.get_json()
+    my_saved_scenario = SavedScenario(is_demo, scenario_id, scenario_input)
+    my_saved_scenario.save_scenario()
     return jump_summary_get()
 
 @app.route('/scenario/<scenario_id>/journals', methods=['GET', 'POST'])

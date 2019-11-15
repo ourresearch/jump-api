@@ -73,6 +73,7 @@ app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 app.config['SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = False # doesn't expire
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = False # doesn't expire
+app.config['JWT_TOKEN_LOCATION'] = ('headers', 'query_string')
 jwt = JWTManager(app)
 
 # database stuff
