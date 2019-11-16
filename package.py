@@ -38,7 +38,7 @@ class Package(db.Model):
     def unique_saved_scenarios(self):
         if self.is_demo_account:
             unique_saved_scenarios = self.saved_scenarios
-            unique_key = self.package_id.replace("demo", "")
+            unique_key = self.package_id.replace("demo", "").replace("-", "")
             for my_scenario in unique_saved_scenarios:
                 my_scenario.package_id = self.package_id
                 my_scenario.scenario_id = u"demo-{}".format(unique_key)
