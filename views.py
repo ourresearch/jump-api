@@ -470,7 +470,7 @@ def scenario_id_slider_get(scenario_id):
     response = my_saved_scenario.to_dict_definition()
     my_timing.log_timing("after to_dict()")
     response["_timing"] = my_timing.to_dict()
-    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider(pagesize))
+    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
 
 @app.route('/scenario/<scenario_id>/apc', methods=['GET', 'POST'])
 @jwt_optional
