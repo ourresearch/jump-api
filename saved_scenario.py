@@ -16,6 +16,8 @@ package_lookup = {
     "51e8103d":	"mit_elsevier"
 }
 
+
+
 def get_latest_scenario(scenario_id):
     if scenario_id.startswith("demo"):
         tablename = "jump_scenario_details_demo"
@@ -35,10 +37,14 @@ def get_latest_scenario(scenario_id):
     if rows:
         scenario_data = json.loads(rows[0]["scenario_json"])
 
-    if scenario_data:
-        old_package_id = package_lookup.get(scenario_data["pkgId"], scenario_data["pkgId"])
-    else:
-        old_package_id = "uva_elsevier"
+    # TODO
+    # if scenario_data:
+    #     old_package_id = package_lookup.get(scenario_data["pkgId"], scenario_data["pkgId"])
+    # else:
+    #     old_package_id = "uva_elsevier"
+
+    old_package_id = "uva_elsevier"
+
     my_scenario = Scenario(old_package_id, scenario_data)
     return my_scenario
 
@@ -51,12 +57,12 @@ class SavedScenario(db.Model):
     scenario_name = db.Column(db.Text)
     created = db.Column(db.DateTime)
 
-    def __init__(self, is_demo, scenario_id, scenario_input):
+    def __init__(self, is_demo_account, scenario_id, scenario_input):
         self.created = datetime.datetime.utcnow().isoformat()
         self.scenario_input = scenario_input
         self.live_scenario = None
 
-    def save_to_db(self, ip):
+    def save_live_scenario_to_db(self, ip):
         if self.is_demo_account:
             tablename = "jump_scenario_details_demo"
         else:
