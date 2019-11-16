@@ -433,7 +433,7 @@ def scenario_id_summary_get(scenario_id):
     response = my_saved_scenario.to_dict_definition()
     my_timing.log_timing("after to_dict()")
     response["_timing"] = my_timing.to_dict()
-    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_summary(pagesize))
+    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_summary())
 
 @app.route('/scenario/<scenario_id>/journals', methods=['GET', 'POST'])
 @app.route('/scenario/<scenario_id>/overview', methods=['GET', 'POST'])
