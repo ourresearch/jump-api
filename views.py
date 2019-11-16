@@ -275,7 +275,7 @@ def login():
     # Identity can be any data that is json serializable.  Include timestamp so is unique for each demo start.
     identity_dict = {
         "account_id": my_account.id,
-        "login_uuid": shortuuid.uuid()[0:20],
+        "login_uuid": shortuuid.uuid()[0:10],
         "created": datetime.datetime.utcnow().isoformat(),
         "is_demo": my_account.is_demo_account
     }
