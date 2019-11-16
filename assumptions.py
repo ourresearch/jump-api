@@ -26,8 +26,9 @@ class Assumptions(object):
                 http_request_args = http_request_args["configs"]
 
             for input_key in http_request_args:
-                value = http_request_args.get(input_key)
-                self.set_assumption(input_key, value)
+                if input_key not in ["jwt"]:
+                    value = http_request_args.get(input_key)
+                    self.set_assumption(input_key, value)
             self.package = http_request_args.get("package", None)  # so get demo if that's what was used
 
     def set_assumption(self, key, value):

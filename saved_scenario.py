@@ -57,12 +57,6 @@ class SavedScenario(db.Model):
         self.live_scenario = None
 
     def save_to_db(self, ip):
-        if not self.scenario_id or self.scenario_id=="demo":
-            if self.is_demo_account:
-                self.scenario_id = "demo"+shortuuid.uuid()[0:20]
-            else:
-                self.scenario_id = shortuuid.uuid()[0:8]
-
         if self.is_demo_account:
             tablename = "jump_scenario_details_demo"
         else:
@@ -74,6 +68,9 @@ class SavedScenario(db.Model):
             )
             # print command
             cursor.execute(command)
+
+    def set_unique_id(self, unique_id):
+        self.scenario_id = u"demo-{}".format(unique_id)
 
     @property
     def is_demo_account(self):

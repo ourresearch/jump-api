@@ -41,7 +41,7 @@ class Package(db.Model):
             unique_key = self.package_id.replace("demo", "")
             for my_scenario in unique_saved_scenarios:
                 my_scenario.package_id = self.package_id
-                my_scenario.scenario_id = u"demo{}".format(unique_key)
+                my_scenario.scenario_id = u"demo-{}".format(unique_key)
             return unique_saved_scenarios
         return self.saved_scenarios
 
