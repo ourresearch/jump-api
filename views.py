@@ -359,7 +359,7 @@ def scenario_id_get(scenario_id):
 
     my_timing.log_timing("after getting scenario")
 
-    my_saved_scenario.save_to_db()
+    my_saved_scenario.save_to_db(get_ip(request))
 
     response = my_saved_scenario.to_dict_definition()
 
@@ -375,7 +375,7 @@ def scenario_id_summary_get(scenario_id):
     is_demo = (identity_dict["account_id"] == "demo")
     scenario_input = request.get_json()
     my_saved_scenario = SavedScenario(is_demo, scenario_id, scenario_input)
-    my_saved_scenario.save_to_db()
+    my_saved_scenario.save_to_db(get_ip(request))
     return jump_summary_get()
 
 @app.route('/scenario/<scenario_id>/journals', methods=['GET', 'POST'])

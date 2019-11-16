@@ -56,7 +56,7 @@ class SavedScenario(db.Model):
         self.scenario_input = scenario_input
         self.live_scenario = None
 
-    def save_to_db(self, ip=""):
+    def save_to_db(self, ip):
         if not self.scenario_id or self.scenario_id=="demo":
             if self.is_demo_account:
                 self.scenario_id = "demo"+shortuuid.uuid()[0:20]
