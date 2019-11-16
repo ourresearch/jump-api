@@ -91,7 +91,7 @@ def jump_wizard_get():
     if identity_dict:
         unique_id = identity_dict.get("login_uuid")
     my_saved_scenario.set_unique_id(unique_id)
-    my_saved_scenario.save_to_db(get_ip(request))
+    my_saved_scenario.save_live_scenario_to_db(get_ip(request))
 
     response = scenario.to_dict(pagesize)
     response["_scenario_id"] = my_saved_scenario.scenario_id
@@ -277,7 +277,7 @@ def login():
         "account_id": my_account.id,
         "login_uuid": shortuuid.uuid()[0:10],
         "created": datetime.datetime.utcnow().isoformat(),
-        "is_demo": my_account.is_demo_account
+        "is_demo_account": my_account.is_demo_account
     }
     print u"login with {}".format(identity_dict)
     access_token = create_access_token(identity=identity_dict)
@@ -306,7 +306,7 @@ def account_get():
 
     identity_dict = get_jwt_identity()
     my_account = Account.query.get(identity_dict["account_id"])
-    if identity_dict["is_demo"]:
+    if identity_dict["is_demo_account"]:
         my_account.make_unique_demo_packages(identity_dict["login_uuid"])
     my_timing.log_timing("after getting account")
 
@@ -349,14 +349,10 @@ def package_id_get(package_id):
 
     return jsonify_fast(package_dict)
 
-@app.route('/scenario/<scenario_id>', methods=['GET'])
-@jwt_required
-def scenario_id_get(scenario_id):
-    my_timing = TimingMessages()
-
+def get_saved_scenario(scenario_id):
     identity_dict = get_jwt_identity()
-    is_demo = (identity_dict["account_id"] == "demo")
-    if is_demo:
+    is_demo_account = (identity_dict["account_id"] == "demo")
+    if is_demo_account:
         my_saved_scenario = SavedScenario.query.get(scenario_id)
         if not my_saved_scenario:
             my_saved_scenario = SavedScenario.query.get("demo")
@@ -369,39 +365,54 @@ def scenario_id_get(scenario_id):
     if my_saved_scenario.package_real.account_id != identity_dict["account_id"]:
         abort_json(401, "Not authorized to view this package")
 
-    my_timing.log_timing("after getting scenario")
+    my_saved_scenario.set_live_scenario()
+    return my_saved_scenario
 
+
+@app.route('/scenario/<scenario_id>', methods=['GET'])
+@jwt_required
+def scenario_id_get(scenario_id):
+    my_timing = TimingMessages()
+    my_saved_scenario = get_saved_scenario(scenario_id)
+    my_timing.log_timing("after setting live scenario")
     response = my_saved_scenario.to_dict_definition()
-
     my_timing.log_timing("after to_dict()")
     response["_timing"] = my_timing.to_dict()
-
     return jsonify_fast(response)
 
 
 @app.route('/scenario/<scenario_id>', methods=['POST'])
+@app.route('/scenario/<scenario_id>/post', methods=['GET'])  # just for debugging
 @jwt_required
 def scenario_id_post(scenario_id):
     my_timing = TimingMessages()
 
     identity_dict = get_jwt_identity()
-    my_saved_scenario = get_latest_scenario(scenario_id)
 
-    is_demo = (identity_dict["account_id"] == "demo")
+    scenario_input = request.get_json()
+    if not scenario_input:
+        scenario_input = request.args
 
-    if is_demo and not my_saved_scenario:
-        my_saved_scenario = SavedScenario.query.get("demo")
-        my_saved_scenario.scenario_id = scenario_id
+    my_saved_scenario = SavedScenario.query.get(scenario_id)
 
-    if not my_saved_scenario:
-        abort_json(404, "Scenario not found")
+    # check if demo account is ok
+    if identity_dict["is_demo_account"]:
+        if not scenario_id.startswith("demo"):
+            abort_json(401, "Not authorized to view this package")
+        if not my_saved_scenario:
+            my_saved_scenario = SavedScenario(True, scenario_id, scenario_input)
+            my_saved_scenario.scenario_id = scenario_id
+    else:
+        if not my_saved_scenario:
+            abort_json(404, "Package not found")
+        if my_saved_scenario.package.account_id != identity_dict["account_id"]:
+            abort_json(401, "Not authorized to view this package")
 
-    if my_saved_scenario.package_real.account_id != identity_dict["account_id"]:
-        abort_json(401, "Not authorized to view this package")
+    package_id = get_clean_package(my_saved_scenario.package_id)
+    my_live_scenario = Scenario(package_id, scenario_input)  # don't care about old one, just write new one
+    my_saved_scenario.live_scenario = my_live_scenario
 
-    my_timing.log_timing("after getting scenario")
-
-    my_saved_scenario.save_to_db(get_ip(request))
+    my_saved_scenario.save_live_scenario_to_db(get_ip(request))
 
     response = my_saved_scenario.to_dict_definition()
 
@@ -413,57 +424,82 @@ def scenario_id_post(scenario_id):
 
 
 @app.route('/scenario/<scenario_id>/summary', methods=['GET', 'POST'])
+@jwt_optional
 def scenario_id_summary_get(scenario_id):
-    identity_dict = get_jwt_identity()
-    is_demo = (identity_dict["account_id"] == "demo")
-    scenario_input = request.get_json()
-    my_saved_scenario = SavedScenario(is_demo, scenario_id, scenario_input)
-    my_saved_scenario.save_to_db(get_ip(request))
-    return jump_summary_get()
+    pagesize = int(request.args.get("pagesize", 5000))
+    my_timing = TimingMessages()
+    my_saved_scenario = get_saved_scenario(scenario_id)
+    my_timing.log_timing("after setting live scenario")
+    response = my_saved_scenario.to_dict_definition()
+    my_timing.log_timing("after to_dict()")
+    response["_timing"] = my_timing.to_dict()
+    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_summary(pagesize))
 
 @app.route('/scenario/<scenario_id>/journals', methods=['GET', 'POST'])
 @app.route('/scenario/<scenario_id>/overview', methods=['GET', 'POST'])
+@jwt_optional
 def scenario_id_overview_get(scenario_id):
-    return jump_overview_get()
+    pagesize = int(request.args.get("pagesize", 5000))
+    my_timing = TimingMessages()
+    my_saved_scenario = get_saved_scenario(scenario_id)
+    my_timing.log_timing("after setting live scenario")
+    response = my_saved_scenario.to_dict_definition()
+    my_timing.log_timing("after to_dict()")
+    response["_timing"] = my_timing.to_dict()
+    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_overview(pagesize))
 
 @app.route('/scenario/<scenario_id>/table', methods=['GET', 'POST'])
+@jwt_optional
 def scenario_id_table_get(scenario_id):
-    return jump_table_get()
+    pagesize = int(request.args.get("pagesize", 5000))
+    my_timing = TimingMessages()
+    my_saved_scenario = get_saved_scenario(scenario_id)
+    my_timing.log_timing("after setting live scenario")
+    response = my_saved_scenario.to_dict_definition()
+    my_timing.log_timing("after to_dict()")
+    response["_timing"] = my_timing.to_dict()
+    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table(pagesize))
 
 @app.route('/scenario/<scenario_id>/slider', methods=['GET', 'POST'])
+@jwt_optional
 def scenario_id_slider_get(scenario_id):
-    return jump_slider_get()
-
-@app.route('/scenario/<scenario_id>/timeline', methods=['GET', 'POST'])
-def scenario_id_timeline_get(scenario_id):
-    return jump_timeline_get()
+    pagesize = int(request.args.get("pagesize", 5000))
+    my_timing = TimingMessages()
+    my_saved_scenario = get_saved_scenario(scenario_id)
+    my_timing.log_timing("after setting live scenario")
+    response = my_saved_scenario.to_dict_definition()
+    my_timing.log_timing("after to_dict()")
+    response["_timing"] = my_timing.to_dict()
+    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider(pagesize))
 
 @app.route('/scenario/<scenario_id>/apc', methods=['GET', 'POST'])
+@jwt_optional
 def scenario_id_apc_get(scenario_id):
-    return jump_apc_get()
+    pagesize = int(request.args.get("pagesize", 5000))
+    my_timing = TimingMessages()
+    my_saved_scenario = get_saved_scenario(scenario_id)
+    my_timing.log_timing("after setting live scenario")
+    response = my_saved_scenario.to_dict_definition()
+    my_timing.log_timing("after to_dict()")
+    response["_timing"] = my_timing.to_dict()
+    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_apc(pagesize))
 
-@app.route('/scenario/<scenario_id>/costs', methods=['GET', 'POST'])
-def scenario_id_costs_get(scenario_id):
-    return jump_costs_get()
-
-@app.route('/scenario/<scenario_id>/oa', methods=['GET', 'POST'])
-def scenario_id_oa_get(scenario_id):
-    return jump_oa_get()
-
-@app.route('/scenario/<scenario_id>/fulfillment', methods=['GET', 'POST'])
-def scenario_id_fulfillment_get(scenario_id):
-    return jump_fulfillment_get()
 
 @app.route('/scenario/<scenario_id>/report', methods=['GET', 'POST'])
 def scenario_id_report_get(scenario_id):
-    return jump_report_get()
-
-@app.route('/scenario/<scenario_id>/impact', methods=['GET', 'POST'])
-def scenario_id_impact_get(scenario_id):
-    return jump_impact_get()
+    pagesize = int(request.args.get("pagesize", 5000))
+    my_timing = TimingMessages()
+    my_saved_scenario = get_saved_scenario(scenario_id)
+    my_timing.log_timing("after setting live scenario")
+    response = my_saved_scenario.to_dict_definition()
+    my_timing.log_timing("after to_dict()")
+    response["_timing"] = my_timing.to_dict()
+    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_report(pagesize))
 
 @app.route('/scenario/<scenario_id>/export.csv', methods=['GET', 'POST'])
+@jwt_optional
 def scenario_id_export_csv_get(scenario_id):
+    # TODO
     return jump_export_csv()
 
 @app.route('/register', methods=['GET'])

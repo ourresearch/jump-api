@@ -29,7 +29,7 @@ class Assumptions(object):
                 if input_key not in ["jwt"]:
                     value = http_request_args.get(input_key)
                     self.set_assumption(input_key, value)
-            self.package = http_request_args.get("package", None)  # so get demo if that's what was used
+            self.package = http_request_args.get("package", "demo")  # so get demo if that's what was used
 
     def set_assumption(self, key, value):
         if key.startswith("include_"):
