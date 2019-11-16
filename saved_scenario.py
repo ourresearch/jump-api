@@ -70,7 +70,7 @@ class SavedScenario(db.Model):
             cursor.execute(command)
 
     def set_unique_id(self, unique_id):
-        self.scenario_id = u"demo-{}".format(unique_id)
+        self.scenario_id = u"demo-scenario-{}".format(unique_id)
 
     @property
     def is_demo_account(self):
