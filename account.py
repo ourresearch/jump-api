@@ -44,7 +44,7 @@ class Account(db.Model):
         if self.is_demo_account:
             unique_packages = self.packages
             for package in unique_packages:
-                package.package_id = u"demo-{}".format(self.login_uuid)
+                package.package_id = u"demo-package-{}".format(self.login_uuid)
             return unique_packages
         return self.packages
 
