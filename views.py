@@ -28,6 +28,7 @@ from scenario import Scenario
 from account import Account
 from package import Package
 from saved_scenario import SavedScenario
+from saved_scenario import get_latest_scenario
 from util import jsonify_fast
 from util import jsonify_fast_no_sort
 from util import str2bool
@@ -74,7 +75,9 @@ def base_endpoint():
 #     return redirect(url_for("static", filename="img/favicon.ico", _external=True, _scheme='https'))
 
 @app.route("/scenario/wizard", methods=["GET", "POST"])
+@jwt_optional
 def jump_wizard_get():
+    identity_dict = get_jwt_identity()
 
     pagesize = int(request.args.get("pagesize", 100))
     spend = int(request.args.get("spend"))
@@ -84,9 +87,16 @@ def jump_wizard_get():
 
     my_saved_scenario = SavedScenario.query.get("demo")
     my_saved_scenario.live_scenario = scenario
+    unique_id = shortuuid.uuid()[0:20]
+    if identity_dict:
+        unique_id = identity_dict.get("login_uuid")
+    my_saved_scenario.set_unique_id(unique_id)
     my_saved_scenario.save_to_db(get_ip(request))
 
-    return jsonify_fast(scenario.to_dict(pagesize))
+    response = scenario.to_dict(pagesize)
+    response["_scenario_id"] = my_saved_scenario.scenario_id
+
+    return jsonify_fast(response)
 
 
 @app.route("/scenario/summary", methods=["GET", "POST"])
@@ -241,15 +251,15 @@ def jump_export_csv():
 # Provide a method to create access tokens. The create_access_token()
 # function is used to actually generate the token, and you can return
 # it to the caller however you choose.
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=["GET", 'POST'])
 def login():
     my_timing = TimingMessages()
 
-    if not request.is_json:
-        return abort_json(400, "Missing JSON in request")
-
-    username = request.json.get('username', None)
-    password = request.json.get('password', None)
+    request_source = request.args
+    if request.is_json:
+        request_source = request.json
+    username = request_source.get('username', None)
+    password = request_source.get('password', None)
 
     if not username:
         return abort_json(400, "Missing username parameter")
@@ -265,8 +275,8 @@ def login():
     # Identity can be any data that is json serializable.  Include timestamp so is unique for each demo start.
     identity_dict = {
         "account_id": my_account.id,
-        "login_uuid": shortuuid.uuid()[0:10],
-        "created": datetime.datetime.utcnow(),
+        "login_uuid": shortuuid.uuid()[0:20],
+        "created": datetime.datetime.utcnow().isoformat(),
         "is_demo": my_account.is_demo_account
     }
     print u"login with {}".format(identity_dict)
@@ -339,7 +349,7 @@ def package_id_get(package_id):
 
     return jsonify_fast(package_dict)
 
-@app.route('/scenario/<scenario_id>', methods=['GET', 'POST'])
+@app.route('/scenario/<scenario_id>', methods=['GET'])
 @jwt_required
 def scenario_id_get(scenario_id):
     my_timing = TimingMessages()
@@ -347,10 +357,42 @@ def scenario_id_get(scenario_id):
     identity_dict = get_jwt_identity()
     is_demo = (identity_dict["account_id"] == "demo")
     if is_demo:
-        my_saved_scenario = SavedScenario.query.get("demo")
-        my_saved_scenario.scenario_id = scenario_id
+        my_saved_scenario = SavedScenario.query.get(scenario_id)
+        if not my_saved_scenario:
+            my_saved_scenario = SavedScenario.query.get("demo")
+            my_saved_scenario.scenario_id = scenario_id
     else:
         my_saved_scenario = SavedScenario.query.get(scenario_id)
+    if not my_saved_scenario:
+        abort_json(404, "Scenario not found")
+
+    if my_saved_scenario.package_real.account_id != identity_dict["account_id"]:
+        abort_json(401, "Not authorized to view this package")
+
+    my_timing.log_timing("after getting scenario")
+
+    response = my_saved_scenario.to_dict_definition()
+
+    my_timing.log_timing("after to_dict()")
+    response["_timing"] = my_timing.to_dict()
+
+    return jsonify_fast(response)
+
+
+@app.route('/scenario/<scenario_id>', methods=['POST'])
+@jwt_required
+def scenario_id_post(scenario_id):
+    my_timing = TimingMessages()
+
+    identity_dict = get_jwt_identity()
+    my_saved_scenario = get_latest_scenario(scenario_id)
+
+    is_demo = (identity_dict["account_id"] == "demo")
+
+    if is_demo and not my_saved_scenario:
+        my_saved_scenario = SavedScenario.query.get("demo")
+        my_saved_scenario.scenario_id = scenario_id
+
     if not my_saved_scenario:
         abort_json(404, "Scenario not found")
 
@@ -367,6 +409,7 @@ def scenario_id_get(scenario_id):
     response["_timing"] = my_timing.to_dict()
 
     return jsonify_fast(response)
+
 
 
 @app.route('/scenario/<scenario_id>/summary', methods=['GET', 'POST'])
