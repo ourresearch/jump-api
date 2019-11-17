@@ -58,6 +58,9 @@ class SavedScenario(db.Model):
     created = db.Column(db.DateTime)
 
     def __init__(self, is_demo_account, scenario_id, scenario_input):
+        if is_demo_account:
+            demo_saved_scenario = SavedScenario.query.get("demo")
+            self.scenario_name = demo_saved_scenario.scenario_name
         self.created = datetime.datetime.utcnow().isoformat()
         self.scenario_input = scenario_input
         self.live_scenario = None
@@ -111,11 +114,7 @@ class SavedScenario(db.Model):
             "id": self.scenario_id,
             "name": self.scenario_name,
             "pkgId": self.package_id,
-            "summary": {
-                "cost_percent": self.live_scenario.cost_spent_percent,
-                "use_instant_percent": self.live_scenario.use_instant_percent,
-                "num_journals_subscribed": len(self.live_scenario.subscribed),
-            },
+            "summary": self.live_scenario.to_dict_summary_dict(),
             "subrs": [j.issn_l for j in self.live_scenario.subscribed],
             "customSubrs": [],
             "configs": self.live_scenario.settings.to_dict(),

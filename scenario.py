@@ -619,6 +619,8 @@ class Scenario(object):
                     "use_free_instant_percent": self.use_free_instant_percent,
                     "use_subscription_percent": self.use_subscription_percent,
                     "use_ill_percent": self.use_ill_percent
+
+
         }
         return response
 
