@@ -1016,7 +1016,7 @@ class Journal(object):
         response = {"issn_l": self.issn_l,
                 "title": self.title,
                 "subject": self.subject,
-                "downloads_total": self.use_total,
+                "downloads_total": self.downloads_total,
                 "use_total": self.use_total, # replace with above
                 "cost_subscription": self.cost_subscription,
                 "cost_ill": self.cost_ill,
@@ -1033,8 +1033,8 @@ class Journal(object):
         response["use_groups_free_instant"] = {}
         for group in use_groups_free_instant:
             response["use_groups_free_instant"][group] = self.use_actual[group]
-        response["use_groups_if_subscribed"] = {"subscription": self.downloads_subscription}
-        response["use_groups_if_not_subscribed"] = {"ill": self.downloads_ill, "other_delayed": self.downloads_other_delayed}
+        response["use_groups_if_subscribed"] = {"subscription": self.use_subscription}
+        response["use_groups_if_not_subscribed"] = {"ill": self.use_ill, "other_delayed": self.use_other_delayed}
         return response
 
 
