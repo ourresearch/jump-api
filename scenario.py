@@ -670,7 +670,7 @@ def get_scenario_data_from_db(package):
 
     package_issn_ls = get_issn_ls_for_package(package)
 
-    command = "select issn_l, total from jump_counter where package='{}'".format(package)
+    command = "select issn_l, total from jump_counter where package_id='{}'".format(package)
     counter_rows = None
     with get_db_cursor() as cursor:
         cursor.execute(command)

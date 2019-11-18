@@ -232,12 +232,12 @@ def jump_export_csv():
 
     filename = "export.csv"
     with open(filename, "w") as file:
-        csv_file = csv.writer(file, encoding='utf-8')
+        csv_writer = csv.writer(file, encoding='utf-8')
         keys = ["issn_l", "title", "subscribed"]
-        csv_file.writerow(keys)
+        csv_writer.writerow(keys)
         for journal in scenario.journals:
             # doing this hacky thing so excel doesn't format the issn as a date :(
-            csv_file.writerow(["issn:{}".format(journal.issn_l), journal.title, journal.subscribed])
+            csv_writer.writerow(["issn:{}".format(journal.issn_l), journal.title, journal.subscribed])
 
     with open(filename, "r") as file:
         contents = file.readlines()
