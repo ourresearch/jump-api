@@ -652,23 +652,9 @@ class Scenario(object):
 
 
 @cache
-def get_issn_ls_for_package(package):
-    command = "select issn_l from unpaywall_journals_package_issnl_view"
-    if package:
-        command += " where package='{}'".format(package)
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
-    package_issn_ls = [row["issn_l"] for row in rows]
-    return package_issn_ls
-
-
-@cache
 def get_scenario_data_from_db(package):
     timing = []
     section_time = time()
-
-    package_issn_ls = get_issn_ls_for_package(package)
 
     command = "select issn_l, total from jump_counter where package_id='{}'".format(package)
     counter_rows = None
@@ -730,7 +716,6 @@ def get_scenario_data_from_db(package):
 
     data = {
         "timing": timing,
-        "package_issn_ls": package_issn_ls,
         "counter_dict": counter_dict,
         "embargo_dict": embargo_dict,
         "citation_dict": citation_dict,
