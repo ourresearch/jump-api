@@ -247,7 +247,6 @@ def jump_export_csv():
 
 
 
-
 # Provide a method to create access tokens. The create_access_token()
 # function is used to actually generate the token, and you can return
 # it to the caller however you choose.
