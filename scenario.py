@@ -672,9 +672,12 @@ def get_package_specific_scenario_data_from_db(package_id):
     timing.append(("time from db: counter", elapsed(section_time, 2)))
     section_time = time()
 
-    command = """select *
-        from jump_citing
-        where citing_org = 'University of Virginia' and year < 2019""".format(package_id)
+    command = """select citing.*
+        from jump_citing citing
+        join jump_account_grid_id account_grid on citing.grid_id = account_grid.grid_id
+        join jump_account_package account_package on account_grid.account_id = account_package.account_id
+        where citing.year < 2019 
+        and package_id = '{}'""".format(package_id)
     citation_rows = None
     with get_db_cursor() as cursor:
         cursor.execute(command)
@@ -686,9 +689,13 @@ def get_package_specific_scenario_data_from_db(package_id):
     timing.append(("time from db: citation_rows", elapsed(section_time, 2)))
     section_time = time()
 
-    command = """select *
-        from jump_authorship
-        where org = 'University of Virginia' and year < 2019""".format(package_id)
+    command = """
+        select authorship.*
+        from jump_authorship authorship
+        join jump_account_grid_id account_grid on authorship.grid_id = account_grid.grid_id
+        join jump_account_package account_package on account_grid.account_id = account_package.account_id
+        where authorship.year < 2019 
+        and package_id = '{}'""".format(package_id)
     authorship_rows = None
     with get_db_cursor() as cursor:
         cursor.execute(command)
@@ -783,8 +790,7 @@ def get_society_data_from_db():
 
 @cache
 def get_apc_data_from_db(package_id):
-    # command = """select * from jump_apc_authorships where package_id='340c2753'
-    command = """select * from jump_apc_authorships
+    command = """select * from jump_apc_authorships where package_id='{}'
                     """.format(package_id)
     with get_db_cursor() as cursor:
         cursor.execute(command)
