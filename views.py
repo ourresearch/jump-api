@@ -409,7 +409,7 @@ def scenario_id_post(scenario_id):
         if my_saved_scenario.package.account_id != identity_dict["account_id"]:
             abort_json(401, "Not authorized to view this package")
 
-    package_id = get_clean_package_id(my_saved_scenario.package_id)
+    package_id = get_clean_package_id({"package": my_saved_scenario.package_id})
     my_live_scenario = Scenario(package_id, scenario_input)  # don't care about old one, just write new one
     my_saved_scenario.live_scenario = my_live_scenario
 
