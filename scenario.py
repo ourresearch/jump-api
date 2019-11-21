@@ -783,7 +783,7 @@ def get_society_data_from_db():
 
 @cache
 def get_apc_data_from_db(package_id):
-    command = """select * from jump_apc_authorships where package_id='{}'
+    command = """select * from jump_apc_authorships where package_id='340c2753'
                     """.format(package_id)
     with get_db_cursor() as cursor:
         cursor.execute(command)
