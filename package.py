@@ -25,16 +25,6 @@ class Package(db.Model):
         super(Package, self).__init__(**kwargs)
 
     @property
-    def package_id_old(self):
-        lookup = {
-            "658349d9": "uva_elsevier",
-            "15d18dca": "suny_elsevier",
-            "demo": "uva_elsevier", #demo
-            "51e8103d":	"mit_elsevier"
-        }
-        return lookup.get(self.package_id, self.package_id)
-
-    @property
     def unique_saved_scenarios(self):
         if self.is_demo_account:
             unique_saved_scenarios = self.saved_scenarios

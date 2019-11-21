@@ -9,14 +9,6 @@ from app import db
 from app import get_db_cursor
 from scenario import Scenario
 
-package_lookup = {
-    "658349d9": "uva_elsevier",
-    "15d18dca": "suny_elsevier",
-    "demo": "uva_elsevier", #demo
-    "51e8103d":	"mit_elsevier"
-}
-
-
 
 def get_latest_scenario(scenario_id):
     if scenario_id.startswith("demo"):
@@ -37,13 +29,7 @@ def get_latest_scenario(scenario_id):
     if rows:
         scenario_data = json.loads(rows[0]["scenario_json"])
 
-    # TODO
-    # if scenario_data:
-    #     old_package_id = package_lookup.get(scenario_data["pkgId"], scenario_data["pkgId"])
-    # else:
-    #     old_package_id = "uva_elsevier"
-
-    old_package_id = "uva_elsevier"
+    old_package_id = "658349d9"
 
     my_scenario = Scenario(old_package_id, scenario_data)
     return my_scenario
