@@ -39,6 +39,8 @@ from util import TimingMessages
 from util import get_ip
 
 def get_clean_package_id(http_request_args):
+    return "uva_elsevier"
+
     if not http_request_args:
         return "658349d9"
     package_id = http_request_args.get("package", "demo")
