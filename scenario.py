@@ -39,30 +39,36 @@ class Scenario(object):
         if http_request_args:
             self.starting_subscriptions += http_request_args.get("subrs", []) + http_request_args.get("customSubrs", [])
 
-        self.data = get_scenario_data_from_db(package)
-        self.log_timing("get_scenario_data_from_db")
+        self.data = get_package_specific_scenario_data_from_db(package)
+        self.log_timing("get_package_specific_scenario_data_from_db")
+
+        self.data["embargo_dict"] = get_embargo_data_from_db()
+        self.log_timing("get_embargo_data_from_db")
+
+        self.data["unpaywall_downloads_dict"] = get_unpaywall_downloads_from_db()
+        self.log_timing("get_unpaywall_downloads_from_db")
 
         self.data["apc"] = get_apc_data_from_db(package)
         self.log_timing("get_apc_data_from_db")
 
-        self.data["oa"] = get_oa_data_from_db(package)
+        self.data["oa"] = get_oa_data_from_db()
         self.log_timing("get_oa_data_from_db")
 
-        self.data["oa_recent"] = get_oa_recent_data_from_db(package)
+        self.data["oa_recent"] = get_oa_recent_data_from_db()
         self.log_timing("get_oa_data_from_db")
 
-        self.data["social_networks"] = get_social_networks_data_from_db(package)
+        self.data["social_networks"] = get_social_networks_data_from_db()
         self.log_timing("get_social_networks_data_from_db")
 
-        self.data["oa_adjustment"] = get_oa_adjustment_data_from_db(package)
+        self.data["oa_adjustment"] = get_oa_adjustment_data_from_db()
         self.log_timing("get_oa_adjustment_data_from_db")
 
-        self.data["society"] = get_society_data_from_db(package)
+        self.data["society"] = get_society_data_from_db()
         self.log_timing("get_society_data_from_db")
 
         self.log_timing("mint apc journals")
 
-        self.journals = get_fresh_journal_list(self.data["big_view_dict"])
+        self.journals = get_fresh_journal_list(self.data["unpaywall_downloads_dict"])
         self.log_timing("mint regular journals")
         [j.set_scenario(self) for j in self.journals]
         self.log_timing("set self in journals")
@@ -652,11 +658,11 @@ class Scenario(object):
 
 
 @cache
-def get_scenario_data_from_db(package):
+def get_package_specific_scenario_data_from_db(package_id):
     timing = []
     section_time = time()
 
-    command = "select issn_l, total from jump_counter where package_id='{}'".format(package)
+    command = "select issn_l, total from jump_counter where package_id='{}'".format(package_id)
     counter_rows = None
     with get_db_cursor() as cursor:
         cursor.execute(command)
@@ -666,19 +672,9 @@ def get_scenario_data_from_db(package):
     timing.append(("time from db: counter", elapsed(section_time, 2)))
     section_time = time()
 
-    command = "select issn_l, embargo from journal_delayed_oa_active"
-    embargo_rows = None
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        embargo_rows = cursor.fetchall()
-    embargo_dict = dict((a["issn_l"], round(a["embargo"])) for a in embargo_rows)
-
-    timing.append(("time from db: journal_delayed_oa_active", elapsed(section_time, 2)))
-    section_time = time()
-
     command = """select *
         from jump_citing
-        where citing_org = 'University of Virginia' and year < 2019""".format(package)
+        where citing_org = 'University of Virginia' and year < 2019""".format(package_id)
     citation_rows = None
     with get_db_cursor() as cursor:
         cursor.execute(command)
@@ -692,7 +688,7 @@ def get_scenario_data_from_db(package):
 
     command = """select *
         from jump_authorship
-        where org = 'University of Virginia' and year < 2019""".format(package)
+        where org = 'University of Virginia' and year < 2019""".format(package_id)
     authorship_rows = None
     with get_db_cursor() as cursor:
         cursor.execute(command)
@@ -704,30 +700,42 @@ def get_scenario_data_from_db(package):
     timing.append(("time from db: authorship_rows", elapsed(section_time, 2)))
     section_time = time()
 
-    command = "select * from jump_elsevier_unpaywall_downloads"
-    big_view_rows = None
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        big_view_rows = cursor.fetchall()
-    big_view_dict = dict((row["issn_l"], row) for row in big_view_rows)
-
-    timing.append(("time from db: download_rows", elapsed(section_time, 2)))
-    section_time = time()
 
     data = {
         "timing": timing,
         "counter_dict": counter_dict,
-        "embargo_dict": embargo_dict,
         "citation_dict": citation_dict,
-        "authorship_dict": authorship_dict,
-        "big_view_dict": big_view_dict
+        "authorship_dict": authorship_dict
     }
 
     return data
 
 
 @cache
-def get_oa_recent_data_from_db(package):
+def get_embargo_data_from_db():
+    command = "select issn_l, embargo from journal_delayed_oa_active"
+    embargo_rows = None
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        embargo_rows = cursor.fetchall()
+    embargo_dict = dict((a["issn_l"], round(a["embargo"])) for a in embargo_rows)
+    return embargo_dict
+
+
+@cache
+def get_unpaywall_downloads_from_db():
+    command = "select * from jump_elsevier_unpaywall_downloads"
+    big_view_rows = None
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        big_view_rows = cursor.fetchall()
+    unpaywall_downloads_dict = dict((row["issn_l"], row) for row in big_view_rows)
+    return unpaywall_downloads_dict
+
+
+
+@cache
+def get_oa_recent_data_from_db():
     oa_dict = {}
     for submitted in ["with_submitted", "no_submitted"]:
         for bronze in ["with_bronze", "no_bronze"]:
@@ -744,7 +752,7 @@ def get_oa_recent_data_from_db(package):
     return oa_dict
 
 @cache
-def get_oa_data_from_db(package):
+def get_oa_data_from_db():
     oa_dict = {}
     for submitted in ["with_submitted", "no_submitted"]:
         for bronze in ["with_bronze", "no_bronze"]:
@@ -762,7 +770,7 @@ def get_oa_data_from_db(package):
     return oa_dict
 
 @cache
-def get_society_data_from_db(package):
+def get_society_data_from_db():
     command = "select issn_l, is_society_journal from jump_society_journals_input where is_society_journal is not null"
     with get_db_cursor() as cursor:
         cursor.execute(command)
@@ -774,9 +782,9 @@ def get_society_data_from_db(package):
 
 
 @cache
-def get_apc_data_from_db(package):
-    command = """select * from jump_apc_authorships
-                    """.format(package)
+def get_apc_data_from_db(package_id):
+    command = """select * from jump_apc_authorships where package_id='{}'
+                    """.format(package_id)
     with get_db_cursor() as cursor:
         cursor.execute(command)
         rows = cursor.fetchall()
@@ -793,7 +801,7 @@ def get_apc_data_from_db(package):
 
 
 @cache
-def get_social_networks_data_from_db(package):
+def get_social_networks_data_from_db():
     command = """select issn_l, asn_only_rate::float from jump_mturk_asn_rates
                     """
     with get_db_cursor() as cursor:
@@ -805,7 +813,7 @@ def get_social_networks_data_from_db(package):
     return lookup_dict
 
 @cache
-def get_oa_adjustment_data_from_db(package):
+def get_oa_adjustment_data_from_db():
     command = """select issn_l, 
             max(mturk.max_oa_rate::float) as mturk_max_oa_rate, 
             count(*) as num_papers_3_years,

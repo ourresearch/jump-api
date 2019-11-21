@@ -45,7 +45,7 @@ class Journal(object):
 
     @property
     def my_scenario_data_row(self):
-        return self._scenario_data["big_view_dict"][self.issn_l]
+        return self._scenario_data["unpaywall_downloads_dict"][self.issn_l]
 
     @cached_property
     def title(self):
