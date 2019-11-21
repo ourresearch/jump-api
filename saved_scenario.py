@@ -11,6 +11,12 @@ from scenario import Scenario
 
 
 def get_latest_scenario(scenario_id):
+    my_saved_scenario = SavedScenario.query.get(scenario_id)
+    if my_saved_scenario:
+        package_id = my_saved_scenario.package_id
+    else:
+        package_id = "658349d9"
+
     if scenario_id.startswith("demo"):
         tablename = "jump_scenario_details_demo"
     else:
@@ -29,9 +35,7 @@ def get_latest_scenario(scenario_id):
     if rows:
         scenario_data = json.loads(rows[0]["scenario_json"])
 
-    old_package_id = "658349d9"
-
-    my_scenario = Scenario(old_package_id, scenario_data)
+    my_scenario = Scenario(package_id, scenario_data)
     return my_scenario
 
 
