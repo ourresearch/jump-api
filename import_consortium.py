@@ -37,10 +37,15 @@ def import_grid_ids():
         new_account.grid_id_objects.append(new_grid_id_object)
 
         # add AccountPackage things here
-        new_grid_id_object = AccountPackage()
+        # new_grid_id_object = AccountPackage()
         # insert into jump_account_package (select id, fn_short_uuid(), 'Elsevier', display_name || ' Elsevier', sysdate from jump_account where id not in (select package_id from jump_account_package))
         # new_grid_id_object.grid_id = row["grid_id"]
         # new_account.grid_id_objects.append(new_grid_id_object)
+
+        # update jump_apc_authorships_view to use grid_id
+        # jump_citing
+        # jump_authorship
+        # jump_counter
 
         db.session.add(new_account)
 

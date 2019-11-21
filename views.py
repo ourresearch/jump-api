@@ -38,17 +38,18 @@ from util import safe_commit
 from util import TimingMessages
 from util import get_ip
 
-def get_clean_package(http_request_args):
-    return "uva_elsevier"
-    # package = http_request_args.get("package", "demo")
-    # if package == "demo":
-    #     package = "uva_elsevier"
-    # return package
+def get_clean_package_id(http_request_args):
+    if not http_request_args:
+        return "658349d9"
+    package_id = http_request_args.get("package", "demo")
+    if package_id == "demo":
+        package_id = "658349d9"
+    return package_id
 
 # warm the cache
 print "warming the cache"
 start_time = time()
-Scenario(get_clean_package(None))
+Scenario(get_clean_package_id(None))
 print "done, took {} seconds".format(elapsed(start_time, 2))
 
 @app.after_request
@@ -81,7 +82,7 @@ def jump_wizard_get():
 
     pagesize = int(request.args.get("pagesize", 100))
     spend = int(request.args.get("spend"))
-    package = get_clean_package(request.args)
+    package = get_clean_package_id(request.args)
     scenario = Scenario(package, request.args)
     scenario.do_wizardly_things(spend)
 
@@ -104,7 +105,7 @@ def jump_summary_get():
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
-    package = get_clean_package(scenario_input)
+    package = get_clean_package_id(scenario_input)
     scenario = Scenario(package, scenario_input)
     return jsonify_fast(scenario.to_dict_summary())
 
@@ -115,7 +116,7 @@ def jump_overview_get():
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
-    package = get_clean_package(scenario_input)
+    package = get_clean_package_id(scenario_input)
     scenario = Scenario(package, scenario_input)
     return jsonify_fast_no_sort(scenario.to_dict_overview(pagesize))
 
@@ -125,7 +126,7 @@ def jump_table_get():
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
-    package = get_clean_package(scenario_input)
+    package = get_clean_package_id(scenario_input)
     scenario = Scenario(package, scenario_input)
     return jsonify_fast_no_sort(scenario.to_dict_table(pagesize))
 
@@ -135,7 +136,7 @@ def jump_slider_get():
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
-    package = get_clean_package(scenario_input)
+    package = get_clean_package_id(scenario_input)
     scenario = Scenario(package, scenario_input)
     return jsonify_fast_no_sort(scenario.to_dict_slider())
 
@@ -145,7 +146,7 @@ def jump_timeline_get():
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
-    package = get_clean_package(scenario_input)
+    package = get_clean_package_id(scenario_input)
     scenario = Scenario(package, scenario_input)
     return jsonify_fast_no_sort(scenario.to_dict_timeline(pagesize))
 
@@ -155,7 +156,7 @@ def jump_apc_get():
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
-    package = get_clean_package(scenario_input)
+    package = get_clean_package_id(scenario_input)
     scenario = Scenario(package, scenario_input)
     return jsonify_fast_no_sort(scenario.to_dict_apc(pagesize))
 
@@ -165,7 +166,7 @@ def jump_costs_get():
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
-    package = get_clean_package(scenario_input)
+    package = get_clean_package_id(scenario_input)
     scenario = Scenario(package, scenario_input)
     return jsonify_fast_no_sort(scenario.to_dict_cost(pagesize))
 
@@ -175,7 +176,7 @@ def jump_oa_get():
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
-    package = get_clean_package(scenario_input)
+    package = get_clean_package_id(scenario_input)
     scenario = Scenario(package, scenario_input)
     return jsonify_fast_no_sort(scenario.to_dict_oa(pagesize))
 
@@ -186,7 +187,7 @@ def jump_fulfillment_get():
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
-    package = get_clean_package(scenario_input)
+    package = get_clean_package_id(scenario_input)
     scenario = Scenario(package, scenario_input)
     return jsonify_fast_no_sort(scenario.to_dict_fulfillment(pagesize))
 
@@ -196,7 +197,7 @@ def jump_report_get():
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
-    package = get_clean_package(scenario_input)
+    package = get_clean_package_id(scenario_input)
     scenario = Scenario(package, scenario_input)
     return jsonify_fast_no_sort(scenario.to_dict_report(pagesize))
 
@@ -206,7 +207,7 @@ def jump_impact_get():
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
-    package = get_clean_package(scenario_input)
+    package = get_clean_package_id(scenario_input)
     scenario = Scenario(package, scenario_input)
     return jsonify_fast_no_sort(scenario.to_dict_impact(pagesize))
 
@@ -216,7 +217,7 @@ def jump_issn_get(issn_l):
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
-    package = get_clean_package(scenario_input)
+    package = get_clean_package_id(scenario_input)
     scenario = Scenario(package, scenario_input)
     my_journal = scenario.get_journal(issn_l)
     return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
@@ -227,7 +228,7 @@ def jump_export_csv():
     scenario_input = request.get_json()
     if not scenario_input:
         scenario_input = request.args
-    package = get_clean_package(scenario_input)
+    package = get_clean_package_id(scenario_input)
     scenario = Scenario(package, scenario_input)
 
     filename = "export.csv"
@@ -407,7 +408,7 @@ def scenario_id_post(scenario_id):
         if my_saved_scenario.package.account_id != identity_dict["account_id"]:
             abort_json(401, "Not authorized to view this package")
 
-    package_id = get_clean_package(my_saved_scenario.package_id)
+    package_id = get_clean_package_id(my_saved_scenario.package_id)
     my_live_scenario = Scenario(package_id, scenario_input)  # don't care about old one, just write new one
     my_saved_scenario.live_scenario = my_live_scenario
 
