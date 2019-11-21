@@ -39,6 +39,8 @@ class Scenario(object):
         if http_request_args:
             self.starting_subscriptions += http_request_args.get("subrs", []) + http_request_args.get("customSubrs", [])
 
+        print "getting data using package", package
+
         self.data = get_package_specific_scenario_data_from_db(package)
         self.log_timing("get_package_specific_scenario_data_from_db")
 
@@ -83,7 +85,9 @@ class Scenario(object):
 
     @cached_property
     def apc_journals(self):
-        return [ApcJournal(issn_l, self.data, self) for issn_l in self.data["apc"]["df"].issn_l.unique()]
+        if self.data["apc"]:
+            return [ApcJournal(issn_l, self.data, self) for issn_l in self.data["apc"]["df"].issn_l.unique()]
+        return []
 
     @cached_property
     def journals_sorted_ncppu(self):
@@ -320,7 +324,10 @@ class Scenario(object):
 
     @cached_property
     def apc_price(self):
-        return np.max([j.apc_2019 for j in self.apc_journals])
+        if self.apc_journals:
+            return np.max([j.apc_2019 for j in self.apc_journals])
+        else:
+            return 0
 
     @cached_property
     def num_citations_weight_percent(self):
@@ -792,19 +799,21 @@ def get_society_data_from_db():
 def get_apc_data_from_db(package_id):
     command = """select * from jump_apc_authorships where package_id='{}'
                     """.format(package_id)
-    print "get_apc_data_from_db", command
     with get_db_cursor() as cursor:
         cursor.execute(command)
         rows = cursor.fetchall()
 
-    df = pd.DataFrame(rows)
-    # df["apc"] = df["apc"].astype(float)
-    df["year"] = df["year"].astype(int)
-    df["authorship_fraction"] = df.num_authors_from_uni/df.num_authors_total
-    df["apc_fraction"] = df["apc"].astype(float) * df["authorship_fraction"]
-    df_by_issn_l_and_year = df.groupby(["issn_l", "year"]).apc_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'size': 'num_papers', "sum": "dollars"})
+    if rows:
+        df = pd.DataFrame(rows)
+        # df["apc"] = df["apc"].astype(float)
+        df["year"] = df["year"].astype(int)
+        df["authorship_fraction"] = df.num_authors_from_uni/df.num_authors_total
+        df["apc_fraction"] = df["apc"].astype(float) * df["authorship_fraction"]
+        df_by_issn_l_and_year = df.groupby(["issn_l", "year"]).apc_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'size': 'num_papers', "sum": "dollars"})
+        my_dict = {"df": df, "df_by_issn_l_and_year": df_by_issn_l_and_year}
+    else:
+        my_dict = None
 
-    my_dict = {"df": df, "df_by_issn_l_and_year": df_by_issn_l_and_year}
     return my_dict
 
 
