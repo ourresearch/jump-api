@@ -792,6 +792,7 @@ def get_society_data_from_db():
 def get_apc_data_from_db(package_id):
     command = """select * from jump_apc_authorships where package_id='{}'
                     """.format(package_id)
+    print "get_apc_data_from_db", command
     with get_db_cursor() as cursor:
         cursor.execute(command)
         rows = cursor.fetchall()

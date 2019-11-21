@@ -42,7 +42,7 @@ def get_clean_package_id(http_request_args):
     if not http_request_args:
         return "658349d9"
     package_id = http_request_args.get("package", "demo")
-    if package_id == "demo":
+    if package_id == "demo" or package_id == "uva_elsevier":
         package_id = "658349d9"
     return package_id
 
