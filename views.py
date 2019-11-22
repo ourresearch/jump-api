@@ -425,7 +425,7 @@ def scenario_id_post(scenario_id):
 
 
 @app.route('/scenario/<scenario_id>/summary', methods=['GET', 'POST'])
-@jwt_optional
+@jwt_required
 def scenario_id_summary_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
     my_timing = TimingMessages()
@@ -438,7 +438,7 @@ def scenario_id_summary_get(scenario_id):
 
 @app.route('/scenario/<scenario_id>/journals', methods=['GET', 'POST'])
 @app.route('/scenario/<scenario_id>/overview', methods=['GET', 'POST'])
-@jwt_optional
+@jwt_required
 def scenario_id_overview_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
     my_timing = TimingMessages()
@@ -450,7 +450,7 @@ def scenario_id_overview_get(scenario_id):
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_overview(pagesize))
 
 @app.route('/scenario/<scenario_id>/table', methods=['GET', 'POST'])
-@jwt_optional
+@jwt_required
 def scenario_id_table_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
     my_timing = TimingMessages()
@@ -462,7 +462,7 @@ def scenario_id_table_get(scenario_id):
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table(pagesize))
 
 @app.route('/scenario/<scenario_id>/slider', methods=['GET', 'POST'])
-@jwt_optional
+@jwt_required
 def scenario_id_slider_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
     my_timing = TimingMessages()
@@ -474,7 +474,7 @@ def scenario_id_slider_get(scenario_id):
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
 
 @app.route('/scenario/<scenario_id>/apc', methods=['GET', 'POST'])
-@jwt_optional
+@jwt_required
 def scenario_id_apc_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
     my_timing = TimingMessages()
@@ -487,6 +487,7 @@ def scenario_id_apc_get(scenario_id):
 
 
 @app.route('/scenario/<scenario_id>/report', methods=['GET', 'POST'])
+@jwt_required
 def scenario_id_report_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
     my_timing = TimingMessages()
@@ -498,7 +499,7 @@ def scenario_id_report_get(scenario_id):
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_report(pagesize))
 
 @app.route('/scenario/<scenario_id>/export.csv', methods=['GET', 'POST'])
-@jwt_optional
+@jwt_required
 def scenario_id_export_csv_get(scenario_id):
     # TODO
     return jump_export_csv()
