@@ -30,7 +30,7 @@ class Scenario(object):
         self.timing_messages.append("{: <30} {: >6}s".format(message, elapsed(self.section_time, 2)))
         self.section_time = time()
         
-    def __init__(self, package, http_request_args=None):
+    def __init__(self, package_id, http_request_args=None):
         self.timing_messages = []; 
         self.section_time = time()        
         self.settings = Assumptions(http_request_args)
@@ -39,19 +39,23 @@ class Scenario(object):
         if http_request_args:
             self.starting_subscriptions += http_request_args.get("subrs", []) + http_request_args.get("customSubrs", [])
 
-        print "getting data using package", package
+        print "getting data using package_id", package_id
 
-        self.data = get_package_specific_scenario_data_from_db(package)
+        # package_id specific
+
+        self.data = get_package_specific_scenario_data_from_db(package_id)
         self.log_timing("get_package_specific_scenario_data_from_db")
+
+        self.data["apc"] = get_apc_data_from_db(package_id)
+        self.log_timing("get_apc_data_from_db")
+
+        # not package_id specific
 
         self.data["embargo_dict"] = get_embargo_data_from_db()
         self.log_timing("get_embargo_data_from_db")
 
         self.data["unpaywall_downloads_dict"] = get_unpaywall_downloads_from_db()
         self.log_timing("get_unpaywall_downloads_from_db")
-
-        self.data["apc"] = get_apc_data_from_db(package)
-        self.log_timing("get_apc_data_from_db")
 
         self.data["oa"] = get_oa_data_from_db()
         self.log_timing("get_oa_data_from_db")
@@ -648,43 +652,51 @@ class Scenario(object):
         response["_timing"] = self.timing_messages
         return response
 
-    @property
-    def id(self):
-        # TODO
-        return "1"
-
-    @property
-    def display_name(self):
-        # TODO
-        return "my Elsevier Freedom Package"
-
-
     def __repr__(self):
         return u"<{} (n={})>".format(self.__class__.__name__, len(self.journals))
 
 
 
+def get_consortium_package_ids(package_id):
+    command = """select package_id from jump_account_package where consortium_package_id = '{}'""".format(package_id)
+    rows = None
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+    package_ids = [row["package_id"] for row in rows]
+    return package_ids
+
 @cache
-def get_package_specific_scenario_data_from_db(package_id):
+def get_package_specific_scenario_data_from_db(input_package_id):
     timing = []
     section_time = time()
 
-    command = "select issn_l, total from jump_counter where package_id='{}'".format(package_id)
-    counter_rows = None
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        counter_rows = cursor.fetchall()
-    counter_dict = dict((a["issn_l"], a["total"]) for a in counter_rows)
+    consortium_package_ids = get_consortium_package_ids(input_package_id)
+    if not consortium_package_ids:
+        consortium_package_ids = [input_package_id]
+    counter_dict = defaultdict(int)
+    for package_id in consortium_package_ids:
+
+        command = "select issn_l, total from jump_counter where package_id='{}'".format(package_id)
+        rows = None
+        with get_db_cursor() as cursor:
+            cursor.execute(command)
+            rows = cursor.fetchall()
+        for row in rows:
+            counter_dict[row["issn_l"]] += row["total"]
 
     timing.append(("time from db: counter", elapsed(section_time, 2)))
     section_time = time()
 
-    command = """select citing.*
+    consortium_package_ids_string = ",".join(["'{}'".format(package_id) for package_id in consortium_package_ids])
+
+    command = """select citing.issn_l, citing.year, sum(num_citations) as num_citations
         from jump_citing citing
         join jump_account_grid_id account_grid on citing.grid_id = account_grid.grid_id
         join jump_account_package account_package on account_grid.account_id = account_package.account_id
         where citing.year < 2019 
-        and package_id = '{}'""".format(package_id)
+        and package_id in ({})
+        group by issn_l, year""".format(consortium_package_ids_string)
     citation_rows = None
     with get_db_cursor() as cursor:
         cursor.execute(command)
@@ -697,12 +709,13 @@ def get_package_specific_scenario_data_from_db(package_id):
     section_time = time()
 
     command = """
-        select authorship.*
+        select authorship.issn_l, authorship.year, sum(num_authorships) as num_authorships
         from jump_authorship authorship
         join jump_account_grid_id account_grid on authorship.grid_id = account_grid.grid_id
         join jump_account_package account_package on account_grid.account_id = account_package.account_id
         where authorship.year < 2019 
-        and package_id = '{}'""".format(package_id)
+        and package_id in ({})
+        group by issn_l, year""".format(consortium_package_ids_string)
     authorship_rows = None
     with get_db_cursor() as cursor:
         cursor.execute(command)
@@ -714,7 +727,6 @@ def get_package_specific_scenario_data_from_db(package_id):
     timing.append(("time from db: authorship_rows", elapsed(section_time, 2)))
     section_time = time()
 
-
     data = {
         "timing": timing,
         "counter_dict": counter_dict,
@@ -723,6 +735,33 @@ def get_package_specific_scenario_data_from_db(package_id):
     }
 
     return data
+
+
+@cache
+def get_apc_data_from_db(input_package_id):
+    consortium_package_ids = get_consortium_package_ids(input_package_id)
+    if not consortium_package_ids:
+        consortium_package_ids = [input_package_id]
+    consortium_package_ids_string = ",".join(["'{}'".format(package_id) for package_id in consortium_package_ids])
+
+    command = """select * from jump_apc_authorships where package_id in ({})
+                    """.format(consortium_package_ids_string)
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+
+    if rows:
+        df = pd.DataFrame(rows)
+        # df["apc"] = df["apc"].astype(float)
+        df["year"] = df["year"].astype(int)
+        df["authorship_fraction"] = df.num_authors_from_uni/df.num_authors_total
+        df["apc_fraction"] = df["apc"].astype(float) * df["authorship_fraction"]
+        df_by_issn_l_and_year = df.groupby(["issn_l", "year"]).apc_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'size': 'num_papers', "sum": "dollars"})
+        my_dict = {"df": df, "df_by_issn_l_and_year": df_by_issn_l_and_year}
+    else:
+        my_dict = None
+
+    return my_dict
 
 
 @cache
@@ -794,27 +833,6 @@ def get_society_data_from_db():
         lookup_dict[row["issn_l"]] = row["is_society_journal"]
     return lookup_dict
 
-
-@cache
-def get_apc_data_from_db(package_id):
-    command = """select * from jump_apc_authorships where package_id='{}'
-                    """.format(package_id)
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
-
-    if rows:
-        df = pd.DataFrame(rows)
-        # df["apc"] = df["apc"].astype(float)
-        df["year"] = df["year"].astype(int)
-        df["authorship_fraction"] = df.num_authors_from_uni/df.num_authors_total
-        df["apc_fraction"] = df["apc"].astype(float) * df["authorship_fraction"]
-        df_by_issn_l_and_year = df.groupby(["issn_l", "year"]).apc_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'size': 'num_papers', "sum": "dollars"})
-        my_dict = {"df": df, "df_by_issn_l_and_year": df_by_issn_l_and_year}
-    else:
-        my_dict = None
-
-    return my_dict
 
 
 @cache
