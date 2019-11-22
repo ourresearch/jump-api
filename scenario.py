@@ -15,13 +15,24 @@ from util import elapsed
 from util import for_sorting
 
 from journal import Journal
+from consortium_journal import ConsortiumJournal
 from apc_journal import ApcJournal
 from assumptions import Assumptions
 
-def get_fresh_journal_list(issn_ls):
+def get_fresh_journal_list(issn_ls, scenario):
     journals_to_exclude = ["0370-2693"]
-    journals = [Journal(issn_l) for issn_l in issn_ls if issn_l not in journals_to_exclude]
+    if scenario.is_consortium:
+        org_package_ids = scenario.data["org_package_ids"]
+        journals = [ConsortiumJournal(issn_l, org_package_ids) for issn_l in issn_ls if issn_l not in journals_to_exclude]
+    else:
+        journals = [Journal(issn_l) for issn_l in issn_ls if issn_l not in journals_to_exclude]
+        for journal in journals:
+            journal.package_id = scenario.package_id
     return journals
+
+def get_fresh_apc_journal_list(issn_ls, scenario):
+    return [ApcJournal(issn_l, scenario.data, scenario) for issn_l in issn_ls]
+
 
 class Scenario(object):
     years = range(0, 5)
@@ -35,6 +46,8 @@ class Scenario(object):
         self.section_time = time()        
         self.settings = Assumptions(http_request_args)
         self.starting_subscriptions = []
+        self.is_consortium = False
+        self.package_id = package_id
 
         if http_request_args:
             self.starting_subscriptions += http_request_args.get("subrs", []) + http_request_args.get("customSubrs", [])
@@ -43,10 +56,20 @@ class Scenario(object):
 
         # package_id specific
 
-        self.data = get_package_specific_scenario_data_from_db(package_id)
-        self.log_timing("get_package_specific_scenario_data_from_db")
+        self.data = {}
+        org_package_ids = get_consortium_package_ids(package_id)
+        if org_package_ids:
+            self.is_consortium = True
+            self.data["org_package_ids"] = org_package_ids
+        else:
+            self.data["org_package_ids"] = [package_id]
+        self.log_timing("get_consortium_package_ids")
 
-        self.data["apc"] = get_apc_data_from_db(package_id)
+        for org_package_id in self.data["org_package_ids"]:
+            self.data[org_package_id] = get_package_specific_scenario_data_from_db(org_package_id)
+            self.log_timing("get_package_specific_scenario_data_from_db")
+
+        self.data["apc"] = get_apc_data_from_db(package_id)  # gets everything from consortium itself
         self.log_timing("get_apc_data_from_db")
 
         # not package_id specific
@@ -74,7 +97,7 @@ class Scenario(object):
 
         self.log_timing("mint apc journals")
 
-        self.journals = get_fresh_journal_list(self.data["unpaywall_downloads_dict"])
+        self.journals = get_fresh_journal_list(self.data["unpaywall_downloads_dict"].keys(), self)
         self.log_timing("mint regular journals")
         [j.set_scenario(self) for j in self.journals]
         self.log_timing("set self in journals")
@@ -90,7 +113,7 @@ class Scenario(object):
     @cached_property
     def apc_journals(self):
         if self.data["apc"]:
-            return [ApcJournal(issn_l, self.data, self) for issn_l in self.data["apc"]["df"].issn_l.unique()]
+            return get_fresh_apc_journal_list(self.data["apc"]["df"].issn_l.unique(), self)
         return []
 
     @cached_property
@@ -656,7 +679,7 @@ class Scenario(object):
         return u"<{} (n={})>".format(self.__class__.__name__, len(self.journals))
 
 
-
+@cache
 def get_consortium_package_ids(package_id):
     command = """select package_id from jump_account_package where consortium_package_id = '{}'""".format(package_id)
     rows = None

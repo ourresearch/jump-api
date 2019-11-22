@@ -214,6 +214,7 @@ def jump_impact_get():
 
 
 @app.route("/journal/issn_l/<issn_l>", methods=["GET", "POST"])
+@jwt_required
 def jump_issn_get(issn_l):
     scenario_input = request.get_json()
     if not scenario_input:
@@ -225,6 +226,7 @@ def jump_issn_get(issn_l):
 
 
 @app.route("/scenario/export.csv", methods=["GET"])
+@jwt_required
 def jump_export_csv():
     scenario_input = request.get_json()
     if not scenario_input:
@@ -415,7 +417,9 @@ def scenario_id_post(scenario_id):
 
     my_saved_scenario.save_live_scenario_to_db(get_ip(request))
 
-    response = my_saved_scenario.to_dict_definition()
+    my_newly_saved_scenario = get_saved_scenario(scenario_id)
+    my_timing.log_timing("after re-getting live scenario")
+    response = my_newly_saved_scenario.to_dict_definition()
 
     my_timing.log_timing("after to_dict()")
     response["_timing"] = my_timing.to_dict()
