@@ -162,6 +162,14 @@ class Journal(object):
 
 
     @cached_property
+    def use_free_instant_by_year(self):
+        response = [0 for year in self.years]
+        for group in use_groups_free_instant:
+            for year in self.years:
+                response[year] += self.use_actual_by_year[group][year]
+        return response
+
+    @cached_property
     def use_instant_by_year(self):
         response = [0 for year in self.years]
         for group in use_groups_free_instant + ["subscription"]:
@@ -173,6 +181,9 @@ class Journal(object):
     def use_instant(self):
         return round(np.mean(self.use_instant_by_year), 4)
 
+    @cached_property
+    def use_free_instant(self):
+        return round(np.mean(self.use_free_instant_by_year), 4)
 
     @cached_property
     def downloads_subscription_by_year(self):
@@ -535,6 +546,12 @@ class Journal(object):
         return min(100.0, round(100 * float(self.use_instant) / self.use_total, 4))
 
     @cached_property
+    def use_free_instant_percent(self):
+        if not self.use_total:
+            return 0
+        return min(100.0, round(100 * float(self.use_free_instant) / self.use_total, 4))
+
+    @cached_property
     def use_instant_percent_by_year(self):
         if not self.downloads_total:
             return 0
@@ -737,6 +754,7 @@ class Journal(object):
         table_row["cost"] = self.cost_actual
         table_row["use"] = self.use_total
         table_row["instant_usage_percent"] = self.use_instant_percent
+        table_row["free_instant_usage_percent"] = self.use_free_instant_percent
 
         # cost
         table_row["scenario_cost"] = round(self.cost_actual)

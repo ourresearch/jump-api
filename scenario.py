@@ -505,6 +505,7 @@ class Scenario(object):
                         {"text": "Cost", "value": "cost", "percent": None, "raw": self.cost, "display": "currency_int"},
                         {"text": "Usage", "value": "use", "percent": None, "raw": self.use_total, "display": "number"},
                         {"text": "Instant Usage Percent", "value": "instant_usage_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent, "display": "percent"},
+                        {"text": "Free Instant Usage Percent", "value": "free_instant_usage_percent", "percent": None, "raw": None, "display": "percent"},
 
                         # cost
                         {"text": "Scenario Cost", "value": "scenario_cost", "percent": None, "raw": self.cost, "display": "currency_int"},
@@ -513,19 +514,19 @@ class Scenario(object):
                         {"text": "Subscription minus ILL Cost", "value": "real_cost", "percent": None, "raw": self.cost_subscription_minus_ill, "display": "currency_int"},
 
                         # fulfillment
-                        {"text": "ASNs", "value": "use_asns", "percent": round(float(100)*self.use_social_networks/self.use_total), "raw": self.use_social_networks, "display": "number"},
-                        {"text": "Open access", "value": "use_oa", "percent": round(float(100)*self.use_oa/self.use_total), "raw": self.use_oa, "display": "number"},
-                        {"text": "Backfile", "value": "use_backfile", "percent": round(float(100)*self.use_backfile/self.use_total), "raw": self.use_backfile, "display": "number"},
-                        {"text": "Subscription", "value": "use_subscription", "percent": round(float(100)*self.use_subscription/self.use_total), "raw": self.use_subscription, "display": "number"},
-                        {"text": "ILL", "value": "use_ill", "percent": round(float(100)*self.use_ill/self.use_total), "raw": self.use_ill, "display": "number"},
-                        {"text": "Other (delayed)", "value": "use_other_delayed", "percent": round(float(100)*self.use_other_delayed/self.use_total), "raw": self.use_other_delayed, "display": "number"},
+                        {"text": "Percent of Usage from ASNs", "value": "use_asns", "percent": round(float(100)*self.use_social_networks/self.use_total), "raw": self.use_social_networks, "display": "percent"},
+                        {"text": "Percent of Usage from Open access", "value": "use_oa", "percent": round(float(100)*self.use_oa/self.use_total), "raw": self.use_oa, "display": "percent"},
+                        {"text": "Percent of Usage from Backfile", "value": "use_backfile", "percent": round(float(100)*self.use_backfile/self.use_total), "raw": self.use_backfile, "display": "percent"},
+                        {"text": "Percent of Usage from Subscription", "value": "use_subscription", "percent": round(float(100)*self.use_subscription/self.use_total), "raw": self.use_subscription, "display": "percent"},
+                        {"text": "Percent of Usage from ILL", "value": "use_ill", "percent": round(float(100)*self.use_ill/self.use_total), "raw": self.use_ill, "display": "percent"},
+                        {"text": "Percent of Usage from Other (delayed)", "value": "use_other_delayed", "percent": round(float(100)*self.use_other_delayed/self.use_total), "raw": self.use_other_delayed, "display": "percent"},
 
                         # oa
-                        {"text": "Percent of Usage that is OA", "value": "use_oa_percent", "percent": round(float(100)*self.use_oa/self.use_total), "raw": self.use_oa, "display": "percent"},
-                        {"text": "Percent of Usage that is Green OA", "value": "use_green_percent", "percent": round(float(100)*self.use_green/self.use_total), "raw": self.use_green, "display": "percent"},
-                        {"text": "Percent of Usage that is Hybrid OA", "value": "use_hybrid_percent", "percent": round(float(100)*self.use_hybrid/self.use_total), "raw": self.use_hybrid, "display": "percent"},
-                        {"text": "Percent of Usage that is Bronze OA", "value": "use_bronze_percent", "percent": round(float(100)*self.use_bronze/self.use_total), "raw": self.use_bronze, "display": "percent"},
-                        {"text": "Percent of Usage that is Peer-reviewed OA", "value": "use_peer_reviewed_percent", "percent": round(float(100)*self.use_peer_reviewed/self.use_total), "raw": self.use_peer_reviewed, "display": "percent"},
+                        {"text": "Percent of Usage from OA", "value": "use_oa_percent", "percent": round(float(100)*self.use_oa/self.use_total), "raw": self.use_oa, "display": "percent"},
+                        {"text": "Percent of Usage from Green OA", "value": "use_green_percent", "percent": round(float(100)*self.use_green/self.use_total), "raw": self.use_green, "display": "percent"},
+                        {"text": "Percent of Usage from Hybrid OA", "value": "use_hybrid_percent", "percent": round(float(100)*self.use_hybrid/self.use_total), "raw": self.use_hybrid, "display": "percent"},
+                        {"text": "Percent of Usage from Bronze OA", "value": "use_bronze_percent", "percent": round(float(100)*self.use_bronze/self.use_total), "raw": self.use_bronze, "display": "percent"},
+                        {"text": "Percent of Usage from Peer-reviewed OA", "value": "use_peer_reviewed_percent", "percent": round(float(100)*self.use_peer_reviewed/self.use_total), "raw": self.use_peer_reviewed, "display": "percent"},
 
                         # impact
                         {"text": "Total Usage", "value":"total_usage", "percent": 100, "raw": self.use_total, "display": "number"},
