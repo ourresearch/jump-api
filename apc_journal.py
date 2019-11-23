@@ -5,6 +5,7 @@ import numpy as np
 from collections import defaultdict
 import weakref
 from collections import OrderedDict
+import pandas as pd
 
 class ApcJournal(object):
     years = range(0, 5)
@@ -25,17 +26,28 @@ class ApcJournal(object):
         if self.issn_l in [issn_dict["issn_l"] for issn_dict in self._scenario_data["apc"]]:
             self.have_data = True
 
+    @cached_property
+    def my_df_dict(self):
+        my_dict = {}
+        if self._scenario_data["apc"]:
+            df = pd.DataFrame(self._scenario_data["apc"])
+            df["year"] = df["year"].astype(int)
+            df["authorship_fraction"] = df.num_authors_from_uni/df.num_authors_total
+            df["apc_fraction"] = df["apc"].astype(float) * df["authorship_fraction"]
+            df_by_issn_l_and_year = df.groupby(["issn_l", "year"]).apc_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'size': 'num_papers', "sum": "dollars"})
+            my_dict = {"df": df, "df_by_issn_l_and_year": df_by_issn_l_and_year}
+        return my_dict
 
     @cached_property
     def my_data_dict(self):
-        my_df = self._scenario_data["apc"]["df_by_issn_l_and_year"]
+        my_df = self.my_df_dict["df_by_issn_l_and_year"]
         matching_rows_df = my_df.loc[my_df.issn_l == self.issn_l]
         matching_rows_df.set_index("year", inplace=True)
         return matching_rows_df.to_dict('index')
 
     @cached_property
     def first_df(self):
-        my_df = self._scenario_data["apc"]["df"]
+        my_df = self.my_df_dict["df"]
         matching_rows_df = my_df.loc[my_df.issn_l == self.issn_l]
         return matching_rows_df.iloc[0].to_dict()
 
@@ -79,7 +91,7 @@ class ApcJournal(object):
 
     @cached_property
     def fractional_authorships_total_by_year(self):
-        my_df = self._scenario_data["apc"]["df"]
+        my_df = self.my_df_dict["df"]
         matching_rows_df = my_df.loc[my_df.issn_l == self.issn_l]
         my_dict_rows = matching_rows_df.to_dict('records')
         by_year = defaultdict(float)
