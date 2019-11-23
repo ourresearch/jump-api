@@ -86,17 +86,16 @@ class Scenario(object):
 
     @cached_property
     def apc_journals(self):
-        return []
-        # if self.data["apc"]:
-        #     df = pd.DataFrame(self.data["apc"])
+        if self.data["apc"]:
+            df = pd.DataFrame(self.data["apc"])
         #     # df["apc"] = df["apc"].astype(float)
-        #     df["year"] = df["year"].astype(int)
-        #     df["authorship_fraction"] = df.num_authors_from_uni/df.num_authors_total
-        #     df["apc_fraction"] = df["apc"].astype(float) * df["authorship_fraction"]
-        #     df_by_issn_l_and_year = df.groupby(["issn_l", "year"]).apc_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'size': 'num_papers', "sum": "dollars"})
-        #     my_dict = {"df": df, "df_by_issn_l_and_year": df_by_issn_l_and_year}
-        #     return get_fresh_apc_journal_list(my_dict["df"].issn_l.unique(), self)
-        # return []
+            df["year"] = df["year"].astype(int)
+            df["authorship_fraction"] = df.num_authors_from_uni/df.num_authors_total
+            df["apc_fraction"] = df["apc"].astype(float) * df["authorship_fraction"]
+            df_by_issn_l_and_year = df.groupby(["issn_l", "year"]).apc_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'size': 'num_papers', "sum": "dollars"})
+            my_dict = {"df": df, "df_by_issn_l_and_year": df_by_issn_l_and_year}
+            return get_fresh_apc_journal_list(my_dict["df"].issn_l.unique(), self)
+        return []
 
     @cached_property
     def journals_sorted_ncppu(self):
@@ -745,6 +744,8 @@ def get_package_specific_scenario_data_from_db(input_package_id):
 
 @cache
 def get_apc_data_from_db(input_package_id):
+    if input_package_id == DEMO_PACKAGE_ID or input_package_id.startswith("demo"):
+        input_package_id = DEMO_PACKAGE_ID
     consortium_package_ids = get_consortium_package_ids(input_package_id)
     if not consortium_package_ids:
         consortium_package_ids = [input_package_id]
