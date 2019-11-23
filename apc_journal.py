@@ -22,7 +22,7 @@ class ApcJournal(object):
                 self.is_in_package = True
                 self.subscribed = matching_journal.subscribed
         self._scenario_data = scenario_data
-        if self.issn_l in [str(issn) for issn in self._scenario_data["apc"]["df_by_issn_l_and_year"].issn_l]:
+        if self.issn_l in [issn_dict["issn_l"] for issn_dict in self._scenario_data["apc"]]:
             self.have_data = True
 
 
