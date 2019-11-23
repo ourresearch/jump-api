@@ -26,14 +26,15 @@ class Package(db.Model):
 
     @property
     def unique_saved_scenarios(self):
+        response = self.saved_scenarios
         if self.is_demo_account:
             unique_saved_scenarios = self.saved_scenarios
             unique_key = self.package_id.replace("demo", "").replace("-package-", "")
             for my_scenario in unique_saved_scenarios:
                 my_scenario.package_id = self.package_id
                 my_scenario.scenario_id = u"demo-scenario-{}".format(unique_key)
-            return unique_saved_scenarios
-        return self.saved_scenarios
+            response = unique_saved_scenarios
+        return response
 
     @property
     def is_demo_account(self):

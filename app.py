@@ -30,6 +30,7 @@ from util import elapsed
 from util import HTTPMethodOverrideMiddleware
 
 HEROKU_APP_NAME = "jump-api"
+DEMO_PACKAGE_ID = "658349d9"
 
 # set up logging
 # see http://wiki.pylonshq.com/display/pylonscookbook/Alternative+logging+configuration

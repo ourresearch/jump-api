@@ -8,7 +8,7 @@ import shortuuid
 from app import db
 from app import get_db_cursor
 from scenario import Scenario
-from scenario import DEMO_PACKAGE_ID
+from app import DEMO_PACKAGE_ID
 
 
 def get_latest_scenario(scenario_id):
@@ -91,15 +91,11 @@ class SavedScenario(db.Model):
     def set_live_scenario(self):
         if not hasattr(self, "live_scenario") or not self.live_scenario:
             self.live_scenario = get_latest_scenario(self.scenario_id)
+        self.live_scenario.package_id = self.package_id
         return self.live_scenario
 
-    @property
-    def package_id_old(self):
-        return package_lookup.get(self.package_id, self.package_id)
-
     def to_dict_definition(self):
-        if not hasattr(self, "live_scenario") or not self.live_scenario:
-            self.live_scenario = get_latest_scenario(self.scenario_id)
+        self.set_live_scenario()  # in case not done
 
         response = {
             "id": self.scenario_id,
