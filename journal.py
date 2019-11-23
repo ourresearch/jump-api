@@ -587,8 +587,11 @@ class Journal(object):
         my_dict = defaultdict(dict)
 
         key = u"{}_{}".format(submitted, bronze)
-        my_rows = self._scenario_data["oa"][key][self.issn_l]
-        my_recent_rows = self._scenario_data["oa_recent"][key][self.issn_l]
+        print self._scenario_data.keys()
+        print self._scenario_data["oa"].keys()
+        print self._scenario_data["oa"][key].keys()
+        my_rows = self._scenario_data["oa"][key].get(self.issn_l, [])
+        my_recent_rows = self._scenario_data["oa_recent"][key].get(self.issn_l, [])
 
         for row in my_rows:
             my_dict[row["fresh_oa_status"]][round(row["year_int"])] = round(row["count"])
