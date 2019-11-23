@@ -213,6 +213,18 @@ def jump_impact_get():
     return jsonify_fast_no_sort(scenario.to_dict_impact(pagesize))
 
 
+@app.route('/scenario/<scenario_id>/journal/<issn_l>', methods=['GET', 'POST'])
+@jwt_required
+def jump_scenario_issn_get(scenario_id, issn_l):
+    scenario_input = request.get_json()
+    if not scenario_input:
+        scenario_input = request.args
+    package = get_clean_package_id(scenario_input)
+    scenario = Scenario(package, scenario_input)
+    my_journal = scenario.get_journal(issn_l)
+    return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
+
+
 @app.route("/journal/issn_l/<issn_l>", methods=["GET", "POST"])
 @jwt_required
 def jump_issn_get(issn_l):
