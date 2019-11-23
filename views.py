@@ -42,10 +42,10 @@ from util import get_ip
 
 
 # warm the cache
-print "warming the cache"
-start_time = time()
-Scenario(get_clean_package_id(None))
-print "done, took {} seconds".format(elapsed(start_time, 2))
+# print "warming the cache"
+# start_time = time()
+# Scenario(get_clean_package_id(None))
+# print "done, took {} seconds".format(elapsed(start_time, 2))
 
 @app.after_request
 def after_request_stuff(resp):
