@@ -587,9 +587,6 @@ class Journal(object):
         my_dict = defaultdict(dict)
 
         key = u"{}_{}".format(submitted, bronze)
-        print self._scenario_data.keys()
-        print self._scenario_data["oa"].keys()
-        print self._scenario_data["oa"][key].keys()
         my_rows = self._scenario_data["oa"][key].get(self.issn_l, [])
         my_recent_rows = self._scenario_data["oa_recent"][key].get(self.issn_l, [])
 
