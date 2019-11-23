@@ -7,17 +7,30 @@ from collections import defaultdict
 import weakref
 from kids.cache import cache
 import pickle
+import requests
+import os
 
 from app import use_groups
 from app import get_db_cursor
 from time import time
 from util import elapsed
 from util import for_sorting
+from util import TimingMessages
 
 from journal import Journal
 from consortium_journal import ConsortiumJournal
 from apc_journal import ApcJournal
 from assumptions import Assumptions
+
+DEMO_PACKAGE_ID = "658349d9"
+def get_clean_package_id(http_request_args):
+    if not http_request_args:
+        return DEMO_PACKAGE_ID
+    package_id = http_request_args.get("package", "demo")
+    if package_id == "demo" or package_id == "uva_elsevier":
+        package_id = DEMO_PACKAGE_ID
+    return package_id
+
 
 def get_fresh_journal_list(issn_ls, scenario):
     journals_to_exclude = ["0370-2693"]
@@ -52,50 +65,12 @@ class Scenario(object):
         if http_request_args:
             self.starting_subscriptions += http_request_args.get("subrs", []) + http_request_args.get("customSubrs", [])
 
+        if get_consortium_package_ids(package_id):
+            self.is_consortium = True
+
         print "getting data using package_id", package_id
 
-        # package_id specific
-
-        self.data = {}
-        org_package_ids = get_consortium_package_ids(package_id)
-        if org_package_ids:
-            self.is_consortium = True
-            self.data["org_package_ids"] = org_package_ids
-        else:
-            self.data["org_package_ids"] = [package_id]
-        self.log_timing("get_consortium_package_ids")
-
-        for org_package_id in self.data["org_package_ids"]:
-            self.data[org_package_id] = get_package_specific_scenario_data_from_db(org_package_id)
-            self.log_timing("get_package_specific_scenario_data_from_db")
-
-        self.data["apc"] = get_apc_data_from_db(package_id)  # gets everything from consortium itself
-        self.log_timing("get_apc_data_from_db")
-
-        # not package_id specific
-
-        self.data["embargo_dict"] = get_embargo_data_from_db()
-        self.log_timing("get_embargo_data_from_db")
-
-        self.data["unpaywall_downloads_dict"] = get_unpaywall_downloads_from_db()
-        self.log_timing("get_unpaywall_downloads_from_db")
-
-        self.data["oa"] = get_oa_data_from_db()
-        self.log_timing("get_oa_data_from_db")
-
-        self.data["oa_recent"] = get_oa_recent_data_from_db()
-        self.log_timing("get_oa_data_from_db")
-
-        self.data["social_networks"] = get_social_networks_data_from_db()
-        self.log_timing("get_social_networks_data_from_db")
-
-        self.data["oa_adjustment"] = get_oa_adjustment_data_from_db()
-        self.log_timing("get_oa_adjustment_data_from_db")
-
-        self.data["society"] = get_society_data_from_db()
-        self.log_timing("get_society_data_from_db")
-
-        self.log_timing("mint apc journals")
+        self.data = get_common_package_data_from_cache(package_id)
 
         self.journals = get_fresh_journal_list(self.data["unpaywall_downloads_dict"].keys(), self)
         self.log_timing("mint regular journals")
@@ -113,7 +88,14 @@ class Scenario(object):
     @cached_property
     def apc_journals(self):
         if self.data["apc"]:
-            return get_fresh_apc_journal_list(self.data["apc"]["df"].issn_l.unique(), self)
+            df = pd.DataFrame(self.data["apc"])
+            # df["apc"] = df["apc"].astype(float)
+            df["year"] = df["year"].astype(int)
+            df["authorship_fraction"] = df.num_authors_from_uni/df.num_authors_total
+            df["apc_fraction"] = df["apc"].astype(float) * df["authorship_fraction"]
+            df_by_issn_l_and_year = df.groupby(["issn_l", "year"]).apc_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'size': 'num_papers', "sum": "dollars"})
+            my_dict = {"df": df, "df_by_issn_l_and_year": df_by_issn_l_and_year}
+            return get_fresh_apc_journal_list(my_dict["df"].issn_l.unique(), self)
         return []
 
     @cached_property
@@ -774,18 +756,8 @@ def get_apc_data_from_db(input_package_id):
         cursor.execute(command)
         rows = cursor.fetchall()
 
-    if rows:
-        df = pd.DataFrame(rows)
-        # df["apc"] = df["apc"].astype(float)
-        df["year"] = df["year"].astype(int)
-        df["authorship_fraction"] = df.num_authors_from_uni/df.num_authors_total
-        df["apc_fraction"] = df["apc"].astype(float) * df["authorship_fraction"]
-        df_by_issn_l_and_year = df.groupby(["issn_l", "year"]).apc_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'size': 'num_papers', "sum": "dollars"})
-        my_dict = {"df": df, "df_by_issn_l_and_year": df_by_issn_l_and_year}
-    else:
-        my_dict = None
+    return rows
 
-    return my_dict
 
 
 @cache
@@ -892,3 +864,63 @@ def get_oa_adjustment_data_from_db():
         lookup_dict[row["issn_l"]] = row
     return lookup_dict
 
+
+@cache
+def get_common_package_data(package_id):
+    my_timing = TimingMessages()
+
+    # package_id specific
+    my_data = {}
+    org_package_ids = get_consortium_package_ids(package_id)
+    if org_package_ids:
+        my_data["org_package_ids"] = org_package_ids
+    else:
+        my_data["org_package_ids"] = [package_id]
+    my_timing.log_timing("get_consortium_package_ids")
+
+    for org_package_id in my_data["org_package_ids"]:
+        my_data[org_package_id] = get_package_specific_scenario_data_from_db(org_package_id)
+        my_timing.log_timing("get_package_specific_scenario_data_from_db")
+
+    my_data["apc"] = get_apc_data_from_db(package_id)  # gets everything from consortium itself
+    my_timing.log_timing("get_apc_data_from_db")
+
+    # not package_id specific
+
+    my_data["embargo_dict"] = get_embargo_data_from_db()
+    my_timing.log_timing("get_embargo_data_from_db")
+
+    my_data["unpaywall_downloads_dict"] = get_unpaywall_downloads_from_db()
+    my_timing.log_timing("get_unpaywall_downloads_from_db")
+
+    my_data["oa"] = get_oa_data_from_db()
+    my_timing.log_timing("get_oa_data_from_db")
+
+    my_data["oa_recent"] = get_oa_recent_data_from_db()
+    my_timing.log_timing("get_oa_data_from_db")
+
+    my_data["social_networks"] = get_social_networks_data_from_db()
+    my_timing.log_timing("get_social_networks_data_from_db")
+
+    my_data["oa_adjustment"] = get_oa_adjustment_data_from_db()
+    my_timing.log_timing("get_oa_adjustment_data_from_db")
+
+    my_data["society"] = get_society_data_from_db()
+    my_timing.log_timing("get_society_data_from_db")
+
+    my_data["_timing"] = my_timing.to_dict()
+
+    return my_data
+
+
+@cache
+def get_common_package_data_from_cache(package_id):
+    package_id_in_cache = package_id
+    if package_id.startswith("demo") or package_id==DEMO_PACKAGE_ID:
+        package_id_in_cache = DEMO_PACKAGE_ID
+
+    r = requests.get("https://cdn.unpaywalljournals.org/data/common/{}?secret={}".format(
+        package_id_in_cache, os.getenv("JWT_SECRET_KEY")))
+    if r.status_code == 200:
+        return r.json()
+    return None

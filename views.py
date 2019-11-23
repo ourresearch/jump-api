@@ -29,6 +29,8 @@ from account import Account
 from package import Package
 from saved_scenario import SavedScenario
 from saved_scenario import get_latest_scenario
+from scenario import get_common_package_data
+from scenario import get_clean_package_id
 from util import jsonify_fast
 from util import jsonify_fast_no_sort
 from util import str2bool
@@ -37,14 +39,6 @@ from util import abort_json
 from util import safe_commit
 from util import TimingMessages
 from util import get_ip
-
-def get_clean_package_id(http_request_args):
-    if not http_request_args:
-        return "658349d9"
-    package_id = http_request_args.get("package", "demo")
-    if package_id == "demo" or package_id == "uva_elsevier":
-        package_id = "658349d9"
-    return package_id
 
 
 # warm the cache
@@ -235,6 +229,16 @@ def jump_issn_get(issn_l):
     scenario = Scenario(package, scenario_input)
     my_journal = scenario.get_journal(issn_l)
     return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
+
+@app.route('/data/common/<package_id>', methods=['GET'])
+def jump_data_package_id_get(package_id):
+    secret = request.args.get('secret', None)
+    if not safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
+        abort_json(500, "Secret doesn't match, not saving user in database")
+
+    response = get_common_package_data(package_id)
+
+    return jsonify_fast_no_sort(response)
 
 
 @app.route("/scenario/export.csv", methods=["GET"])

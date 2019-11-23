@@ -8,6 +8,7 @@ import shortuuid
 from app import db
 from app import get_db_cursor
 from scenario import Scenario
+from scenario import DEMO_PACKAGE_ID
 
 
 def get_latest_scenario(scenario_id):
@@ -15,7 +16,7 @@ def get_latest_scenario(scenario_id):
     if my_saved_scenario:
         package_id = my_saved_scenario.package_id
     else:
-        package_id = "658349d9"
+        package_id = DEMO_PACKAGE_ID
 
     if scenario_id.startswith("demo"):
         tablename = "jump_scenario_details_demo"
