@@ -67,7 +67,11 @@ class ApcJournal(object):
 
     @cached_property
     def apc_2019(self):
-        return self.first_df["apc"]
+        try:
+            response = int(self.first_df.get("apc", None))
+        except ValueError:
+            response = None
+        return response
 
     @cached_property
     def num_apc_papers_historical_by_year(self):
@@ -120,7 +124,7 @@ class ApcJournal(object):
         table_row = OrderedDict()
         table_row["oa_status"] = self.oa_status
         if self.apc_2019:
-            table_row["apc_price"] = round(self.apc_2019)
+            table_row["apc_price"] = self.apc_2019
         else:
             table_row["apc_price"] = None
         table_row["fractional_authorship"] = round(self.fractional_authorships_total, 1)
