@@ -12,6 +12,7 @@ import os
 
 from app import use_groups
 from app import get_db_cursor
+from app import DEMO_PACKAGE_ID
 from time import time
 from util import elapsed
 from util import for_sorting
@@ -22,11 +23,10 @@ from consortium_journal import ConsortiumJournal
 from apc_journal import ApcJournal
 from assumptions import Assumptions
 
-DEMO_PACKAGE_ID = "658349d9"
 def get_clean_package_id(http_request_args):
     if not http_request_args:
         return DEMO_PACKAGE_ID
-    package_id = http_request_args.get("package", "demo")
+    package_id = http_request_args.get("package", DEMO_PACKAGE_ID)
     if package_id == "demo" or package_id == "uva_elsevier":
         package_id = DEMO_PACKAGE_ID
     return package_id
@@ -60,17 +60,16 @@ class Scenario(object):
         self.settings = Assumptions(http_request_args)
         self.starting_subscriptions = []
         self.is_consortium = False
-        self.package_id = package_id
+        self.package_id = get_clean_package_id({"package": package_id})
 
         if http_request_args:
             self.starting_subscriptions += http_request_args.get("subrs", []) + http_request_args.get("customSubrs", [])
 
-        if get_consortium_package_ids(package_id):
+        if get_consortium_package_ids(self.package_id):
             self.is_consortium = True
 
-        print "getting data using package_id", package_id
 
-        self.data = get_common_package_data_from_cache(package_id)
+        self.data = get_common_package_data_from_cache(self.package_id)
 
         self.journals = get_fresh_journal_list(self.data["unpaywall_downloads_dict"].keys(), self)
         self.log_timing("mint regular journals")
@@ -897,7 +896,7 @@ def get_common_package_data(package_id):
     my_timing.log_timing("get_oa_data_from_db")
 
     my_data["oa_recent"] = get_oa_recent_data_from_db()
-    my_timing.log_timing("get_oa_data_from_db")
+    my_timing.log_timing("get_oa_recent_data_from_db")
 
     my_data["social_networks"] = get_social_networks_data_from_db()
     my_timing.log_timing("get_social_networks_data_from_db")
@@ -923,4 +922,5 @@ def get_common_package_data_from_cache(package_id):
         package_id_in_cache, os.getenv("JWT_SECRET_KEY")))
     if r.status_code == 200:
         return r.json()
-    return None
+
+    return get_common_package_data(package_id_in_cache)

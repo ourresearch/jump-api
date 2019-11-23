@@ -3,6 +3,7 @@
 from cached_property import cached_property
 import numpy as np
 
+from app import DEMO_PACKAGE_ID
 from util import str2bool
 
 class Assumptions(object):
@@ -19,7 +20,7 @@ class Assumptions(object):
         self.include_submitted_version = True
         self.include_social_networks = True
         self.include_backfile = True
-        self.package = "demo"  # remove after API not counting on it
+        self.package = DEMO_PACKAGE_ID  # remove after API not counting on it
 
         if http_request_args:
             if "configs" in http_request_args:
@@ -29,7 +30,7 @@ class Assumptions(object):
                 if input_key not in ["jwt"]:
                     value = http_request_args.get(input_key)
                     self.set_assumption(input_key, value)
-            self.package = http_request_args.get("package", "demo")  # so get demo if that's what was used
+            self.package = http_request_args.get("package", DEMO_PACKAGE_ID)  # so get demo if that's what was used
 
     def set_assumption(self, key, value):
         if key.startswith("include_"):
