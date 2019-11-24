@@ -24,6 +24,10 @@ import csv
 from flask import current_app
 from simplejson import dumps
 import locale
+from werkzeug.wsgi import ClosingIterator
+import traceback
+from threading import Thread
+
 
 try:
     locale.setlocale(locale.LC_ALL, 'en_US.UTF-8') #use locale.format for commafication
@@ -797,4 +801,47 @@ def get_ip(request):
     else:
        ip = request.remote_addr
     return ip
+
+# this is to support fully after-flask response sent efforts
+# from # https://stackoverflow.com/a/51013358/596939
+# use like
+# @app.after_response
+# def say_hi():
+#     print("hi")
+class AfterResponse:
+    def __init__(self, app=None):
+        self.callbacks = []
+        if app:
+            self.init_app(app)
+
+    def __call__(self, callback):
+        self.callbacks.append(callback)
+        return callback
+
+    def init_app(self, app):
+        # install extension
+        app.after_response = self
+
+        # install middleware
+        app.wsgi_app = AfterResponseMiddleware(app.wsgi_app, self)
+
+    def flush(self):
+        for fn in self.callbacks:
+            try:
+                fn()
+            except Exception:
+                traceback.print_exc()
+
+class AfterResponseMiddleware:
+    def __init__(self, application, after_response_ext):
+        self.application = application
+        self.after_response_ext = after_response_ext
+
+    def __call__(self, environ, after_response):
+        iterator = self.application(environ, after_response)
+        try:
+            return ClosingIterator(iterator, [self.after_response_ext.flush])
+        except Exception:
+            traceback.print_exc()
+            return iterator
 
