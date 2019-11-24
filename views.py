@@ -57,7 +57,7 @@ def after_request_stuff(resp):
     resp.headers['Access-Control-Allow-Origin'] = "*"
     resp.headers['Access-Control-Allow-Methods'] = "POST, GET, OPTIONS, PUT, DELETE, PATCH"
     resp.headers['Access-Control-Allow-Headers'] = "Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control"
-    resp.headers['Access-Control-Expose-Headers'] = "Authorization"
+    resp.headers['Access-Control-Expose-Headers'] = "Authorization, Cache-Control"
     resp.headers['Access-Control-Allow-Credentials'] = "true"
 
     # make cacheable
