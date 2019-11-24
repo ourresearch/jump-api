@@ -1,16 +1,6 @@
 # coding: utf-8
 
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from flask_compress import Compress
-from flask_debugtoolbar import DebugToolbarExtension
-from flask_jwt_extended import JWTManager
-
-from sqlalchemy import exc
-from sqlalchemy import event
-from sqlalchemy.pool import NullPool
-from sqlalchemy.pool import Pool
-
+import traceback
 import logging
 import sys
 import os
@@ -24,6 +14,16 @@ import psycopg2.extras # needed though you wouldn't guess it
 from psycopg2.pool import ThreadedConnectionPool
 from contextlib import contextmanager
 from collections import OrderedDict
+
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_compress import Compress
+from flask_debugtoolbar import DebugToolbarExtension
+from flask_jwt_extended import JWTManager
+from sqlalchemy import exc
+from sqlalchemy import event
+from sqlalchemy.pool import NullPool
+from sqlalchemy.pool import Pool
 
 from util import safe_commit
 from util import elapsed
@@ -151,6 +151,7 @@ def get_db_cursor(commit=False):
       finally:
           cursor.close()
           pass
+
 
 use_groups_lookup = OrderedDict()
 use_groups_lookup["oa"] = {"display": "OA", "free_instant": True}

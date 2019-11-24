@@ -15,10 +15,13 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import simplejson as json
 import os
 import sys
+from time import sleep
 from time import time
 import unicodecsv as csv
 import shortuuid
 import datetime
+from threading import Thread
+import requests
 
 from app import app
 from app import logger
@@ -53,9 +56,14 @@ def after_request_stuff(resp):
     #support CORS
     resp.headers['Access-Control-Allow-Origin'] = "*"
     resp.headers['Access-Control-Allow-Methods'] = "POST, GET, OPTIONS, PUT, DELETE, PATCH"
-    resp.headers['Access-Control-Allow-Headers'] = "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+    resp.headers['Access-Control-Allow-Headers'] = "Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control"
     resp.headers['Access-Control-Expose-Headers'] = "Authorization"
     resp.headers['Access-Control-Allow-Credentials'] = "true"
+
+    # make cacheable
+    resp.cache_control.max_age = 300
+    resp.cache_control.public = True
+
     return resp
 
 
@@ -65,6 +73,7 @@ def base_endpoint():
         "version": "0.0.1",
         "msg": "Don't panic"
     })
+
 
 # @app.route('/favicon.ico')
 # def favicon():
@@ -285,6 +294,7 @@ def login():
     if not password:
         return abort_json(400, "Missing password parameter")
 
+    my_timing.log_timing("before db get for account")
     my_account = Account.query.filter(Account.username == username).first()
     my_timing.log_timing("after db get for account")
 
@@ -318,6 +328,20 @@ def protected():
     identity_dict = get_jwt_identity()
     return jsonify({"logged_in_as": identity_dict["account_id"]})
 
+
+# from https://stackoverflow.com/a/51480061/596939
+class RunAsyncToRequestResponse(Thread):
+    def __init__(self, url_end):
+        Thread.__init__(self)
+        self.url_end = url_end
+
+    def run(self):
+        url = u"https://cdn.unpaywalljournals.org/{}".format(self.url_end)
+        print u"starting cache request for {}".format(url)
+        r = requests.get(url)
+        print u"cache request status code {} for {}".format(r.status_code, url)
+
+
 @app.route('/account', methods=['GET'])
 @jwt_required
 def account_get():
@@ -340,6 +364,13 @@ def account_get():
     return jsonify_fast(account_dict)
 
 
+def get_jwt():
+    if request.args and request.arg.get("jwt", None):
+        return request.arg.get("jwt")
+    if request.headers["Authorization"] and "Bearer " in request.headers["Authorization"]:
+        return request.headers["Authorization"].replace("Bearer ", "")
+    return None
+
 @app.route('/package/<package_id>', methods=['GET'])
 @jwt_required
 def package_id_get(package_id):
@@ -360,6 +391,17 @@ def package_id_get(package_id):
         abort_json(401, "Not authorized to view this package")
 
     my_timing.log_timing("after getting package")
+
+    my_jwt = get_jwt()
+
+    RunAsyncToRequestResponse("package/{}?jwt={}".format(package_id, my_jwt)).start()
+    for scenario in my_package.unique_saved_scenarios:
+        RunAsyncToRequestResponse("scenario/{}?jwt={}".format(scenario.scenario_id, my_jwt)).start()
+        RunAsyncToRequestResponse("scenario/{}/slider?jwt={}".format(scenario.scenario_id, my_jwt)).start()
+        RunAsyncToRequestResponse("scenario/{}/table?jwt={}".format(scenario.scenario_id, my_jwt)).start()
+        RunAsyncToRequestResponse("scenario/{}/apc?jwt={}".format(scenario.scenario_id, my_jwt)).start()
+
+    my_timing.log_timing("after kicking off cache requests")
 
     package_dict = my_package.to_dict_summary()
     package_dict["scenarios"] = [scenario.to_dict_definition() for scenario in my_package.unique_saved_scenarios]
