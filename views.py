@@ -338,8 +338,9 @@ class RunAsyncToRequestResponse(Thread):
     def run(self):
         url = u"https://cdn.unpaywalljournals.org/{}".format(self.url_end)
         print u"starting cache request for {}".format(url)
-        r = requests.get(url)
-        print u"cache request status code {} for {}".format(r.status_code, url)
+        headers = {"Cache-Control": "public, max-age=31536000"}
+        r = requests.get(url, headers=headers)
+        print u"cache request status code {} for {}".format(r.status_code, self.url_end.split("?")[0])
 
 
 @app.route('/account', methods=['GET'])
