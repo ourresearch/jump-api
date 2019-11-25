@@ -365,8 +365,8 @@ def account_get():
 
 
 def get_jwt():
-    if request.args and request.arg.get("jwt", None):
-        return request.arg.get("jwt")
+    if request.args and request.args.get("jwt", None):
+        return request.args.get("jwt")
     if request.headers["Authorization"] and "Bearer " in request.headers["Authorization"]:
         return request.headers["Authorization"].replace("Bearer ", "")
     return None
