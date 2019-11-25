@@ -42,11 +42,14 @@ class Package(db.Model):
 
     @property
     def has_counter_data(self):
-        return self.num_journals > 0
+        # TODO
+        return True
 
     @property
     def num_journals(self):
-        return len(self.saved_scenarios[0].journals)
+        # TODO
+        return 1850
+        # return len(self.saved_scenarios[0].journals)
 
     @property
     def num_perpetual_access_journals(self):
@@ -54,12 +57,13 @@ class Package(db.Model):
         return self.num_journals
 
     def to_dict_summary(self):
+
         return {
                 "id": self.package_id,
                 "name": self.package_name,
                 "hasCounterData": self.has_counter_data,
                 "numJournals": self.num_journals,
-                "numPerpAccessJournals": self.num_perpetual_access_journals
+                "numPerpAccessJournals": self.num_perpetual_access_journals,
         }
 
     def __repr__(self):
