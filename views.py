@@ -406,8 +406,9 @@ def package_id_get(package_id):
     my_timing.log_timing("after kicking off cache requests")
 
     package_dict = my_package.to_dict_summary()
+    my_timing.log_timing("after my_package.to_dict_summary()")
     package_dict["scenarios"] = [scenario.to_dict_definition() for scenario in my_package.unique_saved_scenarios]
-    my_timing.log_timing("after to_dict()")
+    my_timing.log_timing("after scenarios()")
     package_dict["_timing"] = my_timing.to_dict()
 
     return jsonify_fast(package_dict)

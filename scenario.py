@@ -920,8 +920,10 @@ def get_common_package_data_from_cache(package_id):
     if package_id.startswith("demo") or package_id==DEMO_PACKAGE_ID:
         package_id_in_cache = DEMO_PACKAGE_ID
 
-    r = requests.get("https://cdn.unpaywalljournals.org/data/common/{}?secret={}".format(
-        package_id_in_cache, os.getenv("JWT_SECRET_KEY")))
+    url = "https://cdn.unpaywalljournals.org/data/common/{}?secret={}".format(
+        package_id_in_cache, os.getenv("JWT_SECRET_KEY"))
+    headers = {"Cache-Control": "public, max-age=31536000"}
+    r = requests.get(url, headers=headers)
     if r.status_code == 200:
         return r.json()
 
