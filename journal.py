@@ -25,10 +25,11 @@ class Journal(object):
         # "oa": [1.16, 1.24, 1.57, 1.83, 2.12]
     }
     
-    def __init__(self, issn_l, scenario_data=None, scenario=None):
+    def __init__(self, issn_l, scenario=None, scenario_data=None, package_id=None):
         self.set_scenario(scenario)
         self.set_scenario_data(scenario_data)
         self.issn_l = issn_l
+        self.package_id = package_id
         self.subscribed = False
         self.use_default_download_curve = False
 
@@ -43,7 +44,7 @@ class Journal(object):
     def set_scenario_data(self, scenario_data):
         self._scenario_data = scenario_data
 
-    @property
+    @cached_property
     def my_scenario_data_row(self):
         return self._scenario_data["unpaywall_downloads_dict"][self.issn_l]
 
@@ -465,16 +466,18 @@ class Journal(object):
         for group in use_groups:
             my_dict[group] = [0 for year in self.years]
 
-        # true regardless
-        for group in use_groups_free_instant + ["total"]:
-            my_dict[group] = self.__getattribute__("downloads_{}_by_year".format(group))
+        # include the if to skip this if no useage
+        if self.downloads_total:
+            # true regardless
+            for group in use_groups_free_instant + ["total"]:
+                my_dict[group] = self.__getattribute__("downloads_{}_by_year".format(group))
 
-        # depends
-        if self.subscribed:
-            my_dict["subscription"] = self.downloads_subscription_by_year
-        else:
-            my_dict["ill"] = self.downloads_ill_by_year
-            my_dict["other_delayed"] = self.downloads_other_delayed_by_year
+            # depends
+            if self.subscribed:
+                my_dict["subscription"] = self.downloads_subscription_by_year
+            else:
+                my_dict["ill"] = self.downloads_ill_by_year
+                my_dict["other_delayed"] = self.downloads_other_delayed_by_year
 
         return my_dict
 
@@ -492,9 +495,12 @@ class Journal(object):
     @cached_property
     def use_addition_from_weights(self):
         # using the average on purpose... by year too rough
-        weights_addition = float(self.settings.weight_citation) * self.num_citations
-        weights_addition += float(self.settings.weight_authorship) * self.num_authorships
-        weights_addition = round(weights_addition, 4)
+        weights_addition = 0
+        # the if is to help speed it up
+        if self.num_citations or self.num_authorships:
+            weights_addition = float(self.settings.weight_citation) * self.num_citations
+            weights_addition += float(self.settings.weight_authorship) * self.num_authorships
+            weights_addition = round(weights_addition, 4)
         return weights_addition
 
     @cached_property
@@ -724,7 +730,7 @@ class Journal(object):
                     "subject": self.subject,
                     "subscribed": self.subscribed}
         table_row = OrderedDict()
-        if self.cppu_use:
+        if self.ncppu:
             table_row["ncppu"] = self.ncppu
         else:
             table_row["ncppu"] = "no paywalled usage"
@@ -747,7 +753,7 @@ class Journal(object):
         table_row = OrderedDict()
 
         # table
-        if self.cppu_use:
+        if self.ncppu:
             table_row["ncppu"] = self.ncppu
         else:
             table_row["ncppu"] = "no paywalled usage"
@@ -796,7 +802,7 @@ class Journal(object):
                     "subject": self.subject,
                     "subscribed": self.subscribed}
         table_row = OrderedDict()
-        if self.cppu_use:
+        if self.ncppu:
             table_row["ncppu"] = round(self.ncppu, 2)
         else:
             table_row["ncppu"] = "no paywalled usage"
@@ -843,7 +849,7 @@ class Journal(object):
                 "cost_ill": format_currency(self.cost_ill),
                 "cost_actual": format_currency(self.cost_actual),
                 "cost_subscription_minus_ill": format_currency(self.cost_subscription_minus_ill),
-                "cppu": format_currency(self.cppu_use, True),
+                "ncppu": format_currency(self.ncppu, True),
                 "use_instant_percent": self.use_instant_percent,
                 "api_journal_raw_default_settings": "https://unpaywall-jump-api.herokuapp.com/journal/issn_l/{}?email=YOUR_EMAIL_ADDRESS".format(self.issn_l)
         }
@@ -1035,15 +1041,11 @@ class Journal(object):
                 "title": self.title,
                 "subject": self.subject,
                 "downloads_total": self.downloads_total,
-                "use_total": self.use_total, # replace with above
+                "use_total": self.use_total,
                 "cost_subscription": self.cost_subscription,
                 "cost_ill": self.cost_ill,
                 "cost_subscription_minus_ill": self.cost_subscription_minus_ill,
-                "cppu_use_delta": self.ncppu,  #use below
-                "cppu_delta_weighted": self.ncppu, # replace with above
-                "ncppu": self.ncppu, # use this to replace the two above it
-                "cppu_use": self.cppu_use,
-                "cppu_weighted": self.cppu_use, # replace with above
+                "ncppu": self.ncppu,
                 "subscribed": self.subscribed,
                 "use_instant": self.use_instant,
                 "use_instant_percent": self.use_instant_percent,
@@ -1064,16 +1066,12 @@ class Journal(object):
                 "num_citations": self.num_citations,
                 "downloads_paywalled": self.downloads_paywalled,
                 "use_paywalled": self.use_paywalled,
-                "use_paywalled_weighted": self.use_paywalled, # replace with above
                 "use_instant": self.use_instant,
                 "downloads_total": self.downloads_total,
                 "cost_subscription": self.cost_subscription,
                 "cost_ill": self.cost_ill,
                 "cost_subscription_minus_ill": self.cost_subscription_minus_ill,
-                "cppu_use_delta": self.ncppu,
-                "ncppu": self.ncppu,  #replace above with this
-                "cppu_downloads": self.cppu_downloads,
-                "cppu_use": self.cppu_use,
+                "ncppu": self.ncppu,
                 "subscribed": self.subscribed
                 }
 

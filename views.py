@@ -407,7 +407,7 @@ def package_id_get(package_id):
 
     package_dict = my_package.to_dict_summary()
     my_timing.log_timing("after my_package.to_dict_summary()")
-    package_dict["scenarios"] = [scenario.to_dict_definition() for scenario in my_package.unique_saved_scenarios]
+    package_dict["scenarios"] = [saved_scenario.to_dict_definition() for saved_scenario in my_package.unique_saved_scenarios]
     my_timing.log_timing("after scenarios()")
     package_dict["_timing"] = my_timing.to_dict()
 
@@ -427,7 +427,11 @@ def get_saved_scenario(scenario_id):
         abort_json(404, "Scenario not found")
 
     if my_saved_scenario.package_real.account_id != identity_dict["account_id"]:
-        abort_json(401, "Not authorized to view this package")
+        if not my_saved_scenario.package_real.consortium_package_id:
+            abort_json(401, "Not authorized to view this package")
+        consortium_package = Package.query.filter(Package.package_id==my_saved_scenario.package_real.consortium_package_id).first()
+        if consortium_package.account_id != identity_dict["account_id"]:
+            abort_json(401, "Not authorized to view this package")
 
     my_saved_scenario.set_live_scenario()
     return my_saved_scenario

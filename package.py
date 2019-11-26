@@ -17,6 +17,7 @@ class Package(db.Model):
     package_id = db.Column(db.Text, primary_key=True)
     publisher = db.Column(db.Text)
     package_name = db.Column(db.Text)
+    consortium_package_id = db.Column(db.Text)
     created = db.Column(db.DateTime)
     saved_scenarios = db.relationship('SavedScenario', lazy='subquery', backref=db.backref("package", lazy="subquery"))
 
