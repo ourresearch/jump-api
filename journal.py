@@ -71,7 +71,8 @@ class Journal(object):
     @cached_property
     def num_citations_historical_by_year(self):
         my_dict = self._scenario_data[self.package_id]["citation_dict"].get(self.issn_l, {})
-        return [my_dict.get(year, 0) for year in self.historical_years_by_year]
+        # the year is a string key alas
+        return [my_dict.get(str(year), 0) for year in self.historical_years_by_year]
 
     @cached_property
     def num_citations(self):
@@ -80,7 +81,8 @@ class Journal(object):
     @cached_property
     def num_authorships_historical_by_year(self):
         my_dict = self._scenario_data[self.package_id]["authorship_dict"].get(self.issn_l, {})
-        return [my_dict.get(year, 0) for year in self.historical_years_by_year]
+        # the year is a string key alas
+        return [my_dict.get(str(year), 0) for year in self.historical_years_by_year]
 
     @cached_property
     def num_authorships(self):
