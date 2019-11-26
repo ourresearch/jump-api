@@ -243,7 +243,7 @@ def jump_issn_get(issn_l):
 def jump_data_package_id_get(package_id):
     secret = request.args.get('secret', None)
     if not safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
-        abort_json(500, "Secret doesn't match, not saving user in database")
+        abort_json(500, "Secret doesn't match, getting package")
 
     response = get_common_package_data(package_id)
 
