@@ -708,7 +708,7 @@ def get_package_specific_scenario_data_from_db(input_package_id):
         citation_rows = cursor.fetchall()
     citation_dict = defaultdict(dict)
     for row in citation_rows:
-        citation_dict[row["issn_l"]][round(row["year"])] = round(row["num_citations"])
+        citation_dict[row["issn_l"]][int(row["year"])] = round(row["num_citations"])
 
     timing.append(("time from db: citation_rows", elapsed(section_time, 2)))
     section_time = time()
@@ -727,7 +727,7 @@ def get_package_specific_scenario_data_from_db(input_package_id):
         authorship_rows = cursor.fetchall()
     authorship_dict = defaultdict(dict)
     for row in authorship_rows:
-        authorship_dict[row["issn_l"]][round(row["year"])] = round(row["num_authorships"])
+        authorship_dict[row["issn_l"]][int(row["year"])] = round(row["num_authorships"])
 
     timing.append(("time from db: authorship_rows", elapsed(section_time, 2)))
     section_time = time()
@@ -926,6 +926,8 @@ def get_common_package_data_from_cache(package_id):
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
         data = r.json()
+        print u"success in get_common_package_data_from_cache with {}".format(url)
     else:
         data = get_common_package_data(package_id_in_cache)
+        print u"not success in get_common_package_data_from_cache with {}, had to build locally".format(url)
     return data
