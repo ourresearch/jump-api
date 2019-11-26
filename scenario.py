@@ -36,11 +36,9 @@ def get_fresh_journal_list(issn_ls, scenario):
     journals_to_exclude = ["0370-2693"]
     if scenario.is_consortium:
         org_package_ids = scenario.data["org_package_ids"]
-        journals = [ConsortiumJournal(issn_l, org_package_ids) for issn_l in issn_ls if issn_l not in journals_to_exclude]
+        journals = [ConsortiumJournal(issn_l, org_package_ids, scenario.package_id) for issn_l in issn_ls if issn_l not in journals_to_exclude]
     else:
-        journals = [Journal(issn_l) for issn_l in issn_ls if issn_l not in journals_to_exclude]
-        for journal in journals:
-            journal.package_id = scenario.package_id
+        journals = [Journal(issn_l, package_id=scenario.package_id) for issn_l in issn_ls if issn_l not in journals_to_exclude]
     return journals
 
 def get_fresh_apc_journal_list(issn_ls, scenario):
@@ -68,8 +66,10 @@ class Scenario(object):
         if get_consortium_package_ids(self.package_id):
             self.is_consortium = True
 
+        self.log_timing("setup")
 
         self.data = get_common_package_data_from_cache(self.package_id)
+        self.log_timing("get_common_package_data_from_cache")
 
         self.journals = get_fresh_journal_list(self.data["unpaywall_downloads_dict"].keys(), self)
         self.log_timing("mint regular journals")
@@ -925,6 +925,7 @@ def get_common_package_data_from_cache(package_id):
     headers = {"Cache-Control": "public, max-age=31536000"}
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
-        return r.json()
-
-    return get_common_package_data(package_id_in_cache)
+        data = r.json()
+    else:
+        data = get_common_package_data(package_id_in_cache)
+    return data
