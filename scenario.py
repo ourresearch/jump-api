@@ -917,7 +917,7 @@ def get_common_package_data(package_id):
 @cache
 def get_common_package_data_from_cache(package_id):
     package_id_in_cache = package_id
-    if package_id.startswith("demo") or package_id==DEMO_PACKAGE_ID:
+    if not package_id or package_id.startswith("demo") or package_id==DEMO_PACKAGE_ID:
         package_id_in_cache = DEMO_PACKAGE_ID
 
     url = "https://cdn.unpaywalljournals.org/data/common/{}?secret={}".format(
