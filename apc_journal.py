@@ -69,7 +69,7 @@ class ApcJournal(object):
     def apc_2019(self):
         try:
             response = int(self.first_df.get("apc", None))
-        except ValueError:
+        except (ValueError, TypeError):
             response = None
         return response
 
