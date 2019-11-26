@@ -433,7 +433,8 @@ def get_saved_scenario(scenario_id):
         if consortium_package.account_id != identity_dict["account_id"]:
             abort_json(401, "Not authorized to view this package")
 
-    my_saved_scenario.set_live_scenario()
+    my_saved_scenario.set_live_scenario(get_jwt())
+
     return my_saved_scenario
 
 
@@ -517,6 +518,18 @@ def scenario_id_overview_get(scenario_id):
     my_timing.log_timing("after to_dict()")
     response["_timing"] = my_timing.to_dict()
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_overview(pagesize))
+
+@app.route('/scenario/<scenario_id>/raw', methods=['GET', 'POST'])
+@jwt_required
+def scenario_id_raw_get(scenario_id):
+    pagesize = int(request.args.get("pagesize", 5000))
+    my_timing = TimingMessages()
+    my_saved_scenario = get_saved_scenario(scenario_id)
+    my_timing.log_timing("after setting live scenario")
+    response = my_saved_scenario.to_dict_definition()
+    my_timing.log_timing("after to_dict()")
+    response["_timing"] = my_timing.to_dict()
+    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_raw(pagesize))
 
 @app.route('/scenario/<scenario_id>/table', methods=['GET', 'POST'])
 @jwt_required

@@ -11,7 +11,7 @@ from scenario import Scenario
 from app import DEMO_PACKAGE_ID
 
 
-def get_latest_scenario(scenario_id):
+def get_latest_scenario(scenario_id, my_jwt=None):
     my_saved_scenario = SavedScenario.query.get(scenario_id)
     if my_saved_scenario:
         package_id = my_saved_scenario.package_id
@@ -36,7 +36,7 @@ def get_latest_scenario(scenario_id):
     if rows:
         scenario_data = json.loads(rows[0]["scenario_json"])
 
-    my_scenario = Scenario(package_id, scenario_data)
+    my_scenario = Scenario(package_id, scenario_data, my_jwt=my_jwt)
     return my_scenario
 
 
@@ -88,10 +88,11 @@ class SavedScenario(db.Model):
     def journals(self):
         return self.set_live_scenario().journals
 
-    def set_live_scenario(self):
+    def set_live_scenario(self, my_jwt=None):
         if not hasattr(self, "live_scenario") or not self.live_scenario:
-            self.live_scenario = get_latest_scenario(self.scenario_id)
+            self.live_scenario = get_latest_scenario(self.scenario_id, my_jwt)
         self.live_scenario.package_id = self.package_id
+        self.live_scenario.jwt = my_jwt
         return self.live_scenario
 
     def to_dict_definition(self):
