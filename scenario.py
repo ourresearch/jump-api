@@ -19,7 +19,7 @@ from util import for_sorting
 from util import TimingMessages
 
 from journal import Journal
-from consortium_journal import ConsortiumJournal
+from consortium import Consortium
 from apc_journal import ApcJournal
 from assumptions import Assumptions
 
@@ -32,14 +32,21 @@ def get_clean_package_id(http_request_args):
     return package_id
 
 
-def get_fresh_journal_list(issn_ls, scenario):
+def get_fresh_journal_list(scenario, my_jwt):
     journals_to_exclude = ["0370-2693"]
+    issn_ls = scenario.data["unpaywall_downloads_dict"].keys()
+    issnls_to_build = [issn_l for issn_l in issn_ls if issn_l not in journals_to_exclude]
     if scenario.is_consortium:
-        org_package_ids = scenario.data["org_package_ids"]
-        journals = [ConsortiumJournal(issn_l, org_package_ids, scenario.package_id) for issn_l in issn_ls if issn_l not in journals_to_exclude]
+        my_consortium = Consortium(scenario.package_id, my_jwt)
+        journals = my_consortium.journals
     else:
-        journals = [Journal(issn_l, package_id=scenario.package_id) for issn_l in issn_ls if issn_l not in journals_to_exclude]
+        journals = [Journal(issn_l, package_id=scenario.package_id) for issn_l in issnls_to_build]
+
+    for my_journal in journals:
+        my_journal.set_scenario(scenario)
+
     return journals
+
 
 def get_fresh_apc_journal_list(issn_ls, scenario):
     return [ApcJournal(issn_l, scenario.data, scenario) for issn_l in issn_ls]
@@ -52,7 +59,7 @@ class Scenario(object):
         self.timing_messages.append("{: <30} {: >6}s".format(message, elapsed(self.section_time, 2)))
         self.section_time = time()
         
-    def __init__(self, package_id, http_request_args=None):
+    def __init__(self, package_id, http_request_args=None, my_jwt=None):
         self.timing_messages = []; 
         self.section_time = time()        
         self.settings = Assumptions(http_request_args)
@@ -71,14 +78,13 @@ class Scenario(object):
         self.data = get_common_package_data_from_cache(self.package_id)
         self.log_timing("get_common_package_data_from_cache")
 
-        self.journals = get_fresh_journal_list(self.data["unpaywall_downloads_dict"].keys(), self)
+        self.journals = get_fresh_journal_list(self, my_jwt)
         self.log_timing("mint regular journals")
-        [j.set_scenario(self) for j in self.journals]
-        self.log_timing("set self in journals")
-        [j.set_scenario_data(self.data) for j in self.journals]
-        self.log_timing("set data in journals")
 
-        self.log_timing("make all journals")
+        if not self.is_consortium:
+            [j.set_scenario_data(self.data) for j in self.journals]
+            self.log_timing("set data in journals")
+
         for journal in self.journals:
             if journal.issn_l in self.starting_subscriptions:
                 journal.set_subscribe()
@@ -183,13 +189,12 @@ class Scenario(object):
     def use_paywalled(self):
         return self.use_actual["subscription"] + self.use_actual["ill"] + self.use_actual["other_delayed"]
 
-    @cached_property
-    def cppu(self):
-        return round(self.cost / self.use_paywalled, 2)
 
     @cached_property
     def ncppu(self):
-        return round(self.cost / self.use_paywalled, 2)
+        if self.use_paywalled:
+            return round(self.cost / self.use_paywalled, 2)
+        return None
 
     @cached_property
     def cost_ill(self):
@@ -517,6 +522,17 @@ class Scenario(object):
 
                 ],
                 "journals": [j.to_dict_table() for j in self.journals_sorted_ncppu[0:pagesize]],
+            }
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
+        return response
+
+
+    def to_dict_raw(self, pagesize):
+        response = {
+                "_settings": self.settings.to_dict(),
+                "_summary": self.to_dict_summary_dict(),
+                "journals": [j.to_dict_raw() for j in self.journals_sorted_ncppu[0:pagesize]],
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
@@ -926,7 +942,7 @@ def get_common_package_data_from_cache(package_id):
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
         data = r.json()
-        print u"success in get_common_package_data_from_cache with {}".format(url)
+        # print u"success in get_common_package_data_from_cache with {}".format(url)
     else:
         data = get_common_package_data(package_id_in_cache)
         print u"not success in get_common_package_data_from_cache with {}, had to build locally".format(url)

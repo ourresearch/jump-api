@@ -1059,6 +1059,39 @@ class Journal(object):
         response["use_groups_if_not_subscribed"] = {"ill": self.use_ill, "other_delayed": self.use_other_delayed}
         return response
 
+    def to_dict_raw(self):
+        response = OrderedDict()
+        response["meta"] = {"issn_l": self.issn_l,
+                    "title": self.title,
+                    "subject": self.subject}
+        table_row = OrderedDict()
+
+        # cost
+        table_row["subscription_cost"] = round(self.cost_subscription)
+        table_row["ill_cost"] = round(self.cost_ill)
+
+        # fulfillment
+        table_row["use_asns"] = self.use_social_networks
+        table_row["use_oa"] = self.use_oa
+        table_row["use_backfile"] = self.use_backfile
+        table_row["use_subscription"] = self.use_subscription
+        table_row["use_ill"] = self.use_ill
+        table_row["use_other_delayed"] =  self.use_other_delayed
+
+        # oa
+        table_row["use_green"] = self.use_oa_green
+        table_row["use_hybrid"] = self.use_oa_hybrid
+        table_row["use_bronze"] = self.use_oa_bronze
+        table_row["use_peer_reviewed"] =  self.use_oa_peer_reviewed
+
+        # impact
+        table_row["total_usage"] = round(self.use_total, 2)
+        table_row["downloads"] = round(self.downloads_total, 2)
+        table_row["citations"] = round(self.num_citations, 2)
+        table_row["authorships"] = round(self.num_authorships, 2)
+
+        response["table_row"] = table_row
+
 
     def to_dict(self):
         return {"issn_l": self.issn_l,
