@@ -28,17 +28,16 @@ class Consortium(object):
             cursor.execute(command)
             rows = cursor.fetchall()
 
-        self.org_scenario_ids = [row["scenario_id"] for row in rows]
-        self.org_package_ids = [row["package_id"] for row in rows]
+        self.org_ids = rows
 
         if not hasattr(threading.current_thread(), "_children"):
             threading.current_thread()._children = weakref.WeakKeyDictionary()
 
         my_thread_pool = ThreadPool(10)
 
-        def call_cached_version(org_scenario_id):
+        def call_cached_version(org_id_dict):
 
-            url = u"https://cdn.unpaywalljournals.org/scenario/{}/raw?jwt={}".format(org_scenario_id, self.jwt)
+            url = u"https://cdn.unpaywalljournals.org/scenario/{}/raw?jwt={}".format(org_id_dict["scenario_id"], self.jwt)
 
             # print u"starting cache request for {}".format(url)
             headers = {"Cache-Control": "public, max-age=31536000"}
@@ -47,19 +46,21 @@ class Consortium(object):
             # print r.headers
             if r.status_code == 200:
                 data = r.json()
-                data["scenario_id"] = org_scenario_id
+                data["scenario_id"] = org_id_dict["scenario_id"]
+                data["package_id"] = org_id_dict["package_id"]
                 data["status_code"] = r.status_code
                 data["url"] = url
                 # print u"success in call_cached_version with {}".format(url)
             else:
                 data = {}
-                data["scenario_id"] = org_scenario_id
+                data["scenario_id"] = org_id_dict["scenario_id"]
+                data["package_id"] = org_id_dict["package_id"]
                 data["status_code"] = r.status_code
                 data["url"] = url
                 # print u"not success in call_cached_version with {}".format(url)
             return data
 
-        self.consortium_org_responses = my_thread_pool.imap_unordered(call_cached_version, self.org_scenario_ids)
+        self.consortium_org_responses = my_thread_pool.imap_unordered(call_cached_version, self.org_ids)
         my_thread_pool.close()
         my_thread_pool.join()
         my_thread_pool.terminate()
@@ -69,9 +70,11 @@ class Consortium(object):
         for org_response in self.consortium_org_responses:
             if org_response["status_code"] == 200:
                 for journal_dict in org_response["journals"]:
-                    journal_dict["table_row"]["org_package_id"] = org_response["_settings"]["package"]
-                    self.journal_org_data[journal_dict["meta"]["issn_l"]].append(journal_dict["table_row"])
-                    self.journal_meta[journal_dict["meta"]["issn_l"]] = journal_dict["meta"]
+                    if journal_dict and "table_row" in journal_dict:
+                        journal_dict["table_row"]["org_package_id"] = org_response["package_id"]
+                        journal_dict["table_row"]["org_scenario_id"] = org_response["scenario_id"]
+                        self.journal_org_data[journal_dict["meta"]["issn_l"]].append(journal_dict["table_row"])
+                        self.journal_meta[journal_dict["meta"]["issn_l"]] = journal_dict["meta"]
             else:
                 print "failed org response", org_response
 
