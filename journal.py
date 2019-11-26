@@ -1092,6 +1092,8 @@ class Journal(object):
 
         response["table_row"] = table_row
 
+        return response
+
 
     def to_dict(self):
         return {"issn_l": self.issn_l,
