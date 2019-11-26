@@ -113,7 +113,7 @@ class ConsortiumJournal(object):
     def ncppu(self):
         if not self.use_paywalled:
             return None
-        return round(self.cost_subscription_minus_ill/self.use_paywalled, 6)
+        return round(float(self.cost_subscription_minus_ill)/self.use_paywalled, 6)
 
     @cached_property
     def cost_subscription(self):
@@ -131,7 +131,7 @@ class ConsortiumJournal(object):
     def use_actual(self):
         my_dict = {}
         for group in use_groups:
-            my_dict[group] = [0 for year in self.years]
+            my_dict[group] = 0
         # include the if to skip this if no useage
         if self.use_total:
             # true regardless
@@ -146,47 +146,57 @@ class ConsortiumJournal(object):
         return my_dict
 
     @cached_property
+    def use_social_networks(self):
+        return self.sum_attribute("use_asns")
+
+    @cached_property
+    def use_oa(self):
+        return self.sum_attribute("use_oa")
+
+    @cached_property
+    def use_subscription(self):
+        return self.sum_attribute("use_subscription")
+
+    @cached_property
+    def use_backfile(self):
+        return self.sum_attribute("use_backfile")
+
+    @cached_property
+    def use_ill(self):
+        return self.sum_attribute("use_ill")
+
+    @cached_property
+    def use_other_delayed(self):
+        return self.sum_attribute("use_other_delayed")
+
+    @cached_property
     def use_oa_green(self):
-        return self.sum_attribute("use_oa_green")
+        return self.sum_attribute("use_green")
 
     @cached_property
     def use_oa_hybrid(self):
-        return self.sum_attribute("use_oa_hybrid")
+        return self.sum_attribute("use_hybrid")
 
     @cached_property
     def use_oa_bronze(self):
-        return self.sum_attribute("use_oa_bronze")
+        return self.sum_attribute("use_bronze")
 
     @cached_property
     def use_oa_peer_reviewed(self):
-        return self.sum_attribute("use_oa_peer_reviewed")
+        return self.sum_attribute("use_peer_reviewed")
 
-    @cached_property
-    def use_actual_by_year(self):
-        # todo
-        my_dict = {}
-        for group in use_groups:
-            my_dict[group] = [0 for year in self.years]
-        for my_org in self.org_data:
-            for year in self.years:
-                my_dict[group][year] += 42
-        return my_dict
-
-
-    @cached_property
-    def use_total_by_year(self):
-        return [42 for year in self.years]
 
     @cached_property
     def use_free_instant(self):
         response = 0
         for group in use_groups_free_instant:
             response += self.use_actual[group]
-        return response
+        return min(response, self.use_total)
 
     @cached_property
     def use_instant(self):
-        return self.use_free_instant + self.use_actual["subscription"]
+        response = self.use_free_instant + self.use_actual["subscription"]
+        return min(response, self.use_total)
 
     @cached_property
     def use_instant_percent(self):

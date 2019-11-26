@@ -151,11 +151,11 @@ class Scenario(object):
 
     @cached_property
     def use_total(self):
-        return round(1 + np.mean(self.use_total_by_year), 4)
+        return 1 + np.sum([journal.use_total for journal in self.journals])
 
     @cached_property
     def downloads_total(self):
-        return round(1 + np.mean(self.downloads_total_by_year), 4)
+        return np.sum([journal.downloads_total for journal in self.journals])
 
     @cached_property
     def downloads_actual_by_year(self):
@@ -187,13 +187,15 @@ class Scenario(object):
 
     @cached_property
     def use_paywalled(self):
-        return self.use_actual["subscription"] + self.use_actual["ill"] + self.use_actual["other_delayed"]
-
+        response = round(sum([j.use_paywalled for j in self.journals if j.use_paywalled]))
+        response = max(0, response)
+        response = min(response, self.use_total)
+        return response
 
     @cached_property
     def ncppu(self):
         if self.use_paywalled:
-            return round(self.cost / self.use_paywalled, 2)
+            return round(self.cost_subscription_minus_ill / self.use_paywalled, 2)
         return None
 
     @cached_property
@@ -240,7 +242,7 @@ class Scenario(object):
 
     @cached_property
     def use_instant(self):
-        return round(np.mean(self.use_instant_by_year), 4)
+        return round(sum([j.use_instant for j in self.journals if j.use_instant]))
 
     @cached_property
     def use_instant_by_year(self):
