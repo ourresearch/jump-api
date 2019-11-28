@@ -747,7 +747,7 @@ class Journal(object):
             table_row["ncppu"] = "no paywalled usage"
         table_row["cost"] = self.cost_actual
         table_row["use"] = self.use_total
-        table_row["instant_usage_percent"] = self.use_instant_percent
+        table_row["instant_usage_percent"] = round(self.use_instant_percent, 1)
         response["table_row"] = table_row
 
         for k, v in self.to_dict_slider().iteritems():
@@ -770,8 +770,8 @@ class Journal(object):
             table_row["ncppu"] = "no paywalled usage"
         table_row["cost"] = self.cost_actual
         table_row["usage"] = self.use_total
-        table_row["instant_usage_percent"] = self.use_instant_percent
-        table_row["free_instant_usage_percent"] = self.use_free_instant_percent
+        table_row["instant_usage_percent"] = round(self.use_instant_percent)
+        table_row["free_instant_usage_percent"] = round(self.use_free_instant_percent)
 
         # cost
         table_row["subscription_cost"] = round(self.cost_subscription)
@@ -1028,7 +1028,7 @@ class Journal(object):
                     "subject": self.subject,
                     "subscribed": self.subscribed}
         table_row = OrderedDict()
-        table_row["instant_usage_percent"] = round(self.use_instant_percent)
+        table_row["instant_usage_percent"] = round(self.use_instant_percent, 1)
         table_row["use_asns"] = round(float(100)*self.use_actual["social_networks"]/self.use_total)
         table_row["use_oa"] = round(float(100)*self.use_actual["oa"]/self.use_total)
         table_row["use_backfile"] = round(float(100)*self.use_actual["backfile"]/self.use_total)
