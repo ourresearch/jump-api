@@ -383,14 +383,18 @@ def scenario_id_export_csv_get(scenario_id):
     filename = "export.csv"
     with open(filename, "w") as file:
         csv_writer = csv.writer(file, encoding='utf-8')
-        keys = table_dicts[0]["table_row"].keys()
+        meta_keys = table_dicts[0]["meta"].keys()
+        keys = meta_keys + table_dicts[0]["table_row"].keys()
         csv_writer.writerow(keys)
         for table_dict in table_dicts:
             row = []
             for my_key in keys:
-                if my_key == "issn_l":
-                    # doing this hacky thing so excel doesn't format the issn as a date :(
-                    row.append(u"issn:{}".format(table_dict["table_row"][my_key]))
+                if my_key in meta_keys:
+                    if my_key in "issn_l":
+                        # doing this hacky thing so excel doesn't format the issn as a date :(
+                        row.append(u"issn:{}".format(table_dict["meta"][my_key]))
+                    else:
+                        row.append(table_dict["meta"][my_key])
                 else:
                     row.append(table_dict["table_row"][my_key])
             csv_writer.writerow(row)
