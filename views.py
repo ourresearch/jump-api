@@ -79,163 +79,11 @@ def base_endpoint():
 # def favicon():
 #     return redirect(url_for("static", filename="img/favicon.ico", _external=True, _scheme='https'))
 
-@app.route("/scenario/wizard", methods=["GET", "POST"])
-@jwt_optional
-def jump_wizard_get():
-    identity_dict = get_jwt_identity()
-
-    pagesize = int(request.args.get("pagesize", 100))
-    spend = int(request.args.get("spend"))
-    package = get_clean_package_id(request.args)
-    scenario = Scenario(package, request.args)
-    scenario.do_wizardly_things(spend)
-
-    my_saved_scenario = SavedScenario.query.get("demo")
-    my_saved_scenario.live_scenario = scenario
-    unique_id = shortuuid.uuid()[0:20]
-    if identity_dict:
-        unique_id = identity_dict.get("login_uuid")
-    my_saved_scenario.set_unique_id(unique_id)
-    my_saved_scenario.save_live_scenario_to_db(get_ip(request))
-
-    response = scenario.to_dict(pagesize)
-    response["_scenario_id"] = my_saved_scenario.scenario_id
-
-    return jsonify_fast(response)
-
-
-@app.route("/scenario/summary", methods=["GET", "POST"])
-def jump_summary_get():
-    scenario_input = request.get_json()
-    if not scenario_input:
-        scenario_input = request.args
-    package = get_clean_package_id(scenario_input)
-    scenario = Scenario(package, scenario_input)
-    return jsonify_fast(scenario.to_dict_summary())
-
-@app.route("/scenario/journals", methods=["GET", "POST"])
-@app.route("/scenario/overview", methods=["GET", "POST"])
-def jump_overview_get():
-    pagesize = int(request.args.get("pagesize", 5000))
-    scenario_input = request.get_json()
-    if not scenario_input:
-        scenario_input = request.args
-    package = get_clean_package_id(scenario_input)
-    scenario = Scenario(package, scenario_input)
-    return jsonify_fast_no_sort(scenario.to_dict_overview(pagesize))
-
-@app.route("/scenario/table", methods=["GET", "POST"])
-def jump_table_get():
-    pagesize = int(request.args.get("pagesize", 5000))
-    scenario_input = request.get_json()
-    if not scenario_input:
-        scenario_input = request.args
-    package = get_clean_package_id(scenario_input)
-    scenario = Scenario(package, scenario_input)
-    return jsonify_fast_no_sort(scenario.to_dict_table(pagesize))
-
-@app.route("/scenario", methods=["GET", "POST"])
-@app.route("/scenario/slider", methods=["GET", "POST"])
-def jump_slider_get():
-    scenario_input = request.get_json()
-    if not scenario_input:
-        scenario_input = request.args
-    package = get_clean_package_id(scenario_input)
-    scenario = Scenario(package, scenario_input)
-    return jsonify_fast_no_sort(scenario.to_dict_slider())
-
-@app.route("/scenario/timeline", methods=["GET", "POST"])
-def jump_timeline_get():
-    pagesize = int(request.args.get("pagesize", 5000))
-    scenario_input = request.get_json()
-    if not scenario_input:
-        scenario_input = request.args
-    package = get_clean_package_id(scenario_input)
-    scenario = Scenario(package, scenario_input)
-    return jsonify_fast_no_sort(scenario.to_dict_timeline(pagesize))
-
-@app.route("/scenario/apc", methods=["GET", "POST"])
-def jump_apc_get():
-    pagesize = int(request.args.get("pagesize", 5000))
-    scenario_input = request.get_json()
-    if not scenario_input:
-        scenario_input = request.args
-    package = get_clean_package_id(scenario_input)
-    scenario = Scenario(package, scenario_input)
-    return jsonify_fast_no_sort(scenario.to_dict_apc(pagesize))
-
-@app.route("/scenario/costs", methods=["GET", "POST"])
-def jump_costs_get():
-    pagesize = int(request.args.get("pagesize", 5000))
-    scenario_input = request.get_json()
-    if not scenario_input:
-        scenario_input = request.args
-    package = get_clean_package_id(scenario_input)
-    scenario = Scenario(package, scenario_input)
-    return jsonify_fast_no_sort(scenario.to_dict_cost(pagesize))
-
-@app.route("/scenario/oa", methods=["GET", "POST"])
-def jump_oa_get():
-    pagesize = int(request.args.get("pagesize", 5000))
-    scenario_input = request.get_json()
-    if not scenario_input:
-        scenario_input = request.args
-    package = get_clean_package_id(scenario_input)
-    scenario = Scenario(package, scenario_input)
-    return jsonify_fast_no_sort(scenario.to_dict_oa(pagesize))
-
-
-@app.route("/scenario/fulfillment", methods=["GET", "POST"])
-def jump_fulfillment_get():
-    pagesize = int(request.args.get("pagesize", 5000))
-    scenario_input = request.get_json()
-    if not scenario_input:
-        scenario_input = request.args
-    package = get_clean_package_id(scenario_input)
-    scenario = Scenario(package, scenario_input)
-    return jsonify_fast_no_sort(scenario.to_dict_fulfillment(pagesize))
-
-@app.route("/scenario/report", methods=["GET", "POST"])
-def jump_report_get():
-    pagesize = int(request.args.get("pagesize", 5000))
-    scenario_input = request.get_json()
-    if not scenario_input:
-        scenario_input = request.args
-    package = get_clean_package_id(scenario_input)
-    scenario = Scenario(package, scenario_input)
-    return jsonify_fast_no_sort(scenario.to_dict_report(pagesize))
-
-@app.route("/scenario/impact", methods=["GET", "POST"])
-def jump_impact_get():
-    pagesize = int(request.args.get("pagesize", 5000))
-    scenario_input = request.get_json()
-    if not scenario_input:
-        scenario_input = request.args
-    package = get_clean_package_id(scenario_input)
-    scenario = Scenario(package, scenario_input)
-    return jsonify_fast_no_sort(scenario.to_dict_impact(pagesize))
-
-
 @app.route('/scenario/<scenario_id>/journal/<issn_l>', methods=['GET', 'POST'])
 @jwt_required
 def jump_scenario_issn_get(scenario_id, issn_l):
-    scenario_input = request.get_json()
-    if not scenario_input:
-        scenario_input = request.args
-    package = get_clean_package_id(scenario_input)
-    scenario = Scenario(package, scenario_input)
-    my_journal = scenario.get_journal(issn_l)
-    return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
-
-
-@app.route("/journal/issn_l/<issn_l>", methods=["GET", "POST"])
-@jwt_required
-def jump_issn_get(issn_l):
-    scenario_input = request.get_json()
-    if not scenario_input:
-        scenario_input = request.args
-    package = get_clean_package_id(scenario_input)
-    scenario = Scenario(package, scenario_input)
+    my_saved_scenario = get_saved_scenario(scenario_id)
+    scenario = my_saved_scenario.live_scenario
     my_journal = scenario.get_journal(issn_l)
     return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
 
@@ -248,7 +96,6 @@ def jump_data_package_id_get(package_id):
     response = get_common_package_data(package_id)
 
     return jsonify_fast_no_sort(response)
-
 
 
 # Provide a method to create access tokens. The create_access_token()
@@ -476,9 +323,7 @@ def scenario_id_summary_get(scenario_id):
     my_timing = TimingMessages()
     my_saved_scenario = get_saved_scenario(scenario_id)
     my_timing.log_timing("after setting live scenario")
-    response = my_saved_scenario.to_dict_definition()
     my_timing.log_timing("after to_dict()")
-    response["_timing"] = my_timing.to_dict()
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_summary())
 
 @app.route('/scenario/<scenario_id>/journals', methods=['GET', 'POST'])
@@ -488,58 +333,34 @@ def scenario_id_overview_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
     my_timing = TimingMessages()
     my_saved_scenario = get_saved_scenario(scenario_id)
-    my_timing.log_timing("after setting live scenario")
-    response = my_saved_scenario.to_dict_definition()
-    my_timing.log_timing("after to_dict()")
-    response["_timing"] = my_timing.to_dict()
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_overview(pagesize))
 
 @app.route('/scenario/<scenario_id>/raw', methods=['GET', 'POST'])
 @jwt_required
 def scenario_id_raw_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
-    my_timing = TimingMessages()
     my_saved_scenario = get_saved_scenario(scenario_id)
-    my_timing.log_timing("after setting live scenario")
-    response = my_saved_scenario.to_dict_definition()
-    my_timing.log_timing("after to_dict()")
-    response["_timing"] = my_timing.to_dict()
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_raw(pagesize))
 
 @app.route('/scenario/<scenario_id>/table', methods=['GET', 'POST'])
 @jwt_required
 def scenario_id_table_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
-    my_timing = TimingMessages()
     my_saved_scenario = get_saved_scenario(scenario_id)
-    my_timing.log_timing("after setting live scenario")
-    response = my_saved_scenario.to_dict_definition()
-    my_timing.log_timing("after to_dict()")
-    response["_timing"] = my_timing.to_dict()
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table(pagesize))
 
 @app.route('/scenario/<scenario_id>/slider', methods=['GET', 'POST'])
 @jwt_required
 def scenario_id_slider_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
-    my_timing = TimingMessages()
     my_saved_scenario = get_saved_scenario(scenario_id)
-    my_timing.log_timing("after setting live scenario")
-    response = my_saved_scenario.to_dict_definition()
-    my_timing.log_timing("after to_dict()")
-    response["_timing"] = my_timing.to_dict()
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
 
 @app.route('/scenario/<scenario_id>/apc', methods=['GET', 'POST'])
 @jwt_required
 def scenario_id_apc_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
-    my_timing = TimingMessages()
     my_saved_scenario = get_saved_scenario(scenario_id)
-    my_timing.log_timing("after setting live scenario")
-    response = my_saved_scenario.to_dict_definition()
-    my_timing.log_timing("after to_dict()")
-    response["_timing"] = my_timing.to_dict()
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_apc(pagesize))
 
 
@@ -547,12 +368,7 @@ def scenario_id_apc_get(scenario_id):
 @jwt_required
 def scenario_id_report_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
-    my_timing = TimingMessages()
     my_saved_scenario = get_saved_scenario(scenario_id)
-    my_timing.log_timing("after setting live scenario")
-    response = my_saved_scenario.to_dict_definition()
-    my_timing.log_timing("after to_dict()")
-    response["_timing"] = my_timing.to_dict()
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_report(pagesize))
 
 
