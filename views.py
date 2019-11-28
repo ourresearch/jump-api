@@ -250,31 +250,6 @@ def jump_data_package_id_get(package_id):
     return jsonify_fast_no_sort(response)
 
 
-@app.route("/scenario/export.csv", methods=["GET"])
-@jwt_required
-def jump_export_csv():
-    scenario_input = request.get_json()
-    if not scenario_input:
-        scenario_input = request.args
-    package = get_clean_package_id(scenario_input)
-    scenario = Scenario(package, scenario_input)
-
-    filename = "export.csv"
-    with open(filename, "w") as file:
-        csv_writer = csv.writer(file, encoding='utf-8')
-        keys = ["issn_l", "title", "subscribed"]
-        csv_writer.writerow(keys)
-        for journal in scenario.journals:
-            # doing this hacky thing so excel doesn't format the issn as a date :(
-            csv_writer.writerow(["issn:{}".format(journal.issn_l), journal.title, journal.subscribed])
-
-    with open(filename, "r") as file:
-        contents = file.readlines()
-
-    # return Response(contents, mimetype="text/text")
-    return Response(contents, mimetype="text/csv")
-
-
 
 # Provide a method to create access tokens. The create_access_token()
 # function is used to actually generate the token, and you can return
@@ -580,11 +555,36 @@ def scenario_id_report_get(scenario_id):
     response["_timing"] = my_timing.to_dict()
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_report(pagesize))
 
+
 @app.route('/scenario/<scenario_id>/export.csv', methods=['GET', 'POST'])
 @jwt_required
 def scenario_id_export_csv_get(scenario_id):
-    # TODO
-    return jump_export_csv()
+    pagesize = int(request.args.get("pagesize", 5000))
+    my_saved_scenario = get_saved_scenario(scenario_id)
+
+    table_dicts = my_saved_scenario.live_scenario.to_dict_table(pagesize)["journals"]
+
+    filename = "export.csv"
+    with open(filename, "w") as file:
+        csv_writer = csv.writer(file, encoding='utf-8')
+        keys = table_dicts[0]["table_rows"].keys()
+        csv_writer.writerow(keys)
+        for table_dict in table_dicts:
+            row = []
+            for my_key in keys:
+                if my_key == "issn_l":
+                    # doing this hacky thing so excel doesn't format the issn as a date :(
+                    row.append(u"issn:{}".format(table_dict["table_rows"][my_key]))
+                else:
+                    row.append(table_dict["table_rows"][my_key])
+            csv_writer.writerow(row)
+
+    with open(filename, "r") as file:
+        contents = file.readlines()
+
+    # return Response(contents, mimetype="text/text")
+    return Response(contents, mimetype="text/csv")
+
 
 @app.route('/register', methods=['GET'])
 def register_user():
