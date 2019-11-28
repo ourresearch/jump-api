@@ -769,37 +769,33 @@ class Journal(object):
         else:
             table_row["ncppu"] = "no paywalled usage"
         table_row["cost"] = self.cost_actual
-        table_row["use"] = self.use_total
+        table_row["usage"] = self.use_total
         table_row["instant_usage_percent"] = self.use_instant_percent
         table_row["free_instant_usage_percent"] = self.use_free_instant_percent
 
         # cost
-        table_row["scenario_cost"] = round(self.cost_actual)
         table_row["subscription_cost"] = round(self.cost_subscription)
         table_row["ill_cost"] = round(self.cost_ill)
-        table_row["real_cost"] = round(self.cost_subscription_minus_ill)
+        table_row["subscription_minus_ill_cost"] = round(self.cost_subscription_minus_ill)
 
         # fulfillment
-        table_row["use_asns"] = round(float(100)*self.use_actual["social_networks"]/self.use_total)
-        table_row["use_oa"] = round(float(100)*self.use_actual["oa"]/self.use_total)
-        table_row["use_backfile"] = round(float(100)*self.use_actual["backfile"]/self.use_total)
-        table_row["use_subscription"] = round(float(100)*self.use_actual["subscription"]/self.use_total)
-        table_row["use_ill"] = round(float(100)*self.use_actual["ill"]/self.use_total)
-        table_row["use_other_delayed"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
+        table_row["use_asns_percent"] = round(float(100)*self.use_actual["social_networks"]/self.use_total)
+        table_row["use_oa_percent"] = round(float(100)*self.use_actual["oa"]/self.use_total)
+        table_row["use_backfile_percent"] = round(float(100)*self.use_actual["backfile"]/self.use_total)
+        table_row["use_subscription_percent"] = round(float(100)*self.use_actual["subscription"]/self.use_total)
+        table_row["use_ill_percent"] = round(float(100)*self.use_actual["ill"]/self.use_total)
+        table_row["use_other_delayed_percent"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
 
         # oa
-        table_row["use_oa_percent"] = round(float(100)*self.use_actual["oa"]/self.use_total)
         table_row["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
         table_row["use_hybrid_percent"] = round(float(100)*self.use_oa_hybrid/self.use_total)
         table_row["use_bronze_percent"] = round(float(100)*self.use_oa_bronze/self.use_total)
         table_row["use_peer_reviewed_percent"] =  round(float(100)*self.use_oa_peer_reviewed/self.use_total)
 
         # impact
-        table_row["total_usage"] = round(self.use_total)
         table_row["downloads"] = round(self.downloads_total)
         table_row["citations"] = round(self.num_citations, 1)
         table_row["authorships"] = round(self.num_authorships, 1)
-
 
         response["table_row"] = table_row
 
