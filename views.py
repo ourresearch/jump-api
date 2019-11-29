@@ -406,8 +406,28 @@ def scenario_id_export_csv_get(scenario_id):
     return Response(contents, mimetype="text/csv")
 
 
-@app.route('/register', methods=['GET'])
-def register_user():
+@app.route('/admin/change_password', methods=['GET'])
+def admin_change_password():
+    username = request.args.get('username')
+    old_password = request.args.get('old_password')
+    new_password = request.args.get('new_password')
+    if not username or not old_password or not new_password:
+        return abort_json(400, "Missing parameters:  need username, old_password, new_password")
+
+    my_account = Account.query.filter(Account.username == username).first()
+
+    if not my_account or not check_password_hash(my_account.password_hash, old_password):
+        return abort_json(401, "Bad username or or old password")
+    my_account.password_hash = generate_password_hash(new_password)
+    safe_commit(db)
+
+    return jsonify({'message': "Password updated successfully",
+                    "username": username,
+                    "display_name": my_account.display_name})
+
+
+@app.route('/admin/register', methods=['GET'])
+def admin_register_user():
     secret = request.args.get('secret', None)
     if not safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
         abort_json(500, "Secret doesn't match, not saving user in database")
