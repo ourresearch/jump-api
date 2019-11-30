@@ -53,6 +53,7 @@ class SavedScenario(db.Model):
             demo_saved_scenario = SavedScenario.query.get("demo")
             self.scenario_name = demo_saved_scenario.scenario_name
         self.created = datetime.datetime.utcnow().isoformat()
+        self.scenario_id = scenario_id
         self.scenario_input = scenario_input
         self.live_scenario = None
 
