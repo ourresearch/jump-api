@@ -20,7 +20,7 @@ from sqlalchemy import sql
 from sqlalchemy import exc
 from subprocess import call
 from requests.adapters import HTTPAdapter
-import csv
+import unicodecsv as csv
 from flask import current_app
 from simplejson import dumps
 import locale

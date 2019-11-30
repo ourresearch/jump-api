@@ -360,6 +360,14 @@ class Journal(object):
         return response
 
 
+    @cached_property
+    def raw_downloads_by_age(self):
+        # isn't replaced by default if too low or not monotonically decreasing
+        total_downloads_by_age_before_counter_correction = [self.my_scenario_data_row["downloads_{}y".format(age)] for age in self.years]
+        total_downloads_by_age_before_counter_correction = [val if val else 0 for val in total_downloads_by_age_before_counter_correction]
+        downloads_by_age = [num * self.downloads_counter_multiplier for num in total_downloads_by_age_before_counter_correction]
+        return downloads_by_age
+
 
     @cached_property
     def downloads_by_age(self):
@@ -1001,6 +1009,9 @@ class Journal(object):
         response_debug["use_oa"] = self.use_oa
         response_debug["downloads_scaled_by_counter_by_year"] = self.downloads_scaled_by_counter_by_year
         response_debug["use_default_download_curve"] = self.use_default_download_curve
+        response_debug["downloads_total_older_than_five_years"] = self.downloads_total_older_than_five_years
+        response_debug["raw_downloads_by_age"] = self.raw_downloads_by_age
+        response_debug["downloads_oa_by_age"] = self.downloads_oa_by_age
         response["debug"] = response_debug
 
         return response
