@@ -239,7 +239,8 @@ def is_issn(text):
     if not text:
         return False
 
-    p = re.compile("[\dx]{4}-[\dx]{4}")
+    # include X and F
+    p = re.compile("[\dxf]{4}-[\dxf]{4}")
     matches = re.findall(p, text.lower())
     if len(matches) > 0:
         return True

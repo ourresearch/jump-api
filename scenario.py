@@ -797,7 +797,16 @@ def get_unpaywall_downloads_from_db():
     unpaywall_downloads_dict = dict((row["issn_l"], row) for row in big_view_rows)
     return unpaywall_downloads_dict
 
-
+@cache
+def get_num_papers_from_db():
+    command = "select issn_l, year, num_papers from jump_num_papers_view"
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+    lookup_dict = defaultdict(dict)
+    for row in rows:
+        lookup_dict[row["issn_l"]][row["year"]] = row["num_papers"]
+    return lookup_dict
 
 @cache
 def get_oa_recent_data_from_db():
@@ -918,11 +927,14 @@ def get_common_package_data(package_id):
     my_data["social_networks"] = get_social_networks_data_from_db()
     my_timing.log_timing("get_social_networks_data_from_db")
 
-    my_data["oa_adjustment"] = get_oa_adjustment_data_from_db()
-    my_timing.log_timing("get_oa_adjustment_data_from_db")
+    # my_data["oa_adjustment"] = get_oa_adjustment_data_from_db()
+    # my_timing.log_timing("get_oa_adjustment_data_from_db")
 
     my_data["society"] = get_society_data_from_db()
     my_timing.log_timing("get_society_data_from_db")
+
+    my_data["num_papers"] = get_num_papers_from_db()
+    my_timing.log_timing("get_num_papers_from_db")
 
     my_data["_timing"] = my_timing.to_dict()
 
