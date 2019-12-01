@@ -1,11 +1,13 @@
 # coding: utf-8
 
 from cached_property import cached_property
-import numpy as np
 from collections import defaultdict
 import weakref
 from kids.cache import cache
 from collections import OrderedDict
+import numpy as np
+import scipy
+from scipy.optimize import curve_fit
 
 from app import use_groups
 from app import use_groups_free_instant
@@ -18,13 +20,7 @@ from util import format_with_commas
 
 class Journal(object):
     years = range(0, 5)
-    growth_scaling = {
-        "downloads": [1.0 for year in range(0, 5)],
-        "oa": [1.0 for year in range(0, 5)],
-        # "downloads": [1.10, 1.21, 1.34, 1.49, 1.65],
-        # "oa": [1.16, 1.24, 1.57, 1.83, 2.12]
-    }
-    
+
     def __init__(self, issn_l, scenario=None, scenario_data=None, package_id=None):
         self.set_scenario(scenario)
         self.set_scenario_data(scenario_data)
@@ -271,10 +267,10 @@ class Journal(object):
             scaled = [0 for year in self.years]
             for year in self.years:
                 age = year
-                new = 0.5 * ((self.downloads_by_age[age] * self.growth_scaling["downloads"][year]) - (self.downloads_oa_by_age[year][age] * self.growth_scaling["oa"][year]))
+                new = 0.5 * ((self.downloads_by_age[age] * self.growth_scaling_downloads[year]) - (self.downloads_oa_by_age[year][age] * self.growth_scaling_oa_downloads[year]))
                 scaled[year] = max(new, 0)
                 for age in range(year+1, 5):
-                    by_age = (self.downloads_by_age[age] * self.growth_scaling["downloads"][year]) - (self.downloads_oa_by_age[year][age] * self.growth_scaling["oa"][year])
+                    by_age = (self.downloads_by_age[age] * self.growth_scaling_downloads[year]) - (self.downloads_oa_by_age[year][age] * self.growth_scaling_oa_downloads[year])
                     by_age += max(new, 0)
                 scaled[year] += by_age
                 if scaled[year]:
@@ -337,7 +333,7 @@ class Journal(object):
 
     @cached_property
     def downloads_total_by_year(self):
-        scaled = [round(self.downloads_scaled_by_counter_by_year[year] * self.growth_scaling["downloads"][year]) for year in self.years]
+        scaled = [round(self.downloads_scaled_by_counter_by_year[year] * self.growth_scaling_downloads[year]) for year in self.years]
 
         return scaled
 
@@ -368,32 +364,68 @@ class Journal(object):
         downloads_by_age = [num * self.downloads_counter_multiplier for num in total_downloads_by_age_before_counter_correction]
         return downloads_by_age
 
+    @cached_property
+    def raw_oa_by_age(self):
+        # isn't replaced by default if too low or not monotonically decreasing
+        total_downloads_by_age_before_counter_correction = [self.my_scenario_data_row["downloads_oa_{}y".format(age)] for age in self.years]
+        total_downloads_by_age_before_counter_correction = [val if val else 0 for val in total_downloads_by_age_before_counter_correction]
+        downloads_by_age = [num * self.downloads_counter_multiplier for num in total_downloads_by_age_before_counter_correction]
+        return downloads_by_age
+
+
+
+
+    @cached_property
+    def curve_fit_for_downloads(self):
+        x = np.array(self.years)
+        y = np.array(self.downloads_by_age_before_counter_correction)
+        initial_guess = (float(np.max(y)), 30.0, -1.0)  # determined empirically
+
+        def func(x, a, b, c):
+           return b + a * np.exp(x/c)
+
+        try:
+            pars, pcov = curve_fit(func, x, y, initial_guess)
+        except:
+            return {}
+
+        y_fit = [func(a, pars[0], pars[1], pars[2]) for a in x]
+
+        residuals = y - y_fit
+        ss_res = np.sum(residuals**2)
+        ss_tot = np.sum((y - np.mean(y))**2)
+        r_squared = 1 - (ss_res / ss_tot)
+
+        return {"y_fit": y_fit,
+                "r_squared": r_squared,
+                "params": pars}
+
+
+    @cached_property
+    def downloads_by_age_before_counter_correction(self):
+        downloads_by_age_before_counter_correction = [self.my_scenario_data_row["downloads_{}y".format(age)] for age in self.years]
+        downloads_by_age_before_counter_correction = [val if val else 0 for val in downloads_by_age_before_counter_correction]
+        return downloads_by_age_before_counter_correction
 
     @cached_property
     def downloads_by_age(self):
         use_default_curve = False
 
-        total_downloads_by_age_before_counter_correction = [self.my_scenario_data_row["downloads_{}y".format(age)] for age in self.years]
-        total_downloads_by_age_before_counter_correction = [val if val else 0 for val in total_downloads_by_age_before_counter_correction]
-
-        sum_total_downloads_by_age_before_counter_correction = np.sum(total_downloads_by_age_before_counter_correction)
-
-        download_curve_diff = np.array(total_downloads_by_age_before_counter_correction)
-
-        # should mostly be strictly negative slope.  if it is very positive, use default instead
-        if np.max(download_curve_diff) > 0.075:
+        my_curve_fit = self.curve_fit_for_downloads
+        if my_curve_fit and my_curve_fit["r_squared"] >= 0.75:
+            # print u"GREAT curve fit for {}, r_squared {}".format(self.issn_l, my_curve_fit.get("r_squared", "no r_squared"))
+            downloads_by_age_before_counter_correction_curve_to_use = my_curve_fit["y_fit"]
+        else:
+            # print u"bad curve fit for {}, r_squared {}".format(self.issn_l, my_curve_fit.get("r_squared", "no r_squared"))
             self.use_default_download_curve = True
-
-        if sum_total_downloads_by_age_before_counter_correction < 25:
-            self.use_default_download_curve = True
-
-        if self.use_default_download_curve:
             # from future of OA paper, modified to be just elsevier, all colours
             default_download_by_age = [0.371269, 0.137739, 0.095896, 0.072885, 0.058849]
-            total_downloads_by_age_before_counter_correction = [num*sum_total_downloads_by_age_before_counter_correction for num in default_download_by_age]
+            sum_total_downloads_by_age_before_counter_correction = np.sum(self.downloads_by_age_before_counter_correction)
+            downloads_by_age_before_counter_correction_curve_to_use = [num*sum_total_downloads_by_age_before_counter_correction for num in default_download_by_age]
 
-        downloads_by_age = [num * self.downloads_counter_multiplier for num in total_downloads_by_age_before_counter_correction]
+        downloads_by_age = [num * self.downloads_counter_multiplier for num in downloads_by_age_before_counter_correction_curve_to_use]
         return downloads_by_age
+
 
     @cached_property
     def downloads_total_older_than_five_years(self):
@@ -404,7 +436,9 @@ class Journal(object):
         # TODO do separately for each type of OA
         # print [[float(num), self.num_papers, self.num_oa_historical] for num in self.downloads_by_age]
 
-        return [float(num)/self.num_papers for num in self.downloads_by_age]
+        if self.num_papers:
+            return [float(num)/self.num_papers for num in self.downloads_by_age]
+        return [0 for num in self.downloads_by_age]
 
     @cached_property
     def downloads_scaled_by_counter_by_year(self):
@@ -549,6 +583,12 @@ class Journal(object):
         return round(self.cost_subscription - self.cost_ill, 4)
 
     @cached_property
+    def ncppu_rank(self):
+        if self.ncppu:
+            return self.scenario.ncppu_rank_lookup[self.issn_l]
+        return None
+
+    @cached_property
     def use_total_fuzzed(self):
         return self.scenario.use_total_fuzzed_lookup[self.issn_l]
 
@@ -561,8 +601,69 @@ class Journal(object):
         return self.scenario.num_citations_fuzzed_lookup[self.issn_l]
 
     @cached_property
+    def curve_fit_for_num_papers(self):
+        x = np.array(self.years)
+        y = np.array(self.raw_num_papers_historical_by_year)
+        initial_guess = (float(np.mean(y)), 0.05)  # determined empirically
+
+        def func(x, b, m):
+               return b + m * x
+
+        try:
+            pars, pcov = curve_fit(func, x, y, initial_guess)
+        except:
+            return {}
+
+        y_fit = [func(a, pars[0], pars[1]) for a in x]
+
+        residuals = y - y_fit
+        ss_res = np.sum(residuals**2)
+        ss_tot = np.sum((y - np.mean(y))**2)
+        r_squared = 1 - (ss_res / ss_tot)
+
+        y_extrap = [func(a, pars[0], pars[1]) for a in range(5, 10)]
+
+        response = {"y_fit": y_fit,
+                "r_squared": r_squared,
+                "params": pars,
+                "y_extrap": y_extrap
+                }
+        return response
+
+    @cached_property
+    def growth_scaling_downloads(self):
+        return self.num_papers_growth_from_2018_by_year
+
+    @cached_property
+    def growth_scaling_oa_downloads(self):
+        # todo add OA growing faster
+        return self.growth_scaling_downloads
+
+    @cached_property
+    def num_papers_growth_from_2018_by_year(self):
+        num_papers_2018 = self.curve_fit_for_num_papers["y_fit"][4]
+        return [round(float(x)/num_papers_2018, 4) for x in self.num_papers_by_year]
+
+    @cached_property
+    def num_papers_by_year(self):
+        my_curve_fit = self.curve_fit_for_num_papers
+        if not my_curve_fit:
+            return [self.papers_2018 for year in self.years]
+        return [max(0, num) for num in my_curve_fit["y_extrap"]]
+
+    @cached_property
+    def raw_num_papers_historical_by_year(self):
+        if self.issn_l in self._scenario_data["num_papers"]:
+            my_raw_numbers = self._scenario_data["num_papers"][self.issn_l]
+            # historical goes up to 2019 but we don't have all the data for that yet
+            response = [my_raw_numbers.get(str(year-1), 0) for year in self.historical_years_by_year]
+        else:
+            response = [self.papers_2018 for year in self.years]
+        return response
+
+    @cached_property
     def num_papers(self):
-        return self.papers_2018
+        return round(np.mean(self.num_papers_by_year))
 
     @cached_property
     def use_instant_percent(self):
@@ -776,8 +877,9 @@ class Journal(object):
             table_row["ncppu"] = self.ncppu
         else:
             table_row["ncppu"] = "no paywalled usage"
+        table_row["ncppu_rank"] = self.ncppu_rank
         table_row["cost"] = self.cost_actual
-        table_row["usage"] = self.use_total
+        table_row["usage"] = round(self.use_total)
         table_row["instant_usage_percent"] = round(self.use_instant_percent)
         table_row["free_instant_usage_percent"] = round(self.use_free_instant_percent)
 
@@ -996,8 +1098,10 @@ class Journal(object):
         response_debug["use_instant_percent_by_year"] = self.use_instant_percent_by_year
         response_debug["oa_embargo_months"] = self.oa_embargo_months
         response_debug["num_papers"] = self.num_papers
-        response_debug["use_weight_multiplier"] = self.use_weight_multiplier_normalized
-        response_debug["downloads_counter_multiplier"] = self.downloads_counter_multiplier_normalized
+        response_debug["use_weight_multiplier_normalized"] = self.use_weight_multiplier_normalized
+        response_debug["use_weight_multiplier"] = self.use_weight_multiplier
+        response_debug["downloads_counter_multiplier_normalized"] = self.downloads_counter_multiplier_normalized
+        response_debug["downloads_counter_multiplier"] = self.downloads_counter_multiplier
         response_debug["use_instant_by_year"] = self.use_instant_by_year
         response_debug["use_instant_percent_by_year"] = self.use_instant_percent_by_year
         response_debug["use_actual_by_year"] = self.use_actual_by_year
@@ -1011,7 +1115,12 @@ class Journal(object):
         response_debug["use_default_download_curve"] = self.use_default_download_curve
         response_debug["downloads_total_older_than_five_years"] = self.downloads_total_older_than_five_years
         response_debug["raw_downloads_by_age"] = self.raw_downloads_by_age
+        response_debug["downloads_by_age"] = self.downloads_by_age
         response_debug["downloads_oa_by_age"] = self.downloads_oa_by_age
+        response_debug["num_papers_by_year"] = self.num_papers_by_year
+        response_debug["num_papers_growth_from_2018_by_year"] = self.num_papers_growth_from_2018_by_year
+        response_debug["raw_num_papers_historical_by_year"] = self.raw_num_papers_historical_by_year
+        response_debug["ncppu_rank"] = self.ncppu_rank
         response["debug"] = response_debug
 
         return response
@@ -1140,4 +1249,6 @@ class Journal(object):
 # 2021 	34,222,756.60 	1.34 	19,830,049.25 	1.57
 # 2022 	38,000,898.80 	1.49 	23,092,284.75 	1.82
 # 2023 	42,304,671.82 	1.65 	26,895,794.03 	2.12
+
+
 
