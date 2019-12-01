@@ -20,6 +20,7 @@ psycopg2-binary==2.8.2
 pycounter==2.1.0
 python-dateutil==2.6.0
 requests[security] == 2.20.0
+scipy==1.2.2
 shortuuid==0.4.3
 simplejson==3.3.1
 sqlalchemy-redshift==0.7.3

@@ -43,6 +43,7 @@ from util import safe_commit
 from util import TimingMessages
 from util import get_ip
 
+from app import DEMO_PACKAGE_ID
 
 # warm the cache
 # print "warming the cache"
@@ -89,9 +90,9 @@ def jump_scenario_issn_get(scenario_id, issn_l):
 
 @app.route('/data/common/<package_id>', methods=['GET'])
 def jump_data_package_id_get(package_id):
-    secret = request.args.get('secret', None)
+    secret = request.args.get('secret', "")
     if not safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
-        abort_json(500, "Secret doesn't match, getting package")
+        abort_json(500, "Secret doesn't match, not getting package")
 
     response = get_common_package_data(package_id)
 
@@ -149,6 +150,37 @@ def protected():
     # Access the identity of the current user with get_jwt_identity
     identity_dict = get_jwt_identity()
     return jsonify({"logged_in_as": identity_dict["account_id"]})
+
+
+
+def get_saved_scenario(scenario_id, debug_mode=False):
+    if debug_mode:
+        identity_dict = {"account_id": DEMO_PACKAGE_ID}
+        is_demo_account = True
+    else:
+        identity_dict = get_jwt_identity()
+        is_demo_account = (identity_dict["account_id"] == "demo")
+    if is_demo_account:
+        my_saved_scenario = SavedScenario.query.get(scenario_id)
+        if not my_saved_scenario:
+            my_saved_scenario = SavedScenario.query.get("demo")
+            my_saved_scenario.scenario_id = scenario_id
+    else:
+        my_saved_scenario = SavedScenario.query.get(scenario_id)
+    if not my_saved_scenario:
+        abort_json(404, "Scenario not found")
+
+    if not debug_mode and my_saved_scenario.package_real.account_id != identity_dict["account_id"]:
+        if not my_saved_scenario.package_real.consortium_package_id:
+            abort_json(401, "Not authorized to view this package")
+        consortium_package = Package.query.filter(Package.package_id==my_saved_scenario.package_real.consortium_package_id).first()
+        if consortium_package.account_id != identity_dict["account_id"]:
+            abort_json(401, "Not authorized to view this package")
+
+
+    my_saved_scenario.set_live_scenario(None)
+
+    return my_saved_scenario
 
 
 # from https://stackoverflow.com/a/51480061/596939
@@ -234,31 +266,6 @@ def package_id_get(package_id):
     package_dict["_timing"] = my_timing.to_dict()
 
     return jsonify_fast(package_dict)
-
-def get_saved_scenario(scenario_id):
-    identity_dict = get_jwt_identity()
-    is_demo_account = (identity_dict["account_id"] == "demo")
-    if is_demo_account:
-        my_saved_scenario = SavedScenario.query.get(scenario_id)
-        if not my_saved_scenario:
-            my_saved_scenario = SavedScenario.query.get("demo")
-            my_saved_scenario.scenario_id = scenario_id
-    else:
-        my_saved_scenario = SavedScenario.query.get(scenario_id)
-    if not my_saved_scenario:
-        abort_json(404, "Scenario not found")
-
-    if my_saved_scenario.package_real.account_id != identity_dict["account_id"]:
-        if not my_saved_scenario.package_real.consortium_package_id:
-            abort_json(401, "Not authorized to view this package")
-        consortium_package = Package.query.filter(Package.package_id==my_saved_scenario.package_real.consortium_package_id).first()
-        if consortium_package.account_id != identity_dict["account_id"]:
-            abort_json(401, "Not authorized to view this package")
-
-    my_saved_scenario.set_live_scenario(get_jwt())
-
-    return my_saved_scenario
-
 
 @app.route('/scenario/<scenario_id>', methods=['GET'])
 @jwt_required
@@ -441,6 +448,23 @@ def admin_register_user():
 
     return jsonify({'message': 'User registered successfully',
                     "username": request.args.get('username')})
+
+
+@app.route('/debug/journal/<issn_l>', methods=['GET'])
+def jump_debug_issn_get(issn_l):
+    scenario_id = "demo-debug"
+    my_saved_scenario = get_saved_scenario(scenario_id, debug_mode=True)
+    scenario = my_saved_scenario.live_scenario
+    my_journal = scenario.get_journal(issn_l)
+    if not my_journal:
+        abort_json(404, "journal not found")
+    return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
+
+@app.route('/debug/scenario/table', methods=['GET'])
+def jump_debug_table_get():
+    scenario_id = "demo-debug"
+    my_saved_scenario = get_saved_scenario(scenario_id, debug_mode=True)
+    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table(5000))
 
 
 if __name__ == "__main__":

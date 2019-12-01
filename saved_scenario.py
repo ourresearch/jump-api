@@ -4,12 +4,12 @@ from cached_property import cached_property
 import simplejson as json
 import datetime
 import shortuuid
+from flask_jwt_extended import jwt_required, jwt_optional, create_access_token, get_jwt_identity
 
 from app import db
 from app import get_db_cursor
 from scenario import Scenario
 from app import DEMO_PACKAGE_ID
-
 
 def get_latest_scenario(scenario_id, my_jwt=None):
     my_saved_scenario = SavedScenario.query.get(scenario_id)
