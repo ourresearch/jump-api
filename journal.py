@@ -21,7 +21,7 @@ def display_usage(value):
     if value:
         return value
     else:
-        return "no paywalled usage"
+        return "—"
 
 class Journal(object):
     years = range(0, 5)
