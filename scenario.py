@@ -140,6 +140,12 @@ class Scenario(object):
         df["ranked"] = df.lookup_value.rank(method='first')
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
+    @cached_property
+    def ncppu_rank_lookup(self):
+        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.ncppu for j in self.journals]})
+        df["rank"] = df.lookup_value.rank(method='first')
+        return dict(zip(df.issn_l, df["rank"]))
+
 
     @cached_property
     def use_total_by_year(self):
@@ -490,6 +496,7 @@ class Scenario(object):
                 "figure": [],
                 "headers": [
                         {"text": "Net cost per paid use", "value": "ncppu", "percent": None, "raw": self.ncppu, "display": "currency"},
+                        {"text": "NCPPU Rank", "value": "ncppu_rank", "percent": None, "raw": None, "display": "number"},
                         {"text": "Cost", "value": "cost", "percent": None, "raw": self.cost, "display": "currency_int"},
                         {"text": "Usage", "value": "usage", "percent": None, "raw": self.use_total, "display": "number"},
                         {"text": "Instant Usage Percent", "value": "instant_usage_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent, "display": "percent"},
@@ -927,6 +934,7 @@ def get_common_package_data(package_id):
     my_data["social_networks"] = get_social_networks_data_from_db()
     my_timing.log_timing("get_social_networks_data_from_db")
 
+    # add this in later
     # my_data["oa_adjustment"] = get_oa_adjustment_data_from_db()
     # my_timing.log_timing("get_oa_adjustment_data_from_db")
 
