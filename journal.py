@@ -397,8 +397,8 @@ class Journal(object):
         y_fit = [func(a, pars[0], pars[1], pars[2]) for a in x]
 
         residuals = y - y_fit
-        ss_res = np.sum(residuals**2)
-        ss_tot = np.sum((y - np.mean(y))**2)
+        ss_res = np.sum(residuals**2) + 0.0001
+        ss_tot = np.sum((y - np.mean(y))**2) + 0.0001
         r_squared = 1 - (ss_res / ss_tot)
 
         return {"y_fit": y_fit,
@@ -622,8 +622,8 @@ class Journal(object):
         y_fit = [func(a, pars[0], pars[1]) for a in x]
 
         residuals = y - y_fit
-        ss_res = np.sum(residuals**2)
-        ss_tot = np.sum((y - np.mean(y))**2)
+        ss_res = np.sum(residuals**2) + 0.0001
+        ss_tot = np.sum((y - np.mean(y))**2) + 0.0001
         r_squared = 1 - (ss_res / ss_tot)
 
         y_extrap = [func(a, pars[0], pars[1]) for a in range(5, 10)]
