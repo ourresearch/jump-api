@@ -149,18 +149,6 @@ class Journal(object):
         return round(np.mean(self.cost_subscription_by_year), 4)
 
     @cached_property
-    def cppu_downloads(self):
-        if not self.downloads_paywalled:
-            return None
-        return round(self.cost_subscription/self.downloads_paywalled, 6)
-
-    @cached_property
-    def cppu_use(self):
-        if not self.use_paywalled:
-            return None
-        return round(self.cost_subscription/self.use_paywalled, 6)
-
-    @cached_property
     def ncppu(self):
         if not self.use_paywalled:
             return None
@@ -339,7 +327,6 @@ class Journal(object):
     @cached_property
     def downloads_total_by_year(self):
         scaled = [round(self.downloads_scaled_by_counter_by_year[year] * self.growth_scaling_downloads[year]) for year in self.years]
-
         return scaled
 
     @cached_property
@@ -493,7 +480,7 @@ class Journal(object):
 
     @cached_property
     def use_paywalled(self):
-        return round(round(self.downloads_paywalled * self.use_weight_multiplier), 4)
+        return self.use_total - self.use_instant
 
     @cached_property
     def downloads_counter_multiplier_normalized(self):
@@ -1221,7 +1208,6 @@ class Journal(object):
                 "subject": self.subject,
                 "num_authorships": self.num_authorships,
                 "num_citations": self.num_citations,
-                "downloads_paywalled": self.downloads_paywalled,
                 "use_paywalled": self.use_paywalled,
                 "use_instant": self.use_instant,
                 "usage": self.use_total,
