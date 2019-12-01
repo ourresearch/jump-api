@@ -17,6 +17,11 @@ from util import format_currency
 from util import format_percent
 from util import format_with_commas
 
+def display_usage(value):
+    if value:
+        return value
+    else:
+        return "no paywalled usage"
 
 class Journal(object):
     years = range(0, 5)
@@ -850,10 +855,7 @@ class Journal(object):
                     "subject": self.subject,
                     "subscribed": self.subscribed}
         table_row = OrderedDict()
-        if self.ncppu:
-            table_row["ncppu"] = self.ncppu
-        else:
-            table_row["ncppu"] = "no paywalled usage"
+        table_row["ncppu"] = display_usage(self.ncppu)
         table_row["cost"] = self.cost_actual
         table_row["use"] = self.use_total
         table_row["instant_usage_percent"] = round(self.use_instant_percent, 1)
@@ -873,11 +875,8 @@ class Journal(object):
         table_row = OrderedDict()
 
         # table
-        if self.ncppu:
-            table_row["ncppu"] = self.ncppu
-        else:
-            table_row["ncppu"] = "no paywalled usage"
-        table_row["ncppu_rank"] = self.ncppu_rank
+        table_row["ncppu"] = display_usage(self.ncppu)
+        table_row["ncppu_rank"] = display_usage(self.ncppu_rank)
         table_row["cost"] = self.cost_actual
         table_row["usage"] = round(self.use_total)
         table_row["instant_usage_percent"] = round(self.use_instant_percent)
@@ -919,10 +918,7 @@ class Journal(object):
                     "subject": self.subject,
                     "subscribed": self.subscribed}
         table_row = OrderedDict()
-        if self.ncppu:
-            table_row["ncppu"] = round(self.ncppu, 2)
-        else:
-            table_row["ncppu"] = "no paywalled usage"
+        table_row["ncppu"] = display_usage(self.ncppu)
         table_row["scenario_cost"] = round(self.cost_actual)
         table_row["subscription_cost"] = round(self.cost_subscription)
         table_row["ill_cost"] = round(self.cost_ill)
