@@ -150,7 +150,7 @@ class Journal(object):
 
     @cached_property
     def ncppu(self):
-        if not self.use_paywalled:
+        if not self.use_paywalled or self.use_paywalled > 1:
             return None
         return round(self.cost_subscription_minus_ill/self.use_paywalled, 6)
 
