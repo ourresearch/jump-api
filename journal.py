@@ -338,7 +338,7 @@ class Journal(object):
     # used to calculate use_weight_multiplier so it can't use it
     @cached_property
     def use_total_by_year(self):
-        return [round(self.downloads_total_by_year[year] + self.use_addition_from_weights) for year in self.years]
+        return [round(self.downloads_total_by_year[year] + self.use_addition_from_weights*self.growth_scaling_downloads[year]) for year in self.years]
 
     @cached_property
     def use_total(self):
