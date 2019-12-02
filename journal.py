@@ -480,7 +480,7 @@ class Journal(object):
 
     @cached_property
     def use_paywalled(self):
-        return self.use_total - self.use_instant
+        return max(0, self.use_total - self.use_instant)
 
     @cached_property
     def downloads_counter_multiplier_normalized(self):
