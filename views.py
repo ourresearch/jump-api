@@ -250,12 +250,12 @@ def package_id_get(package_id):
     my_jwt = get_jwt()
 
     for scenario in my_package.unique_saved_scenarios:
-        RunAsyncToRequestResponse("scenario/{}?jwt={}".format(scenario.scenario_id, my_jwt)).start()
+        # RunAsyncToRequestResponse("scenario/{}?jwt={}".format(scenario.scenario_id, my_jwt)).start()
         RunAsyncToRequestResponse("scenario/{}/slider?jwt={}".format(scenario.scenario_id, my_jwt)).start()
-        RunAsyncToRequestResponse("scenario/{}/table?jwt={}".format(scenario.scenario_id, my_jwt)).start()
-        RunAsyncToRequestResponse("scenario/{}/apc?jwt={}".format(scenario.scenario_id, my_jwt)).start()
+        # RunAsyncToRequestResponse("scenario/{}/table?jwt={}".format(scenario.scenario_id, my_jwt)).start()
+        # RunAsyncToRequestResponse("scenario/{}/apc?jwt={}".format(scenario.scenario_id, my_jwt)).start()
 
-    RunAsyncToRequestResponse("package/{}?jwt={}".format(package_id, my_jwt)).start()
+    # RunAsyncToRequestResponse("package/{}?jwt={}".format(package_id, my_jwt)).start()
 
     my_timing.log_timing("after kicking off cache requests")
 
