@@ -211,6 +211,7 @@ def account_get():
     account_dict = {
         "id": my_account.id,
         "name": my_account.display_name,
+        "is_demo_account": my_account.is_demo_account,
         "packages": [package.to_dict_summary() for package in my_account.unique_packages],
     }
     my_timing.log_timing("after to_dict()")
