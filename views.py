@@ -415,12 +415,17 @@ def scenario_id_export_csv_get(scenario_id):
 
 
 @app.route('/admin/change_password', methods=['GET'])
+@app.route('/admin/change-password', methods=['GET'])
 def admin_change_password():
     username = request.args.get('username')
     old_password = request.args.get('old_password')
+    if not old_password:
+        old_password = request.args.get('old-password')
     new_password = request.args.get('new_password')
+    if not new_password:
+        new_password = request.args.get('new-password')
     if not username or not old_password or not new_password:
-        return abort_json(400, "Missing parameters:  need username, old_password, new_password")
+        return abort_json(400, "Missing parameters:  need username, old-password, new-password")
 
     my_account = Account.query.filter(Account.username == username).first()
 
