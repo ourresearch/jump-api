@@ -128,6 +128,7 @@ class ApcJournal(object):
         else:
             table_row["apc_price"] = None
         table_row["fractional_authorship"] = round(self.fractional_authorships_total, 1)
+        table_row["num_apc_papers"] = round(self.num_apc_papers_historical, 1)
         table_row["cost_apc"] = round(self.cost_apc_historical)
         response["table_row"] = table_row
         return response

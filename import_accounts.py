@@ -52,39 +52,48 @@ def convert_date_spaces_to_dashes(filename):
                 targetFile.write(contents)
     return new_filename
 
-def import_counter(filename):
+def build_counter_import_file(filename):
 
     rows = read_csv_file(filename)
     # todo just one for now
     reports = {}
     lines = []
     for row in rows:
-        print "row:", row["username"], row["display_name"], row["grid_id"]
-        my_files = glob.glob("/Users/hpiwowar/Downloads/{}.*".format(row["username"]))
-        if my_files:
-            counter_file = my_files[0]
-            print counter_file
-            try:
-                report = pycounter.report.parse(counter_file)
-                print report
-                reports[row["username"]] = report
+        if row["add_now"] == "1":
+            print "row:", row["username"], row["display_name"], row["grid_id"], row["add_now"]
+            my_files = glob.glob("/Users/hpiwowar/Downloads/{}.*".format(row["username"]))
+            if my_files:
+                counter_file = my_files[0]
+                print counter_file
+                try:
+                    report = pycounter.report.parse(counter_file)
+                    print report
+                    reports[row["username"]] = report
 
-            except AttributeError:
-                report = None
-                print "error on", my_files
-                reports[row["username"]] = "error"
+                # except ValueError:
+                #     convert_date_spaces_to_dashes(counter_file)
+                #     return import_counter(filename)
+                #
+                # except UnicodeDecodeError:
+                #     convert_from_utf16_to_utf8(counter_file)
+                #     return import_counter(filename)
 
-            if report:
-                my_account = Account.query.filter(Account.username == row["username"]).first()
-                package_id = my_account.packages[0].package_id
-                for journal in report:
-                    export_dict = {}
-                    export_dict["organization"] = row["username"]
-                    export_dict["package_id"] = package_id
-                    export_dict["publisher"] = journal.publisher
-                    export_dict["issn"] = journal.issn
-                    export_dict["total"] = journal.html_total + journal.pdf_total
-                    lines.append(export_dict)
+                except AttributeError:
+                    report = None
+                    print "error on", my_files
+                    reports[row["username"]] = "error"
+
+                if report:
+                    my_account = Account.query.filter(Account.username == row["username"]).first()
+                    package_id = my_account.packages[0].package_id
+                    for journal in report:
+                        export_dict = {}
+                        export_dict["organization"] = row["username"]
+                        export_dict["package_id"] = package_id
+                        export_dict["publisher"] = journal.publisher
+                        export_dict["issn"] = journal.issn
+                        export_dict["total"] = journal.html_total + journal.pdf_total
+                        lines.append(export_dict)
 
     print reports
     for username, report in reports.iteritems():
@@ -142,9 +151,11 @@ def create_accounts(filename):
     rows = read_csv_file(filename)
     # todo just one for now
     for row in rows:
-        print "row:", row["username"], row["display_name"], row["grid_id"]
+        print "row:", row["username"], row["display_name"], row["grid_id"], row["add_now"]
 
-        if Account.query.filter(Account.username==row["username"]).first():
+        if not row["add_now"] == "1":
+            print u"skipping {}, add_row != 1".format(row["username"])
+        elif  Account.query.filter(Account.username==row["username"]).first():
             print u"skipping {}, already in db".format(row["username"])
         else:
             new_account = Account()
@@ -163,7 +174,7 @@ def create_accounts(filename):
 
             scenario_id = shortuuid.uuid()[0:8]
             new_saved_scenario = SavedScenario(False, scenario_id, None)
-            new_saved_scenario.scenario_name = u"{} first scenario".format(new_package.package_name)
+            new_saved_scenario.scenario_name = u"First Scenario".format(new_package.package_name)
 
             new_package.saved_scenarios = [new_saved_scenario]
             new_account.packages = [new_package]
@@ -183,9 +194,9 @@ if __name__ == "__main__":
     parsed_args = parser.parse_args()
     parsed_vars = vars(parsed_args)
 
-    import_counter(parsed_vars["filename"])
 
-    # create_accounts(parsed_vars["filename"])
+    create_accounts(parsed_vars["filename"])
+    build_counter_import_file(parsed_vars["filename"])
 
 
     # then import it into jump_counter_input
@@ -195,14 +206,14 @@ if __name__ == "__main__":
     # alter table jump_counter rename to jump_counter_old;
     # alter table jump_counter_newest rename to jump_counter;
     # drop table jump_counter_old;
-
+    #
     # drop table jump_apc_authorships_new;
     # create table jump_apc_authorships_new distkey (package_id) interleaved sortkey (package_id, doi, issn_l) as (select * from jump_apc_authorships_view);
     # select * from jump_apc_authorships_new order by random() limit 1000;
     # alter table jump_apc_authorships rename to jump_apc_authorships_old;
     # alter table jump_apc_authorships_new rename to jump_apc_authorships;
     # drop table jump_apc_authorships_old;
-
+    #
     # create table jump_citing_new distkey(issn_l) interleaved sortkey (citing_org, grid_id, year, issn_l) as (select * from jump_citing_view where grid_id in (select grid_id from jump_account_grid_id))
     # select * from jump_citing_new order by random() limit 1000;
     # alter table jump_citing rename to jump_citing_old;
