@@ -148,12 +148,18 @@ class Journal(object):
     def cost_subscription(self):
         return round(np.mean(self.cost_subscription_by_year), 4)
 
+
     @cached_property
     def ncppu(self):
         if not self.use_paywalled or self.use_paywalled < 1:
             return None
         return round(self.cost_subscription_minus_ill/self.use_paywalled, 6)
 
+    @cached_property
+    def old_school_cpu(self):
+        if not self.downloads_total or self.downloads_total < 1:
+            return None
+        return round(float(self.cost_subscription)/self.downloads_total, 6)
 
     @cached_property
     def use_weight_multiplier(self):
@@ -581,6 +587,12 @@ class Journal(object):
         return None
 
     @cached_property
+    def old_school_cpu_rank(self):
+        if self.old_school_cpu:
+            return self.scenario.old_school_cpu_rank_lookup[self.issn_l]
+        return None
+
+    @cached_property
     def use_total_fuzzed(self):
         return self.scenario.use_total_fuzzed_lookup[self.issn_l]
 
@@ -873,6 +885,8 @@ class Journal(object):
         table_row["subscription_cost"] = round(self.cost_subscription)
         table_row["ill_cost"] = round(self.cost_ill)
         table_row["subscription_minus_ill_cost"] = round(self.cost_subscription_minus_ill)
+        table_row["old_school_cpu"] = display_usage(self.old_school_cpu)
+        table_row["old_school_cpu_rank"] = display_usage(self.old_school_cpu_rank)
 
         # fulfillment
         table_row["use_asns_percent"] = round(float(100)*self.use_actual["social_networks"]/self.use_total)

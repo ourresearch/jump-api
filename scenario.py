@@ -146,6 +146,12 @@ class Scenario(object):
         df["rank"] = df.lookup_value.rank(method='first')
         return dict(zip(df.issn_l, df["rank"]))
 
+    @cached_property
+    def old_school_cpu_rank_lookup(self):
+        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.old_school_cpu for j in self.journals]})
+        df["rank"] = df.lookup_value.rank(method='first')
+        return dict(zip(df.issn_l, df["rank"]))
+
 
     @cached_property
     def use_total_by_year(self):
@@ -310,6 +316,10 @@ class Scenario(object):
     @cached_property
     def num_authorships(self):
         return round(np.sum([j.num_authorships for j in self.journals]), 4)
+
+    @cached_property
+    def num_apc_papers_historical(self):
+        return round(np.sum([j.num_apc_papers_historical for j in self.apc_journals]))
 
     @cached_property
     def cost_apc_historical_by_year(self):
@@ -506,6 +516,8 @@ class Scenario(object):
                         {"text": "Subscription Cost", "value": "subscription_cost", "percent": None, "raw": self.cost_subscription, "display": "currency_int"},
                         {"text": "ILL Cost", "value": "ill_cost", "percent": None, "raw": self.cost_ill, "display": "currency_int"},
                         {"text": "Subscription minus ILL Cost", "value": "subscription_minus_ill_cost", "percent": None, "raw": self.cost_subscription_minus_ill, "display": "currency_int"},
+                        {"text": "Old School Cost per Use", "value": "old_school_cpu", "percent": None, "raw": None, "display": "currency"},
+                        {"text": "Old School CPU Rank", "value": "old_school_cpu_rank", "percent": None, "raw": None, "display": "currency"},
 
                         # fulfillment
                         {"text": "Percent of Usage from ASNs", "value": "use_asns_percent", "percent": round(float(100)*self.use_social_networks/self.use_total), "raw": self.use_social_networks, "display": "percent"},
@@ -595,6 +607,7 @@ class Scenario(object):
                         {"text": "OA type", "value": "oa_status", "percent": None, "raw": None, "display": "text"},
                         {"text": "APC price", "value": "apc_price", "percent": None, "raw": self.apc_price, "display": "currency_int"},
                         {"text": "Total fractional authorship", "value": "fractional_authorship", "percent": None, "raw": self.fractional_authorships_total, "display": "float1"},
+                        {"text": "Number papers", "value": "num_apc_papers", "percent": None, "raw": self.num_apc_papers_historical, "display": "number"},
                         {"text": "APC Dollars Spent", "value": "cost_apc", "percent": None, "raw": self.cost_apc_historical, "display": "currency_int"},
                 ],
                 "journals": [j.to_dict() for j in self.apc_journals_sorted_spend[0:pagesize]],
