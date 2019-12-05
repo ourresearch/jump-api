@@ -606,8 +606,8 @@ class Scenario(object):
                 "headers": [
                         {"text": "OA type", "value": "oa_status", "percent": None, "raw": None, "display": "text"},
                         {"text": "APC price", "value": "apc_price", "percent": None, "raw": self.apc_price, "display": "currency_int"},
-                        {"text": "Total fractional authorship", "value": "fractional_authorship", "percent": None, "raw": self.fractional_authorships_total, "display": "float1"},
                         {"text": "Number papers", "value": "num_apc_papers", "percent": None, "raw": self.num_apc_papers_historical, "display": "number"},
+                        {"text": "Total fractional authorship", "value": "fractional_authorship", "percent": None, "raw": self.fractional_authorships_total, "display": "float1"},
                         {"text": "APC Dollars Spent", "value": "cost_apc", "percent": None, "raw": self.cost_apc_historical, "display": "currency_int"},
                 ],
                 "journals": [j.to_dict() for j in self.apc_journals_sorted_spend[0:pagesize]],
