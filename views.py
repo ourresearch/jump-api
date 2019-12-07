@@ -380,13 +380,9 @@ def scenario_id_report_get(scenario_id):
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_report(pagesize))
 
 
-@app.route('/scenario/<scenario_id>/export.csv', methods=['GET', 'POST'])
-@jwt_required
-def scenario_id_export_csv_get(scenario_id):
-    pagesize = int(request.args.get("pagesize", 5000))
-    my_saved_scenario = get_saved_scenario(scenario_id)
+def export_get(my_saved_scenario):
 
-    table_dicts = my_saved_scenario.live_scenario.to_dict_table(pagesize)["journals"]
+    table_dicts = my_saved_scenario.live_scenario.to_dict_export(5000)["journals"]
 
     filename = "export.csv"
     with open(filename, "w") as file:
@@ -410,8 +406,32 @@ def scenario_id_export_csv_get(scenario_id):
     with open(filename, "r") as file:
         contents = file.readlines()
 
+    return contents
+
+
+@app.route('/scenario/<scenario_id>/export.csv', methods=['GET', 'POST'])
+@jwt_required
+def scenario_id_export_csv_get(scenario_id):
+    my_saved_scenario = get_saved_scenario(scenario_id)
+    contents = export_get(my_saved_scenario)
     # return Response(contents, mimetype="text/text")
     return Response(contents, mimetype="text/csv")
+
+
+@app.route('/scenario/<scenario_id>/export', methods=['GET', 'POST'])
+@jwt_required
+def scenario_id_export_get(scenario_id):
+    my_saved_scenario = get_saved_scenario(scenario_id)
+    contents = export_get(my_saved_scenario)
+    return Response(contents, mimetype="text/text")
+
+@app.route('/debug/export', methods=['GET'])
+def debug_export_get():
+    scenario_id = "demo-debug"
+    my_saved_scenario = get_saved_scenario(scenario_id, debug_mode=True)
+    contents = export_get(my_saved_scenario)
+    return Response(contents, mimetype="text/text")
+
 
 
 @app.route('/admin/change_password', methods=['GET'])
