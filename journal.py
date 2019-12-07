@@ -609,6 +609,10 @@ class Journal(object):
         return self.scenario.use_total_fuzzed_lookup[self.issn_l]
 
     @cached_property
+    def downloads_fuzzed(self):
+        return self.scenario.downloads_fuzzed_lookup[self.issn_l]
+
+    @cached_property
     def num_authorships_fuzzed(self):
         return self.scenario.num_authorships_fuzzed_lookup[self.issn_l]
 
@@ -835,7 +839,7 @@ class Journal(object):
                     "title": self.title,
                     "subject": self.subject,
                     "subscribed": self.subscribed,
-                    "use_total_fuzzed": self.use_total_fuzzed,
+                    "usage_total_fuzzed": self.use_total_fuzzed,
                     "num_authorships_fuzzed": self.num_authorships_fuzzed,
                     "num_citations_fuzzed": self.num_citations_fuzzed,
                     "num_papers": self.num_papers,
@@ -882,7 +886,8 @@ class Journal(object):
         response["table_row"]["ncppu_fuzzed"] = self.ncppu_fuzzed
         response["table_row"]["subscription_cost_fuzzed"] = self.cost_subscription_fuzzed
         response["table_row"]["subscription_minus_ill_cost_fuzzed"] = self.cost_subscription_minus_ill_fuzzed
-        response["table_row"]["use_fuzzed"] = self.use_total_fuzzed
+        response["table_row"]["usage_fuzzed"] = self.use_total_fuzzed
+        response["table_row"]["downloads_fuzzed"] = self.downloads_fuzzed
         response["table_row"]["citations_fuzzed"] = self.num_citations_fuzzed
         response["table_row"]["authorships_fuzzed"] = self.num_authorships_fuzzed
         return response
