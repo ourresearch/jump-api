@@ -153,6 +153,12 @@ class Scenario(object):
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
     @cached_property
+    def downloads_fuzzed_lookup(self):
+        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.downloads_total for j in self.journals]})
+        df["ranked"] = df.lookup_value.rank(method='first')
+        return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
+
+    @cached_property
     def ncppu_fuzzed_lookup(self):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.ncppu for j in self.journals]})
         df["ranked"] = df.lookup_value.rank(method='first')
@@ -521,7 +527,8 @@ class Scenario(object):
                      {"text": "NCPPU Fuzzed", "value": "ncppu_fuzzed", "percent": None, "raw": None, "display": "text"},
                      {"text": "Subscription Cost Fuzzed", "value": "subscription_cost_fuzzed", "percent": None, "raw": None, "display": "text"},
                      {"text": "Subscription minus ILL Cost Fuzzed", "value": "subscription_minus_ill_cost_fuzzed", "percent": None, "raw": None, "display": "text"},
-                     {"text": "Usage Fuzzed", "value": "use_fuzzed", "percent": None, "raw": None, "display": "text"},
+                     {"text": "Usage Fuzzed", "value": "usage_fuzzed", "percent": None, "raw": None, "display": "text"},
+                     {"text": "Downloads Fuzzed", "value": "downloads_fuzzed", "percent": None, "raw": None, "display": "text"},
                      {"text": "Citations to papers Fuzzed", "value": "citations_fuzzed", "percent": None, "raw": None, "display": "text"},
                      {"text": "Authored papers Fuzzed", "value": "authorships_fuzzed", "percent": None, "raw": None, "display": "text"},
             ]
