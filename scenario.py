@@ -123,6 +123,18 @@ class Scenario(object):
         return [j for j in self.journals_sorted_ncppu if j.subscribed]
 
     @cached_property
+    def cost_subscription_fuzzed_lookup(self):
+        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.cost_subscription for j in self.journals]})
+        df["ranked"] = df.lookup_value.rank(method='first')
+        return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
+
+    @cached_property
+    def cost_subscription_minus_ill_fuzzed_lookup(self):
+        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.cost_subscription_minus_ill for j in self.journals]})
+        df["ranked"] = df.lookup_value.rank(method='first')
+        return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
+
+    @cached_property
     def num_citations_fuzzed_lookup(self):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.num_citations for j in self.journals]})
         df["ranked"] = df.lookup_value.rank(method='first')
@@ -137,6 +149,12 @@ class Scenario(object):
     @cached_property
     def use_total_fuzzed_lookup(self):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.use_total for j in self.journals]})
+        df["ranked"] = df.lookup_value.rank(method='first')
+        return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
+
+    @cached_property
+    def ncppu_fuzzed_lookup(self):
+        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.ncppu for j in self.journals]})
         df["ranked"] = df.lookup_value.rank(method='first')
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
@@ -496,6 +514,22 @@ class Scenario(object):
         response["_timing"] = self.timing_messages
         return response
 
+    def to_dict_export(self, pagesize):
+        response = self.to_dict_table(pagesize)
+        # additional headers
+        response["headers"] += [
+                     {"text": "NCPPU Fuzzed", "value": "ncppu_fuzzed", "percent": None, "raw": None, "display": "text"},
+                     {"text": "Subscription Cost Fuzzed", "value": "subscription_cost_fuzzed", "percent": None, "raw": None, "display": "text"},
+                     {"text": "Subscription minus ILL Cost Fuzzed", "value": "subscription_minus_ill_cost_fuzzed", "percent": None, "raw": None, "display": "text"},
+                     {"text": "Usage Fuzzed", "value": "use_fuzzed", "percent": None, "raw": None, "display": "text"},
+                     {"text": "Citations to papers Fuzzed", "value": "citations_fuzzed", "percent": None, "raw": None, "display": "text"},
+                     {"text": "Authored papers Fuzzed", "value": "authorships_fuzzed", "percent": None, "raw": None, "display": "text"},
+            ]
+
+        #overwrite
+        response["journals"] = [j.to_dict_export() for j in self.journals_sorted_ncppu[0:pagesize]]
+
+        return response
 
     def to_dict_table(self, pagesize):
         response = {
@@ -516,8 +550,8 @@ class Scenario(object):
                         {"text": "Subscription Cost", "value": "subscription_cost", "percent": None, "raw": self.cost_subscription, "display": "currency_int"},
                         {"text": "ILL Cost", "value": "ill_cost", "percent": None, "raw": self.cost_ill, "display": "currency_int"},
                         {"text": "Subscription minus ILL Cost", "value": "subscription_minus_ill_cost", "percent": None, "raw": self.cost_subscription_minus_ill, "display": "currency_int"},
-                        {"text": "Old School Cost per Use", "value": "old_school_cpu", "percent": None, "raw": None, "display": "currency"},
-                        {"text": "Old School CPU Rank", "value": "old_school_cpu_rank", "percent": None, "raw": None, "display": "currency"},
+                        # {"text": "Old School Cost per Use", "value": "old_school_cpu", "percent": None, "raw": None, "display": "currency"},
+                        # {"text": "Old School CPU Rank", "value": "old_school_cpu_rank", "percent": None, "raw": None, "display": "currency"},
 
                         # fulfillment
                         {"text": "Percent of Usage from ASNs", "value": "use_asns_percent", "percent": round(float(100)*self.use_social_networks/self.use_total), "raw": self.use_social_networks, "display": "percent"},

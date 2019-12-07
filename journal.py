@@ -593,6 +593,18 @@ class Journal(object):
         return None
 
     @cached_property
+    def cost_subscription_fuzzed(self):
+        return self.scenario.cost_subscription_fuzzed_lookup[self.issn_l]
+
+    @cached_property
+    def cost_subscription_minus_ill_fuzzed(self):
+        return self.scenario.cost_subscription_minus_ill_fuzzed_lookup[self.issn_l]
+
+    @cached_property
+    def ncppu_fuzzed(self):
+        return self.scenario.ncppu_fuzzed_lookup[self.issn_l]
+
+    @cached_property
     def use_total_fuzzed(self):
         return self.scenario.use_total_fuzzed_lookup[self.issn_l]
 
@@ -865,6 +877,16 @@ class Journal(object):
 
         return response
 
+    def to_dict_export(self):
+        response = self.to_dict_table()
+        response["table_row"]["ncppu_fuzzed"] = self.ncppu_fuzzed
+        response["table_row"]["subscription_cost_fuzzed"] = self.cost_subscription_fuzzed
+        response["table_row"]["subscription_minus_ill_cost_fuzzed"] = self.cost_subscription_minus_ill_fuzzed
+        response["table_row"]["use_fuzzed"] = self.use_total_fuzzed
+        response["table_row"]["citations_fuzzed"] = self.num_citations_fuzzed
+        response["table_row"]["authorships_fuzzed"] = self.num_authorships_fuzzed
+        return response
+
     def to_dict_table(self):
         response = OrderedDict()
         response["meta"] = {"issn_l": self.issn_l,
@@ -885,8 +907,8 @@ class Journal(object):
         table_row["subscription_cost"] = round(self.cost_subscription)
         table_row["ill_cost"] = round(self.cost_ill)
         table_row["subscription_minus_ill_cost"] = round(self.cost_subscription_minus_ill)
-        table_row["old_school_cpu"] = display_usage(self.old_school_cpu)
-        table_row["old_school_cpu_rank"] = display_usage(self.old_school_cpu_rank)
+        # table_row["old_school_cpu"] = display_usage(self.old_school_cpu)
+        # table_row["old_school_cpu_rank"] = display_usage(self.old_school_cpu_rank)
 
         # fulfillment
         table_row["use_asns_percent"] = round(float(100)*self.use_actual["social_networks"]/self.use_total)
