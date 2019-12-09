@@ -482,10 +482,13 @@ def admin_register_user():
 
 @app.route('/debug/journal/<issn_l>', methods=['GET'])
 def jump_debug_issn_get(issn_l):
+    subscribe = str2bool(request.args.get('subscribe', "false"))
     scenario_id = "demo-debug"
     my_saved_scenario = get_saved_scenario(scenario_id, debug_mode=True)
     scenario = my_saved_scenario.live_scenario
     my_journal = scenario.get_journal(issn_l)
+    if subscribe:
+        my_journal.subscribed = True
     if not my_journal:
         abort_json(404, "journal not found")
     return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
