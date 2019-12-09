@@ -496,6 +496,12 @@ def jump_debug_table_get():
     my_saved_scenario = get_saved_scenario(scenario_id, debug_mode=True)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table(5000))
 
+@app.route('/debug/scenario/slider', methods=['GET'])
+def jump_debug_slider_get():
+    scenario_id = "demo-debug"
+    my_saved_scenario = get_saved_scenario(scenario_id, debug_mode=True)
+    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
+
 @app.route('/debug/scenario/apc', methods=['GET'])
 def jump_debug_apc_get():
     scenario_id = "demo-debug"
