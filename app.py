@@ -9,11 +9,14 @@ import simplejson as json
 import random
 import warnings
 import urlparse
+import numpy
+from contextlib import contextmanager
+from collections import OrderedDict
+
+warnings.filterwarnings("ignore", category=UserWarning, module='psycopg2')
 import psycopg2
 import psycopg2.extras # needed though you wouldn't guess it
 from psycopg2.pool import ThreadedConnectionPool
-from contextlib import contextmanager
-from collections import OrderedDict
 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
@@ -39,9 +42,9 @@ logging.basicConfig(
     level=logging.DEBUG,
     format='%(thread)d: %(message)s'  #tried process but it was always "6" on heroku
 )
-logger = logging.getLogger("oadoi")
+logger = logging.getLogger("jump-api")
 
-libraries_to_mum = [
+libraries_to_mum_warning = [
     "requests",
     "urllib3",
     "requests.packages.urllib3",
@@ -54,15 +57,32 @@ libraries_to_mum = [
     "paramiko",
     "chardet",
     "cryptography",
-    "psycopg2",
-    "matplotlib"
 ]
 
-for a_library in libraries_to_mum:
+
+libraries_to_mum_error = [
+    "scipy",
+    "psycopg2",
+    "matplotlib",
+    "numpy"
+]
+
+for a_library in libraries_to_mum_warning:
     the_logger = logging.getLogger(a_library)
     the_logger.setLevel(logging.WARNING)
     the_logger.propagate = True
     warnings.filterwarnings("ignore", category=UserWarning, module=a_library)
+
+for a_library in libraries_to_mum_error:
+    the_logger = logging.getLogger(a_library)
+    the_logger.setLevel(logging.ERROR)
+    the_logger.propagate = True
+    warnings.filterwarnings("ignore", category=UserWarning, module=a_library)
+
+with warnings.catch_warnings():
+    warnings.filterwarnings('ignore', r'RuntimeWarning: overflow encountered in exp')
+
+numpy.seterr(over="ignore")
 
 # disable extra warnings
 requests.packages.urllib3.disable_warnings()
