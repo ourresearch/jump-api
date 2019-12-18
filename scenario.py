@@ -850,7 +850,7 @@ def get_embargo_data_from_db():
 
 @cache
 def get_unpaywall_downloads_from_db():
-    command = "select * from jump_elsevier_unpaywall_downloads"
+    command = "select * from jump_unpaywall_downloads where issn_l in (select distinct issn_l from jump_counter)"
     big_view_rows = None
     with get_db_cursor() as cursor:
         cursor.execute(command)
