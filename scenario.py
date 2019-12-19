@@ -75,8 +75,12 @@ class Scenario(object):
 
         self.log_timing("setup")
 
-        self.data = get_common_package_data_from_cache(self.package_id)
+        # self.data = get_common_package_data_from_cache(self.package_id)
+        self.data = get_common_package_data(self.package_id)
         self.log_timing("get_common_package_data_from_cache")
+
+        self.set_clean_data()  #order for this one matters, after get common, before build journals
+        self.log_timing("set_clean_data")
 
         self.journals = get_fresh_journal_list(self, my_jwt)
         self.log_timing("mint regular journals")
@@ -89,6 +93,21 @@ class Scenario(object):
             if journal.issn_l in self.starting_subscriptions:
                 journal.set_subscribe()
         self.log_timing("subscribing to all journals")
+
+
+    def set_clean_data(self):
+        clean_dict = {}
+        for k, v in self.data["prices_raw"][DEMO_PACKAGE_ID].iteritems():
+            if v != 0 and v is not None:
+                clean_dict[k] = v
+        self.data["prices"] = clean_dict
+
+        clean_dict = {}
+        issn_ls_with_prices = self.data["prices"].keys()
+        for k, v in self.data["unpaywall_downloads_dict_raw"].iteritems():
+            if k in issn_ls_with_prices:
+                clean_dict[k] = v
+        self.data["unpaywall_downloads_dict"] = clean_dict
 
     @cached_property
     def apc_journals(self):
@@ -278,7 +297,7 @@ class Scenario(object):
 
     @cached_property
     def use_instant(self):
-        return round(sum([j.use_instant for j in self.journals if j.use_instant]))
+        return 1 + np.sum([journal.use_instant for journal in self.journals])
 
     @cached_property
     def use_instant_by_year(self):
@@ -538,7 +557,7 @@ class Scenario(object):
 
         return response
 
-    def to_dict_table(self, pagesize):
+    def to_dict_table(self, pagesize=5000):
         response = {
                 "_settings": self.settings.to_dict(),
                 "name": "Overview",
@@ -551,7 +570,7 @@ class Scenario(object):
                         {"text": "Cost", "value": "cost", "percent": None, "raw": self.cost, "display": "currency_int"},
                         {"text": "Usage", "value": "usage", "percent": None, "raw": self.use_total, "display": "number"},
                         {"text": "Instant Usage Percent", "value": "instant_usage_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent, "display": "percent"},
-                        {"text": "Free Instant Usage Percent", "value": "free_instant_usage_percent", "percent": None, "raw": None, "display": "percent"},
+                        {"text": "Free Instant Usage Percent", "value": "free_instant_usage_percent", "percent": self.use_free_instant_percent, "raw": self.use_free_instant_percent, "display": "percent"},
 
                         # cost
                         {"text": "Subscription Cost", "value": "subscription_cost", "percent": None, "raw": self.cost_subscription, "display": "currency_int"},
@@ -771,7 +790,7 @@ def get_package_specific_scenario_data_from_db(input_package_id):
 
     consortium_package_ids_string = ",".join(["'{}'".format(package_id) for package_id in consortium_package_ids])
 
-    command = """select citing.issn_l, citing.year, sum(num_citations) as num_citations
+    command = """select citing.issn_l, citing.year::int, sum(num_citations) as num_citations
         from jump_citing citing
         join jump_account_grid_id account_grid on citing.grid_id = account_grid.grid_id
         join jump_account_package account_package on account_grid.account_id = account_package.account_id
@@ -784,13 +803,13 @@ def get_package_specific_scenario_data_from_db(input_package_id):
         citation_rows = cursor.fetchall()
     citation_dict = defaultdict(dict)
     for row in citation_rows:
-        citation_dict[row["issn_l"]][int(row["year"])] = round(row["num_citations"])
+        citation_dict[row["issn_l"]][row["year"]] = round(row["num_citations"])
 
     timing.append(("time from db: citation_rows", elapsed(section_time, 2)))
     section_time = time()
 
     command = """
-        select authorship.issn_l, authorship.year, sum(num_authorships) as num_authorships
+        select authorship.issn_l, authorship.year::int, sum(num_authorships) as num_authorships
         from jump_authorship authorship
         join jump_account_grid_id account_grid on authorship.grid_id = account_grid.grid_id
         join jump_account_package account_package on account_grid.account_id = account_package.account_id
@@ -803,7 +822,7 @@ def get_package_specific_scenario_data_from_db(input_package_id):
         authorship_rows = cursor.fetchall()
     authorship_dict = defaultdict(dict)
     for row in authorship_rows:
-        authorship_dict[row["issn_l"]][int(row["year"])] = round(row["num_authorships"])
+        authorship_dict[row["issn_l"]][row["year"]] = round(row["num_authorships"])
 
     timing.append(("time from db: authorship_rows", elapsed(section_time, 2)))
     section_time = time()
@@ -867,6 +886,17 @@ def get_num_papers_from_db():
     lookup_dict = defaultdict(dict)
     for row in rows:
         lookup_dict[row["issn_l"]][row["year"]] = row["num_papers"]
+    return lookup_dict
+
+@cache
+def get_prices_from_db():
+    command = "select issn_l, usa_usd, package_id from jump_journal_prices"
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+    lookup_dict = defaultdict(dict)
+    for row in rows:
+        lookup_dict[row["package_id"]][row["issn_l"]] = row["usa_usd"]
     return lookup_dict
 
 @cache
@@ -976,7 +1006,7 @@ def get_common_package_data(package_id):
     my_data["embargo_dict"] = get_embargo_data_from_db()
     my_timing.log_timing("get_embargo_data_from_db")
 
-    my_data["unpaywall_downloads_dict"] = get_unpaywall_downloads_from_db()
+    my_data["unpaywall_downloads_dict_raw"] = get_unpaywall_downloads_from_db()
     my_timing.log_timing("get_unpaywall_downloads_from_db")
 
     my_data["oa"] = get_oa_data_from_db()
@@ -997,6 +1027,9 @@ def get_common_package_data(package_id):
 
     my_data["num_papers"] = get_num_papers_from_db()
     my_timing.log_timing("get_num_papers_from_db")
+
+    my_data["prices_raw"] = get_prices_from_db()
+    my_timing.log_timing("get_prices_from_db")
 
     my_data["_timing"] = my_timing.to_dict()
 

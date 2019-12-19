@@ -9,6 +9,7 @@ from nose.tools import assert_equals
 from nose.tools import assert_is_not_none
 from nose.tools import assert_not_equals
 from nose.tools import assert_true
+
 import numpy as np
 from numpy.testing import assert_almost_equal
 from numpy.testing import assert_allclose
@@ -18,14 +19,11 @@ from app import use_groups
 
 requests_cache.install_cache('jump_api_requests_cache', expire_after=60*60*24*7)  # expire_after is in seconds
 
-# nosetests --processes=50 --process-timeout=600 -s test/test_scenario.py:MyTest
-
 
 # run default open and closed like this:
 # nosetests --processes=50 --process-timeout=600 test/
+# mynosy
 
-# test just hybrid like this
-# nosetests --processes=50 --process-timeout=600 -s test/test_publication.py:TestHybrid
 
 my_data = ["boo"]
 
@@ -37,12 +35,24 @@ class MyTest(unittest.TestCase):
         self.my_saved_scenario = get_saved_scenario(self.scenario_id, debug_mode=True)
         self.live_scenario = self.my_saved_scenario.live_scenario
         self.slider_dict = self.my_saved_scenario.live_scenario.to_dict_slider()
-        self.journals = self.slider_dict["journals"]
+        self.table_dict = self.my_saved_scenario.live_scenario.to_dict_table()
+        self.table_headers = self.table_dict["headers"]
+        self.slider_journals = self.slider_dict["journals"]
+
+    def test_nonzero(self):
+        for header in self.table_headers:
+            if header["value"] not in ["ncppu_rank", "use_subscription_percent"]:
+                print header["value"]
+                assert_not_equals(header["raw"], None)
+                assert_not_equals(header["raw"], 0)
+                if header["percent"]:
+                    assert_true(header["percent"] <= 100)
+
 
     def test_total_sums(self):
         counts = defaultdict(int)
 
-        for my_journal in self.journals:
+        for my_journal in self.slider_journals:
             calculated_total = 0
             calculated_total += my_journal["use_groups_if_subscribed"]["subscription"]
             calculated_total += my_journal["use_groups_free_instant"]["oa"]
@@ -71,7 +81,7 @@ class MyTest(unittest.TestCase):
 
     def test_subscription_sums(self):
         counts = defaultdict(int)
-        for my_journal in self.journals:
+        for my_journal in self.slider_journals:
 
             calculated_total = 0
             calculated_total += my_journal["use_groups_if_not_subscribed"]["ill"]
