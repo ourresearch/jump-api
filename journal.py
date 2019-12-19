@@ -13,6 +13,7 @@ from app import use_groups
 from app import use_groups_free_instant
 from app import use_groups_lookup
 from app import get_db_cursor
+from app import DEMO_PACKAGE_ID
 from util import format_currency
 from util import format_percent
 from util import format_with_commas
@@ -63,7 +64,11 @@ class Journal(object):
 
     @cached_property
     def cost_subscription_2018(self):
-        return float(self.my_scenario_data_row["usa_usd"]) * (1 + self.settings.cost_content_fee_percent/float(100))
+        # return float(self.my_scenario_data_row["usa_usd"]) * (1 + self.settings.cost_content_fee_percent/float(100))
+        my_lookup = self._scenario_data["prices"]
+        if not my_lookup.get(self.issn_l):
+            return None
+        return float(my_lookup.get(self.issn_l)) * (1 + self.settings.cost_content_fee_percent/float(100))
 
     @cached_property
     def papers_2018(self):
@@ -77,7 +82,10 @@ class Journal(object):
             print "key error in num_citations_historical_by_year for {}".format(self.issn_l)
             return [0 for year in self.years]
         # the year is a string key alas
-        return [my_dict.get(str(year), 0) for year in self.historical_years_by_year]
+        if my_dict and isinstance(my_dict.keys()[0], int):
+            return [my_dict.get(year, 0) for year in self.historical_years_by_year]
+        else:
+            return [my_dict.get(str(year), 0) for year in self.historical_years_by_year]
 
     @cached_property
     def num_citations(self):
@@ -92,7 +100,10 @@ class Journal(object):
             return [0 for year in self.years]
 
         # the year is a string key alas
-        return [my_dict.get(str(year), 0) for year in self.historical_years_by_year]
+        if my_dict and isinstance(my_dict.keys()[0], int):
+            return [my_dict.get(year, 0) for year in self.historical_years_by_year]
+        else:
+            return [my_dict.get(str(year), 0) for year in self.historical_years_by_year]
 
     @cached_property
     def num_authorships(self):
@@ -538,35 +549,39 @@ class Journal(object):
         response = defaultdict(int)
         for group in use_groups:
             response[group] = self.__getattribute__("use_{}".format(group))
+            if self.subscribed:
+                response["ill"] = 0
+                response["other_delayed"] = 0
+            else:
+                response["subscription"] = 0
         return response
 
     @cached_property
     def downloads_actual_by_year(self):
         #initialize
         my_dict = {}
-        for group in use_groups:
-            my_dict[group] = [0 for year in self.years]
-
         # include the if to skip this if no useage
         if self.downloads_total:
-            # true regardless
-            for group in use_groups_free_instant + ["total"]:
+            for group in use_groups:
                 my_dict[group] = self.__getattribute__("downloads_{}_by_year".format(group))
-
-            # depends
-            if self.subscribed:
-                my_dict["subscription"] = self.downloads_subscription_by_year
-            else:
-                my_dict["ill"] = self.downloads_ill_by_year
-                my_dict["other_delayed"] = self.downloads_other_delayed_by_year
-
+                if self.subscribed:
+                    my_dict["ill"] = [0 for year in self.years]
+                    my_dict["other_delayed"] = [0 for year in self.years]
+                else:
+                    my_dict["subscription"] = [0 for year in self.years]
         return my_dict
 
     @cached_property
     def use_actual_by_year(self):
         my_dict = {}
         for group in use_groups:
+            # defaults
             my_dict[group] = self.__getattribute__("use_{}_by_year".format(group))
+            if self.subscribed:
+                my_dict["ill"] = [0 for year in self.years]
+                my_dict["other_delayed"] = [0 for year in self.years]
+            else:
+                my_dict["subscription"] = [0 for year in self.years]
         return my_dict
 
     @cached_property
@@ -654,6 +669,9 @@ class Journal(object):
     def curve_fit_for_num_papers(self):
         x = np.array(self.years)
         y = np.array(self.raw_num_papers_historical_by_year)
+        if self.issn_l == "0092-8674":
+            print x, y
+
         initial_guess = (float(np.mean(y)), 0.05)  # determined empirically
 
         def func(x, b, m):
@@ -691,8 +709,14 @@ class Journal(object):
 
     @cached_property
     def num_papers_growth_from_2018_by_year(self):
-        num_papers_2018 = self.curve_fit_for_num_papers["y_fit"][4]
-        return [round(float(x)/num_papers_2018, 4) for x in self.num_papers_by_year]
+        curve_fit = self.curve_fit_for_num_papers
+        if self.issn_l == "0092-8674":
+            print self.raw_num_papers_historical_by_year
+            print curve_fit
+        if curve_fit and curve_fit["y_fit"][4]:
+            num_papers_2018 = curve_fit["y_fit"][4]
+            return [round(float(x)/num_papers_2018, 4) for x in self.num_papers_by_year]
+        return [0 for x in self.num_papers_by_year]
 
     @cached_property
     def num_papers_by_year(self):
@@ -703,12 +727,24 @@ class Journal(object):
 
     @cached_property
     def raw_num_papers_historical_by_year(self):
+        if self.issn_l == "0092-8674":
+            print self._scenario_data["num_papers"][self.issn_l]
+
         if self.issn_l in self._scenario_data["num_papers"]:
             my_raw_numbers = self._scenario_data["num_papers"][self.issn_l]
             # historical goes up to 2019 but we don't have all the data for that yet
-            response = [my_raw_numbers.get(str(year-1), 0) for year in self.historical_years_by_year]
+
+            # yeah this is ugly depends on whether cached or not yuck
+            if isinstance(my_raw_numbers.keys()[0], int):
+                response = [my_raw_numbers.get(year-1, 0) for year in self.historical_years_by_year]
+            else:
+                response = [my_raw_numbers.get(str(year-1), 0) for year in self.historical_years_by_year]
         else:
             response = [self.papers_2018 for year in self.years]
+
+        if self.issn_l == "0092-8674":
+            print response
+
         return response
 
     @cached_property
@@ -732,7 +768,6 @@ class Journal(object):
         if not self.downloads_total:
             return 0
         return [round(100 * float(self.use_instant_by_year[year]) / self.use_total_by_year[year], 4) if self.use_total_by_year[year] else None for year in self.years]
-
 
 
     @cached_property
