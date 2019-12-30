@@ -75,8 +75,8 @@ class Scenario(object):
 
         self.log_timing("setup")
 
-        # self.data = get_common_package_data_from_cache(self.package_id)
-        self.data = get_common_package_data(self.package_id)
+        self.data = get_common_package_data_from_cache(self.package_id)
+        # self.data = get_common_package_data(self.package_id)
         self.log_timing("get_common_package_data_from_cache")
 
         self.set_clean_data()  #order for this one matters, after get common, before build journals

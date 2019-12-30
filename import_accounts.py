@@ -11,7 +11,8 @@ from dateutil import parser
 from werkzeug.security import generate_password_hash
 import shortuuid
 import glob
-import pycounter
+from lib import pycounter
+from lib.pycounter import report as reporter
 import codecs
 
 from app import db
@@ -61,14 +62,17 @@ def build_counter_import_file(filename):
     for row in rows:
         if row["add_now"] == "1":
             print "row:", row["username"], row["display_name"], row["grid_id"], row["add_now"]
+
             my_files = glob.glob("/Users/hpiwowar/Downloads/{}.*".format(row["username"]))
             if my_files:
+                report = None
+
                 counter_file = my_files[0]
-                print counter_file
-                try:
-                    report = pycounter.report.parse(counter_file)
-                    # print report
-                    reports[row["username"]] = report
+                # print counter_file
+                # try:
+                report = reporter.parse(counter_file)
+                # print report
+                reports[row["username"]] = report
 
                 # except ValueError:
                 #     convert_date_spaces_to_dashes(counter_file)
@@ -78,10 +82,25 @@ def build_counter_import_file(filename):
                 #     convert_from_utf16_to_utf8(counter_file)
                 #     return import_counter(filename)
 
-                except AttributeError:
-                    report = None
-                    print "error on", my_files
-                    reports[row["username"]] = "error"
+                # except pycounter.exceptions.UnknownReportTypeError:
+                #     class MockJournal(object):
+                #         pass
+                #
+                #     counter_rows = read_csv_file(filename)
+                #     report = []
+                #     for counter_row in counter_rows:
+                #         my_journal = MockJournal()
+                #         my_journal.issn = counter_row["ISSN"]
+                #         my_journal.html_total = counter_row["Total"]
+                #         my_journal.pdf_total = 0
+                #         my_journal.publisher = None
+                #         report += [my_journal]
+                #     reports[row["username"]] = report
+
+                # except AttributeError:
+                #     report = None
+                #     print "error on", my_files
+                #     reports[row["username"]] = "error"
 
                 if report:
                     my_account = Account.query.filter(Account.username == row["username"]).first()
@@ -92,7 +111,11 @@ def build_counter_import_file(filename):
                         export_dict["package_id"] = package_id
                         export_dict["publisher"] = journal.publisher
                         export_dict["issn"] = journal.issn
-                        export_dict["total"] = journal.html_total + journal.pdf_total
+                        if report.report_type == "TR_J1":
+                            export_dict["total"] = journal.total_usage
+                        else:
+                            export_dict["total"] = journal.html_total + journal.pdf_total
+
                         lines.append(export_dict)
 
     print reports
@@ -102,12 +125,14 @@ def build_counter_import_file(filename):
         report.write_tsv(u"/Users/hpiwowar/Downloads/{}_{}_2018_clean.tsv".format(username, publisher))
 
     # print lines
-    with open("/Users/hpiwowar/Downloads/counter_import.csv", "w") as export_file:
+    with open("/Users/hpiwowar/Downloads/counter_import.csv", "wb") as export_file:
         csv_writer = csv.writer(export_file, encoding='utf-8')
         keys = ["organization", "publisher", "package_id", "issn", "total"]
         csv_writer.writerow(keys)
         for line in lines:
             csv_writer.writerow([line[k] for k in keys])
+
+    print "/Users/hpiwowar/Downloads/counter_import.csv"
 
 
 def import_consortium_counter_xls(xls_filename):
@@ -194,7 +219,7 @@ if __name__ == "__main__":
     parsed_vars = vars(parsed_args)
 
 
-    create_accounts(parsed_vars["filename"])
+    # create_accounts(parsed_vars["filename"])
     build_counter_import_file(parsed_vars["filename"])
 
 

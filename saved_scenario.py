@@ -52,6 +52,7 @@ class SavedScenario(db.Model):
         if is_demo_account:
             demo_saved_scenario = SavedScenario.query.get("demo")
             self.scenario_name = demo_saved_scenario.scenario_name
+            self.package_id = DEMO_PACKAGE_ID
         self.created = datetime.datetime.utcnow().isoformat()
         self.scenario_id = scenario_id
         self.scenario_input = scenario_input
@@ -63,6 +64,7 @@ class SavedScenario(db.Model):
         else:
             tablename = "jump_scenario_details_paid"
         scenario_json = json.dumps(self.to_dict_definition())
+        scenario_json = scenario_json.replace("'", "''")
         with get_db_cursor() as cursor:
             command = u"""INSERT INTO {} (scenario_id, updated, ip, scenario_json) values ('{}', sysdate, '{}', '{}');""".format(
                 tablename, self.scenario_id, ip, scenario_json

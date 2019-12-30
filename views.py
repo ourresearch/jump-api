@@ -511,6 +511,85 @@ def jump_debug_apc_get():
     my_saved_scenario = get_saved_scenario(scenario_id, debug_mode=True)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_apc(5000))
 
+@app.route('/debug/counter/<package_id>', methods=['GET'])
+def jump_debug_counter_package_id(package_id):
+    secret = request.args.get('secret', "")
+    if not secret or not  safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
+        return abort_json(401, "Not authorized, need secret.")
+
+    # select combo.package_id, max(display_name), count(*) as counter_rows, count(distinct issn_l) as counter_rows_deduped from jump_counter counter
+    # join jump_account_package_scenario_view combo on counter.package_id=combo.package_id
+    # where combo.package_id in
+    # ('03120c5a', 'b0d9faaa', 'b514d37c', '30bc16d3')
+    # group by combo.package_id
+
+    from util import get_sql_answer
+    from util import get_sql_rows
+    from collections import OrderedDict
+    response = OrderedDict()
+    response["diff"] = OrderedDict()
+    response["package_id"] = package_id
+    answer = get_sql_answer(db, "select display_name from jump_account_package_scenario_view where package_id='{}'".format(package_id))
+    response["display_name"] = answer
+
+    answer = get_sql_answer(db, "select count(*) from jump_counter where package_id='{}'".format(package_id))
+    response["counter_rows"] = answer
+
+    answer = get_sql_answer(db, "select count(distinct issn_l) from jump_counter where package_id='{}'".format(package_id))
+    response["counter_unique_rows"] = answer
+
+    command = """
+        select count(distinct journal_issn_l) 
+        from unpaywall u 
+        where 
+            journal_issn_l in (	
+            select jump_counter.issn_l from jump_counter
+            where package_id='{}'
+            )
+         and journal_is_oa='false'""".format(package_id)
+    answer = get_sql_answer(db, command)
+    response["counter_unique_toll_access"] = answer
+    response["diff"]["gold_oa"] = response["counter_unique_rows"] - response["counter_unique_toll_access"]
+
+    command += " and year=2019"
+    answer = get_sql_answer(db, command)
+    response["counter_toll_access_published_in_2019"] = answer
+    response["diff"]["toll_access_no_2019_papers"] =  response["counter_unique_toll_access"] - response["counter_toll_access_published_in_2019"]
+
+    command += " and publisher ilike '%%Elsevier%%'"
+    answer = get_sql_answer(db, command)
+    response["counter_toll_access_published_in_2019_with_elsevier"] = answer
+    response["diff"]["toll_access_not_with_elsevier_in_2019"] = response["counter_toll_access_published_in_2019"] -  response["counter_toll_access_published_in_2019_with_elsevier"]
+
+    command = """select count(*) from jump_counter
+                    join jump_journal_prices on jump_journal_prices.issn_l = jump_counter.issn_l
+                    where jump_counter.package_id='{}' and jump_journal_prices.package_id='93YfzkaA'
+                    """.format(package_id)
+    answer = get_sql_answer(db, command)
+    response["in_counter_and_has_prices"] = answer
+    response["diff"]["unexpectedly_no_price"] =  response["counter_toll_access_published_in_2019_with_elsevier"] - response["in_counter_and_has_prices"]
+
+    command = """select issn_l, total::int as num_downloads from jump_counter 
+    where package_id='{}' and issn_l in ( 
+    select distinct journal_issn_l from unpaywall u 
+    where journal_issn_l in (	
+    select jump_counter.issn_l from jump_counter
+     where package_id='340c2753'	
+    )
+     and journal_is_oa='false'
+     and year=2019
+     and publisher ilike '%%elsevier%%'
+    and journal_issn_l not in (
+    select jump_counter.issn_l from jump_counter
+    join jump_journal_prices on jump_journal_prices.issn_l = jump_counter.issn_l
+    where jump_counter.package_id='{}' and jump_journal_prices.package_id='93YfzkaA'))
+                    """.format(package_id, package_id)
+    answer = dict(get_sql_rows(db, command))
+    answer_filtered = [k for k, v in answer.iteritems() if v > 200]
+    response["unexpectedly_no_price_and_greater_than_200_downloads"] = answer_filtered
+
+
+    return jsonify_fast_no_sort(response)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5004))
