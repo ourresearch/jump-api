@@ -580,6 +580,12 @@ def get_sql_answers(db, q):
         return []
     return [row[0] for row in rows]
 
+def get_sql_rows(db, q):
+    rows = db.engine.execute(sql.text(q)).fetchall()
+    if not rows:
+        return []
+    return rows
+
 def normalize_title(title):
     if not title:
         return ""
