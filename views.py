@@ -225,7 +225,7 @@ def precache_account_get():
 
 @app.route('/cache/account', methods=['GET'])
 @jwt_required
-def cached_account_get():
+def cache_account_get():
     my_timing = TimingMessages()
 
     identity_dict = get_jwt_identity()
@@ -255,7 +255,23 @@ def get_jwt():
 
 @app.route('/package/<package_id>', methods=['GET'])
 @jwt_required
-def package_id_get(package_id):
+def precache_package_id_get(package_id):
+    tags_list = ["package"]
+    tags_list += [u"package_{}".format(package_id)]
+    url = u"https://cdn.unpaywalljournals.org/cache/package/{}?jwt={}".format(package_id, get_jwt())
+    print u"redirecting cache request to {}".format(url)
+    headers = {"Cache-Control": "public, max-age=31536000",
+               "Cache-Tag": ",".join(tags_list)}
+    print headers
+    r = requests.get(url, headers=headers)
+    if r.status_code == 200:
+        return jsonify_fast_no_sort(r.json())
+    return abort_json(r.status_code, "Problem.")
+
+
+@app.route('/cache/package/<package_id>', methods=['GET'])
+@jwt_required
+def cache_package_id_get(package_id):
     my_timing = TimingMessages()
 
     identity_dict = get_jwt_identity()
