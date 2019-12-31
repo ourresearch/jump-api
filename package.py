@@ -82,7 +82,7 @@ class Package(db.Model):
             left outer join ricks_journal on counter.issn_l = ricks_journal.issn_l
             where package_id='{package_id}' 
             order by num_2018_downloads desc
-            """.format(package_id=self.package_id)
+            """.format(package_id=self.package_id_for_db)
         rows = get_sql_dict_rows(q)
         return rows
 
@@ -100,7 +100,7 @@ class Package(db.Model):
             {and_where}
             group by counter.issn_l
             order by num_2018_downloads desc
-            """.format(package_id=self.package_id, and_where=and_where)
+            """.format(package_id=self.package_id_for_db, and_where=and_where)
         rows = get_sql_dict_rows(q)
         return rows
 
@@ -203,10 +203,6 @@ class Package(db.Model):
         response["papers"] = OrderedDict()
         response["package_id"] = package_id
 
-
-        answer = get_sql_answer(db, "select display_name from jump_account_package_scenario_view where package_id='{}'".format(package_id))
-        response["display_name"] = answer
-
         response["counter_rows"] = len(self.get_counter_rows)
         response["counter_unique_rows"] = len(self.get_counter_unique_rows)
         response["diff_counts"]["diff_non_unique"] = len(self.get_diff_non_unique)
@@ -234,7 +230,7 @@ class Package(db.Model):
 
 
     def get_unexpectedly_no_price(self):
-        package_id = self.package_id
+        package_id = self.package_id_for_db
 
         command = """select counter.issn_l, title, total::int as num_2018_downloads 
         from jump_counter counter
@@ -263,14 +259,14 @@ class Package(db.Model):
         return rows
 
     def get_unexpectedly_no_price_and_greater_than_200_downloads(self):
-        package_id = self.package_id
+        package_id = self.package_id_for_db
         rows = self.get_unexpectedly_no_price()
         answer_filtered = [row for row in rows if row["num_2018_downloads"] > 200]
         return answer_filtered
 
 
     def get_gold_oa(self):
-        package_id = self.package_id
+        package_id = self.package_id_for_db
 
         command = """select counter.issn_l, title, total::int as num_2018_downloads 
         from jump_counter counter
@@ -294,7 +290,7 @@ class Package(db.Model):
 
 
     def get_toll_access_no_2019_papers(self):
-        package_id = self.package_id
+        package_id = self.package_id_for_db
 
         command = """select counter.issn_l, title, total::int as num_2018_downloads 
         from jump_counter counter
