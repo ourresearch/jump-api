@@ -205,19 +205,9 @@ def get_saved_scenario(scenario_id, debug_mode=False):
 @app.route('/account', methods=['GET'])
 @jwt_required
 def precache_account_get():
-    identity_dict = get_jwt_identity()
-    my_account = Account.query.get(identity_dict["account_id"])
-    tags_list = ["account"]
-    if identity_dict["is_demo_account"]:
-        my_account.make_unique_demo_packages(identity_dict["login_uuid"])
-        tags_list += ["account_demo"]
-    tags_list += [u"package_{}".format(p.package_id) for p in my_account.unique_packages]
-
     url = u"https://cdn.unpaywalljournals.org/cache/account?jwt={}".format(get_jwt())
     print u"getting cached request from {}".format(url)
-    headers = {"Cache-Control": "public, max-age=31536000",
-               "Cache-Tag": ",".join(tags_list)}
-    print "request headers:", headers
+    headers = {"Cache-Control": "public, max-age=31536000"}
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
         print "response headers:", r.headers
@@ -244,7 +234,15 @@ def cache_account_get():
     my_timing.log_timing("after to_dict()")
     account_dict["_timing"] = my_timing.to_dict()
 
-    return jsonify_fast(account_dict)
+    cache_tags_list = ["account"]
+    if identity_dict["is_demo_account"]:
+        my_account.make_unique_demo_packages(identity_dict["login_uuid"])
+        cache_tags_list += ["account_demo"]
+    cache_tags_list += [u"package_{}".format(p.package_id) for p in my_account.unique_packages]
+
+    response = jsonify_fast(account_dict)
+    response.headers["Cache-Tag"] = u",".join(cache_tags_list)
+    return response
 
 
 def get_jwt():
@@ -257,13 +255,9 @@ def get_jwt():
 @app.route('/package/<package_id>', methods=['GET'])
 @jwt_required
 def precache_package_id_get(package_id):
-    tags_list = ["package"]
-    tags_list += [u"package_{}".format(package_id)]
     url = u"https://cdn.unpaywalljournals.org/cache/package/{}?jwt={}".format(package_id, get_jwt())
     print u"getting cached request from {}".format(url)
-    headers = {"Cache-Control": "public, max-age=31536000",
-               "Cache-Tag": ",".join(tags_list)}
-    print "request headers:", headers
+    headers = {"Cache-Control": "public, max-age=31536000"}
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
         print "response headers:", r.headers
@@ -311,7 +305,11 @@ def cache_package_id_get(package_id):
     my_timing.log_timing("after journal_detail()")
     package_dict["_timing"] = my_timing.to_dict()
 
-    return jsonify_fast(package_dict)
+    cache_tags_list = ["package"]
+    cache_tags_list += [u"package_{}".format(package_id)]
+    response = jsonify_fast(package_dict)
+    response.headers["Cache-Tag"] = u",".join(cache_tags_list)
+    return response
 
 @app.route('/scenario/<scenario_id>', methods=['GET'])
 @jwt_required
