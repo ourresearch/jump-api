@@ -207,12 +207,16 @@ def get_saved_scenario(scenario_id, debug_mode=False):
 def precache_account_get():
     identity_dict = get_jwt_identity()
     my_account = Account.query.get(identity_dict["account_id"])
-    package_tags = u",".join([u"package-{}".format(p.package_id) for p in my_account.unique_packages])
+    tags_list = ["account"]
+    if identity_dict["is_demo_account"]:
+        my_account.make_unique_demo_packages(identity_dict["login_uuid"])
+        tags_list += ["account_demo"]
+    tags_list += [u"package_{}".format(p.package_id) for p in my_account.unique_packages]
 
     url = u"https://cdn.unpaywalljournals.org/cache/account?jwt={}".format(get_jwt(), code=301)
     print u"redirecting cache request to {}".format(url)
     headers = {"Cache-Control": "public, max-age=31536000",
-               "Cache-Tag": "account, {}".format(package_tags)}
+               "Cache-Tag": ",".join(tags_list)}
     print headers
     r = requests.get(url, headers=headers)
     return response_json(r)
