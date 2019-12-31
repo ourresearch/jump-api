@@ -90,7 +90,7 @@ def jump_scenario_issn_get(scenario_id, issn_l):
     my_journal = scenario.get_journal(issn_l)
     return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
 
-@app.route('/data/common/<package_id>', methods=['GET'])
+@app.route('/cache/data/common/<package_id>', methods=['GET'])
 def jump_data_package_id_get(package_id):
     secret = request.args.get('secret', "")
     if not safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
@@ -98,7 +98,9 @@ def jump_data_package_id_get(package_id):
 
     response = get_common_package_data(package_id)
 
-    return jsonify_fast_no_sort(response)
+    response = jsonify_fast_no_sort(response)
+    response.headers["Cache-Tag"] = u",".join(["common", u"package_{}".format(package_id)])
+    return response
 
 
 # Provide a method to create access tokens. The create_access_token()

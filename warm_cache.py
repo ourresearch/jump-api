@@ -15,11 +15,9 @@ def warm_the_cache():
     for package in packages:
         print u"\nstart: {} {}".format(package.package_id, package)
         start_time = time.time()
-        url = "https://cdn.unpaywalljournals.org/data/common/{}?secret={}".format(
+        url = "https://cdn.unpaywalljournals.org/cache/data/common/{}?secret={}".format(
             package.package_id, os.getenv("JWT_SECRET_KEY"))
-        headers = {"Cache-Control": "public, max-age=31536000",
-                   "Cache-Tag": "common, common_{}".format(package.package_id)
-                   }
+        headers = {"Cache-Control": "public, max-age=31536000"}
         r = requests.get(url, headers=headers)
         print u"1st: {} {} {}".format(package.package_id, r.status_code, elapsed(start_time))
 
