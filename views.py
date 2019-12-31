@@ -275,7 +275,7 @@ def cache_package_id_get(package_id):
     identity_dict = get_jwt_identity()
 
     if package_id.startswith("demo"):
-        my_package = Package.query.get(DEMO_PACKAGE_ID)
+        my_package = Package.query.get("demo")
         my_package.package_id = package_id
     else:
         my_package = Package.query.get(package_id)
@@ -563,7 +563,7 @@ def jump_debug_counter_package_id(package_id):
         return abort_json(401, "Not authorized, need secret.")
 
     if package_id.startswith("demo"):
-        my_package = Package.query.get(DEMO_PACKAGE_ID)
+        my_package = Package.query.get("demo")
         my_package.package_id = package_id
     else:
         my_package = Package.query.get(package_id)
@@ -577,7 +577,7 @@ def jump_debug_counter_diff_type_package_id(diff_type, package_id):
         return abort_json(401, "Not authorized, need secret.")
 
     if package_id.startswith("demo"):
-        my_package = Package.query.get(DEMO_PACKAGE_ID)
+        my_package = Package.query.get("demo")
         my_package.package_id = package_id
     else:
         my_package = Package.query.get(package_id)
