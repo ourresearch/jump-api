@@ -1044,7 +1044,8 @@ def get_common_package_data_from_cache(package_id):
 
     url = "https://cdn.unpaywalljournals.org/data/common/{}?secret={}".format(
         package_id_in_cache, os.getenv("JWT_SECRET_KEY"))
-    headers = {"Cache-Control": "public, max-age=31536000"}
+    headers = {"Cache-Control": "public, max-age=31536000",
+                "Cache-Tag": "common, common_{}".format(package_id)}
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
         data = r.json()

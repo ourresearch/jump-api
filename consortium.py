@@ -40,7 +40,8 @@ class Consortium(object):
             url = u"https://cdn.unpaywalljournals.org/scenario/{}/raw?jwt={}".format(org_id_dict["scenario_id"], self.jwt)
 
             # print u"starting cache request for {}".format(url)
-            headers = {"Cache-Control": "public, max-age=31536000"}
+            headers = {"Cache-Control": "public, max-age=31536000",
+                "Cache-Tag": "common, common_{}".format(package_id)}
             r = requests.get(url, headers=headers)
             # print
             # print r.headers
