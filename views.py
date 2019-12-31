@@ -275,7 +275,7 @@ def cache_package_id_get(package_id):
     identity_dict = get_jwt_identity()
 
     if package_id.startswith("demo"):
-        my_package = Package.query.get("demo")
+        my_package = Package.query.get(DEMO_PACKAGE_ID)
         my_package.package_id = package_id
     else:
         my_package = Package.query.get(package_id)
@@ -562,7 +562,11 @@ def jump_debug_counter_package_id(package_id):
     if not secret or not  safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
         return abort_json(401, "Not authorized, need secret.")
 
-    my_package = Package.query.get(package_id)
+    if package_id.startswith("demo"):
+        my_package = Package.query.get(DEMO_PACKAGE_ID)
+        my_package.package_id = package_id
+    else:
+        my_package = Package.query.get(package_id)
     response = my_package.get_package_counter_breakdown()
     return jsonify_fast_no_sort(response)
 
@@ -572,7 +576,11 @@ def jump_debug_counter_diff_type_package_id(diff_type, package_id):
     if not secret or not  safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
         return abort_json(401, "Not authorized, need secret.")
 
-    my_package = Package.query.get(package_id)
+    if package_id.startswith("demo"):
+        my_package = Package.query.get(DEMO_PACKAGE_ID)
+        my_package.package_id = package_id
+    else:
+        my_package = Package.query.get(package_id)
     attribute_name = getattr(my_package, "get_{}".format(diff_type))
     rows = attribute_name
     for row in rows:
