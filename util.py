@@ -572,18 +572,27 @@ def run_sql(db, q):
 
 def get_sql_answer(db, q):
     row = db.engine.execute(sql.text(q)).first()
-    return row[0]
+    if row:
+        return row[0]
+    return None
 
 def get_sql_answers(db, q):
     rows = db.engine.execute(sql.text(q)).fetchall()
     if not rows:
         return []
-    return [row[0] for row in rows]
+    return [row[0] for row in rows if row]
 
 def get_sql_rows(db, q):
     rows = db.engine.execute(sql.text(q)).fetchall()
     if not rows:
         return []
+    return rows
+
+def get_sql_dict_rows(q):
+    from app import get_db_cursor
+    with get_db_cursor() as cursor:
+        cursor.execute(q)
+        rows = cursor.fetchall()
     return rows
 
 def normalize_title(title):
@@ -758,6 +767,12 @@ def for_sorting(x):
     if x is None:
         return float('inf')
     return x
+
+def response_json(r):
+    from flask import make_response
+    response = make_response(r.json(), r.status_code)
+    response.mimetype = "application/json"
+    return response
 
 def abort_json(status_code, msg):
     from flask import make_response

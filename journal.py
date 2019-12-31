@@ -669,8 +669,6 @@ class Journal(object):
     def curve_fit_for_num_papers(self):
         x = np.array(self.years)
         y = np.array(self.raw_num_papers_historical_by_year)
-        if self.issn_l == "0092-8674":
-            print x, y
 
         initial_guess = (float(np.mean(y)), 0.05)  # determined empirically
 
@@ -710,9 +708,6 @@ class Journal(object):
     @cached_property
     def num_papers_growth_from_2018_by_year(self):
         curve_fit = self.curve_fit_for_num_papers
-        if self.issn_l == "0092-8674":
-            print self.raw_num_papers_historical_by_year
-            print curve_fit
         if curve_fit and curve_fit["y_fit"][4]:
             num_papers_2018 = curve_fit["y_fit"][4]
             return [round(float(x)/num_papers_2018, 4) for x in self.num_papers_by_year]
@@ -727,9 +722,6 @@ class Journal(object):
 
     @cached_property
     def raw_num_papers_historical_by_year(self):
-        if self.issn_l == "0092-8674":
-            print self._scenario_data["num_papers"][self.issn_l]
-
         if self.issn_l in self._scenario_data["num_papers"]:
             my_raw_numbers = self._scenario_data["num_papers"][self.issn_l]
             # historical goes up to 2019 but we don't have all the data for that yet
@@ -741,9 +733,6 @@ class Journal(object):
                 response = [my_raw_numbers.get(str(year-1), 0) for year in self.historical_years_by_year]
         else:
             response = [self.papers_2018 for year in self.years]
-
-        if self.issn_l == "0092-8674":
-            print response
 
         return response
 
