@@ -213,7 +213,7 @@ def precache_account_get():
         tags_list += ["account_demo"]
     tags_list += [u"package_{}".format(p.package_id) for p in my_account.unique_packages]
 
-    url = u"https://cdn.unpaywalljournals.org/cache/account?jwt={}".format(get_jwt(), code=301)
+    url = u"https://cdn.unpaywalljournals.org/cache/account?jwt={}".format(get_jwt())
     print u"redirecting cache request to {}".format(url)
     headers = {"Cache-Control": "public, max-age=31536000",
                "Cache-Tag": ",".join(tags_list)}
