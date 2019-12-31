@@ -219,7 +219,9 @@ def precache_account_get():
                "Cache-Tag": ",".join(tags_list)}
     print headers
     r = requests.get(url, headers=headers)
-    return response_json(r)
+    if r.status_code == 200:
+        return jsonify_fast_no_sort(r.json())
+    return abort_json(r.status_code, "Problem.")
 
 @app.route('/cache/account', methods=['GET'])
 @jwt_required
