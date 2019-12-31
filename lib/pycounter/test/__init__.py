@@ -1,1 +1,0 @@
-"""pycounter test suite."""
