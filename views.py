@@ -214,12 +214,13 @@ def precache_account_get():
     tags_list += [u"package_{}".format(p.package_id) for p in my_account.unique_packages]
 
     url = u"https://cdn.unpaywalljournals.org/cache/account?jwt={}".format(get_jwt())
-    print u"redirecting cache request to {}".format(url)
+    print u"getting cached request from {}".format(url)
     headers = {"Cache-Control": "public, max-age=31536000",
                "Cache-Tag": ",".join(tags_list)}
-    print headers
+    print "request headers:", headers
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
+        print "response headers:", r.headers
         return jsonify_fast_no_sort(r.json())
     return abort_json(r.status_code, "Problem.")
 
@@ -259,12 +260,13 @@ def precache_package_id_get(package_id):
     tags_list = ["package"]
     tags_list += [u"package_{}".format(package_id)]
     url = u"https://cdn.unpaywalljournals.org/cache/package/{}?jwt={}".format(package_id, get_jwt())
-    print u"redirecting cache request to {}".format(url)
+    print u"getting cached request from {}".format(url)
     headers = {"Cache-Control": "public, max-age=31536000",
                "Cache-Tag": ",".join(tags_list)}
-    print headers
+    print "request headers:", headers
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
+        print "response headers:", r.headers
         return jsonify_fast_no_sort(r.json())
     return abort_json(r.status_code, "Problem.")
 
