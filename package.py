@@ -10,6 +10,7 @@ import shortuuid
 
 from app import db
 from app import get_db_cursor
+from app import DEMO_PACKAGE_ID
 from saved_scenario import SavedScenario
 from util import get_sql_answer
 from util import get_sql_rows
@@ -187,9 +188,16 @@ class Package(db.Model):
         response = sorted(response_dict.values(), key=lambda x: x["num_2018_downloads"], reverse=True)
         return response
 
+    @cached_property
+    def package_id_for_db(self):
+        package_id = self.package_id
+        if not package_id or package_id.startswith("demo") or package_id==DEMO_PACKAGE_ID:
+            package_id = DEMO_PACKAGE_ID
+        return package_id
 
     def get_package_counter_breakdown(self):
-        package_id = self.package_id
+        package_id = self.package_id_for_db
+
         response = OrderedDict()
         response["diff_counts"] = OrderedDict()
         response["papers"] = OrderedDict()
