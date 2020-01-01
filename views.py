@@ -324,7 +324,7 @@ def precache_scenario_id_slider_get(scenario_id):
 def precache_scenario_id_get(scenario_id):
     return get_cached_response("scenario/{}".format(scenario_id))
 
-@app.route('/scenario/<scenario_id>', methods=['GET'])
+@app.route('/cache/scenario/<scenario_id>', methods=['GET'])
 @jwt_required
 def cache_scenario_id_get(scenario_id):
     my_timing = TimingMessages()
