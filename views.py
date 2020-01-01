@@ -158,6 +158,7 @@ def protected():
 
 
 def get_cached_response(url_end):
+    url_end = url_end.lstrip("/")
     url = u"https://cdn.unpaywalljournals.org/cache/{}?jwt={}".format(url_end, get_jwt())
     print u"getting cached request from {}".format(url)
     headers = {"Cache-Control": "public, max-age=31536000"}
@@ -218,7 +219,7 @@ def get_saved_scenario(scenario_id, debug_mode=False):
 @app.route('/account', methods=['GET'])
 @jwt_required
 def precache_account_get():
-    return get_cached_response("/account")
+    return get_cached_response("account")
 
 @app.route('/cache/account', methods=['GET'])
 @jwt_required
@@ -315,13 +316,13 @@ def cache_package_id_get(package_id):
 @app.route('/scenario/<scenario_id>/slider', methods=['GET'])
 @jwt_required
 def precache_scenario_id_slider_get(scenario_id):
-    return get_cached_response("/scenario/{}/slider".format(scenario_id))
+    return get_cached_response("scenario/{}/slider".format(scenario_id))
 
 
 @app.route('/scenario/<scenario_id>', methods=['GET'])
 @jwt_required
 def precache_scenario_id_get(scenario_id):
-    return get_cached_response("/scenario/{}".format(scenario_id))
+    return get_cached_response("scenario/{}".format(scenario_id))
 
 @app.route('/scenario/<scenario_id>', methods=['GET'])
 @jwt_required
