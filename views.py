@@ -426,12 +426,6 @@ def scenario_id_table_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table(pagesize))
 
-
-@app.route('/scenario/<scenario_id>/slider', methods=['GET'])
-@jwt_required
-def precache_scenario_id_slider_get(scenario_id):
-    return get_cached_response("/scenario/{}/slider".format(scenario_id))
-
 @app.route('/cache/scenario/<scenario_id>/slider', methods=['GET'])
 @jwt_required
 def cache_scenario_id_slider_get(scenario_id):
