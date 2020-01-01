@@ -82,7 +82,7 @@ def base_endpoint():
 # def favicon():
 #     return redirect(url_for("static", filename="img/favicon.ico", _external=True, _scheme='https'))
 
-@app.route('/scenario/<scenario_id>/journal/<issn_l>', methods=['GET', 'POST'])
+@app.route('/scenario/<scenario_id>/journal/<issn_l>', methods=['GET'])
 @jwt_required
 def jump_scenario_issn_get(scenario_id, issn_l):
     my_saved_scenario = get_saved_scenario(scenario_id)
@@ -144,7 +144,7 @@ def login():
 
 
 # curl -s -X POST -H 'Accept: application/json' -H 'Content-Type: application/json' --data '{"username":"test","password":"password","rememberMe":false}' http://localhost:5004/login
-#curl -H 'Accept: application/json' -H "Authorization: Bearer ${TOKEN}" http://localhost:5004/protected
+# curl -H 'Accept: application/json' -H "Authorization: Bearer ${TOKEN}" http://localhost:5004/protected
 
 # Protect a view with jwt_required, which requires a valid access token
 # in the request to access.
@@ -155,6 +155,17 @@ def protected():
     identity_dict = get_jwt_identity()
     return jsonify({"logged_in_as": identity_dict["account_id"]})
 
+
+
+def get_cached_response(url_end):
+    url = u"https://cdn.unpaywalljournals.org/cache/{}?jwt={}".format(url_end, get_jwt())
+    print u"getting cached request from {}".format(url)
+    headers = {"Cache-Control": "public, max-age=31536000"}
+    r = requests.get(url, headers=headers)
+    if r.status_code == 200:
+        print "response headers:", r.headers
+        return jsonify_fast_no_sort(r.json())
+    return abort_json(r.status_code, "Problem.")
 
 
 def get_saved_scenario(scenario_id, debug_mode=False):
@@ -207,14 +218,7 @@ def get_saved_scenario(scenario_id, debug_mode=False):
 @app.route('/account', methods=['GET'])
 @jwt_required
 def precache_account_get():
-    url = u"https://cdn.unpaywalljournals.org/cache/account?jwt={}".format(get_jwt())
-    print u"getting cached request from {}".format(url)
-    headers = {"Cache-Control": "public, max-age=31536000"}
-    r = requests.get(url, headers=headers)
-    if r.status_code == 200:
-        print "response headers:", r.headers
-        return jsonify_fast_no_sort(r.json())
-    return abort_json(r.status_code, "Problem.")
+    return get_cached_response("/account")
 
 @app.route('/cache/account', methods=['GET'])
 @jwt_required
@@ -257,14 +261,7 @@ def get_jwt():
 @app.route('/package/<package_id>', methods=['GET'])
 @jwt_required
 def precache_package_id_get(package_id):
-    url = u"https://cdn.unpaywalljournals.org/cache/package/{}?jwt={}".format(package_id, get_jwt())
-    print u"getting cached request from {}".format(url)
-    headers = {"Cache-Control": "public, max-age=31536000"}
-    r = requests.get(url, headers=headers)
-    if r.status_code == 200:
-        print "response headers:", r.headers
-        return jsonify_fast_no_sort(r.json())
-    return abort_json(r.status_code, "Problem.")
+    return get_cached_response("package/{}".format(package_id))
 
 
 @app.route('/cache/package/<package_id>', methods=['GET'])
@@ -313,22 +310,41 @@ def cache_package_id_get(package_id):
     response.headers["Cache-Tag"] = u",".join(cache_tags_list)
     return response
 
+
+
+@app.route('/scenario/<scenario_id>/slider', methods=['GET'])
+@jwt_required
+def precache_scenario_id_slider_get(scenario_id):
+    return get_cached_response("/scenario/{}/slider".format(scenario_id))
+
+
 @app.route('/scenario/<scenario_id>', methods=['GET'])
 @jwt_required
-def scenario_id_get(scenario_id):
+def precache_scenario_id_get(scenario_id):
+    return get_cached_response("/scenario/{}".format(scenario_id))
+
+@app.route('/scenario/<scenario_id>', methods=['GET'])
+@jwt_required
+def cache_scenario_id_get(scenario_id):
     my_timing = TimingMessages()
     my_saved_scenario = get_saved_scenario(scenario_id)
     my_timing.log_timing("after setting live scenario")
     response = my_saved_scenario.to_dict_definition()
     my_timing.log_timing("after to_dict()")
     response["_timing"] = my_timing.to_dict()
-    return jsonify_fast(response)
+    response = jsonify_fast(response)
+    cache_tags_list = ["scenario"]
+    cache_tags_list += [u"package_{}".format(my_saved_scenario.package_id)]
+    cache_tags_list += [u"scenario_{}".format(scenario_id)]
+    response.headers["Cache-Tag"] = u",".join(cache_tags_list)
+    return response
 
 
 @app.route('/scenario/<scenario_id>', methods=['POST'])
 @app.route('/scenario/<scenario_id>/post', methods=['GET'])  # just for debugging
 @jwt_required
 def scenario_id_post(scenario_id):
+
     my_timing = TimingMessages()
 
     identity_dict = get_jwt_identity()
@@ -352,6 +368,14 @@ def scenario_id_post(scenario_id):
         if my_saved_scenario.package.account_id != identity_dict["account_id"]:
             abort_json(401, "Not authorized to view this package")
 
+    tags_to_purge = ["scenario_{}".format(scenario_id)]
+    url = "https://api.cloudflare.com/client/v4/zones/{}/purge_cache".format(os.getenv("CLOUDFLARE_ZONE_ID"))
+    headers = {"X-Auth-Email": "heather@ourresearch.org",
+               "X-Auth-Key": os.getenv("CLOUDFLARE_GLOBAL_API")}
+    r = requests.post(url, headers=headers, json={"tags": tags_to_purge})
+
+    my_timing.log_timing("clear the cache for package")
+
     package_id = get_clean_package_id({"package": my_saved_scenario.package_id})
     my_live_scenario = Scenario(package_id, scenario_input)  # don't care about old one, just write new one
     my_saved_scenario.live_scenario = my_live_scenario
@@ -369,7 +393,7 @@ def scenario_id_post(scenario_id):
 
 
 
-@app.route('/scenario/<scenario_id>/summary', methods=['GET', 'POST'])
+@app.route('/scenario/<scenario_id>/summary', methods=['GET'])
 @jwt_required
 def scenario_id_summary_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
@@ -379,8 +403,8 @@ def scenario_id_summary_get(scenario_id):
     my_timing.log_timing("after to_dict()")
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_summary())
 
-@app.route('/scenario/<scenario_id>/journals', methods=['GET', 'POST'])
-@app.route('/scenario/<scenario_id>/overview', methods=['GET', 'POST'])
+@app.route('/scenario/<scenario_id>/journals', methods=['GET'])
+@app.route('/scenario/<scenario_id>/overview', methods=['GET'])
 @jwt_required
 def scenario_id_overview_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
@@ -388,28 +412,40 @@ def scenario_id_overview_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_overview(pagesize))
 
-@app.route('/scenario/<scenario_id>/raw', methods=['GET', 'POST'])
+@app.route('/scenario/<scenario_id>/raw', methods=['GET'])
 @jwt_required
 def scenario_id_raw_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
     my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_raw(pagesize))
 
-@app.route('/scenario/<scenario_id>/table', methods=['GET', 'POST'])
+@app.route('/scenario/<scenario_id>/table', methods=['GET'])
 @jwt_required
 def scenario_id_table_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
     my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table(pagesize))
 
-@app.route('/scenario/<scenario_id>/slider', methods=['GET', 'POST'])
+
+@app.route('/scenario/<scenario_id>/slider', methods=['GET'])
 @jwt_required
-def scenario_id_slider_get(scenario_id):
+def precache_scenario_id_slider_get(scenario_id):
+    return get_cached_response("/scenario/{}/slider".format(scenario_id))
+
+@app.route('/cache/scenario/<scenario_id>/slider', methods=['GET'])
+@jwt_required
+def cache_scenario_id_slider_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
     my_saved_scenario = get_saved_scenario(scenario_id)
-    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
+    response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
+    cache_tags_list = ["scenario"]
+    cache_tags_list += [u"package_{}".format(my_saved_scenario.package_id)]
+    cache_tags_list += [u"scenario_{}".format(scenario_id)]
+    response.headers["Cache-Tag"] = u",".join(cache_tags_list)
+    return response
 
-@app.route('/scenario/<scenario_id>/apc', methods=['GET', 'POST'])
+
+@app.route('/scenario/<scenario_id>/apc', methods=['GET'])
 @jwt_required
 def scenario_id_apc_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
@@ -417,7 +453,7 @@ def scenario_id_apc_get(scenario_id):
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_apc(pagesize))
 
 
-@app.route('/scenario/<scenario_id>/report', methods=['GET', 'POST'])
+@app.route('/scenario/<scenario_id>/report', methods=['GET'])
 @jwt_required
 def scenario_id_report_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
@@ -454,7 +490,7 @@ def export_get(my_saved_scenario):
     return contents
 
 
-@app.route('/scenario/<scenario_id>/export.csv', methods=['GET', 'POST'])
+@app.route('/scenario/<scenario_id>/export.csv', methods=['GET'])
 @jwt_required
 def scenario_id_export_csv_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
@@ -463,7 +499,7 @@ def scenario_id_export_csv_get(scenario_id):
     return Response(contents, mimetype="text/csv")
 
 
-@app.route('/scenario/<scenario_id>/export', methods=['GET', 'POST'])
+@app.route('/scenario/<scenario_id>/export', methods=['GET'])
 @jwt_required
 def scenario_id_export_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
