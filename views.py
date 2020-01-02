@@ -22,6 +22,7 @@ import shortuuid
 import datetime
 from threading import Thread
 import requests
+import dateparser
 
 from app import app
 from app import logger
@@ -33,6 +34,7 @@ from package import Package
 from package import get_ids
 from saved_scenario import SavedScenario
 from saved_scenario import get_latest_scenario
+from saved_scenario import save_raw_scenario_to_db
 from scenario import get_common_package_data
 from scenario import get_clean_package_id
 from util import jsonify_fast
@@ -207,13 +209,15 @@ class RunAsyncToRequestResponse(Thread):
         self.jwt = my_jwt
 
     def run(self):
-        url_start = self.url_end.split("?")[0]
+        print "sleeping for 2 seconds in RunAsyncToRequestResponse for {}".format(self.url_end)
+        sleep(2)
         url = u"https://cdn.unpaywalljournals.org/cache/{}?jwt={}".format(self.url_end, self.jwt)
         print u"starting RunAsyncToRequestResponse cache request for {}".format(self.url_end)
         headers = {"Cache-Control": "public, max-age=31536000"}
         r = requests.get(url, headers=headers)
         print u"cache RunAsyncToRequestResponse request status code {} for {}".format(r.status_code, url_start)
         print u"cache RunAsyncToRequestResponse response header:", r.headers["CF-Cache-Status"]
+
 
 @app.route('/account', methods=['GET'])
 @jwt_required
@@ -304,46 +308,23 @@ def cache_package_id_get(package_id):
     my_timing.log_timing("after journal_detail()")
     package_dict["_timing"] = my_timing.to_dict()
 
-    cache_tags_list = ["package"]
-    cache_tags_list += [u"package_{}".format(package_id)]
     response = jsonify_fast(package_dict)
+    cache_tags_list = ["package", u"package_{}".format(package_id)]
     response.headers["Cache-Tag"] = u",".join(cache_tags_list)
     return response
 
 
 def post_subscription_guts(scenario_id):
-    identity_dict = get_jwt_identity()
-
-    scenario_input = request.get_json()
-    if not scenario_input:
-        scenario_input = request.args
-
-    my_saved_scenario = SavedScenario.query.get(scenario_id)
-
-    # check if demo account is ok
-    if identity_dict["is_demo_account"]:
-        if not scenario_id.startswith("demo"):
-            abort_json(401, "Not authorized to view this package")
-        if not my_saved_scenario:
-            my_saved_scenario = SavedScenario(True, scenario_id, scenario_input)
-            my_saved_scenario.scenario_id = scenario_id
-    else:
-        if not my_saved_scenario:
-            abort_json(404, "Package not found")
-        if my_saved_scenario.package.account_id != identity_dict["account_id"]:
-            abort_json(401, "Not authorized to view this package")
+    # need to save before purging, to make sure don't have race condition
+    save_raw_scenario_to_db(scenario_id, request.get_json(), get_ip(request))
 
     tags_to_purge = ["scenario_{}".format(scenario_id)]
     url = "https://api.cloudflare.com/client/v4/zones/{}/purge_cache".format(os.getenv("CLOUDFLARE_ZONE_ID"))
     headers = {"X-Auth-Email": "heather@ourresearch.org",
                "X-Auth-Key": os.getenv("CLOUDFLARE_GLOBAL_API")}
     r = requests.post(url, headers=headers, json={"tags": tags_to_purge})
-
-    package_id = get_clean_package_id({"package": my_saved_scenario.package_id})
-    my_live_scenario = Scenario(package_id, scenario_input)  # don't care about old one, just write new one
-    my_saved_scenario.live_scenario = my_live_scenario
-
-    my_saved_scenario.save_live_scenario_to_db(get_ip(request))
+    if r.status_code != 200:
+        abort_json(500, "Couldn't purge cache")
     return
 
 
@@ -352,26 +333,50 @@ def post_subscription_guts(scenario_id):
 @jwt_required
 def scenario_id_post(scenario_id):
 
+    date_before_purge = datetime.datetime.utcnow()
+
     my_timing = TimingMessages()
     post_subscription_guts(scenario_id)
     my_timing.log_timing("after post_subscription_guts()")
 
-    # kick this off now, as early as possible
-    my_jwt = get_jwt()
-    # doing this next one below
-    # RunAsyncToRequestResponse("scenario/{}".format(scenario_id), my_jwt).start()
-    RunAsyncToRequestResponse("scenario/{}/slider".format(scenario_id), my_jwt).start()
-    RunAsyncToRequestResponse("scenario/{}/table".format(scenario_id), my_jwt).start()
-    RunAsyncToRequestResponse("scenario/{}/apc".format(scenario_id), my_jwt).start()
-    my_timing.log_timing("after start RunAsyncToRequestResponse")
+    if False:
+        # kick this off now, as early as possible
+        my_jwt = get_jwt()
+        # doing this next one below
+        RunAsyncToRequestResponse("scenario/{}".format(scenario_id), my_jwt).start()
+        RunAsyncToRequestResponse("scenario/{}/slider".format(scenario_id), my_jwt).start()
+        RunAsyncToRequestResponse("scenario/{}/table".format(scenario_id), my_jwt).start()
+        RunAsyncToRequestResponse("scenario/{}/apc".format(scenario_id), my_jwt).start()
+        my_timing.log_timing("after start RunAsyncToRequestResponse")
 
-    response = get_cached_response("scenario/{}".format(scenario_id))
+    my_newly_saved_scenario = get_saved_scenario(scenario_id)
     my_timing.log_timing("after re-getting live scenario")
+    response = my_newly_saved_scenario.to_dict_definition()
 
     my_timing.log_timing("after to_dict()")
-    # response["_timing"] = my_timing.to_dict()
+    response["_timing"] = my_timing.to_dict()
 
-    return response
+    if False:
+        # stall for log enough to make sure slider is accurate
+        new_cache_hit = False
+        url = u"https://cdn.unpaywalljournals.org/cache/scenario/{}/slider?jwt={}".format(scenario_id, get_jwt())
+        print u"getting cached request from {}".format(url)
+        headers = {"Cache-Control": "public, max-age=31536000"}
+        while not new_cache_hit:
+            print "calling {}".format(url)
+            r = requests.get(url, headers=headers)
+            if r.status_code == 200:
+                if r.headers["CF-Cache-Status"] == "HIT":
+                    # print r.headers["Date"]
+                    # print dateparser.parse(r.headers["Date"])
+                    # print date_before_purge
+                    if dateparser.parse(r.headers["Date"], settings={'RETURN_AS_TIMEZONE_AWARE': False}) > date_before_purge:
+                        print "is a hit from after purge"
+                        new_cache_hit = True
+                        print "new_cache_hit True"
+
+    return jsonify_fast_no_sort(response)
+
 
 
 
@@ -381,15 +386,19 @@ def subscriptions_scenario_id_post(scenario_id):
 
     my_timing = TimingMessages()
     post_subscription_guts(scenario_id)
-    my_timing.log_timing("after post_subscription_guts()")
+    my_timing.log_timing("save_raw_scenario_to_db()")
 
     # kick this off now, as early as possible
     my_jwt = get_jwt()
 
+    print "start RunAsyncToRequestResponse"
+
     RunAsyncToRequestResponse("scenario/{}".format(scenario_id), my_jwt).start()
     RunAsyncToRequestResponse("scenario/{}/slider".format(scenario_id), my_jwt).start()
     RunAsyncToRequestResponse("scenario/{}/table".format(scenario_id), my_jwt).start()
-    my_timing.log_timing("after start RunAsyncToRequestResponse")
+    my_timing.log_timing("start RunAsyncToRequestResponse")
+
+    print "all done"
 
     my_timing.log_timing("after to_dict()")
     response = {"status": "success"}
@@ -416,9 +425,8 @@ def cache_scenario_id_get(scenario_id):
     my_timing.log_timing("after to_dict()")
     response["_timing"] = my_timing.to_dict()
     response = jsonify_fast(response)
-    cache_tags_list = ["scenario"]
-    cache_tags_list += [u"package_{}".format(my_saved_scenario.package_id)]
-    cache_tags_list += [u"scenario_{}".format(scenario_id)]
+    cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
+    print "cache_tags for /scenario", cache_tags_list
     response.headers["Cache-Tag"] = u",".join(cache_tags_list)
     return response
 
@@ -469,7 +477,8 @@ def cache_scenario_id_table_get(scenario_id):
 @app.route('/scenario/<scenario_id>/slider', methods=['GET'])
 @jwt_required
 def precache_scenario_id_slider_get(scenario_id):
-    return get_cached_response("scenario/{}/slider".format(scenario_id))
+    # return get_cached_response("scenario/{}/slider".format(scenario_id))
+    return cache_scenario_id_slider_get(scenario_id)
 
 @app.route('/cache/scenario/<scenario_id>/slider', methods=['GET'])
 @jwt_required
