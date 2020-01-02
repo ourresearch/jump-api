@@ -367,9 +367,9 @@ def scenario_id_post(scenario_id):
     my_timing.log_timing("after re-getting live scenario")
 
     my_timing.log_timing("after to_dict()")
-    response["_timing"] = my_timing.to_dict()
+    # response["_timing"] = my_timing.to_dict()
 
-    return jsonify_fast(response)
+    return response
 
 
 @app.route('/scenario/<scenario_id>', methods=['GET'])
