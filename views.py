@@ -313,34 +313,6 @@ def cache_package_id_get(package_id):
 
 
 
-@app.route('/scenario/<scenario_id>/slider', methods=['GET'])
-@jwt_required
-def precache_scenario_id_slider_get(scenario_id):
-    return get_cached_response("scenario/{}/slider".format(scenario_id))
-
-
-@app.route('/scenario/<scenario_id>', methods=['GET'])
-@jwt_required
-def precache_scenario_id_get(scenario_id):
-    return get_cached_response("scenario/{}".format(scenario_id))
-
-@app.route('/cache/scenario/<scenario_id>', methods=['GET'])
-@jwt_required
-def cache_scenario_id_get(scenario_id):
-    my_timing = TimingMessages()
-    my_saved_scenario = get_saved_scenario(scenario_id)
-    my_timing.log_timing("after setting live scenario")
-    response = my_saved_scenario.to_dict_definition()
-    my_timing.log_timing("after to_dict()")
-    response["_timing"] = my_timing.to_dict()
-    response = jsonify_fast(response)
-    cache_tags_list = ["scenario"]
-    cache_tags_list += [u"package_{}".format(my_saved_scenario.package_id)]
-    cache_tags_list += [u"scenario_{}".format(scenario_id)]
-    response.headers["Cache-Tag"] = u",".join(cache_tags_list)
-    return response
-
-
 @app.route('/scenario/<scenario_id>', methods=['POST'])
 @app.route('/scenario/<scenario_id>/post', methods=['GET'])  # just for debugging
 @jwt_required
@@ -393,6 +365,28 @@ def scenario_id_post(scenario_id):
     return jsonify_fast(response)
 
 
+@app.route('/scenario/<scenario_id>', methods=['GET'])
+@jwt_required
+def precache_scenario_id_get(scenario_id):
+    return get_cached_response("scenario/{}".format(scenario_id))
+
+@app.route('/cache/scenario/<scenario_id>', methods=['GET'])
+@jwt_required
+def cache_scenario_id_get(scenario_id):
+    my_timing = TimingMessages()
+    my_saved_scenario = get_saved_scenario(scenario_id)
+    my_timing.log_timing("after setting live scenario")
+    response = my_saved_scenario.to_dict_definition()
+    my_timing.log_timing("after to_dict()")
+    response["_timing"] = my_timing.to_dict()
+    response = jsonify_fast(response)
+    cache_tags_list = ["scenario"]
+    cache_tags_list += [u"package_{}".format(my_saved_scenario.package_id)]
+    cache_tags_list += [u"scenario_{}".format(scenario_id)]
+    response.headers["Cache-Tag"] = u",".join(cache_tags_list)
+    return response
+
+
 
 @app.route('/scenario/<scenario_id>/summary', methods=['GET'])
 @jwt_required
@@ -422,10 +416,24 @@ def scenario_id_raw_get(scenario_id):
 
 @app.route('/scenario/<scenario_id>/table', methods=['GET'])
 @jwt_required
-def scenario_id_table_get(scenario_id):
+def precache_scenario_id_table_get(scenario_id):
+    return get_cached_response("scenario/{}/table".format(scenario_id))
+
+@app.route('/cache/scenario/<scenario_id>/table', methods=['GET'])
+@jwt_required
+def cache_scenario_id_table_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
     my_saved_scenario = get_saved_scenario(scenario_id)
-    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table(pagesize))
+    response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table(pagesize))
+    cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
+    response.headers["Cache-Tag"] = u",".join(cache_tags_list)
+    return response
+
+
+@app.route('/scenario/<scenario_id>/slider', methods=['GET'])
+@jwt_required
+def precache_scenario_id_slider_get(scenario_id):
+    return get_cached_response("scenario/{}/slider".format(scenario_id))
 
 @app.route('/cache/scenario/<scenario_id>/slider', methods=['GET'])
 @jwt_required
@@ -433,20 +441,25 @@ def cache_scenario_id_slider_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
     my_saved_scenario = get_saved_scenario(scenario_id)
     response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
-    cache_tags_list = ["scenario"]
-    cache_tags_list += [u"package_{}".format(my_saved_scenario.package_id)]
-    cache_tags_list += [u"scenario_{}".format(scenario_id)]
+    cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
     response.headers["Cache-Tag"] = u",".join(cache_tags_list)
     return response
 
 
 @app.route('/scenario/<scenario_id>/apc', methods=['GET'])
 @jwt_required
-def scenario_id_apc_get(scenario_id):
+def precache_scenario_id_apc_get(scenario_id):
+    return get_cached_response("scenario/{}/apc".format(scenario_id))
+
+@app.route('/cache/scenario/<scenario_id>/apc', methods=['GET'])
+@jwt_required
+def cache_scenario_id_apc_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
     my_saved_scenario = get_saved_scenario(scenario_id)
-    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_apc(pagesize))
-
+    response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_apc(pagesize))
+    cache_tags_list = ["apc", u"package_{}".format(my_saved_scenario.package_id)]
+    response.headers["Cache-Tag"] = u",".join(cache_tags_list)
+    return response
 
 @app.route('/scenario/<scenario_id>/report', methods=['GET'])
 @jwt_required
