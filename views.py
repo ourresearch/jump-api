@@ -354,19 +354,20 @@ def scenario_id_post(scenario_id):
 
     my_saved_scenario.save_live_scenario_to_db(get_ip(request))
 
-    my_newly_saved_scenario = get_saved_scenario(scenario_id)
-    my_timing.log_timing("after re-getting live scenario")
-    response = my_newly_saved_scenario.to_dict_definition()
-
-    my_timing.log_timing("after to_dict()")
-    response["_timing"] = my_timing.to_dict()
-
+    # kick this off now, as early as possible
     my_jwt = get_jwt()
-
-    RunAsyncToRequestResponse("scenario/{}".format(scenario_id), my_jwt).start()
+    # doing this next one below
+    # RunAsyncToRequestResponse("scenario/{}".format(scenario_id), my_jwt).start()
     RunAsyncToRequestResponse("scenario/{}/slider".format(scenario_id), my_jwt).start()
     RunAsyncToRequestResponse("scenario/{}/table".format(scenario_id), my_jwt).start()
     RunAsyncToRequestResponse("scenario/{}/apc".format(scenario_id), my_jwt).start()
+    my_timing.log_timing("after start RunAsyncToRequestResponse")
+
+    response = get_cached_response("scenario/{}".format(scenario_id))
+    my_timing.log_timing("after re-getting live scenario")
+
+    my_timing.log_timing("after to_dict()")
+    response["_timing"] = my_timing.to_dict()
 
     return jsonify_fast(response)
 
