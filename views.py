@@ -311,14 +311,7 @@ def cache_package_id_get(package_id):
     return response
 
 
-
-@app.route('/scenario/<scenario_id>', methods=['POST'])
-@app.route('/scenario/<scenario_id>/post', methods=['GET'])  # just for debugging
-@jwt_required
-def scenario_id_post(scenario_id):
-
-    my_timing = TimingMessages()
-
+def post_subscription_guts(scenario_id):
     identity_dict = get_jwt_identity()
 
     scenario_input = request.get_json()
@@ -346,13 +339,22 @@ def scenario_id_post(scenario_id):
                "X-Auth-Key": os.getenv("CLOUDFLARE_GLOBAL_API")}
     r = requests.post(url, headers=headers, json={"tags": tags_to_purge})
 
-    my_timing.log_timing("clear the cache for package")
-
     package_id = get_clean_package_id({"package": my_saved_scenario.package_id})
     my_live_scenario = Scenario(package_id, scenario_input)  # don't care about old one, just write new one
     my_saved_scenario.live_scenario = my_live_scenario
 
     my_saved_scenario.save_live_scenario_to_db(get_ip(request))
+    return
+
+
+@app.route('/scenario/<scenario_id>', methods=['POST'])
+@app.route('/scenario/<scenario_id>/post', methods=['GET'])  # just for debugging
+@jwt_required
+def scenario_id_post(scenario_id):
+
+    my_timing = TimingMessages()
+    post_subscription_guts(scenario_id)
+    my_timing.log_timing("after post_subscription_guts()")
 
     # kick this off now, as early as possible
     my_jwt = get_jwt()
@@ -370,6 +372,33 @@ def scenario_id_post(scenario_id):
     # response["_timing"] = my_timing.to_dict()
 
     return response
+
+
+
+@app.route('/scenario/subscriptions/<scenario_id>', methods=['POST'])
+@jwt_required
+def subscriptions_scenario_id_post(scenario_id):
+
+    my_timing = TimingMessages()
+    post_subscription_guts(scenario_id)
+    my_timing.log_timing("after post_subscription_guts()")
+
+    # kick this off now, as early as possible
+    my_jwt = get_jwt()
+
+    RunAsyncToRequestResponse("scenario/{}".format(scenario_id), my_jwt).start()
+    RunAsyncToRequestResponse("scenario/{}/slider".format(scenario_id), my_jwt).start()
+    RunAsyncToRequestResponse("scenario/{}/table".format(scenario_id), my_jwt).start()
+    my_timing.log_timing("after start RunAsyncToRequestResponse")
+
+    my_timing.log_timing("after to_dict()")
+    response = {"status": "success"}
+    response["_timing"] = my_timing.to_dict()
+
+    return jsonify_fast_no_sort(response)
+
+
+
 
 
 @app.route('/scenario/<scenario_id>', methods=['GET'])
