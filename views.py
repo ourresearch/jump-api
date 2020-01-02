@@ -160,11 +160,11 @@ def protected():
 def get_cached_response(url_end):
     url_end = url_end.lstrip("/")
     url = u"https://cdn.unpaywalljournals.org/cache/{}?jwt={}".format(url_end, get_jwt())
-    print u"getting cached request from {}".format(url)
+    print u"getting cached request from {}".format(url_end)
     headers = {"Cache-Control": "public, max-age=31536000"}
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
-        print "response headers:", r.headers
+        print "cache response header:", r.headers["CF-Cache-Status"]
         return jsonify_fast_no_sort(r.json())
     return abort_json(r.status_code, "Problem.")
 
@@ -209,11 +209,11 @@ class RunAsyncToRequestResponse(Thread):
     def run(self):
         url_start = self.url_end.split("?")[0]
         url = u"https://cdn.unpaywalljournals.org/cache/{}?jwt={}".format(self.url_end, self.jwt)
-        print u"starting cache request for {}".format(url)
+        print u"starting RunAsyncToRequestResponse cache request for {}".format(self.url_end)
         headers = {"Cache-Control": "public, max-age=31536000"}
         r = requests.get(url, headers=headers)
-        print u"cache request status code {} for {}".format(r.status_code, url_start)
-
+        print u"cache RunAsyncToRequestResponse request status code {} for {}".format(r.status_code, url_start)
+        print u"cache RunAsyncToRequestResponse response header:", r.headers["CF-Cache-Status"]
 
 @app.route('/account', methods=['GET'])
 @jwt_required
