@@ -11,6 +11,21 @@ from app import get_db_cursor
 from scenario import Scenario
 from app import DEMO_PACKAGE_ID
 
+def save_raw_scenario_to_db(scenario_id, raw_scenario_definition, ip):
+    scenario_json = json.dumps(raw_scenario_definition)
+
+    if scenario_id.startswith("demo"):
+        tablename = "jump_scenario_details_demo"
+    else:
+        tablename = "jump_scenario_details_paid"
+    scenario_json = scenario_json.replace("'", "''")
+    with get_db_cursor() as cursor:
+        command = u"""INSERT INTO {} (scenario_id, updated, ip, scenario_json) values ('{}', sysdate, '{}', '{}');""".format(
+            tablename, scenario_id, ip, scenario_json
+        )
+        # print command
+        cursor.execute(command)
+
 def get_latest_scenario(scenario_id, my_jwt=None):
     my_saved_scenario = SavedScenario.query.get(scenario_id)
     if my_saved_scenario:
@@ -64,13 +79,18 @@ class SavedScenario(db.Model):
         else:
             tablename = "jump_scenario_details_paid"
         scenario_json = json.dumps(self.to_dict_definition())
+        print "got json"
         scenario_json = scenario_json.replace("'", "''")
+        print "\n\n scenario_json", scenario_json
         with get_db_cursor() as cursor:
+            print "got cursor"
             command = u"""INSERT INTO {} (scenario_id, updated, ip, scenario_json) values ('{}', sysdate, '{}', '{}');""".format(
                 tablename, self.scenario_id, ip, scenario_json
             )
             # print command
             cursor.execute(command)
+        print "done with execute"
+
 
     def set_unique_id(self, unique_id):
         self.scenario_id = u"demo-scenario-{}".format(unique_id)
