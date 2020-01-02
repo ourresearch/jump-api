@@ -200,20 +200,19 @@ def get_saved_scenario(scenario_id, debug_mode=False):
 
 
 # from https://stackoverflow.com/a/51480061/596939
-# class RunAsyncToRequestResponse(Thread):
-#     def __init__(self, url_end):
-#         Thread.__init__(self)
-#         self.url_end = url_end
-#
-#     def run(self):
-#         url_start = self.url_end.split("?")[0]
-#         url = u"https://cdn.unpaywalljournals.org/{}".format(self.url_end)
-#         print u"starting cache request for {}".format(url)
-#         headers = {"Cache-Control": "public, max-age=31536000",
-#                    "Cache-Tag": "common, common_{}".format(url_start)}
-#         print 1/0 # clean up the tags before it is used
-#         r = requests.get(url, headers=headers)
-#         print u"cache request status code {} for {}".format(r.status_code, url_start)
+class RunAsyncToRequestResponse(Thread):
+    def __init__(self, url_end):
+        Thread.__init__(self)
+        self.url_end = url_end
+
+    def run(self):
+        my_jwt = get_jwt()
+        url_start = self.url_end.split("?")[0]
+        url = u"https://cdn.unpaywalljournals.org/cache/{}?jwt={}".format(self.url_end, my_jwt)
+        print u"starting cache request for {}".format(url)
+        headers = {"Cache-Control": "public, max-age=31536000"}
+        r = requests.get(url, headers=headers)
+        print u"cache request status code {} for {}".format(r.status_code, url_start)
 
 
 @app.route('/account', methods=['GET'])
@@ -286,14 +285,12 @@ def cache_package_id_get(package_id):
 
     my_timing.log_timing("after getting package")
 
-    my_jwt = get_jwt()
-
-    # for scenario in my_package.unique_saved_scenarios:
-        # RunAsyncToRequestResponse("scenario/{}?jwt={}".format(scenario.scenario_id, my_jwt)).start()
-        # RunAsyncToRequestResponse("scenario/{}/slider?jwt={}".format(scenario.scenario_id, my_jwt)).start()
-        # RunAsyncToRequestResponse("scenario/{}/table?jwt={}".format(scenario.scenario_id, my_jwt)).start()
-        # RunAsyncToRequestResponse("scenario/{}/apc?jwt={}".format(scenario.scenario_id, my_jwt)).start()
-    # RunAsyncToRequestResponse("package/{}?jwt={}".format(package_id, my_jwt)).start()
+    for my_scenario in my_package.unique_saved_scenarios:
+        RunAsyncToRequestResponse("scenario/{}".format(my_scenario.scenario_id)).start()
+        RunAsyncToRequestResponse("scenario/{}/slider".format(my_scenario.scenario_id)).start()
+        RunAsyncToRequestResponse("scenario/{}/table".format(my_scenario.scenario_id)).start()
+        RunAsyncToRequestResponse("scenario/{}/apc".format(my_scenario.scenario_id)).start()
+    RunAsyncToRequestResponse("package/{}".format(package_id)).start()
 
     my_timing.log_timing("after kicking off cache requests")
 
@@ -361,6 +358,11 @@ def scenario_id_post(scenario_id):
 
     my_timing.log_timing("after to_dict()")
     response["_timing"] = my_timing.to_dict()
+
+    RunAsyncToRequestResponse("scenario/{}".format(scenario_id)).start()
+    RunAsyncToRequestResponse("scenario/{}/slider".format(scenario_id)).start()
+    RunAsyncToRequestResponse("scenario/{}/table".format(scenario_id)).start()
+    RunAsyncToRequestResponse("scenario/{}/apc".format(scenario_id)).start()
 
     return jsonify_fast(response)
 
