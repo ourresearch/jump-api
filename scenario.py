@@ -27,7 +27,7 @@ def get_clean_package_id(http_request_args):
     if not http_request_args:
         return DEMO_PACKAGE_ID
     package_id = http_request_args.get("package", DEMO_PACKAGE_ID)
-    if package_id == "demo" or package_id == "uva_elsevier":
+    if package_id == "demo":
         package_id = DEMO_PACKAGE_ID
     return package_id
 
@@ -103,10 +103,11 @@ class Scenario(object):
         self.data["prices"] = clean_dict
 
         clean_dict = {}
-        issn_ls_with_prices = self.data["prices"].keys()
-        for k, v in self.data["unpaywall_downloads_dict_raw"].iteritems():
-            if k in issn_ls_with_prices:
-                clean_dict[k] = v
+        for issn_l, price_row in self.data["prices"].iteritems():
+            if issn_l in self.data["unpaywall_downloads_dict_raw"]:
+                clean_dict[issn_l] = self.data["unpaywall_downloads_dict_raw"][issn_l]
+            else:
+                clean_dict[issn_l] = None
         self.data["unpaywall_downloads_dict"] = clean_dict
 
     @cached_property
