@@ -229,37 +229,37 @@ class Package(db.Model):
         response = OrderedDict()
         response["counts"] = OrderedDict()
         response["diff_counts"] = OrderedDict()
-        response["papers"] = OrderedDict()
+        # response["papers"] = OrderedDict()
         response["package_id"] = package_id
 
         response["counts"]["counter_rows"] = len(self.get_counter_rows)
         response["counts"]["counter_unique_rows"] = len(self.get_counter_unique_rows)
         response["diff_counts"]["diff_non_unique"] = len(self.get_diff_non_unique)
-        response["papers"]["diff_non_unique"] = self.get_diff_non_unique
+        # response["papers"]["diff_non_unique"] = self.get_diff_non_unique
 
         response["counts"]["published_in_2019"] = len(self.get_published_in_2019)
         response["diff_counts"]["diff_not_published_in_2019"] = len(self.get_diff_not_published_in_2019)
-        response["papers"]["diff_not_published_in_2019"] = self.get_diff_not_published_in_2019
+        # response["papers"]["diff_not_published_in_2019"] = self.get_diff_not_published_in_2019
 
         response["counts"]["toll_access_published_in_2019"] = len(self.get_published_toll_access_in_2019)
         response["diff_counts"]["diff_open_access_journals"] =  len(self.get_diff_open_access_journals)
-        response["papers"]["diff_open_access_journals"] =  self.get_diff_open_access_journals
+        # response["papers"]["diff_open_access_journals"] =  self.get_diff_open_access_journals
 
         response["counts"]["toll_access_published_in_2019_with_elsevier"] = len(self.get_published_toll_access_in_2019_with_elsevier)
         response["diff_counts"]["diff_changed_publisher"] =  len(self.get_diff_changed_publisher)
-        response["papers"]["diff_changed_publisher"] =  self.get_diff_changed_publisher
+        # response["papers"]["diff_changed_publisher"] =  self.get_diff_changed_publisher
 
         response["counts"]["published_toll_access_in_2019_with_elsevier_have_price"] = len(self.get_published_toll_access_in_2019_with_elsevier_have_price)
         response["diff_counts"]["diff_no_price"] =  len(self.get_diff_no_price)
-        response["papers"]["diff_no_price"] =  self.get_diff_no_price
+        # response["papers"]["diff_no_price"] =  self.get_diff_no_price
 
         response["counts"]["in_scenario"] = len(self.get_in_scenario)
         response["diff_counts"]["diff_missing_from_scenario"] =  len(self.get_diff_missing_from_scenario)
-        response["papers"]["diff_missing_from_scenario"] =  self.get_diff_missing_from_scenario
+        # response["papers"]["diff_missing_from_scenario"] =  self.get_diff_missing_from_scenario
         response["diff_counts"]["diff_extra_in_scenario"] =  len(self.get_diff_extra_in_scenario)
-        response["papers"]["diff_extra_in_scenario"] =  self.get_diff_extra_in_scenario
+        # response["papers"]["diff_extra_in_scenario"] =  self.get_diff_extra_in_scenario
 
-        response["papers"]["good_to_use"] =  self.get_in_scenario
+        # response["papers"]["good_to_use"] =  self.get_in_scenario
 
         return response
 
