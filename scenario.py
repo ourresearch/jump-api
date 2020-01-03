@@ -108,6 +108,7 @@ class Scenario(object):
                 clean_dict[issn_l] = self.data["unpaywall_downloads_dict_raw"][issn_l]
             else:
                 clean_dict[issn_l] = None
+
         self.data["unpaywall_downloads_dict"] = clean_dict
 
     @cached_property

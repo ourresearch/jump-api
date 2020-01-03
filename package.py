@@ -56,14 +56,11 @@ class Package(db.Model):
 
     @property
     def has_counter_data(self):
-        # TODO
         return True
 
     @property
     def num_journals(self):
-        # TODO
-        return 1850
-        # return len(self.saved_scenarios[0].journals)
+        return len(self.get_in_scenario)
 
     @property
     def num_perpetual_access_journals(self):

@@ -310,6 +310,8 @@ def cache_package_id_get(package_id):
 
     response = jsonify_fast_no_sort(package_dict)
     cache_tags_list = ["package", u"package_{}".format(package_id)]
+    cache_tags_list += ["scenario_{}".format(saved_scenario.scenario_id for saved_scenario in my_package.unique_saved_scenarios]
+]
     response.headers["Cache-Tag"] = u",".join(cache_tags_list)
     return response
 
