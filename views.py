@@ -215,7 +215,7 @@ class RunAsyncToRequestResponse(Thread):
         print u"starting RunAsyncToRequestResponse cache request for {}".format(self.url_end)
         headers = {"Cache-Control": "public, max-age=31536000"}
         r = requests.get(url, headers=headers)
-        print u"cache RunAsyncToRequestResponse request status code {} for {}".format(r.status_code, url_start)
+        print u"cache RunAsyncToRequestResponse request status code {} for {}".format(r.status_code, self.url_end)
         print u"cache RunAsyncToRequestResponse response header:", r.headers["CF-Cache-Status"]
 
 
