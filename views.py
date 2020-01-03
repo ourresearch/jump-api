@@ -308,7 +308,7 @@ def cache_package_id_get(package_id):
     my_timing.log_timing("after journal_detail()")
     package_dict["_timing"] = my_timing.to_dict()
 
-    response = jsonify_fast(package_dict)
+    response = jsonify_fast_no_sort(package_dict)
     cache_tags_list = ["package", u"package_{}".format(package_id)]
     response.headers["Cache-Tag"] = u",".join(cache_tags_list)
     return response

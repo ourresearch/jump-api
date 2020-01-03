@@ -52,7 +52,7 @@ class Journal(object):
 
     @cached_property
     def title(self):
-        return self.my_scenario_data_row.get("title", "")
+        return self.my_scenario_data_row.get("title", "Unknown Title")
 
     @cached_property
     def subject(self):
