@@ -675,7 +675,10 @@ def jump_debug_counter_diff_type_package_id(diff_type, package_id):
     for row in rows:
         journal_string = row.get("title", "") or ""
         journal_string = journal_string.lower()
-        journal_string = journal_string.decode("utf-8")
+        try:
+            journal_string = journal_string.decode("utf-8")
+        except UnicodeEncodeError:
+            journal_string = "Unknown Title"
         journal_string = journal_string.replace(u" ", u"-")
         row["url"] = u"https://www.journals.elsevier.com/{}".format(journal_string)
     return jsonify_fast_no_sort({"count": len(rows), "list": rows})
