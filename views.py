@@ -315,6 +315,39 @@ def cache_package_id_get(package_id):
     return response
 
 
+
+@app.route('/package/<package_id>/counter/<diff_type>', methods=['GET'])
+@jwt_optional
+def jump_debug_counter_diff_type_package_id(package_id, diff_type):
+    identity_dict = get_jwt_identity()
+
+    if not identity_dict:
+        secret = request.args.get('secret', "")
+        if not secret or not  safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
+            return abort_json(401, "Not authorized, need secret.")
+
+    if package_id.startswith("demo"):
+        my_package = Package.query.get("demo")
+        my_package.package_id = package_id
+    else:
+        my_package = Package.query.get(package_id)
+
+    if not my_package:
+        abort_json(404, "Package not found")
+
+    if not package_id.startswith("demo"):
+        if my_package.account_id != identity_dict["account_id"]:
+            abort_json(401, "Not authorized to view this package")
+
+    rows = getattr(my_package, "get_{}".format(diff_type))
+    my_list = []
+    for row in rows:
+        my_list += [{"issn_l": row["issn_l"], "title": row["title"], "num_2018_downloads": row["num_2018_downloads"]}]
+
+    return jsonify_fast_no_sort({"count": len(rows), "list": my_list})
+
+
+
 def post_subscription_guts(scenario_id):
     # need to save before purging, to make sure don't have race condition
     save_raw_scenario_to_db(scenario_id, request.get_json(), get_ip(request))
@@ -660,29 +693,6 @@ def jump_debug_counter_package_id(package_id):
     response = my_package.get_package_counter_breakdown()
     return jsonify_fast_no_sort(response)
 
-@app.route('/debug/counter/<diff_type>/<package_id>', methods=['GET'])
-def jump_debug_counter_diff_type_package_id(diff_type, package_id):
-    secret = request.args.get('secret', "")
-    if not secret or not  safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
-        return abort_json(401, "Not authorized, need secret.")
-
-    if package_id.startswith("demo"):
-        my_package = Package.query.get("demo")
-        my_package.package_id = package_id
-    else:
-        my_package = Package.query.get(package_id)
-    attribute_name = getattr(my_package, "get_{}".format(diff_type))
-    rows = attribute_name
-    for row in rows:
-        journal_string = row.get("title", "") or ""
-        journal_string = journal_string.lower()
-        try:
-            journal_string = journal_string.decode("utf-8")
-        except UnicodeEncodeError:
-            journal_string = "Unknown Title"
-        journal_string = journal_string.replace(u" ", u"-")
-        row["url"] = u"https://www.journals.elsevier.com/{}".format(journal_string)
-    return jsonify_fast_no_sort({"count": len(rows), "list": rows})
 
 
 @app.route('/debug/ids', methods=['GET'])
