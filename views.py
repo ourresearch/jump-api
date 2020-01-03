@@ -339,7 +339,7 @@ def scenario_id_post(scenario_id):
     post_subscription_guts(scenario_id)
     my_timing.log_timing("after post_subscription_guts()")
 
-    if False:
+    if True:
         # kick this off now, as early as possible
         my_jwt = get_jwt()
         # doing this next one below
@@ -356,7 +356,7 @@ def scenario_id_post(scenario_id):
     my_timing.log_timing("after to_dict()")
     response["_timing"] = my_timing.to_dict()
 
-    if False:
+    if True:
         # stall for log enough to make sure slider is accurate
         new_cache_hit = False
         url = u"https://cdn.unpaywalljournals.org/cache/scenario/{}/slider?jwt={}".format(scenario_id, get_jwt())
@@ -477,8 +477,8 @@ def cache_scenario_id_table_get(scenario_id):
 @app.route('/scenario/<scenario_id>/slider', methods=['GET'])
 @jwt_required
 def precache_scenario_id_slider_get(scenario_id):
-    # return get_cached_response("scenario/{}/slider".format(scenario_id))
-    return cache_scenario_id_slider_get(scenario_id)
+    return get_cached_response("scenario/{}/slider".format(scenario_id))
+    # return cache_scenario_id_slider_get(scenario_id)
 
 @app.route('/cache/scenario/<scenario_id>/slider', methods=['GET'])
 @jwt_required
