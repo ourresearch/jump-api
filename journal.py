@@ -48,23 +48,23 @@ class Journal(object):
 
     @cached_property
     def my_scenario_data_row(self):
-        return self._scenario_data["unpaywall_downloads_dict"][self.issn_l]
+        return self._scenario_data["unpaywall_downloads_dict"][self.issn_l] or {}
 
     @cached_property
     def title(self):
-        return self.my_scenario_data_row["title"]
+        return self.my_scenario_data_row.get("title", "")
 
     @cached_property
     def subject(self):
-        return self.my_scenario_data_row["subject"]
+        return self.my_scenario_data_row.get("subject", "")
 
     @cached_property
     def publisher(self):
-        return self.my_scenario_data_row["publisher"]
+        return self.my_scenario_data_row.get("publisher", "")
 
     @cached_property
     def cost_subscription_2018(self):
-        # return float(self.my_scenario_data_row["usa_usd"]) * (1 + self.settings.cost_content_fee_percent/float(100))
+        # return float(self.my_scenario_data_row.get("usa_usd", 0)) * (1 + self.settings.cost_content_fee_percent/float(100))
         my_lookup = self._scenario_data["prices"]
         if not my_lookup.get(self.issn_l):
             return None
@@ -72,7 +72,7 @@ class Journal(object):
 
     @cached_property
     def papers_2018(self):
-        return self.my_scenario_data_row["num_papers_2018"]
+        return self.my_scenario_data_row.get("num_papers_2018", 0)
 
     @cached_property
     def num_citations_historical_by_year(self):
@@ -390,20 +390,10 @@ class Journal(object):
     @cached_property
     def raw_downloads_by_age(self):
         # isn't replaced by default if too low or not monotonically decreasing
-        total_downloads_by_age_before_counter_correction = [self.my_scenario_data_row["downloads_{}y".format(age)] for age in self.years]
+        total_downloads_by_age_before_counter_correction = [self.my_scenario_data_row.get("downloads_{}y".format(age), 0) for age in self.years]
         total_downloads_by_age_before_counter_correction = [val if val else 0 for val in total_downloads_by_age_before_counter_correction]
         downloads_by_age = [num * self.downloads_counter_multiplier for num in total_downloads_by_age_before_counter_correction]
         return downloads_by_age
-
-    @cached_property
-    def raw_oa_by_age(self):
-        # isn't replaced by default if too low or not monotonically decreasing
-        total_downloads_by_age_before_counter_correction = [self.my_scenario_data_row["downloads_oa_{}y".format(age)] for age in self.years]
-        total_downloads_by_age_before_counter_correction = [val if val else 0 for val in total_downloads_by_age_before_counter_correction]
-        downloads_by_age = [num * self.downloads_counter_multiplier for num in total_downloads_by_age_before_counter_correction]
-        return downloads_by_age
-
-
 
 
     @cached_property
@@ -438,7 +428,7 @@ class Journal(object):
 
     @cached_property
     def downloads_by_age_before_counter_correction(self):
-        downloads_by_age_before_counter_correction = [self.my_scenario_data_row["downloads_{}y".format(age)] for age in self.years]
+        downloads_by_age_before_counter_correction = [self.my_scenario_data_row.get("downloads_{}y".format(age), 0) for age in self.years]
         downloads_by_age_before_counter_correction = [val if val else 0 for val in downloads_by_age_before_counter_correction]
         return downloads_by_age_before_counter_correction
 
@@ -478,7 +468,7 @@ class Journal(object):
     @cached_property
     def downloads_scaled_by_counter_by_year(self):
         # TODO is flat right now
-        downloads_total_before_counter_correction_by_year = [max(1.0, self.my_scenario_data_row["downloads_total"]) for year in self.years]
+        downloads_total_before_counter_correction_by_year = [max(1.0, self.my_scenario_data_row.get("downloads_total", 0.0)) for year in self.years]
         downloads_total_before_counter_correction_by_year = [val if val else 0.0 for val in downloads_total_before_counter_correction_by_year]
         downloads_total_scaled_by_counter = [num * self.downloads_counter_multiplier for num in downloads_total_before_counter_correction_by_year]
         return downloads_total_scaled_by_counter
@@ -586,7 +576,7 @@ class Journal(object):
 
     @cached_property
     def downloads_total_before_counter_correction(self):
-        return max(1, self.my_scenario_data_row["downloads_total"])
+        return max(1.0, self.my_scenario_data_row.get("downloads_total", 0.0))
 
     @cached_property
     def use_addition_from_weights(self):

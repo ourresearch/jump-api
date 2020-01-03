@@ -128,9 +128,19 @@ class Package(db.Model):
         rows = self.get_base(and_where=""" and counter.issn_l in
 	            (select journal_issn_l from unpaywall u where year=2019 and journal_is_oa='false' and publisher ilike '%elsevier%' group by journal_issn_l) 
 	            and counter.issn_l in 
-            	(select issn_l from jump_journal_prices where usa_usd > 0 and package_id='93YfzkaA' group by issn_l) """)
+            	(select issn_l from jump_journal_prices where usa_usd > 0 and package_id='658349d9' group by issn_l) """)
         return rows
 
+    @cached_property
+    def get_in_scenario(self):
+        first_scenario = self.unique_saved_scenarios[0]
+        my_saved_scenario = SavedScenario.query.get(first_scenario.scenario_id)
+        if not my_saved_scenario:
+            my_saved_scenario = SavedScenario.query.get("demo")
+        my_saved_scenario.set_live_scenario(None)
+        response = my_saved_scenario.live_scenario.to_dict_slider()
+        rows = response["journals"]
+        return rows
 
     @cached_property
     def get_counter_unique_rows(self):
@@ -189,6 +199,17 @@ class Package(db.Model):
         return response
 
     @cached_property
+    def get_diff_missing_from_scenario(self):
+        response_dict = {}
+        remove = [row["issn_l"] for row in self.get_in_scenario]
+        for row in self.get_published_toll_access_in_2019_with_elsevier_have_price:
+            if row["issn_l"] not in remove:
+                response_dict[row["issn_l"]] = row
+        response = sorted(response_dict.values(), key=lambda x: x["num_2018_downloads"], reverse=True)
+        return response
+
+
+    @cached_property
     def package_id_for_db(self):
         package_id = self.package_id
         if not package_id or package_id.startswith("demo") or package_id==DEMO_PACKAGE_ID:
@@ -224,7 +245,11 @@ class Package(db.Model):
         response["diff_counts"]["diff_no_price"] =  len(self.get_diff_no_price)
         response["papers"]["diff_no_price"] =  self.get_diff_no_price
 
-        response["papers"]["good_to_use"] =  self.get_published_toll_access_in_2019_with_elsevier_have_price
+        response["in_scenario"] = len(self.get_in_scenario)
+        response["diff_counts"]["diff_missing_from_scenario"] =  len(self.get_diff_missing_from_scenario)
+        response["papers"]["diff_missing_from_scenario"] =  self.get_diff_missing_from_scenario
+
+        response["papers"]["good_to_use"] =  self.get_in_scenario
 
         return response
 
@@ -249,7 +274,7 @@ class Package(db.Model):
                 and journal_issn_l not in (
                     select jump_counter.issn_l from jump_counter
                     join jump_journal_prices on jump_journal_prices.issn_l = jump_counter.issn_l
-                    where jump_counter.package_id='{package_id}' and jump_journal_prices.package_id='93YfzkaA')
+                    where jump_counter.package_id='{package_id}' and jump_journal_prices.package_id='658349d9')
                 )
         order by num_2018_downloads desc
         """.format(package_id=package_id)
