@@ -190,7 +190,11 @@ class Journal(object):
     @cached_property
     def use_instant_by_year(self):
         response = [0 for year in self.years]
-        for group in use_groups_free_instant + ["subscription"]:
+        for group in use_groups_free_instant:
+            for year in self.years:
+                response[year] += self.__getattribute__("use_{}_by_year".format(group))[year]
+        if self.subscribed:
+            group = "subscription"
             for year in self.years:
                 response[year] += self.__getattribute__("use_{}_by_year".format(group))[year]
         return response
@@ -199,7 +203,10 @@ class Journal(object):
     def use_instant(self):
         # return round(np.mean(self.use_instant_by_year), 4)
         response = 0
-        for group in use_groups_free_instant + ["subscription"]:
+        for group in use_groups_free_instant:
+            response += self.__getattribute__("use_{}".format(group))
+        if self.subscribed:
+            group = "subscription"
             response += self.__getattribute__("use_{}".format(group))
         return response
 
