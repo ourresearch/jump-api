@@ -192,12 +192,16 @@ class Journal(object):
         response = [0 for year in self.years]
         for group in use_groups_free_instant + ["subscription"]:
             for year in self.years:
-                response[year] += self.use_actual_by_year[group][year]
+                response[year] += self.__getattribute__("use_{}_by_year".format(group))[year]
         return response
 
     @cached_property
     def use_instant(self):
-        return round(np.mean(self.use_instant_by_year), 4)
+        # return round(np.mean(self.use_instant_by_year), 4)
+        response = 0
+        for group in use_groups_free_instant + ["subscription"]:
+            response += self.__getattribute__("use_{}".format(group))
+        return response
 
     @cached_property
     def use_free_instant(self):
@@ -404,7 +408,7 @@ class Journal(object):
 
         def func(x, a, b, c):
             try:
-                response = b + a * np.exp(x/c)
+                response = b + a * scipy.special.expit( x / c )
             except:
                 response = None
             return response

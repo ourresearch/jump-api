@@ -8,10 +8,9 @@ from sqlalchemy.sql import text
 import datetime
 import re
 from dateutil import parser
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 import shortuuid
 import glob
-from lib import pycounter
 from lib.pycounter import report as reporter
 import codecs
 
@@ -185,7 +184,7 @@ def create_accounts(filename):
         else:
             new_account = Account()
             new_account.username = row["username"]
-            new_account.password_hash = generate_password_hash(row["username"])
+            new_account.password_hash = generate_password_hash(u"{}123".format(row["username"]))
             new_account.display_name = row["display_name"]
             new_account.is_consortium = False
 
@@ -210,6 +209,25 @@ def create_accounts(filename):
 
             print u"created {}, package_id={}".format(new_account.username, new_account.packages[0].package_id)
 
+
+def check_passwords():
+    accounts = Account.query.all()
+    for my_account in accounts:
+        # hashed_username_password = generate_password_hash(u"{}".format(my_account.username))
+        if check_password_hash(my_account.password_hash, my_account.username):
+            if not my_account.consortium_id and my_account.username not in ("cern", "msu", "windsor", "demo", "suny"):
+                print u"{} has NOT changed password.  {}".format(my_account, my_account.created.isoformat())
+                new_hashed_username_password = generate_password_hash(u"{}123".format(my_account.username))
+                my_account.password_hash = new_hashed_username_password
+        else:
+            pass
+            # print ".",
+            # print u"{} has changed password".format(my_account)
+
+    safe_commit(db)
+    print "committed"
+
+
 # python import_accounts.py ~/Downloads/new_accounts.csv
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run stuff.")
@@ -219,7 +237,9 @@ if __name__ == "__main__":
     parsed_vars = vars(parsed_args)
 
 
-    # create_accounts(parsed_vars["filename"])
+    # check_passwords()
+
+    create_accounts(parsed_vars["filename"])
     build_counter_import_file(parsed_vars["filename"])
 
 

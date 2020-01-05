@@ -78,6 +78,64 @@ class MyTest(unittest.TestCase):
         if len(counts.keys()) != 1:
             print 1/0
 
+    #
+    # def test_this_one(self):
+    #     import requests
+    #     use_instant = 0
+    #     use_total = 0
+    #     use_ill_total = 0
+    #     use_oa_total = 0
+    #     use_backfile_total = 0
+    #     use_social_networks_total = 0
+    #     url = "http://localhost:5004/live/scenario/demo-package-dtCDaJRoBA/slider?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI4MTg4MWE3NC01ZjAyLTRkNDQtOTc2My0xNDNjNDhkNjFkMjYiLCJuYmYiOjE1NzgwODM0MzcsImlkZW50aXR5Ijp7ImFjY291bnRfaWQiOiJkZW1vIiwiY3JlYXRlZCI6IjIwMjAtMDEtMDNUMjA6MzA6MzcuNTgwMTEyIiwibG9naW5fdXVpZCI6ImR0Q0RhSlJvQkEiLCJpc19kZW1vX2FjY291bnQiOnRydWV9LCJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNTc4MDgzNDM3LCJmcmVzaCI6ZmFsc2V9.MNFFBWHxRO_he2gcljodz3EBHUx3rQmXbXI98-MxQaY"
+    #     r = requests.get(url)
+    #     data = r.json()
+    #     for my_journal in data["journals"]:
+    #         use_instant += my_journal["use_instant"]
+    #         use_total += my_journal["use_total"]
+    #         use_ill_total += my_journal["use_groups_if_not_subscribed"]["ill"]
+    #         use_oa_total += my_journal["use_groups_free_instant"]["oa"]
+    #         use_backfile_total += my_journal["use_groups_free_instant"]["backfile"]
+    #         use_social_networks_total += my_journal["use_groups_free_instant"]["social_networks"]
+    #     print use_instant, use_total
+    #     print float(use_instant) / use_total
+    #     print use_ill_total
+    #     print "use_ill_total", float(use_ill_total) / use_total
+    #     print "use_oa_total", float(use_oa_total) / use_total
+    #     print "use_backfile_total", float(use_backfile_total) / use_total
+    #     print "use_social_networks_total", float(use_social_networks_total) / use_total
+    #     print 1/0
+
+    def test_instant_sums(self):
+        counts = defaultdict(int)
+        for my_journal in self.slider_journals:
+
+            calculated_total = 0
+            calculated_total += my_journal["use_groups_free_instant"]["oa"]
+            calculated_total += my_journal["use_groups_free_instant"]["backfile"]
+            calculated_total += my_journal["use_groups_free_instant"]["social_networks"]
+            calculated_total = round(calculated_total, 0)
+
+            compare_total = round(my_journal["use_instant"], 0)
+
+            try:
+                assert_allclose(calculated_total,
+                                compare_total,
+                                atol=2,
+                                # err_msg=err_msg,
+                                verbose=True)
+                counts["instant_pass"] += 1
+            except AssertionError as e:
+                pprint([my_journal["title"], calculated_total, compare_total, e])
+                counts["instant_fail"] += 1
+                # raise
+
+            err_msg = None
+
+        pprint(counts)
+        if len(counts.keys()) != 1:
+            print 1/0
+
 
     def test_subscription_sums(self):
         counts = defaultdict(int)
