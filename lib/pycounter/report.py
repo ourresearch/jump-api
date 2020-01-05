@@ -11,15 +11,15 @@ import warnings
 import pendulum
 import six
 
-from pycounter import csvhelper
-from pycounter.constants import CODES, HEADER_FIELDS, METRICS
-from pycounter.constants import REPORT_DESCRIPTIONS, TOTAL_TEXT
-from pycounter.exceptions import (
+from . import csvhelper
+from .constants import CODES, HEADER_FIELDS, METRICS
+from .constants import REPORT_DESCRIPTIONS, TOTAL_TEXT
+from .exceptions import (
     PycounterException,
     PycounterWarning,
     UnknownReportTypeError,
 )
-from pycounter.helpers import (
+from .helpers import (
     convert_covered,
     convert_date_column,
     convert_date_run,
