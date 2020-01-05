@@ -527,11 +527,6 @@ def live_scenario_id_slider_get(scenario_id):
 
 @app.route('/scenario/<scenario_id>/apc', methods=['GET'])
 @jwt_required
-def precache_scenario_id_apc_get(scenario_id):
-    return get_cached_response("scenario/{}/apc".format(scenario_id))
-
-@app.route('/live/scenario/<scenario_id>/apc', methods=['GET'])
-@jwt_required
 def live_scenario_id_apc_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
     my_saved_scenario = get_saved_scenario(scenario_id)
