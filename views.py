@@ -84,15 +84,16 @@ def base_endpoint():
 # def favicon():
 #     return redirect(url_for("static", filename="img/favicon.ico", _external=True, _scheme='https'))
 
+# @app.route('/scenario/<scenario_id>/journal/<issn_l>', methods=['GET'])
+# @jwt_required
+# def jump_scenario_issn_get(scenario_id, issn_l):
+#     my_saved_scenario = get_saved_scenario(scenario_id)
+#     scenario = my_saved_scenario.live_scenario
+#     my_journal = scenario.get_journal(issn_l)
+#     return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
+#
+# @app.route('/live/data/common/<package_id>', methods=['GET'])
 @app.route('/scenario/<scenario_id>/journal/<issn_l>', methods=['GET'])
-@jwt_required
-def jump_scenario_issn_get(scenario_id, issn_l):
-    my_saved_scenario = get_saved_scenario(scenario_id)
-    scenario = my_saved_scenario.live_scenario
-    my_journal = scenario.get_journal(issn_l)
-    return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
-
-@app.route('/live/data/common/<package_id>', methods=['GET'])
 def jump_data_package_id_get(package_id):
     secret = request.args.get('secret', "")
     if not safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
@@ -159,16 +160,16 @@ def protected():
 
 
 
-def get_cached_response(url_end):
-    url_end = url_end.lstrip("/")
-    url = u"https://cdn.unpaywalljournals.org/live/{}?jwt={}".format(url_end, get_jwt())
-    print u"getting cached request from {}".format(url_end)
-    headers = {"Cache-Control": "public, max-age=31536000"}
-    r = requests.get(url, headers=headers)
-    if r.status_code == 200:
-        print "cache response header:", r.headers["CF-Cache-Status"]
-        return jsonify_fast_no_sort(r.json())
-    return abort_json(r.status_code, "Problem.")
+# def get_cached_response(url_end):
+#     url_end = url_end.lstrip("/")
+#     url = u"https://cdn.unpaywalljournals.org/live/{}?jwt={}".format(url_end, get_jwt())
+#     print u"getting cached request from {}".format(url_end)
+#     headers = {"Cache-Control": "public, max-age=31536000"}
+#     r = requests.get(url, headers=headers)
+#     if r.status_code == 200:
+#         print "cache response header:", r.headers["CF-Cache-Status"]
+#         return jsonify_fast_no_sort(r.json())
+#     return abort_json(r.status_code, "Problem.")
 
 
 def get_saved_scenario(scenario_id, debug_mode=False):
@@ -202,29 +203,30 @@ def get_saved_scenario(scenario_id, debug_mode=False):
 
 
 # from https://stackoverflow.com/a/51480061/596939
-class RunAsyncToRequestResponse(Thread):
-    def __init__(self, url_end, my_jwt):
-        Thread.__init__(self)
-        self.url_end = url_end
-        self.jwt = my_jwt
+# class RunAsyncToRequestResponse(Thread):
+#     def __init__(self, url_end, my_jwt):
+#         Thread.__init__(self)
+#         self.url_end = url_end
+#         self.jwt = my_jwt
+#
+#     def run(self):
+#         print "sleeping for 2 seconds in RunAsyncToRequestResponse for {}".format(self.url_end)
+#         sleep(2)
+#         url = u"https://cdn.unpaywalljournals.org/live/{}?jwt={}".format(self.url_end, self.jwt)
+#         print u"starting RunAsyncToRequestResponse cache request for {}".format(self.url_end)
+#         headers = {"Cache-Control": "public, max-age=31536000"}
+#         r = requests.get(url, headers=headers)
+#         print u"cache RunAsyncToRequestResponse request status code {} for {}".format(r.status_code, self.url_end)
+#         print u"cache RunAsyncToRequestResponse response header:", r.headers["CF-Cache-Status"]
 
-    def run(self):
-        print "sleeping for 2 seconds in RunAsyncToRequestResponse for {}".format(self.url_end)
-        sleep(2)
-        url = u"https://cdn.unpaywalljournals.org/live/{}?jwt={}".format(self.url_end, self.jwt)
-        print u"starting RunAsyncToRequestResponse cache request for {}".format(self.url_end)
-        headers = {"Cache-Control": "public, max-age=31536000"}
-        r = requests.get(url, headers=headers)
-        print u"cache RunAsyncToRequestResponse request status code {} for {}".format(r.status_code, self.url_end)
-        print u"cache RunAsyncToRequestResponse response header:", r.headers["CF-Cache-Status"]
 
-
+# @app.route('/account', methods=['GET'])
+# @jwt_required
+# def precache_account_get():
+#     return get_cached_response("account")
+#
+# @app.route('/live/account', methods=['GET'])
 @app.route('/account', methods=['GET'])
-@jwt_required
-def precache_account_get():
-    return get_cached_response("account")
-
-@app.route('/live/account', methods=['GET'])
 @jwt_required
 def live_account_get():
     my_timing = TimingMessages()
@@ -262,13 +264,14 @@ def get_jwt():
         return request.headers["Authorization"].replace("Bearer ", "")
     return None
 
+# @app.route('/package/<package_id>', methods=['GET'])
+# @jwt_required
+# def precache_package_id_get(package_id):
+#     return get_cached_response("package/{}".format(package_id))
+#
+#
+# @app.route('/live/package/<package_id>', methods=['GET'])
 @app.route('/package/<package_id>', methods=['GET'])
-@jwt_required
-def precache_package_id_get(package_id):
-    return get_cached_response("package/{}".format(package_id))
-
-
-@app.route('/live/package/<package_id>', methods=['GET'])
 @jwt_required
 def live_package_id_get(package_id):
     my_timing = TimingMessages()
@@ -373,15 +376,15 @@ def scenario_id_post(scenario_id):
     post_subscription_guts(scenario_id)
     my_timing.log_timing("after post_subscription_guts()")
 
-    if True:
-        # kick this off now, as early as possible
-        my_jwt = get_jwt()
-        # doing this next one below
-        RunAsyncToRequestResponse("scenario/{}".format(scenario_id), my_jwt).start()
-        RunAsyncToRequestResponse("scenario/{}/slider".format(scenario_id), my_jwt).start()
-        RunAsyncToRequestResponse("scenario/{}/table".format(scenario_id), my_jwt).start()
-        RunAsyncToRequestResponse("scenario/{}/apc".format(scenario_id), my_jwt).start()
-        my_timing.log_timing("after start RunAsyncToRequestResponse")
+    # if False:
+    #     # kick this off now, as early as possible
+    #     my_jwt = get_jwt()
+    #     # doing this next one below
+    #     RunAsyncToRequestResponse("scenario/{}".format(scenario_id), my_jwt).start()
+    #     RunAsyncToRequestResponse("scenario/{}/slider".format(scenario_id), my_jwt).start()
+    #     RunAsyncToRequestResponse("scenario/{}/table".format(scenario_id), my_jwt).start()
+    #     RunAsyncToRequestResponse("scenario/{}/apc".format(scenario_id), my_jwt).start()
+    #     my_timing.log_timing("after start RunAsyncToRequestResponse")
 
     my_newly_saved_scenario = get_saved_scenario(scenario_id)
     my_timing.log_timing("after re-getting live scenario")
@@ -390,24 +393,24 @@ def scenario_id_post(scenario_id):
     my_timing.log_timing("after to_dict()")
     response["_timing"] = my_timing.to_dict()
 
-    if True:
-        # stall for log enough to make sure slider is accurate
-        new_cache_hit = False
-        url = u"https://cdn.unpaywalljournals.org/live/scenario/{}/slider?jwt={}".format(scenario_id, get_jwt())
-        print u"getting cached request from {}".format(url)
-        headers = {"Cache-Control": "public, max-age=31536000"}
-        while not new_cache_hit:
-            print "calling {}".format(url)
-            r = requests.get(url, headers=headers)
-            if r.status_code == 200:
-                if r.headers["CF-Cache-Status"] == "HIT":
-                    # print r.headers["Date"]
-                    # print dateparser.parse(r.headers["Date"])
-                    # print date_before_purge
-                    if dateparser.parse(r.headers["Date"], settings={'RETURN_AS_TIMEZONE_AWARE': False}) > date_before_purge:
-                        print "is a hit from after purge"
-                        new_cache_hit = True
-                        print "new_cache_hit True"
+    # if False:
+    #     # stall for log enough to make sure slider is accurate
+    #     new_cache_hit = False
+    #     url = u"https://cdn.unpaywalljournals.org/live/scenario/{}/slider?jwt={}".format(scenario_id, get_jwt())
+    #     print u"getting cached request from {}".format(url)
+    #     headers = {"Cache-Control": "public, max-age=31536000"}
+    #     while not new_cache_hit:
+    #         print "calling {}".format(url)
+    #         r = requests.get(url, headers=headers)
+    #         if r.status_code == 200:
+    #             if r.headers["CF-Cache-Status"] == "HIT":
+    #                 # print r.headers["Date"]
+    #                 # print dateparser.parse(r.headers["Date"])
+    #                 # print date_before_purge
+    #                 if dateparser.parse(r.headers["Date"], settings={'RETURN_AS_TIMEZONE_AWARE': False}) > date_before_purge:
+    #                     print "is a hit from after purge"
+    #                     new_cache_hit = True
+    #                     print "new_cache_hit True"
 
     return jsonify_fast_no_sort(response)
 
@@ -444,12 +447,13 @@ def subscriptions_scenario_id_post(scenario_id):
 
 
 
+# @app.route('/scenario/<scenario_id>', methods=['GET'])
+# @jwt_required
+# def precache_scenario_id_get(scenario_id):
+#     return get_cached_response("scenario/{}".format(scenario_id))
+#
+# @app.route('/live/scenario/<scenario_id>', methods=['GET'])
 @app.route('/scenario/<scenario_id>', methods=['GET'])
-@jwt_required
-def precache_scenario_id_get(scenario_id):
-    return get_cached_response("scenario/{}".format(scenario_id))
-
-@app.route('/live/scenario/<scenario_id>', methods=['GET'])
 @jwt_required
 def live_scenario_id_get(scenario_id):
     my_timing = TimingMessages()
@@ -492,12 +496,13 @@ def scenario_id_raw_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_raw(pagesize))
 
+# @app.route('/scenario/<scenario_id>/table', methods=['GET'])
+# @jwt_required
+# def precache_scenario_id_table_get(scenario_id):
+#     return get_cached_response("scenario/{}/table".format(scenario_id))
+#
+# @app.route('/live/scenario/<scenario_id>/table', methods=['GET'])
 @app.route('/scenario/<scenario_id>/table', methods=['GET'])
-@jwt_required
-def precache_scenario_id_table_get(scenario_id):
-    return get_cached_response("scenario/{}/table".format(scenario_id))
-
-@app.route('/live/scenario/<scenario_id>/table', methods=['GET'])
 @jwt_required
 def live_scenario_id_table_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
@@ -508,13 +513,14 @@ def live_scenario_id_table_get(scenario_id):
     return response
 
 
+# @app.route('/scenario/<scenario_id>/slider', methods=['GET'])
+# @jwt_required
+# def precache_scenario_id_slider_get(scenario_id):
+#     return get_cached_response("scenario/{}/slider".format(scenario_id))
+#     # return cache_scenario_id_slider_get(scenario_id)
+#
+# @app.route('/live/scenario/<scenario_id>/slider', methods=['GET'])
 @app.route('/scenario/<scenario_id>/slider', methods=['GET'])
-@jwt_required
-def precache_scenario_id_slider_get(scenario_id):
-    return get_cached_response("scenario/{}/slider".format(scenario_id))
-    # return cache_scenario_id_slider_get(scenario_id)
-
-@app.route('/live/scenario/<scenario_id>/slider', methods=['GET'])
 @jwt_required
 def live_scenario_id_slider_get(scenario_id):
     pagesize = int(request.args.get("pagesize", 5000))
