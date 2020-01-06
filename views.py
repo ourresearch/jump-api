@@ -294,12 +294,13 @@ def live_package_id_get(package_id):
 
     my_jwt = get_jwt()
 
-    for my_scenario in my_package.unique_saved_scenarios:
-        RunAsyncToRequestResponse("scenario/{}".format(my_scenario.scenario_id), my_jwt).start()
-        RunAsyncToRequestResponse("scenario/{}/slider".format(my_scenario.scenario_id), my_jwt).start()
-        RunAsyncToRequestResponse("scenario/{}/table".format(my_scenario.scenario_id), my_jwt).start()
-        RunAsyncToRequestResponse("scenario/{}/apc".format(my_scenario.scenario_id), my_jwt).start()
-    RunAsyncToRequestResponse("package/{}".format(package_id), my_jwt).start()
+    # if False:
+    #     for my_scenario in my_package.unique_saved_scenarios:
+    #         RunAsyncToRequestResponse("scenario/{}".format(my_scenario.scenario_id), my_jwt).start()
+    #         RunAsyncToRequestResponse("scenario/{}/slider".format(my_scenario.scenario_id), my_jwt).start()
+    #         RunAsyncToRequestResponse("scenario/{}/table".format(my_scenario.scenario_id), my_jwt).start()
+    #         RunAsyncToRequestResponse("scenario/{}/apc".format(my_scenario.scenario_id), my_jwt).start()
+    #     RunAsyncToRequestResponse("package/{}".format(package_id), my_jwt).start()
 
     my_timing.log_timing("after kicking off cache requests")
 
@@ -428,14 +429,15 @@ def subscriptions_scenario_id_post(scenario_id):
     # kick this off now, as early as possible
     my_jwt = get_jwt()
 
-    print "start RunAsyncToRequestResponse"
-
-    RunAsyncToRequestResponse("scenario/{}".format(scenario_id), my_jwt).start()
-    RunAsyncToRequestResponse("scenario/{}/slider".format(scenario_id), my_jwt).start()
-    RunAsyncToRequestResponse("scenario/{}/table".format(scenario_id), my_jwt).start()
-    my_timing.log_timing("start RunAsyncToRequestResponse")
-
-    print "all done"
+    # print "start RunAsyncToRequestResponse"
+    #
+    # if False:
+    #     RunAsyncToRequestResponse("scenario/{}".format(scenario_id), my_jwt).start()
+    #     RunAsyncToRequestResponse("scenario/{}/slider".format(scenario_id), my_jwt).start()
+    #     RunAsyncToRequestResponse("scenario/{}/table".format(scenario_id), my_jwt).start()
+    #     my_timing.log_timing("start RunAsyncToRequestResponse")
+    #
+    # print "all done"
 
     my_timing.log_timing("after to_dict()")
     response = {"status": "success"}
