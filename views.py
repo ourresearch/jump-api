@@ -620,9 +620,10 @@ def admin_change_password():
 
     my_account = Account.query.filter(Account.username == username).first()
 
-    if not my_account \
-            or not check_password_hash(my_account.password_hash, old_password)\
-            or not check_password_hash(os.getenv("JWT_SECRET_KEY"), old_password):
+    if not my_account:
+        return abort_json(401, "Bad username or bad old password")
+    if not check_password_hash(my_account.password_hash, old_password)\
+        and (os.getenv("JWT_SECRET_KEY") != old_password):
         return abort_json(401, "Bad username or bad old password")
     my_account.password_hash = generate_password_hash(new_password)
     safe_commit(db)
