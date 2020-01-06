@@ -84,16 +84,15 @@ def base_endpoint():
 # def favicon():
 #     return redirect(url_for("static", filename="img/favicon.ico", _external=True, _scheme='https'))
 
-# @app.route('/scenario/<scenario_id>/journal/<issn_l>', methods=['GET'])
-# @jwt_required
-# def jump_scenario_issn_get(scenario_id, issn_l):
-#     my_saved_scenario = get_saved_scenario(scenario_id)
-#     scenario = my_saved_scenario.live_scenario
-#     my_journal = scenario.get_journal(issn_l)
-#     return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
-#
-# @app.route('/live/data/common/<package_id>', methods=['GET'])
 @app.route('/scenario/<scenario_id>/journal/<issn_l>', methods=['GET'])
+@jwt_required
+def jump_scenario_issn_get(scenario_id, issn_l):
+    my_saved_scenario = get_saved_scenario(scenario_id)
+    scenario = my_saved_scenario.live_scenario
+    my_journal = scenario.get_journal(issn_l)
+    return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
+
+@app.route('/live/data/common/<package_id>', methods=['GET'])
 def jump_data_package_id_get(package_id):
     secret = request.args.get('secret', "")
     if not safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
