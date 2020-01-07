@@ -315,6 +315,7 @@ class Journal(object):
                 scaled[year] += by_age
                 if scaled[year]:
                     scaled[year] += self.downloads_total_older_than_five_years
+                scaled[year] *= (self.settings.backfile_contribution / 100.0)
                 scaled[year] *= (1 - self.downloads_social_network_multiplier)
             scaled = [max(0, num) for num in scaled]
             return scaled
