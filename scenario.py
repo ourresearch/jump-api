@@ -13,10 +13,12 @@ import os
 from app import use_groups
 from app import get_db_cursor
 from app import DEMO_PACKAGE_ID
+from app import db
 from time import time
 from util import elapsed
 from util import for_sorting
 from util import TimingMessages
+from util import get_sql_answer
 
 from journal import Journal
 from consortium import Consortium
@@ -97,10 +99,24 @@ class Scenario(object):
 
     def set_clean_data(self):
         clean_dict = {}
-        for k, v in self.data["prices_raw"][DEMO_PACKAGE_ID].iteritems():
-            if v != 0 and v is not None:
-                clean_dict[k] = v
-        self.data["prices"] = clean_dict
+        prices_dict = {}
+        self.data["prices"] = {}
+
+        prices_to_consider = [DEMO_PACKAGE_ID]
+        if get_parent_consortium_package_id(self.package_id) in ["68f1af1d"]:
+            prices_to_consider += ["68f1af1d", "93YfzkaA"]
+
+        # print self.data["prices_raw"]
+        for package_id_for_prices in prices_to_consider:
+            if package_id_for_prices in self.data["prices_raw"]:
+                for my_issnl, price in self.data["prices_raw"][package_id_for_prices].iteritems():
+                    if price != 0 and price is not None:
+                        if not prices_dict.get(my_issnl, 0):
+                            prices_dict[my_issnl] = price
+                        else:
+                            prices_dict[my_issnl] = min(prices_dict[my_issnl], price)
+
+        self.data["prices"] = prices_dict
 
         clean_dict = {}
         for issn_l, price_row in self.data["prices"].iteritems():
@@ -282,7 +298,11 @@ class Scenario(object):
 
     @cached_property
     def cost_bigdeal_projected_by_year(self):
-        return [round(((1+self.settings.cost_bigdeal_increase/float(100))**year) * self.settings.cost_bigdeal )
+        big_deal_cost = self.settings.cost_bigdeal
+        if isinstance(big_deal_cost, str):
+            big_deal_cost = big_deal_cost.replace(",", "")
+            big_deal_cost = float(big_deal_cost)
+        return [round(((1+self.settings.cost_bigdeal_increase/float(100))**year) * big_deal_cost )
                                             for year in self.years]
 
     @cached_property
@@ -659,6 +679,7 @@ class Scenario(object):
         return response
 
     def to_dict_apc(self, pagesize):
+        response = {}
         response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": self.to_dict_summary_dict(),
@@ -671,9 +692,9 @@ class Scenario(object):
                         {"text": "Number APC papers", "value": "num_apc_papers", "percent": None, "raw": self.num_apc_papers_historical, "display": "float1"},
                         {"text": "Total fractional authorship", "value": "fractional_authorship", "percent": None, "raw": self.fractional_authorships_total, "display": "float1"},
                         {"text": "APC Dollars Spent", "value": "cost_apc", "percent": None, "raw": self.cost_apc_historical, "display": "currency_int"},
-                ],
-                "journals": [j.to_dict() for j in self.apc_journals_sorted_spend[0:pagesize]],
-            }
+                ]
+        }
+        response["journals"] = [j.to_dict() for j in self.apc_journals_sorted_spend[0:pagesize]]
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
         return response
@@ -757,6 +778,11 @@ class Scenario(object):
     def __repr__(self):
         return u"<{} (n={})>".format(self.__class__.__name__, len(self.journals))
 
+
+@cache
+def get_parent_consortium_package_id(package_id):
+    q = """select consortium_package_id from jump_account_package where package_id = '{}'""".format(package_id)
+    return get_sql_answer(db, q)
 
 @cache
 def get_consortium_package_ids(package_id):

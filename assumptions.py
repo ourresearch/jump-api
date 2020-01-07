@@ -16,6 +16,7 @@ class Assumptions(object):
         self.ill_request_percent_of_delayed = 5
         self.weight_citation = 10
         self.weight_authorship = 100
+        self.backfile_contribution = 100 # percent
         self.include_bronze = True
         self.include_submitted_version = True
         self.include_social_networks = True
