@@ -650,6 +650,10 @@ def is_same_publisher(publisher1, publisher2):
         return normalize(publisher1) == normalize(publisher2)
     return False
 
+def myconverter(o):
+    if isinstance(o, datetime.datetime):
+        return o.isoformat()
+    raise TypeError(repr(o) + " is not JSON serializable")
 
 # from https://stackoverflow.com/a/50762571/596939
 def jsonify_fast_no_sort(*args, **kwargs):
@@ -670,9 +674,9 @@ def jsonify_fast_no_sort(*args, **kwargs):
               check_circular=False,
               allow_nan=True,
               cls=None,
+              default=myconverter,
               indent=None,
               # separators=None,
-              default=None,
               sort_keys=sort_keys) + u'\n', mimetype=current_app.config['JSONIFY_MIMETYPE']
     )
 
@@ -696,9 +700,9 @@ def jsonify_fast(*args, **kwargs):
               check_circular=False,
               allow_nan=True,
               cls=None,
+              default=myconverter,
               indent=None,
               # separators=None,
-              default=None,
               sort_keys=sort_keys) + u'\n', mimetype=current_app.config['JSONIFY_MIMETYPE']
     )
 

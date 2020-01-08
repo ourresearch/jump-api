@@ -25,6 +25,7 @@ from consortium import Consortium
 from apc_journal import ApcJournal
 from assumptions import Assumptions
 
+
 def get_clean_package_id(http_request_args):
     if not http_request_args:
         return DEMO_PACKAGE_ID
@@ -883,6 +884,14 @@ def get_apc_data_from_db(input_package_id):
     return rows
 
 
+@cache
+def get_perpetual_access_data_from_db(input_package_id):
+    command = """select * from jump_perpetual_access where package_id='{}'""".format(input_package_id)
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+    my_dict = dict([(a["issn_l"], a) for a in rows])
+    return my_dict
 
 @cache
 def get_embargo_data_from_db():
@@ -1028,6 +1037,9 @@ def get_common_package_data(package_id):
 
     my_data["apc"] = get_apc_data_from_db(package_id)  # gets everything from consortium itself
     my_timing.log_timing("get_apc_data_from_db")
+
+    my_data["perpetual_access"] = get_perpetual_access_data_from_db(package_id)
+    my_timing.log_timing("get_perpetual_access_data_from_db")
 
     # not package_id specific
 
