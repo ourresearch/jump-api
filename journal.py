@@ -7,7 +7,9 @@ from kids.cache import cache
 from collections import OrderedDict
 import numpy as np
 import scipy
+import datetime
 from scipy.optimize import curve_fit
+from threading import Lock
 
 from app import use_groups
 from app import use_groups_free_instant
@@ -17,6 +19,8 @@ from app import DEMO_PACKAGE_ID
 from util import format_currency
 from util import format_percent
 from util import format_with_commas
+
+scipy_lock = Lock()
 
 def display_usage(value):
     if value:
@@ -302,25 +306,132 @@ class Journal(object):
         return [self.use_paywalled_by_year[year] - self.use_ill_by_year[year] for year in self.years]
 
     @cached_property
+    def display_perpetual_access_years(self):
+        if not self.perpetual_access_years:
+            return "None"
+        return "{}-{}".format(min(self.perpetual_access_years), max(self.perpetual_access_years))
+
+    @cached_property
+    def year_by_perpetual_access_years(self):
+        return range(min(self.historical_years_by_year)-5, max(self.historical_years_by_year)+1)
+
+    @cached_property
+    def perpetual_access_years(self):
+        # print self._scenario_data["perpetual_access"]
+        data_dict = self._scenario_data["perpetual_access"]
+        if not data_dict:
+            return self.year_by_perpetual_access_years
+
+        if not self.issn_l in data_dict:
+            return []
+
+        response = []
+        for year in self.year_by_perpetual_access_years:
+            working_date = datetime.datetime(year, 1, 2).isoformat()  # use January 2nd
+            if working_date > data_dict[self.issn_l]["start_date"] and working_date < data_dict[self.issn_l]["end_date"]:
+                # print year, "yes", data_dict[self.issn_l]
+                response.append(year)
+            else:
+                pass
+                # print year, "no", data_dict[self.issn_l]
+        return response
+
+    @cached_property
     def downloads_backfile_by_year(self):
         if self.settings.include_backfile:
-            scaled = [0 for year in self.years]
-            for year in self.years:
-                age = year
-                new = 0.5 * ((self.downloads_by_age[age] * self.growth_scaling_downloads[year]) - (self.downloads_oa_by_age[year][age] * self.growth_scaling_oa_downloads[year]))
-                scaled[year] = max(new, 0)
-                for age in range(year+1, 5):
-                    by_age = (self.downloads_by_age[age] * self.growth_scaling_downloads[year]) - (self.downloads_oa_by_age[year][age] * self.growth_scaling_oa_downloads[year])
-                    by_age += max(new, 0)
-                scaled[year] += by_age
-                if scaled[year]:
-                    scaled[year] += self.downloads_total_older_than_five_years
-                scaled[year] *= (self.settings.backfile_contribution / 100.0)
-                scaled[year] *= (1 - self.downloads_social_network_multiplier)
-            scaled = [max(0, num) for num in scaled]
-            return scaled
+            return self.sum_obs_pub_matrix_by_obs(self.backfile_obs_pub)
         else:
             return [0 for year in self.years]
+
+    @cached_property
+    def downloads_obs_pub(self):
+        by_age = self.downloads_by_age
+        by_age_old = self.downloads_total_older_than_five_years/5.0
+        growth_scaling = self.growth_scaling_downloads
+        my_matrix = self.obs_pub_matrix(by_age, by_age_old, growth_scaling)
+        return my_matrix
+
+
+    @cached_property
+    def oa_obs_pub(self):
+        by_age = self.downloads_oa_by_age
+        by_age_old = (self.downloads_total_older_than_five_years/5.0) * (self.downloads_oa_by_age[4]/(self.downloads_by_age[4]+1))
+        growth_scaling = self.growth_scaling_oa_downloads
+        my_matrix = self.obs_pub_matrix(by_age, by_age_old, growth_scaling)
+        return my_matrix
+
+    @cached_property
+    def backfile_raw_obs_pub(self):
+        response = {}
+        for obs_year in range(2020, 2025):
+            obs_key = "obs{}".format(obs_year)
+            response[obs_key] = {}
+            for pub_year in range(2011, 2025):
+                pub_key = "pub{}".format(pub_year)
+
+                # modelling subscription ending in 2020, so no backfile beyond that
+                if pub_year in self.perpetual_access_years:
+                    value = self.downloads_obs_pub[obs_key][pub_key] - self.oa_obs_pub[obs_key][pub_key]
+                elif pub_year-1 in self.perpetual_access_years:
+                    value = 0.5*(self.downloads_obs_pub[obs_key][pub_key] - self.oa_obs_pub[obs_key][pub_key])
+                else:
+                    value = 0
+                value = max(value, 0)
+                response[obs_key][pub_key] = int(value)
+        return response
+
+
+    @cached_property
+    def backfile_obs_pub(self):
+        response = {}
+        for obs_year in range(2020, 2025):
+            obs_key = "obs{}".format(obs_year)
+            response[obs_key] = {}
+            for pub_year in range(2011, 2025):
+                pub_key = "pub{}".format(pub_year)
+                value = self.backfile_raw_obs_pub[obs_key][pub_key]
+                value *= (self.settings.backfile_contribution / 100.0)
+                value *= (1 - self.downloads_social_network_multiplier)
+                value = max(0, value)
+                response[obs_key][pub_key] = int(value)
+        return response
+
+    def obs_pub_matrix(self, by_age, by_age_old, growth_scaling):
+        response = {}
+        for obs_index, obs_year in enumerate(range(2020, 2025)):
+            response["obs{}".format(obs_year)] = {}
+            for pub_year in range(2011, 2025):
+                age = obs_year - pub_year
+                value = 0
+                if age >= 0 and age <= 4:
+                    value = int(by_age[age])
+                elif age >= 5 and age <= 9:
+                    value = int(by_age_old)
+                value *= growth_scaling[obs_index]
+                response["obs{}".format(obs_year)]["pub{}".format(pub_year)] = int(value)
+        return response
+
+    def display_obs_pub_matrix(self, my_obs_pub_matrix):
+        response = []
+        obs_keys_ordered = sorted(my_obs_pub_matrix.keys())
+        for obs_key in obs_keys_ordered:
+            sub_response = []
+            pub_row = my_obs_pub_matrix[obs_key]
+            pub_keys_ordered = sorted(pub_row.keys())
+            for pub_key in pub_keys_ordered:
+                sub_response.append(pub_row[pub_key])
+            response.append(sub_response)
+        return response
+
+    def sum_obs_pub_matrix_by_obs(self, my_obs_pub_matrix):
+        response = [0 for year in self.years]
+        for i, obs_year in enumerate(range(2020, 2025)):
+            obs_key = "obs{}".format(obs_year)
+            for pub_year in range(2011, 2025):
+                pub_key = "pub{}".format(pub_year)
+                response[i] += my_obs_pub_matrix[obs_key][pub_key]
+        return response
+
 
 
     @cached_property
@@ -341,23 +452,12 @@ class Journal(object):
 
     @cached_property
     def num_oa_historical_by_year(self):
-        # print "num_oa_historical_by_year", self.num_papers, [self.num_green_historical_by_year[year]+self.num_bronze_historical_by_year[year]+self.num_hybrid_historical_by_year[year] for year in self.years]
-        # print "parts", self.num_papers
-        # print "green", self.num_green_historical_by_year
-        # print "bronze", self.num_bronze_historical_by_year
-        # print "hybrid", self.num_hybrid_historical_by_year
-
         return [self.num_green_historical_by_year[year]+self.num_bronze_historical_by_year[year]+self.num_hybrid_historical_by_year[year] for year in self.years]
 
     @cached_property
-    def downloads_oa_base(self):
-        return round(np.sum([self.num_oa_for_convolving[age] * self.downloads_per_paper_by_age[age] for age in self.years]), 4)
-
-    @cached_property
     def downloads_oa_by_year(self):
-        # TODO add some growth by using num_oa_by_year instead of num_oa_by_year_historical
-        response = [self.downloads_oa_base * self.growth_scaling_oa_downloads[year] for year in self.years]
-        return response
+        return self.sum_obs_pub_matrix_by_obs(self.oa_obs_pub)
+
 
     @cached_property
     def use_oa(self):
@@ -368,12 +468,16 @@ class Journal(object):
 
     @cached_property
     def use_oa_by_year(self):
-        # just making this stable prediction over next years
         # TODO fix
         response = [max(0, self.downloads_oa_by_year[year] * self.use_weight_multiplier) for year in self.years]
-        response = [min(num, self.use_total_by_year[year]) for num in response]
+        response = [min(response[year], self.use_total_by_year[year]) for year in self.years]
         return response
 
+    @cached_property
+    def use_oa_percent_by_year(self):
+        # print self.use_oa_by_year, self.use_total_by_year
+        response = [min(100, round(100.0*(self.use_oa_by_year[year]/(1.0+self.use_total_by_year[year])), 1)) for year in self.years]
+        return response
 
     @cached_property
     def downloads_total_by_year(self):
@@ -421,6 +525,7 @@ class Journal(object):
                 response = None
             return response
 
+
         try:
             pars, pcov = curve_fit(func, x, y, initial_guess)
         except:
@@ -446,15 +551,23 @@ class Journal(object):
 
     @cached_property
     def downloads_by_age(self):
-        use_default_curve = False
+        self.use_default_download_curve = False
 
-        my_curve_fit = self.curve_fit_for_downloads
-        if my_curve_fit and my_curve_fit["r_squared"] >= 0.75:
-            # print u"GREAT curve fit for {}, r_squared {}".format(self.issn_l, my_curve_fit.get("r_squared", "no r_squared"))
-            downloads_by_age_before_counter_correction_curve_to_use = my_curve_fit["y_fit"]
+        nonzero_paper_years = [year for year in self.years if self.raw_num_papers_historical_by_year[year]]
+        if len(nonzero_paper_years) == 5:
+            scipy_lock.acquire()
+            my_curve_fit = self.curve_fit_for_downloads
+            scipy_lock.release()
+            if my_curve_fit and my_curve_fit["r_squared"] >= 0.75:
+                # print u"GREAT curve fit for {}, r_squared {}".format(self.issn_l, my_curve_fit.get("r_squared", "no r_squared"))
+                downloads_by_age_before_counter_correction_curve_to_use = my_curve_fit["y_fit"]
+            else:
+                # print u"bad curve fit for {}, r_squared {}".format(self.issn_l, my_curve_fit.get("r_squared", "no r_squared"))
+                self.use_default_download_curve = True
         else:
-            # print u"bad curve fit for {}, r_squared {}".format(self.issn_l, my_curve_fit.get("r_squared", "no r_squared"))
             self.use_default_download_curve = True
+
+        if self.use_default_download_curve:
             # from future of OA paper, modified to be just elsevier, all colours
             default_download_by_age = [0.371269, 0.137739, 0.095896, 0.072885, 0.058849]
             sum_total_downloads_by_age_before_counter_correction = np.sum(self.downloads_by_age_before_counter_correction)
@@ -493,22 +606,55 @@ class Journal(object):
 
 
     @cached_property
-    def num_oa_for_convolving(self):
-        oa_in_order = self.num_oa_historical_by_year
-        # oa_in_order.reverse()
-        # print "\nself.num_oa_historical_by_year", self.num_papers, oa_in_order
-        return [min(self.num_papers, self.num_oa_historical_by_year[year]) for year in self.years]
+    def num_oa_by_year(self):
+        num_reversed = self.num_oa_historical_by_year[::-1]
+        return [min(self.num_papers_by_year[year], num_reversed[year]) for year in self.years]
+
 
     @cached_property
     def downloads_oa_by_age(self):
-        # TODO do separately for each type of OA and each year
-        response = {}
-        for year in self.years:
-            response[year] = [(float(self.downloads_per_paper_by_age[age])*self.num_oa_for_convolving[age]) for age in self.years]
-            if self.oa_embargo_months:
-                for age in self.years:
-                    if age*12 >= self.oa_embargo_months:
-                        response[year][age] = self.downloads_by_age[age]
+        response = [(float(self.downloads_per_paper_by_age[age])*self.num_oa_by_year[age]) for age in self.years]
+        return response
+
+    @cached_property
+    def downloads_oa_bronze_by_age(self):
+        response = [(float(self.downloads_per_paper_by_age[age])*self.num_bronze_by_year[age]) for age in self.years]
+        return response
+
+    @cached_property
+    def downloads_oa_green_by_age(self):
+        response = [(float(self.downloads_per_paper_by_age[age])*self.num_green_by_year[age]) for age in self.years]
+        return response
+
+    @cached_property
+    def num_hybrid_by_year(self):
+        num_reversed = self.num_hybrid_historical_by_year[::-1]
+        return [min(self.num_papers_by_year[year],
+                                  num_reversed[year]) for year in self.years]
+
+    @cached_property
+    def num_bronze_by_year(self):
+        num_reversed = self.num_bronze_historical_by_year[::-1]
+        return [min(self.num_papers_by_year[year] - self.num_hybrid_by_year[year],
+                                  num_reversed[year]) for year in self.years]
+
+    @cached_property
+    def num_green_by_year(self):
+        num_reversed = self.num_green_historical_by_year[::-1]
+        return [min(self.num_papers_by_year[year] - self.num_hybrid_by_year[year] - self.num_bronze_by_year[year],
+                                  num_reversed[year]) for year in self.years]
+
+    @cached_property
+    def downloads_oa_hybrid_by_age(self):
+        response = [(float(self.downloads_per_paper_by_age[age])*self.num_hybrid_by_year[age]) for age in self.years]
+        return response
+
+    @cached_property
+    def downloads_oa_peer_reviewed_by_age(self):
+        num_reversed = self.num_peer_reviewed_historical_by_year[::-1]
+        num_for_convolving = [min(self.num_papers_by_year[year], num_reversed[year]) for year in self.years]
+
+        response = [(float(self.downloads_per_paper_by_age[age])*num_for_convolving[age]) for age in self.years]
         return response
 
     @cached_property
@@ -709,15 +855,17 @@ class Journal(object):
 
     @cached_property
     def num_papers_growth_from_2018_by_year(self):
-        curve_fit = self.curve_fit_for_num_papers
-        if curve_fit and curve_fit["y_fit"][4]:
-            num_papers_2018 = curve_fit["y_fit"][4]
-            return [round(float(x)/num_papers_2018, 4) for x in self.num_papers_by_year]
-        return [0 for x in self.num_papers_by_year]
+        num_papers_2018 = self.num_papers_by_year[4]
+        return [round(float(self.num_papers_by_year[year])/(num_papers_2018+1), 4) for year in self.years]
 
     @cached_property
     def num_papers_by_year(self):
-        my_curve_fit = self.curve_fit_for_num_papers
+        my_curve_fit = None
+        nonzero_paper_years = [year for year in self.years if self.raw_num_papers_historical_by_year[year]]
+        if len(nonzero_paper_years) >= 4 and (2018 in nonzero_paper_years):
+            scipy_lock.acquire()
+            my_curve_fit = self.curve_fit_for_num_papers
+            scipy_lock.release()
         if not my_curve_fit:
             return [self.papers_2018 for year in self.years]
         return [max(0, num) for num in my_curve_fit["y_extrap"]]
@@ -815,7 +963,7 @@ class Journal(object):
 
     @cached_property
     def downloads_oa_green(self):
-        return round(np.sum([self.num_green_historical * self.downloads_per_paper_by_age[age] for age in self.years]), 4)
+        return round(np.mean(self.downloads_oa_green_by_year), 4)
 
     @cached_property
     def use_oa_green(self):
@@ -831,33 +979,106 @@ class Journal(object):
     def num_hybrid_historical(self):
         return round(np.mean(self.num_hybrid_historical_by_year), 4)
 
+    # @cached_property
+    # def downloads_oa_hybrid_by_year(self):
+    #     response = [0 for year in self.years]
+    #     for year in self.years:
+    #         response[year] = sum([(float(self.downloads_per_paper_by_age[age])*self.num_hybrid_historical_by_year[age]) for age in self.years])
+    #     return response
+
     @cached_property
     def downloads_oa_hybrid(self):
-        return round(np.sum([self.num_hybrid_historical * self.downloads_per_paper_by_age[age] for age in self.years]), 4)
+        return round(np.mean(self.downloads_oa_hybrid_by_year), 4)
 
     @cached_property
     def use_oa_hybrid(self):
         return round(self.downloads_oa_hybrid * self.use_weight_multiplier, 4)
 
-
     @cached_property
     def num_bronze_historical_by_year(self):
         my_dict = self.get_oa_data()["bronze"]
         response = [my_dict.get(year, 0) for year in self.historical_years_by_year]
-        if self.oa_embargo_months:
-            for age in self.years:
-                if age*12 < self.oa_embargo_months:
-                    response[age] = 0
         return response
+
 
     @cached_property
     def num_bronze_historical(self):
         return round(np.mean(self.num_bronze_historical_by_year), 4)
 
+    # @cached_property
+    # def downloads_oa_bronze_by_year(self):
+    #     response = [0 for year in self.years]
+    #     for year in self.years:
+    #         response[year] = sum([(float(self.downloads_per_paper_by_age[age])*self.num_bronze_historical_by_year[age]) for age in self.years])
+    #     return response
+
+    @cached_property
+    def downloads_oa_bronze_by_year(self):
+        return self.sum_obs_pub_matrix_by_obs(self.oa_bronze_obs_pub)
+
+    @cached_property
+    def downloads_oa_bronze_older(self):
+        return (self.downloads_total_older_than_five_years/5.0) * (self.downloads_oa_bronze_by_age[4]/(self.downloads_by_age[4]+1))
+
+    @cached_property
+    def downloads_oa_green_older(self):
+        return (self.downloads_total_older_than_five_years/5.0) * (self.downloads_oa_green_by_age[4]/(self.downloads_by_age[4]+1))
+
+    @cached_property
+    def downloads_oa_hybrid_older(self):
+        return (self.downloads_total_older_than_five_years/5.0) * (self.downloads_oa_hybrid_by_age[4]/(self.downloads_by_age[4]+1))
+
+    @cached_property
+    def downloads_oa_peer_reviewed_older(self):
+        return (self.downloads_total_older_than_five_years/5.0) * (self.downloads_oa_peer_reviewed_by_age[4]/(self.downloads_by_age[4]+1))
+
+    @cached_property
+    def oa_bronze_obs_pub(self):
+        by_age = self.downloads_oa_bronze_by_age
+        by_age_old = self.downloads_oa_bronze_older
+        growth_scaling = self.growth_scaling_oa_downloads
+        my_matrix = self.obs_pub_matrix(by_age, by_age_old, growth_scaling)
+        return my_matrix
+
+    @cached_property
+    def downloads_oa_hybrid_by_year(self):
+        return self.sum_obs_pub_matrix_by_obs(self.oa_hybrid_obs_pub)
+
+    @cached_property
+    def oa_hybrid_obs_pub(self):
+        by_age = self.downloads_oa_hybrid_by_age
+        by_age_old = self.downloads_oa_hybrid_older
+        growth_scaling = self.growth_scaling_oa_downloads
+        my_matrix = self.obs_pub_matrix(by_age, by_age_old, growth_scaling)
+        return my_matrix
+
+    @cached_property
+    def downloads_oa_green_by_year(self):
+        return self.sum_obs_pub_matrix_by_obs(self.oa_green_obs_pub)
+
+    @cached_property
+    def oa_green_obs_pub(self):
+        by_age = self.downloads_oa_green_by_age
+        by_age_old = self.downloads_oa_green_older
+        growth_scaling = self.growth_scaling_oa_downloads
+        my_matrix = self.obs_pub_matrix(by_age, by_age_old, growth_scaling)
+        return my_matrix
+
+    @cached_property
+    def downloads_oa_peer_reviewed_by_year(self):
+        return self.sum_obs_pub_matrix_by_obs(self.oa_peer_reviewed_obs_pub)
+
+    @cached_property
+    def oa_peer_reviewed_obs_pub(self):
+        by_age = self.downloads_oa_peer_reviewed_by_age
+        by_age_old = self.downloads_oa_peer_reviewed_older
+        growth_scaling = self.growth_scaling_oa_downloads
+        my_matrix = self.obs_pub_matrix(by_age, by_age_old, growth_scaling)
+        return my_matrix
+
     @cached_property
     def downloads_oa_bronze(self):
-        return round(np.sum([self.num_bronze_historical * self.downloads_per_paper_by_age[age] for age in self.years]), 4)
-
+        return round(np.mean(self.downloads_oa_bronze_by_year), 4)
 
     @cached_property
     def use_oa_bronze(self):
@@ -879,7 +1100,7 @@ class Journal(object):
 
     @cached_property
     def downloads_oa_peer_reviewed(self):
-        return round(np.sum([self.num_peer_reviewed_historical * self.downloads_per_paper_by_age[age] for age in self.years]), 4)
+        return round(np.mean(self.downloads_oa_peer_reviewed_by_year), 4)
 
     @cached_property
     def use_oa_peer_reviewed(self):
@@ -968,8 +1189,8 @@ class Journal(object):
         table_row["subscription_cost"] = round(self.cost_subscription)
         table_row["ill_cost"] = round(self.cost_ill)
         table_row["subscription_minus_ill_cost"] = round(self.cost_subscription_minus_ill)
-        # table_row["old_school_cpu"] = display_usage(self.old_school_cpu)
-        # table_row["old_school_cpu_rank"] = display_usage(self.old_school_cpu_rank)
+        table_row["old_school_cpu"] = display_usage(self.old_school_cpu)
+        table_row["old_school_cpu_rank"] = display_usage(self.old_school_cpu_rank)
 
         # fulfillment
         table_row["use_asns_percent"] = round(float(100)*self.use_actual["social_networks"]/self.use_total)
@@ -978,6 +1199,7 @@ class Journal(object):
         table_row["use_subscription_percent"] = round(float(100)*self.use_actual["subscription"]/self.use_total)
         table_row["use_ill_percent"] = round(float(100)*self.use_actual["ill"]/self.use_total)
         table_row["use_other_delayed_percent"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
+        table_row["perpetual_access_years"] = self.display_perpetual_access_years
 
         # oa
         table_row["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
@@ -1048,7 +1270,6 @@ class Journal(object):
                 "cost_subscription_minus_ill": format_currency(self.cost_subscription_minus_ill),
                 "ncppu": format_currency(self.ncppu, True),
                 "use_instant_percent": self.use_instant_percent,
-                "api_journal_raw_default_settings": "https://unpaywall-jump-api.herokuapp.com/journal/issn_l/{}?email=YOUR_EMAIL_ADDRESS".format(self.issn_l)
         }
 
         group_list = []
@@ -1153,7 +1374,7 @@ class Journal(object):
             "headers": [
                 {"text": "Cost Type", "value": "cost_type"},
                 {"text": "Cost (projected annual)", "value": "cost_avg"},
-                {"text": "Non-net cost per paid use", "value": "cost_per_use"},
+                {"text": "Cost-Type per paid use", "value": "cost_per_use"},
                 {"text": "Cost projected 2020", "value": "year_2020"},
                 {"text": "2021", "value": "year_2021"},
                 {"text": "2022", "value": "year_2022"},
@@ -1172,7 +1393,7 @@ class Journal(object):
             "annual_projected_num_papers": my_apc_journal.num_apc_papers_historical,
         }
 
-        response_debug = {}
+        response_debug = OrderedDict()
         response_debug["scenario_settings"] = self.settings.to_dict()
         response_debug["use_instant_percent"] = self.use_instant_percent
         response_debug["use_instant_percent_by_year"] = self.use_instant_percent_by_year
@@ -1186,21 +1407,49 @@ class Journal(object):
         response_debug["use_instant_percent_by_year"] = self.use_instant_percent_by_year
         response_debug["use_actual_by_year"] = self.use_actual_by_year
         response_debug["use_actual"] = self.use_actual
-        response_debug["use_oa_green"] = self.use_oa_green
-        response_debug["use_oa_hybrid"] = self.use_oa_hybrid
-        response_debug["use_oa_bronze"] = self.use_oa_bronze
-        response_debug["use_oa_peer_reviewed"] = self.use_oa_peer_reviewed
+        # response_debug["use_oa_green"] = self.use_oa_green
+        # response_debug["use_oa_hybrid"] = self.use_oa_hybrid
+        # response_debug["use_oa_bronze"] = self.use_oa_bronze
+        response_debug["perpetual_access_years"] = self.perpetual_access_years
+        response_debug["display_perpetual_access_years"] = self.display_perpetual_access_years
+        # response_debug["use_oa_peer_reviewed"] = self.use_oa_peer_reviewed
         response_debug["use_oa"] = self.use_oa
         response_debug["downloads_total_by_year"] = self.downloads_total_by_year
         response_debug["use_default_download_curve"] = self.use_default_download_curve
         response_debug["downloads_total_older_than_five_years"] = self.downloads_total_older_than_five_years
         response_debug["raw_downloads_by_age"] = self.raw_downloads_by_age
         response_debug["downloads_by_age"] = self.downloads_by_age
-        response_debug["downloads_oa_by_age"] = self.downloads_oa_by_age
         response_debug["num_papers_by_year"] = self.num_papers_by_year
         response_debug["num_papers_growth_from_2018_by_year"] = self.num_papers_growth_from_2018_by_year
         response_debug["raw_num_papers_historical_by_year"] = self.raw_num_papers_historical_by_year
+        response_debug["downloads_oa_by_year"] = self.downloads_oa_by_year
+        response_debug["downloads_backfile_by_year"] = self.downloads_backfile_by_year
+        response_debug["downloads_obs_pub_matrix"] = self.display_obs_pub_matrix(self.downloads_obs_pub)
+        response_debug["oa_obs_pub_matrix"] = self.display_obs_pub_matrix(self.oa_obs_pub)
+        response_debug["backfile_obs_pub_matrix"] = self.display_obs_pub_matrix(self.backfile_obs_pub)
+        response_debug["use_oa_percent_by_year"] = self.use_oa_percent_by_year
+        response_debug["ncppu"] = self.ncppu
         response_debug["ncppu_rank"] = self.ncppu_rank
+        response_debug["old_school_cpu"] = self.old_school_cpu
+        response_debug["old_school_cpu_rank"] = self.old_school_cpu_rank
+        response_debug["downloads_oa_by_age"] = self.downloads_oa_by_age
+        response_debug["num_oa_historical_by_year"] = self.num_oa_historical_by_year
+        response_debug["num_oa_by_year"] = self.num_oa_by_year
+        response_debug["num_bronze_by_year"] = self.num_bronze_by_year
+        response_debug["num_hybrid_by_year"] = self.num_hybrid_by_year
+        response_debug["num_green_by_year"] = self.num_green_by_year
+        response_debug["downloads_oa_by_year"] = self.downloads_oa_by_year
+        response_debug["downloads_oa_bronze_by_year"] = self.downloads_oa_bronze_by_year
+        response_debug["downloads_oa_hybrid_by_year"] = self.downloads_oa_hybrid_by_year
+        response_debug["downloads_oa_green_by_year"] = self.downloads_oa_green_by_year
+        response_debug["downloads_oa_peer_reviewed_by_year"] = self.downloads_oa_peer_reviewed_by_year
+        response_debug["downloads_oa_by_age"] = self.downloads_oa_by_age
+        response_debug["downloads_oa_bronze_by_age"] = self.downloads_oa_bronze_by_age
+        response_debug["downloads_oa_hybrid_by_age"] = self.downloads_oa_hybrid_by_age
+        response_debug["downloads_oa_green_by_age"] = self.downloads_oa_green_by_age
+        response_debug["downloads_oa_bronze_older"] = self.downloads_oa_bronze_older
+        response_debug["downloads_oa_hybrid_older"] = self.downloads_oa_hybrid_older
+        response_debug["downloads_oa_green_older"] = self.downloads_oa_green_older
         response["debug"] = response_debug
 
         return response
@@ -1237,6 +1486,7 @@ class Journal(object):
         table_row["use_other_delayed"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
         response["table_row"] = table_row
         response["bin"] = int(self.use_instant_percent)/10
+
         for k, v in self.to_dict_slider().iteritems():
                 response[k] = v
 
@@ -1283,10 +1533,11 @@ class Journal(object):
         table_row["use_other_delayed"] =  self.use_other_delayed
 
         # oa
-        table_row["use_green"] = self.use_oa_green
-        table_row["use_hybrid"] = self.use_oa_hybrid
-        table_row["use_bronze"] = self.use_oa_bronze
-        table_row["use_peer_reviewed"] =  self.use_oa_peer_reviewed
+        table_row["downloads_green"] = self.downloads_oa_green
+        table_row["downloads_hybrid"] = self.downloads_oa_hybrid
+        table_row["downloads_bronze"] = self.downloads_oa_bronze
+        table_row["downloads_a"] = self.downloads_oa
+        table_row["downloads_peer_reviewed"] =  self.downloads_oa_peer_reviewed
 
         # impact
         table_row["total_usage"] = round(self.use_total, 2)
