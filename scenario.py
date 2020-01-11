@@ -497,7 +497,7 @@ class Scenario(object):
     def use_free_instant_percent(self):
         return round(self.use_instant_percent - self.use_subscription_percent, 1)
 
-    def to_dict_fulfillment(self, pagesize):
+    def to_dict_fulfillment(self):
         response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": self.to_dict_summary_dict(),
@@ -513,14 +513,14 @@ class Scenario(object):
                         {"text": "ILL", "value": "use_ill", "percent": round(float(100)*self.use_ill/self.use_total), "raw": self.use_ill, "display": "number"},
                         {"text": "Other (delayed)", "value": "use_other_delayed", "percent": round(float(100)*self.use_other_delayed/self.use_total), "raw": self.use_other_delayed, "display": "number"},
                 ],
-                "journals": [j.to_dict_fulfillment() for j in self.journals_sorted_use_total[0:pagesize]],
+                "journals": [j.to_dict_fulfillment() for j in self.journals_sorted_use_total],
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
         return response
 
 
-    def to_dict_oa(self, pagesize):
+    def to_dict_oa(self):
         response = {
                 "_settings": self.settings.to_dict(),
                 "name": "Open Access",
@@ -534,7 +534,7 @@ class Scenario(object):
                         {"text": "Percent of Usage that is Bronze OA", "value": "use_bronze_percent", "percent": round(float(100)*self.use_bronze/self.use_total), "raw": self.use_bronze, "display": "percent"},
                         {"text": "Percent of Usage that is Peer-reviewed OA", "value": "use_peer_reviewed_percent", "percent": round(float(100)*self.use_peer_reviewed/self.use_total), "raw": self.use_peer_reviewed, "display": "percent"},
                 ],
-                "journals": [j.to_dict_oa() for j in self.journals_sorted_use_total[0:pagesize]],
+                "journals": [j.to_dict_oa() for j in self.journals_sorted_use_total],
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
@@ -542,7 +542,7 @@ class Scenario(object):
 
 
 
-    def to_dict_impact(self, pagesize):
+    def to_dict_impact(self):
         response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": self.to_dict_summary_dict(),
@@ -556,14 +556,14 @@ class Scenario(object):
                         {"text": "Citations to papers", "value":"citations", "percent": self.num_citations_weight_percent, "raw": self.num_citations, "display": "float1"},
                         {"text": "Authored papers", "value":"authorships", "percent": self.num_authorships_weight_percent, "raw": self.num_authorships, "display": "float1"},
                 ],
-                "journals": [j.to_dict_impact() for j in self.journals_sorted_use_total[0:pagesize]],
+                "journals": [j.to_dict_impact() for j in self.journals_sorted_use_total],
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
         return response
 
-    def to_dict_export(self, pagesize):
-        response = self.to_dict_table(pagesize)
+    def to_dict_export(self):
+        response = self.to_dict_table()
         # additional headers
         response["headers"] += [
                      {"text": "NCPPU Fuzzed", "value": "ncppu_fuzzed", "percent": None, "raw": None, "display": "text"},
@@ -576,7 +576,7 @@ class Scenario(object):
             ]
 
         #overwrite
-        response["journals"] = [j.to_dict_export() for j in self.journals_sorted_ncppu[0:pagesize]]
+        response["journals"] = [j.to_dict_export() for j in self.journals_sorted_ncppu]
 
         return response
 
@@ -599,8 +599,8 @@ class Scenario(object):
                         {"text": "Subscription Cost", "value": "subscription_cost", "percent": None, "raw": self.cost_subscription, "display": "currency_int"},
                         {"text": "ILL Cost", "value": "ill_cost", "percent": None, "raw": self.cost_ill, "display": "currency_int"},
                         {"text": "Subscription minus ILL Cost", "value": "subscription_minus_ill_cost", "percent": None, "raw": self.cost_subscription_minus_ill, "display": "currency_int"},
-                        # {"text": "Old School Cost per Use", "value": "old_school_cpu", "percent": None, "raw": None, "display": "currency"},
-                        # {"text": "Old School CPU Rank", "value": "old_school_cpu_rank", "percent": None, "raw": None, "display": "currency"},
+                        {"text": "Old School Cost per Use", "value": "old_school_cpu", "percent": None, "raw": None, "display": "currency"},
+                        {"text": "Old School CPU Rank", "value": "old_school_cpu_rank", "percent": None, "raw": None, "display": "currency"},
 
                         # fulfillment
                         {"text": "Percent of Usage from ASNs", "value": "use_asns_percent", "percent": round(float(100)*self.use_social_networks/self.use_total), "raw": self.use_social_networks, "display": "percent"},
@@ -609,6 +609,7 @@ class Scenario(object):
                         {"text": "Percent of Usage from Subscription", "value": "use_subscription_percent", "percent": round(float(100)*self.use_subscription/self.use_total), "raw": self.use_subscription, "display": "percent"},
                         {"text": "Percent of Usage from ILL", "value": "use_ill_percent", "percent": round(float(100)*self.use_ill/self.use_total), "raw": self.use_ill, "display": "percent"},
                         {"text": "Percent of Usage from Other (delayed)", "value": "use_other_delayed_percent", "percent": round(float(100)*self.use_other_delayed/self.use_total), "raw": self.use_other_delayed, "display": "percent"},
+                        {"text": "Perpetual access years", "value": "perpetual_access_years", "percent": None, "raw": None, "display": "text"},
 
                         # oa
                         {"text": "Percent of Usage from Green OA", "value": "use_green_percent", "percent": round(float(100)*self.use_green/self.use_total), "raw": self.use_green, "display": "percent"},
@@ -622,25 +623,34 @@ class Scenario(object):
                         {"text": "Authored papers", "value":"authorships", "percent": self.num_authorships_weight_percent, "raw": self.num_authorships, "display": "float1"},
 
                 ],
-                "journals": [j.to_dict_table() for j in self.journals_sorted_ncppu[0:pagesize]],
+                "journals": [j.to_dict_table() for j in self.journals_sorted_ncppu],
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
         return response
 
 
-    def to_dict_raw(self, pagesize):
+    def to_dict_raw(self):
         response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": self.to_dict_summary_dict(),
-                "journals": [j.to_dict_raw() for j in self.journals_sorted_ncppu[0:pagesize]],
+                "journals": [j.to_dict_raw() for j in self.journals_sorted_ncppu],
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
         return response
 
+    def to_dict_details(self):
+        response = {
+                "_settings": self.settings.to_dict(),
+                "_summary": self.to_dict_summary_dict(),
+                "journals": [j.to_dict_details() for j in self.journals_sorted_ncppu],
+            }
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
+        return response
 
-    def to_dict_overview(self, pagesize):
+    def to_dict_overview(self):
         response = {
                 "_settings": self.settings.to_dict(),
                 "name": "Overview",
@@ -653,13 +663,13 @@ class Scenario(object):
                         {"text": "Usage", "value": "use", "percent": None, "raw": self.use_total, "display": "number"},
                         {"text": "Instant Usage Percent", "value": "instant_usage_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent, "display": "percent"},
                 ],
-                "journals": [j.to_dict_overview() for j in self.journals_sorted_ncppu[0:pagesize]],
+                "journals": [j.to_dict_overview() for j in self.journals_sorted_ncppu],
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
         return response
 
-    def to_dict_cost(self, pagesize):
+    def to_dict_cost(self):
         response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": self.to_dict_summary_dict(),
@@ -673,13 +683,13 @@ class Scenario(object):
                         {"text": "ILL Cost", "value": "ill_cost", "percent": None, "raw": self.cost_ill, "display": "currency_int"},
                         {"text": "Subscription minus ILL Cost", "value": "real_cost", "percent": None, "raw": self.cost_subscription_minus_ill, "display": "currency_int"},
                 ],
-                "journals": [j.to_dict_cost() for j in self.journals_sorted_ncppu[0:pagesize]],
+                "journals": [j.to_dict_cost() for j in self.journals_sorted_ncppu],
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
         return response
 
-    def to_dict_apc(self, pagesize):
+    def to_dict_apc(self):
         response = {}
         response = {
                 "_settings": self.settings.to_dict(),
@@ -695,12 +705,12 @@ class Scenario(object):
                         {"text": "APC Dollars Spent", "value": "cost_apc", "percent": None, "raw": self.cost_apc_historical, "display": "currency_int"},
                 ]
         }
-        response["journals"] = [j.to_dict() for j in self.apc_journals_sorted_spend[0:pagesize]]
+        response["journals"] = [j.to_dict() for j in self.apc_journals_sorted_spend]
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
         return response
 
-    def to_dict_report(self, pagesize):
+    def to_dict_report(self):
         response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": {
@@ -710,18 +720,18 @@ class Scenario(object):
                     "use_instant_percent_by_year": self.use_instant_percent_by_year,
                     "use_instant_percent": self.use_instant_percent,
                     },
-                "journals": [j.to_dict_report() for j in self.journals_sorted_use_total[0:pagesize]],
+                "journals": [j.to_dict_report() for j in self.journals_sorted_use_total],
                 "journals_count": len(self.journals),
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
         return response
 
-    def to_dict_timeline(self, pagesize):
+    def to_dict_timeline(self):
         response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": self.to_dict_summary_dict(),
-                "journals": [j.to_dict_timeline() for j in self.journals_sorted_use_total[0:pagesize]],
+                "journals": [j.to_dict_timeline() for j in self.journals_sorted_use_total],
                 "journals_count": len(self.journals),
             }
         self.log_timing("to dict")
@@ -765,11 +775,11 @@ class Scenario(object):
         }
         return response
 
-    def to_dict(self, pagesize):
+    def to_dict(self):
         response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": self.to_dict_summary_dict(),
-                "journals": [j.to_dict() for j in self.journals_sorted_ncppu[0:pagesize]],
+                "journals": [j.to_dict() for j in self.journals_sorted_ncppu],
                 "journals_count": len(self.journals),
             }
         self.log_timing("to dict")

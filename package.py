@@ -13,6 +13,7 @@ from app import get_db_cursor
 from app import DEMO_PACKAGE_ID
 from saved_scenario import SavedScenario
 from scenario import get_prices_from_db
+from scenario import get_perpetual_access_data_from_db
 from util import get_sql_answer
 from util import get_sql_rows
 from util import get_sql_dict_rows
@@ -20,7 +21,6 @@ from util import get_sql_dict_rows
 def get_ids():
     rows = get_sql_dict_rows("""select * from jump_account_package_scenario_view order by username""")
     return rows
-
 
 
 class Package(db.Model):
@@ -59,13 +59,16 @@ class Package(db.Model):
 
     @property
     def has_custom_perpetual_access(self):
+        perpetual_access_rows = get_perpetual_access_data_from_db(self.package_id)
+        if perpetual_access_rows:
+            return True
         return False
 
     @property
     def has_custom_prices(self):
         prices_rows = get_prices_from_db()
         package_ids_with_prices = prices_rows.keys()
-        if self.package_id or self.consortium_package_id in package_ids_with_prices:
+        if self.package_id in package_ids_with_prices or self.consortium_package_id in package_ids_with_prices:
             return True
         return False
 

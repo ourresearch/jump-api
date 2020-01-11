@@ -94,8 +94,7 @@ def jump_scenario_issn_get(scenario_id, issn_l):
 
 @app.route('/live/data/common/<package_id>', methods=['GET'])
 def jump_data_package_id_get(package_id):
-    secret = request.args.get('secret', "")
-    if not safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
+    if not is_authorized_superuser():
         abort_json(500, "Secret doesn't match, not getting package")
 
     response = get_common_package_data(package_id)
@@ -171,14 +170,16 @@ def protected():
 #         return jsonify_fast_no_sort(r.json())
 #     return abort_json(r.status_code, "Problem.")
 
+def is_authorized_superuser():
+    secret = request.args.get("secret", "")
+    if secret and safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
+        return True
+    return False
 
-def get_saved_scenario(scenario_id, debug_mode=False):
-    if debug_mode:
-        identity_dict = {"account_id": DEMO_PACKAGE_ID}
-        is_demo_account = True
-    else:
-        identity_dict = get_jwt_identity()
-        is_demo_account = (identity_dict["account_id"] == "demo")
+def get_saved_scenario(scenario_id, test_mode=False):
+
+    is_demo_account = scenario_id.startswith("demo")
+
     if is_demo_account:
         my_saved_scenario = SavedScenario.query.get(scenario_id)
         if not my_saved_scenario:
@@ -186,16 +187,22 @@ def get_saved_scenario(scenario_id, debug_mode=False):
             my_saved_scenario.scenario_id = scenario_id
     else:
         my_saved_scenario = SavedScenario.query.get(scenario_id)
+
     if not my_saved_scenario:
         abort_json(404, "Scenario not found")
 
-    if not debug_mode and my_saved_scenario.package_real.account_id != identity_dict["account_id"]:
-        if not my_saved_scenario.package_real.consortium_package_id:
-            abort_json(401, "Not authorized to view this package")
-        consortium_package = Package.query.filter(Package.package_id==my_saved_scenario.package_real.consortium_package_id).first()
-        if consortium_package.account_id != identity_dict["account_id"]:
-            abort_json(401, "Not authorized to view this package")
+    if not test_mode and not is_authorized_superuser():
+        identity_dict = get_jwt_identity()
+        if not identity_dict:
+            abort_json(401, "Not authorized to view this package: need jwt")
 
+        if my_saved_scenario.package_real.account_id != identity_dict["account_id"]:
+            if not my_saved_scenario.package_real.consortium_package_id:
+                abort_json(401, "Not authorized to view this package")
+            else:
+                consortium_package = Package.query.filter(Package.package_id==my_saved_scenario.package_real.consortium_package_id).first()
+                if consortium_package.account_id != identity_dict["account_id"]:
+                    abort_json(401, "Not authorized to view this package")
 
     my_saved_scenario.set_live_scenario(None)
 
@@ -326,8 +333,7 @@ def jump_debug_counter_diff_type_package_id(package_id, diff_type):
     identity_dict = get_jwt_identity()
 
     if not identity_dict:
-        secret = request.args.get('secret', "")
-        if not secret or not  safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
+        if not is_authorized_superuser():
             return abort_json(401, "Not authorized, need secret.")
 
     if package_id.startswith("demo"):
@@ -466,7 +472,7 @@ def live_scenario_id_get(scenario_id):
     response["_timing"] = my_timing.to_dict()
     response = jsonify_fast(response)
     cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
-    print "cache_tags for /scenario", cache_tags_list
+    # print "cache_tags for /scenario", cache_tags_list
     response.headers["Cache-Tag"] = u",".join(cache_tags_list)
     return response
 
@@ -475,7 +481,6 @@ def live_scenario_id_get(scenario_id):
 @app.route('/scenario/<scenario_id>/summary', methods=['GET'])
 @jwt_required
 def scenario_id_summary_get(scenario_id):
-    pagesize = int(request.args.get("pagesize", 5000))
     my_timing = TimingMessages()
     my_saved_scenario = get_saved_scenario(scenario_id)
     my_timing.log_timing("after setting live scenario")
@@ -486,17 +491,25 @@ def scenario_id_summary_get(scenario_id):
 @app.route('/scenario/<scenario_id>/overview', methods=['GET'])
 @jwt_required
 def scenario_id_overview_get(scenario_id):
-    pagesize = int(request.args.get("pagesize", 5000))
     my_timing = TimingMessages()
     my_saved_scenario = get_saved_scenario(scenario_id)
-    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_overview(pagesize))
+    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_overview())
 
 @app.route('/scenario/<scenario_id>/raw', methods=['GET'])
 @jwt_required
 def scenario_id_raw_get(scenario_id):
-    pagesize = int(request.args.get("pagesize", 5000))
     my_saved_scenario = get_saved_scenario(scenario_id)
-    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_raw(pagesize))
+    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_raw())
+
+def check_authorized():
+    return True
+
+@app.route('/scenario/<scenario_id>/details', methods=['GET'])
+@jwt_optional
+def scenario_id_details_get(scenario_id):
+    my_saved_scenario = get_saved_scenario(scenario_id)
+    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_details())
+
 
 # @app.route('/scenario/<scenario_id>/table', methods=['GET'])
 # @jwt_required
@@ -507,9 +520,8 @@ def scenario_id_raw_get(scenario_id):
 @app.route('/scenario/<scenario_id>/table', methods=['GET'])
 @jwt_required
 def live_scenario_id_table_get(scenario_id):
-    pagesize = int(request.args.get("pagesize", 5000))
     my_saved_scenario = get_saved_scenario(scenario_id)
-    response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table(pagesize))
+    response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table())
     cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
     response.headers["Cache-Tag"] = u",".join(cache_tags_list)
     return response
@@ -525,7 +537,6 @@ def live_scenario_id_table_get(scenario_id):
 @app.route('/scenario/<scenario_id>/slider', methods=['GET'])
 @jwt_required
 def live_scenario_id_slider_get(scenario_id):
-    pagesize = int(request.args.get("pagesize", 5000))
     my_saved_scenario = get_saved_scenario(scenario_id)
     response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
     cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
@@ -536,9 +547,8 @@ def live_scenario_id_slider_get(scenario_id):
 @app.route('/scenario/<scenario_id>/apc', methods=['GET'])
 @jwt_required
 def live_scenario_id_apc_get(scenario_id):
-    pagesize = int(request.args.get("pagesize", 5000))
     my_saved_scenario = get_saved_scenario(scenario_id)
-    response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_apc(pagesize))
+    response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_apc())
     cache_tags_list = ["apc", u"package_{}".format(my_saved_scenario.package_id)]
     response.headers["Cache-Tag"] = u",".join(cache_tags_list)
     return response
@@ -546,9 +556,8 @@ def live_scenario_id_apc_get(scenario_id):
 @app.route('/scenario/<scenario_id>/report', methods=['GET'])
 @jwt_required
 def scenario_id_report_get(scenario_id):
-    pagesize = int(request.args.get("pagesize", 5000))
     my_saved_scenario = get_saved_scenario(scenario_id)
-    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_report(pagesize))
+    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_report())
 
 
 def export_get(my_saved_scenario):
@@ -599,7 +608,7 @@ def scenario_id_export_get(scenario_id):
 @app.route('/debug/export', methods=['GET'])
 def debug_export_get():
     scenario_id = "demo-debug"
-    my_saved_scenario = get_saved_scenario(scenario_id, debug_mode=True)
+    my_saved_scenario = get_saved_scenario(scenario_id)
     contents = export_get(my_saved_scenario)
     return Response(contents, mimetype="text/text")
 
@@ -635,8 +644,7 @@ def admin_change_password():
 
 @app.route('/admin/register', methods=['GET'])
 def admin_register_user():
-    secret = request.args.get('secret', None)
-    if not safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
+    if not is_authorized_superuser():
         abort_json(500, "Secret doesn't match, not saving user in database")
 
     new_account = Account()
@@ -654,7 +662,7 @@ def admin_register_user():
 def jump_debug_issn_get(issn_l):
     subscribe = str2bool(request.args.get('subscribe', "false"))
     scenario_id = "demo-debug"
-    my_saved_scenario = get_saved_scenario(scenario_id, debug_mode=True)
+    my_saved_scenario = get_saved_scenario(scenario_id)
     scenario = my_saved_scenario.live_scenario
     my_journal = scenario.get_journal(issn_l)
     if subscribe:
@@ -663,28 +671,28 @@ def jump_debug_issn_get(issn_l):
         abort_json(404, "journal not found")
     return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
 
+
 @app.route('/debug/scenario/table', methods=['GET'])
 def jump_debug_table_get():
     scenario_id = "demo-debug"
-    my_saved_scenario = get_saved_scenario(scenario_id, debug_mode=True)
+    my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table(5000))
 
 @app.route('/debug/scenario/slider', methods=['GET'])
 def jump_debug_slider_get():
     scenario_id = "demo-debug"
-    my_saved_scenario = get_saved_scenario(scenario_id, debug_mode=True)
+    my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
 
 @app.route('/debug/scenario/apc', methods=['GET'])
 def jump_debug_apc_get():
     scenario_id = "demo-debug"
-    my_saved_scenario = get_saved_scenario(scenario_id, debug_mode=True)
+    my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_apc(5000))
 
 @app.route('/debug/counter/<package_id>', methods=['GET'])
 def jump_debug_counter_package_id(package_id):
-    secret = request.args.get('secret', "")
-    if not secret or not  safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
+    if not is_authorized_superuser():
         return abort_json(401, "Not authorized, need secret.")
 
     if package_id.startswith("demo"):
@@ -699,8 +707,7 @@ def jump_debug_counter_package_id(package_id):
 
 @app.route('/debug/ids', methods=['GET'])
 def jump_debug_ids():
-    secret = request.args.get('secret', "")
-    if not secret or not  safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
+    if not is_authorized_superuser():
         return abort_json(401, "Not authorized, need secret.")
 
     response = get_ids()
@@ -709,7 +716,7 @@ def jump_debug_ids():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5004))
-    app.run(host='0.0.0.0', port=port, debug=True, threaded=False)
+    app.run(host='0.0.0.0', port=port, debug=True, threaded=True, use_reloader=True)
 
 
 
