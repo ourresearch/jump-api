@@ -48,6 +48,8 @@ from util import get_ip
 from util import response_json
 from app import logger
 
+from fast_mock_slider import fast_mock_slider
+
 from app import DEMO_PACKAGE_ID
 
 # warm the cache
@@ -560,6 +562,12 @@ def live_scenario_id_table_get(scenario_id):
 @app.route('/scenario/<scenario_id>/slider', methods=['GET'])
 @jwt_required
 def live_scenario_id_slider_get(scenario_id):
+
+    if request.args.get("fast-mock-slider", False):
+        return fast_mock_slider
+
+
+
     my_saved_scenario = get_saved_scenario(scenario_id)
     response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
     cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
