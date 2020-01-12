@@ -158,6 +158,13 @@ def protected():
     identity_dict = get_jwt_identity()
     return jsonify({"logged_in_as": identity_dict["account_id"]})
 
+# Protect a view with jwt_required, which requires a valid access token
+# in the request to access.
+@app.route('/super', methods=['GET'])
+def super():
+    if not is_authorized_superuser():
+        abort_json(403, "Secret doesn't match, not getting package")
+    return jsonify({"success": True})
 
 
 # def get_cached_response(url_end):
