@@ -237,7 +237,12 @@ def get_saved_scenario(scenario_id, test_mode=False):
 @app.route('/account', methods=['GET'])
 @jwt_required
 def live_account_get():
+    fast_mock_account = request.args.get("fast-mock-account", False)
+    if fast_mock_account:
+        return '{"_timing": ["after getting account            0.02s", "after to_dict()                  4.37s", "TOTAL                            4.39s"], "id": "demo", "is_demo_account": true, "name": "Demo Account", "packages": [{"hasCounterData": true, "hasCustomPerpetualAccess": false, "hasCustomPrices": false, "id": "demo-package-f5ue5QCEf2", "name": "my Elsevier Freedom Package", "numJournals": 1855}]}'
+
     my_timing = TimingMessages()
+
 
     identity_dict = get_jwt_identity()
     my_account = Account.query.get(identity_dict["account_id"])
