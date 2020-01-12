@@ -294,6 +294,10 @@ def get_jwt():
 @app.route('/package/<package_id>', methods=['GET'])
 @jwt_required
 def live_package_id_get(package_id):
+    if request.args.get("fast-mock-package", False):
+        return '{"_debug": {"package_name": "my Elsevier Freedom Package"}, "_timing": ["after setting live scenario      0.07s", "after to_dict()                  4.64s", "TOTAL                            4.71s"], "configs": {"backfile_contribution": 100.0, "cost_alacart_increase": 8.0, "cost_bigdeal": 2100000.0, "cost_bigdeal_increase": 5.0, "cost_content_fee_percent": 5.7, "cost_ill": 17.0, "ill_request_percent_of_delayed": 5.0, "include_backfile": true, "include_bronze": true, "include_social_networks": true, "include_submitted_version": true, "package": "658349d9", "weight_authorship": 100.0, "weight_citation": 10.0}, "customSubrs": [], "id": "demo-scenario-f5ue5QCEf2", "name": "First Scenario", "pkgId": "demo", "subrs": [], "summary": {"cost_bigdeal_projected": 2320765.2, "cost_percent": 11.3718, "cost_scenario": 263913.33, "cost_scenario_ill": 263913.33, "cost_scenario_subscription": 0.0, "num_journals_subscribed": 0, "num_journals_total": 1855, "use_free_instant_percent": 57.1, "use_ill_percent": 2.1, "use_instant_percent": 57.08, "use_subscription_percent": 0.0}}'
+
+
     my_timing = TimingMessages()
 
     identity_dict = get_jwt_identity()
