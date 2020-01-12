@@ -138,7 +138,7 @@ def login():
         "created": datetime.datetime.utcnow().isoformat(),
         "is_demo_account": my_account.is_demo_account
     }
-    logger.info(u"login with {}".format(identity_dict))
+    logger.info(u"login to account {} with {}".format(my_account.username, identity_dict))
     access_token = create_access_token(identity=identity_dict)
 
     my_timing.log_timing("after create_access_token")
