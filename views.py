@@ -48,6 +48,8 @@ from util import get_ip
 from util import response_json
 from app import logger
 
+from fast_mock_slider import fast_mock_slider
+
 from app import DEMO_PACKAGE_ID
 
 # warm the cache
@@ -244,7 +246,12 @@ def get_saved_scenario(scenario_id, test_mode=False):
 @app.route('/account', methods=['GET'])
 @jwt_required
 def live_account_get():
+    fast_mock_account = request.args.get("fast-mock-account", False)
+    if fast_mock_account:
+        return '{"_timing": ["after getting account            0.02s", "after to_dict()                  4.37s", "TOTAL                            4.39s"], "id": "demo", "is_demo_account": true, "name": "Demo Account", "packages": [{"hasCounterData": true, "hasCustomPerpetualAccess": false, "hasCustomPrices": false, "id": "demo-package-f5ue5QCEf2", "name": "my Elsevier Freedom Package", "numJournals": 1855}]}'
+
     my_timing = TimingMessages()
+
 
     identity_dict = get_jwt_identity()
     my_account = Account.query.get(identity_dict["account_id"])
@@ -289,6 +296,10 @@ def get_jwt():
 @app.route('/package/<package_id>', methods=['GET'])
 @jwt_required
 def live_package_id_get(package_id):
+    if request.args.get("fast-mock-package", False):
+        return '{"hasCustomPerpetualAccess": false, "numJournals": 1855, "id": "demo-package-f5ue5QCEf2", "hasCounterData": true, "scenarios": [{"summary": {"use_ill_percent": 2.1, "cost_scenario_ill": 263913.33, "use_free_instant_percent": 57.1, "use_subscription_percent": 0.0, "cost_scenario": 263913.33, "use_instant_percent": 57.08, "cost_scenario_subscription": 0.0, "cost_bigdeal_projected": 2320765.2, "num_journals_subscribed": 0, "cost_percent": 11.3718, "num_journals_total": 1855}, "pkgId": "demo-package-f5ue5QCEf2", "configs": {"cost_content_fee_percent": 5.7, "ill_request_percent_of_delayed": 5.0, "weight_citation": 10.0, "cost_bigdeal": 2100000.0, "weight_authorship": 100.0, "package": "658349d9", "cost_ill": 17.0, "include_backfile": true, "include_bronze": true, "backfile_contribution": 100.0, "cost_alacart_increase": 8.0, "include_social_networks": true, "cost_bigdeal_increase": 5.0, "include_submitted_version": true}, "_debug": {"package_name": "my Elsevier Freedom Package"}, "customSubrs": [], "name": "First Scenario", "subrs": [], "id": "demo-scenario-f5ue5QCEf2"}], "_timing": ["after getting package            0.02s", "after kicking off cache requests    0.0s", "after my_package.to_dict_summary()   4.78s", "after scenarios()                0.01s", "after journal_detail()           2.76s", "TOTAL                            7.58s"], "name": "my Elsevier Freedom Package", "hasCustomPrices": false, "journal_detail": {"counts": {"counter_rows": 3627, "counter_unique_rows": 3616, "published_in_2019": 2754, "toll_access_published_in_2019": 2252, "toll_access_published_in_2019_with_elsevier": 2094, "published_toll_access_in_2019_with_elsevier_have_price": 1824, "in_scenario": 1855}, "diff_counts": {"diff_non_unique": 11, "diff_not_published_in_2019": 862, "diff_open_access_journals": 502, "diff_changed_publisher": 158, "diff_no_price": 270, "diff_missing_from_scenario": 0, "diff_extra_in_scenario": 31}, "package_id": "658349d9"}}'
+
+
     my_timing = TimingMessages()
 
     identity_dict = get_jwt_identity()
@@ -472,6 +483,12 @@ def subscriptions_scenario_id_post(scenario_id):
 @app.route('/scenario/<scenario_id>', methods=['GET'])
 @jwt_required
 def live_scenario_id_get(scenario_id):
+
+    if request.args.get("fast-mock-scenario", False):
+        return '{"_debug": {"package_name": "my Elsevier Freedom Package"}, "_timing": ["after setting live scenario      0.07s", "after to_dict()                  4.14s", "TOTAL                            4.21s"], "configs": {"backfile_contribution": 100.0, "cost_alacart_increase": 8.0, "cost_bigdeal": 2100000.0, "cost_bigdeal_increase": 5.0, "cost_content_fee_percent": 5.7, "cost_ill": 17.0, "ill_request_percent_of_delayed": 5.0, "include_backfile": true, "include_bronze": true, "include_social_networks": true, "include_submitted_version": true, "package": "658349d9", "weight_authorship": 100.0, "weight_citation": 10.0}, "customSubrs": [], "id": "demo-scenario-f5ue5QCEf2", "name": "First Scenario", "pkgId": "demo", "subrs": [], "summary": {"cost_bigdeal_projected": 2320765.2, "cost_percent": 11.3718, "cost_scenario": 263913.33, "cost_scenario_ill": 263913.33, "cost_scenario_subscription": 0.0, "num_journals_subscribed": 0, "num_journals_total": 1855, "use_free_instant_percent": 57.1, "use_ill_percent": 2.1, "use_instant_percent": 57.08, "use_subscription_percent": 0.0}}'
+
+
+
     my_timing = TimingMessages()
     my_saved_scenario = get_saved_scenario(scenario_id)
     my_timing.log_timing("after setting live scenario")
@@ -545,6 +562,12 @@ def live_scenario_id_table_get(scenario_id):
 @app.route('/scenario/<scenario_id>/slider', methods=['GET'])
 @jwt_required
 def live_scenario_id_slider_get(scenario_id):
+
+    if request.args.get("fast-mock-slider", False):
+        return fast_mock_slider
+
+
+
     my_saved_scenario = get_saved_scenario(scenario_id)
     response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
     cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
