@@ -570,7 +570,7 @@ def scenario_id_report_get(scenario_id):
 
 def export_get(my_saved_scenario):
 
-    table_dicts = my_saved_scenario.live_scenario.to_dict_export(5000)["journals"]
+    table_dicts = my_saved_scenario.live_scenario.to_dict_export()["journals"]
 
     filename = "export.csv"
     with open(filename, "w") as file:
