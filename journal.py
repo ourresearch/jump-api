@@ -71,6 +71,7 @@ class Journal(object):
         # return float(self.my_scenario_data_row.get("usa_usd", 0)) * (1 + self.settings.cost_content_fee_percent/float(100))
         my_lookup = self._scenario_data["prices"]
         if not my_lookup.get(self.issn_l):
+            print u"no price for {}".format(self.issn_l)
             return None
         return float(my_lookup.get(self.issn_l)) * (1 + self.settings.cost_content_fee_percent/float(100))
 
@@ -308,8 +309,14 @@ class Journal(object):
     @cached_property
     def display_perpetual_access_years(self):
         if not self.perpetual_access_years:
-            return "None"
+            return ""
         return "{}-{}".format(min(self.perpetual_access_years), max(self.perpetual_access_years))
+
+    @cached_property
+    def has_perpetual_access(self):
+        if not self.perpetual_access_years:
+            return False
+        return True
 
     @cached_property
     def year_by_perpetual_access_years(self):
@@ -1199,7 +1206,7 @@ class Journal(object):
         table_row["use_subscription_percent"] = round(float(100)*self.use_actual["subscription"]/self.use_total)
         table_row["use_ill_percent"] = round(float(100)*self.use_actual["ill"]/self.use_total)
         table_row["use_other_delayed_percent"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
-        table_row["perpetual_access_years"] = self.display_perpetual_access_years
+        table_row["has_perpetual_access"] = self.has_perpetual_access
 
         # oa
         table_row["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
@@ -1297,6 +1304,8 @@ class Journal(object):
             }
         response["fulfillment"]["use_actual_by_year"] = self.use_actual_by_year
         response["fulfillment"]["downloads_per_paper_by_age"] = self.downloads_per_paper_by_age
+        response["fulfillment"]["perpetual_access_years"] = self.perpetual_access_years
+        response["fulfillment"]["display_perpetual_access_years"] = self.display_perpetual_access_years
 
         oa_list = []
         for oa_type in ["green", "hybrid", "bronze"]:
