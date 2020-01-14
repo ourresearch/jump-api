@@ -609,7 +609,7 @@ class Scenario(object):
                         {"text": "Percent of Usage from Subscription", "value": "use_subscription_percent", "percent": round(float(100)*self.use_subscription/self.use_total), "raw": self.use_subscription, "display": "percent"},
                         {"text": "Percent of Usage from ILL", "value": "use_ill_percent", "percent": round(float(100)*self.use_ill/self.use_total), "raw": self.use_ill, "display": "percent"},
                         {"text": "Percent of Usage from Other (delayed)", "value": "use_other_delayed_percent", "percent": round(float(100)*self.use_other_delayed/self.use_total), "raw": self.use_other_delayed, "display": "percent"},
-                        {"text": "Perpetual access years", "value": "perpetual_access_years", "percent": None, "raw": None, "display": "text"},
+                        {"text": "Has perpetual access", "value": "has_perpetual_access", "percent": None, "raw": None, "display": "boolean"},
 
                         # oa
                         {"text": "Percent of Usage from Green OA", "value": "use_green_percent", "percent": round(float(100)*self.use_green/self.use_total), "raw": self.use_green, "display": "percent"},
