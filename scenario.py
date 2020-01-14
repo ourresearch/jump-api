@@ -121,10 +121,16 @@ class Scenario(object):
 
         clean_dict = {}
         for issn_l, price_row in self.data["prices"].iteritems():
-            if issn_l in self.data["unpaywall_downloads_dict_raw"]:
-                clean_dict[issn_l] = self.data["unpaywall_downloads_dict_raw"][issn_l]
-            else:
-                clean_dict[issn_l] = None
+            include_this_journal = True
+            if "core_list" in self.data and self.data["core_list"]:
+                if self.issn_l not in self.data["core_list"].keys():
+                    include_this_journal = False
+
+            if include_this_journal:
+                if issn_l in self.data["unpaywall_downloads_dict_raw"]:
+                    clean_dict[issn_l] = self.data["unpaywall_downloads_dict_raw"][issn_l]
+                else:
+                    clean_dict[issn_l] = None
 
         self.data["unpaywall_downloads_dict"] = clean_dict
 
@@ -903,6 +909,17 @@ def get_perpetual_access_data_from_db(input_package_id):
     my_dict = dict([(a["issn_l"], a) for a in rows])
     return my_dict
 
+
+@cache
+def get_core_list_from_db(input_package_id):
+    command = "select issn_l from jump_core_journals where package_id='{}'".format(input_package_id)
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+    my_dict = dict([(a["issn_l"], a) for a in rows])
+    return my_dict
+
+
 @cache
 def get_embargo_data_from_db():
     command = "select issn_l, embargo from journal_delayed_oa_active"
@@ -1050,6 +1067,9 @@ def get_common_package_data(package_id):
 
     my_data["perpetual_access"] = get_perpetual_access_data_from_db(package_id)
     my_timing.log_timing("get_perpetual_access_data_from_db")
+
+    my_data["core_list"] = get_core_list_from_db(package_id)
+    my_timing.log_timing("get_core_list_from_db")
 
     # not package_id specific
 
