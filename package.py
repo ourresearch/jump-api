@@ -13,6 +13,7 @@ from app import get_db_cursor
 from app import DEMO_PACKAGE_ID
 from saved_scenario import SavedScenario
 from scenario import get_prices_from_db
+from scenario import get_core_list_from_db
 from scenario import get_perpetual_access_data_from_db
 from util import get_sql_answer
 from util import get_sql_rows
@@ -73,6 +74,34 @@ class Package(db.Model):
         return False
 
     @property
+    def has_core_journal_list(self):
+        rows = get_core_list_from_db(self.package_id)
+        if rows:
+            return True
+        return False
+
+    def filter_by_core_list(self, my_list):
+        if not self.has_core_journal_list:
+            return my_list
+        core_rows = get_core_list_from_db(self.package_id)
+        core_issnls = core_rows.keys()
+        return [row for row in my_list if row["issn_l"] in core_issnls]
+
+    @cached_property
+    def get_core_journal_rows(self):
+        q = """
+            select 
+            core.issn_l, 
+            title as title 
+            from jump_core_journals core
+            left outer join ricks_journal on core.issn_l = ricks_journal.issn_l
+            where package_id='{package_id}' 
+            order by title desc
+            """.format(package_id=self.package_id_for_db)
+        rows = get_sql_dict_rows(q)
+        return rows
+
+    @property
     def num_journals(self):
         return len(self.get_in_scenario)
 
@@ -90,7 +119,7 @@ class Package(db.Model):
             order by num_2018_downloads desc
             """.format(package_id=self.package_id_for_db)
         rows = get_sql_dict_rows(q)
-        return rows
+        return self.filter_by_core_list(rows)
 
     def get_base(self, and_where=""):
         q = """
@@ -115,19 +144,19 @@ class Package(db.Model):
     def get_published_in_2019(self):
         rows = self.get_base(and_where=""" and counter.issn_l in
 	            (select journal_issn_l from unpaywall u where year=2019 group by journal_issn_l) """)
-        return rows
+        return self.filter_by_core_list(rows)
 
     @cached_property
     def get_published_toll_access_in_2019(self):
         rows = self.get_base(and_where=""" and counter.issn_l in
 	            (select journal_issn_l from unpaywall u where year=2019 and journal_is_oa='false' group by journal_issn_l) """)
-        return rows
+        return self.filter_by_core_list(rows)
 
     @cached_property
     def get_published_toll_access_in_2019_with_elsevier(self):
         rows = self.get_base(and_where=""" and counter.issn_l in
 	            (select journal_issn_l from unpaywall u where year=2019 and journal_is_oa='false' and publisher ilike '%elsevier%' group by journal_issn_l) """)
-        return rows
+        return self.filter_by_core_list(rows)
 
     @cached_property
     def get_published_toll_access_in_2019_with_elsevier_have_price(self):
@@ -135,7 +164,7 @@ class Package(db.Model):
 	            (select journal_issn_l from unpaywall u where year=2019 and journal_is_oa='false' and publisher ilike '%elsevier%' group by journal_issn_l) 
 	            and counter.issn_l in 
             	(select issn_l from jump_journal_prices where usa_usd > 0 and package_id='658349d9' group by issn_l) """)
-        return rows
+        return self.filter_by_core_list(rows)
 
     @cached_property
     def get_in_scenario(self):
@@ -146,12 +175,24 @@ class Package(db.Model):
         my_saved_scenario.set_live_scenario(None)
         response = my_saved_scenario.live_scenario.to_dict_slider()
         rows = response["journals"]
-        return rows
+        return self.filter_by_core_list(rows)
 
     @cached_property
     def get_counter_unique_rows(self):
         rows = self.get_base()
-        return rows
+        return self.filter_by_core_list(rows)
+
+    @cached_property
+    def get_diff_not_in_counter(self):
+        if not self.has_core_journal_list:
+            return []
+        response_dict = {}
+        remove = [row["issn_l"] for row in self.get_counter_rows]
+        for row in self.get_core_journal_rows:
+            if row["issn_l"] not in remove:
+                response_dict[row["issn_l"]] = row
+        response = sorted(response_dict.values(), key=lambda x: x["issn_l"], reverse=True)
+        return response
 
     @cached_property
     def get_diff_non_unique(self):
@@ -232,6 +273,9 @@ class Package(db.Model):
             package_id = DEMO_PACKAGE_ID
         return package_id
 
+
+
+
     def get_package_counter_breakdown(self):
         package_id = self.package_id_for_db
 
@@ -241,7 +285,11 @@ class Package(db.Model):
         # response["papers"] = OrderedDict()
         response["package_id"] = package_id
 
+        response["counts"]["core_journal_rows"] = len(self.get_core_journal_rows)
+
         response["counts"]["counter_rows"] = len(self.get_counter_rows)
+        response["diff_counts"]["diff_not_in_counter"] = len(self.get_diff_not_in_counter)
+
         response["counts"]["counter_unique_rows"] = len(self.get_counter_unique_rows)
         response["diff_counts"]["diff_non_unique"] = len(self.get_diff_non_unique)
         # response["papers"]["diff_non_unique"] = self.get_diff_non_unique
@@ -364,6 +412,7 @@ class Package(db.Model):
                 "name": self.package_name,
                 "hasCounterData": self.has_counter_data,
                 "hasCustomPrices": self.has_custom_prices,
+                "hasCoreJournalList": self.has_core_journal_list,
                 "hasCustomPerpetualAccess": self.has_custom_perpetual_access,
                 "numJournals": self.num_journals,
         }

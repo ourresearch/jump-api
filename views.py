@@ -371,7 +371,7 @@ def jump_debug_counter_diff_type_package_id(package_id, diff_type):
     rows = getattr(my_package, "get_{}".format(diff_type))
     my_list = []
     for row in rows:
-        my_list += [{"issn_l": row["issn_l"], "title": row["title"], "num_2018_downloads": row["num_2018_downloads"]}]
+        my_list += [{"issn_l": row["issn_l"], "title": row.get("title", ""), "num_2018_downloads": row.get("num_2018_downloads", None)}]
 
     return jsonify_fast_no_sort({"count": len(rows), "list": my_list})
 
