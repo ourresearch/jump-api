@@ -443,7 +443,7 @@ def scenario_id_post(scenario_id):
 
 
 
-@app.route('/scenario/subscriptions/<scenario_id>', methods=['POST'])
+@app.route('/scenario/<scenario_id>/subscriptions', methods=['POST'])
 @jwt_required
 def subscriptions_scenario_id_post(scenario_id):
 
