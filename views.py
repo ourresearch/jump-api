@@ -441,12 +441,12 @@ def scenario_id_post(scenario_id):
     return jsonify_fast_no_sort(response)
 
 
-
+# only call from cloudflare workers POST to prevent circularities
 @app.route('/cloudflare_prefetch_wrapper/<path:the_rest>', methods=['GET'])
 @jwt_optional
 def cloudflare_noncircular_wrapper(the_rest):
     print "redirecting"
-    return redirect("https://api.unpaywalljournals.org/{}?jwt={}".format(the_rest, get_jwt()))
+    return redirect("https://api.unpaywalljournals.org/{}?jwt={}&fresh=1".format(the_rest, get_jwt()))
 
 
 
