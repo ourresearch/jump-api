@@ -14,6 +14,7 @@ from app import use_groups
 from app import get_db_cursor
 from app import DEMO_PACKAGE_ID
 from app import db
+from app import logger
 from time import time
 from util import elapsed
 from util import for_sorting
@@ -81,6 +82,7 @@ class Scenario(object):
         self.data = get_common_package_data_from_cache(self.package_id)
         # self.data = get_common_package_data(self.package_id)
         self.log_timing("get_common_package_data_from_cache")
+        logger.debug("get_common_package_data_from_cache")
 
         self.set_clean_data()  #order for this one matters, after get common, before build journals
         self.log_timing("set_clean_data")
@@ -1118,8 +1120,8 @@ def get_common_package_data_from_cache(package_id):
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
         data = r.json()
-        # print u"success in get_common_package_data_from_cache with {}".format(url)
+        logger.info(u"success in get_common_package_data_from_cache with {}".format(url))
     else:
         data = get_common_package_data(package_id_in_cache)
-        print u"not success in get_common_package_data_from_cache with {}, had to build locally".format(url)
+        logger.info(u"not success in get_common_package_data_from_cache with {}, had to build locally".format(url))
     return data
