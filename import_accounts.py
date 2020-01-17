@@ -86,6 +86,7 @@ def build_counter_import_file(filename):
                     class MockJournal(object):
                         pass
 
+                    # counter_file = convert_from_utf16_to_utf8(counter_file)
                     counter_rows = read_csv_file(counter_file)
                     report = []
                     for counter_row in counter_rows:
@@ -286,10 +287,10 @@ if __name__ == "__main__":
 
 
     # check_passwords()
-    import_perpetual_access_files()
+    # import_perpetual_access_files()
 
-    # create_accounts(parsed_vars["filename"])
-    # build_counter_import_file(parsed_vars["filename"])
+    create_accounts(parsed_vars["filename"])
+    build_counter_import_file(parsed_vars["filename"])
 
 
     # then import it into jump_counter_input
