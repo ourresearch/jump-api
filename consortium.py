@@ -65,35 +65,6 @@ class Consortium(object):
                 print u"not success in call_cached_version with {}".format(url)
             return data
 
-        def call_cached_version2(org_id_dict):
-
-            # url = u"http://localhost:5004/scenario/{}/raw?secret={}".format(org_id_dict["scenario_id"], os.getenv("JWT_SECRET_KEY"))
-            url = u"https://cdn.unpaywalljournals.org/scenario/{}/raw?secret={}".format(org_id_dict["scenario_id"], os.getenv("JWT_SECRET_KEY"))
-            # url = u"https://cdn.unpaywalljournals.org/scenario/{}/raw?jwt={}".format(org_id_dict["scenario_id"], self.jwt)
-            url = u"https://cdn.unpaywalljournals.org/scenario/{}/raw?secret={}".format(org_id_dict["scenario_id"], os.getenv("JWT_SECRET_KEY"))
-
-            # print u"starting cache request for {}".format(url)
-            headers = {"Cache-Control": "public, max-age=31536000",
-                "Cache-Tag": "common, common_{}".format(package_id)}
-            r = requests.get(url, headers=headers)
-            # print
-            # print r.headers
-            if r.status_code == 200:
-                data = r.json()
-                data["scenario_id"] = org_id_dict["scenario_id"]
-                data["package_id"] = org_id_dict["package_id"]
-                data["status_code"] = r.status_code
-                data["url"] = url
-                print u"success in call_cached_version with {}".format(url)
-            else:
-                data = {}
-                data["scenario_id"] = org_id_dict["scenario_id"]
-                data["package_id"] = org_id_dict["package_id"]
-                data["status_code"] = r.status_code
-                data["url"] = url
-                print u"not success in call_cached_version with {}".format(url)
-            return data
-
 
         self.consortium_org_responses = my_thread_pool.imap_unordered(call_cached_version, self.org_ids)
         my_thread_pool.close()

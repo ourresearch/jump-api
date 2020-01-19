@@ -521,12 +521,15 @@ def scenario_id_summary_get(scenario_id):
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_summary())
 
 @app.route('/scenario/<scenario_id>/journals', methods=['GET'])
-@app.route('/scenario/<scenario_id>/overview', methods=['GET'])
 @jwt_optional
-def scenario_id_overview_get(scenario_id):
-    my_timing = TimingMessages()
+def scenario_id_journals_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
-    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_overview())
+    response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_journals())
+    cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
+    response.headers["Cache-Tag"] = u",".join(cache_tags_list)
+    return response
+
+
 
 @app.route('/scenario/<scenario_id>/raw', methods=['GET'])
 @jwt_optional
@@ -710,6 +713,13 @@ def jump_debug_issn_get(issn_l):
         abort_json(404, "journal not found")
     return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
 
+
+@app.route('/debug/scenario/journals', methods=['GET'])
+def jump_debug_journals_get():
+    print("hi heather")
+    scenario_id = "demo-debug"
+    my_saved_scenario = get_saved_scenario(scenario_id)
+    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_journals())
 
 @app.route('/debug/scenario/table', methods=['GET'])
 def jump_debug_table_get():
