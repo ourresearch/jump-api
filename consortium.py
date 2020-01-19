@@ -107,7 +107,7 @@ class Consortium(object):
                 for journal_dict in org_response["journals"]:
                     print "here"
                     if journal_dict and "table_row" in journal_dict:
-                        print journal_dict["issn_l"]
+                        # print journal_dict["issn_l"]
                         journal_dict["table_row"]["org_package_id"] = org_response["package_id"]
                         journal_dict["table_row"]["org_scenario_id"] = org_response["scenario_id"]
                         self.journal_org_data[journal_dict["meta"]["issn_l"]].append(journal_dict["table_row"])
