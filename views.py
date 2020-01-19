@@ -489,7 +489,7 @@ def subscriptions_scenario_id_post(scenario_id):
 #
 # @app.route('/live/scenario/<scenario_id>', methods=['GET'])
 @app.route('/scenario/<scenario_id>', methods=['GET'])
-@jwt_required
+@jwt_optional
 def live_scenario_id_get(scenario_id):
 
     if request.args.get("fast-mock-scenario", False):
@@ -512,7 +512,7 @@ def live_scenario_id_get(scenario_id):
 
 
 @app.route('/scenario/<scenario_id>/summary', methods=['GET'])
-@jwt_required
+@jwt_optional
 def scenario_id_summary_get(scenario_id):
     my_timing = TimingMessages()
     my_saved_scenario = get_saved_scenario(scenario_id)
@@ -522,7 +522,7 @@ def scenario_id_summary_get(scenario_id):
 
 @app.route('/scenario/<scenario_id>/journals', methods=['GET'])
 @app.route('/scenario/<scenario_id>/overview', methods=['GET'])
-@jwt_required
+@jwt_optional
 def scenario_id_overview_get(scenario_id):
     my_timing = TimingMessages()
     my_saved_scenario = get_saved_scenario(scenario_id)
@@ -551,7 +551,7 @@ def scenario_id_details_get(scenario_id):
 #
 # @app.route('/live/scenario/<scenario_id>/table', methods=['GET'])
 @app.route('/scenario/<scenario_id>/table', methods=['GET'])
-@jwt_required
+@jwt_optional
 def live_scenario_id_table_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
     response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table())
@@ -568,7 +568,7 @@ def live_scenario_id_table_get(scenario_id):
 #
 # @app.route('/live/scenario/<scenario_id>/slider', methods=['GET'])
 @app.route('/scenario/<scenario_id>/slider', methods=['GET'])
-@jwt_required
+@jwt_optional
 def live_scenario_id_slider_get(scenario_id):
 
     if request.args.get("fast-mock-slider", False):
@@ -584,7 +584,7 @@ def live_scenario_id_slider_get(scenario_id):
 
 
 @app.route('/scenario/<scenario_id>/apc', methods=['GET'])
-@jwt_required
+@jwt_optional
 def live_scenario_id_apc_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
     response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_apc())
