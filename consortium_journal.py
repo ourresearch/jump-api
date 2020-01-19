@@ -20,7 +20,7 @@ from util import format_with_commas
 from journal import Journal
 
 
-class ConsortiumJournal(object):
+class ConsortiumJournal(Journal):
     years = range(0, 5)
 
     def __init__(self, issn_l, meta_data, org_data):
@@ -193,7 +193,6 @@ class ConsortiumJournal(object):
     def use_oa_peer_reviewed(self):
         return self.sum_attribute("use_peer_reviewed")
 
-
     @cached_property
     def use_free_instant(self):
         response = 0
@@ -223,76 +222,3 @@ class ConsortiumJournal(object):
         if self.ncppu:
             return self.scenario.ncppu_rank_lookup[self.issn_l]
         return None
-
-    def to_dict_table(self):
-        response = OrderedDict()
-        response["meta"] = {"issn_l": self.issn_l,
-                    "title": self.title,
-                    "subject": self.subject,
-                    "subscribed": self.subscribed}
-        table_row = OrderedDict()
-
-        # table
-        table_row["ncppu"] = self.ncppu
-        table_row["ncppu_rank"] = self.ncppu_rank
-        table_row["cost"] = self.cost_actual
-        table_row["usage"] = self.use_total
-        table_row["instant_usage_percent"] = self.use_instant_percent
-        table_row["free_instant_usage_percent"] = self.use_free_instant_percent
-
-        # cost
-        table_row["scenario_cost"] = round(self.cost_actual)
-        table_row["subscription_cost"] = round(self.cost_subscription)
-        table_row["ill_cost"] = round(self.cost_ill)
-        table_row["subscription_minus_ill_cost"] = round(self.cost_subscription_minus_ill)
-        table_row["old_school_cpu"] = None
-        table_row["old_school_cpu_rank"] = None
-
-        # fulfillment
-        table_row["use_asns_percent"] = round(float(100)*self.use_actual["social_networks"]/self.use_total)
-        table_row["use_oa_percent"] = round(float(100)*self.use_actual["oa"]/self.use_total)
-        table_row["use_backfile_percent"] = round(float(100)*self.use_actual["backfile"]/self.use_total)
-        table_row["use_subscription_percent"] = round(float(100)*self.use_actual["subscription"]/self.use_total)
-        table_row["use_ill_percent"] = round(float(100)*self.use_actual["ill"]/self.use_total)
-        table_row["use_other_delayed_percent"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
-        table_row["has_perpetual_access"] = self.has_perpetual_access
-
-        # oa
-        table_row["use_oa_percent"] = round(float(100)*self.use_actual["oa"]/self.use_total)
-        table_row["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
-        table_row["use_hybrid_percent"] = round(float(100)*self.use_oa_hybrid/self.use_total)
-        table_row["use_bronze_percent"] = round(float(100)*self.use_oa_bronze/self.use_total)
-        table_row["use_peer_reviewed_percent"] =  round(float(100)*self.use_oa_peer_reviewed/self.use_total)
-
-        # impact
-        table_row["total_usage"] = round(self.use_total)
-        table_row["downloads"] = round(self.downloads_total)
-        table_row["citations"] = round(self.num_citations, 1)
-        table_row["authorships"] = round(self.num_authorships, 1)
-
-
-        response["table_row"] = table_row
-
-        return response
-
-
-    def to_dict_slider(self):
-        response = {"issn_l": self.issn_l,
-                "title": self.title,
-                "subject": self.subject,
-                "downloads_total": self.downloads_total,
-                "use_total": self.use_total,
-                "cost_subscription": self.cost_subscription,
-                "cost_ill": self.cost_ill,
-                "cost_subscription_minus_ill": self.cost_subscription_minus_ill,
-                "ncppu": self.ncppu,
-                "subscribed": self.subscribed,
-                "use_instant": self.use_instant,
-                "use_instant_percent": self.use_instant_percent,
-                }
-        response["use_groups_free_instant"] = {}
-        for group in use_groups_free_instant:
-            response["use_groups_free_instant"][group] = self.use_actual[group]
-        response["use_groups_if_subscribed"] = {"subscription": self.use_subscription}
-        response["use_groups_if_not_subscribed"] = {"ill": self.use_ill, "other_delayed": self.use_other_delayed}
-        return response
