@@ -76,7 +76,7 @@ class ConsortiumJournal(object):
     def has_perpetual_access(self):
         response = False
         for my_org_dict in self.org_data:
-            if my_org_dict.has_perpetual_access:
+            if my_org_dict.get("has_perpetual_access", False):
                 response = True
         return response
 
@@ -218,6 +218,11 @@ class ConsortiumJournal(object):
             return 0
         return min(100.0, round(100 * float(self.use_free_instant) / self.use_total, 4))
 
+    @cached_property
+    def ncppu_rank(self):
+        if self.ncppu:
+            return self.scenario.ncppu_rank_lookup[self.issn_l]
+        return None
 
     def to_dict_table(self):
         response = OrderedDict()
@@ -228,11 +233,8 @@ class ConsortiumJournal(object):
         table_row = OrderedDict()
 
         # table
-        if self.ncppu:
-            table_row["ncppu"] = self.ncppu
-        else:
-            table_row["ncppu"] = "no paywalled usage"
-        table_row["ncppu_rank"] = None
+        table_row["ncppu"] = self.ncppu
+        table_row["ncppu_rank"] = self.ncppu_rank
         table_row["cost"] = self.cost_actual
         table_row["usage"] = self.use_total
         table_row["instant_usage_percent"] = self.use_instant_percent
