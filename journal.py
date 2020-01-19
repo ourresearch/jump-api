@@ -1224,6 +1224,66 @@ class Journal(object):
         return response
 
 
+    def to_dict_journals(self):
+        table_row = OrderedDict()
+        table_row["issn_l"] = self.issn_l
+        table_row["title"] = self.title
+        table_row["subject"] = self.subject
+        table_row["subscribed"] = self.subscribed
+
+        # these are below but with different names
+        table_row["use_total"] = self.use_total
+        table_row["cost_subscription"] = self.cost_subscription
+        table_row["cost_ill"] = self.cost_ill
+        table_row["cost_subscription_minus_ill"] = self.cost_subscription_minus_ill,
+        table_row["use_instant"] = self.use_instant
+        table_row["use_instant_percent"] = self.use_instant_percent
+
+        # keep this format
+        table_row["use_groups_free_instant"] = {}
+        for group in use_groups_free_instant:
+            table_row["use_groups_free_instant"][group] = self.__getattribute__("use_{}".format(group))
+        table_row["use_groups_if_subscribed"] = {"subscription": self.use_subscription}
+        table_row["use_groups_if_not_subscribed"] = {"ill": self.use_ill, "other_delayed": self.use_other_delayed}
+
+        # table
+        table_row["ncppu"] = display_usage(self.ncppu)
+        table_row["ncppu_rank"] = display_usage(self.ncppu_rank)
+        table_row["cost"] = self.cost_actual
+        table_row["usage"] = round(self.use_total)
+        table_row["instant_usage_percent"] = round(self.use_instant_percent)
+        table_row["free_instant_usage_percent"] = round(self.use_free_instant_percent)
+
+        # cost
+        table_row["subscription_cost"] = round(self.cost_subscription)
+        table_row["ill_cost"] = round(self.cost_ill)
+        table_row["subscription_minus_ill_cost"] = round(self.cost_subscription_minus_ill)
+        table_row["old_school_cpu"] = display_usage(self.old_school_cpu)
+        table_row["old_school_cpu_rank"] = display_usage(self.old_school_cpu_rank)
+
+        # fulfillment
+        table_row["use_asns_percent"] = round(float(100)*self.use_actual["social_networks"]/self.use_total)
+        table_row["use_oa_percent"] = round(float(100)*self.use_actual["oa"]/self.use_total)
+        table_row["use_backfile_percent"] = round(float(100)*self.use_actual["backfile"]/self.use_total)
+        table_row["use_subscription_percent"] = round(float(100)*self.use_actual["subscription"]/self.use_total)
+        table_row["use_ill_percent"] = round(float(100)*self.use_actual["ill"]/self.use_total)
+        table_row["use_other_delayed_percent"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
+        table_row["has_perpetual_access"] = self.has_perpetual_access
+
+        # oa
+        table_row["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
+        table_row["use_hybrid_percent"] = round(float(100)*self.use_oa_hybrid/self.use_total)
+        table_row["use_bronze_percent"] = round(float(100)*self.use_oa_bronze/self.use_total)
+        table_row["use_peer_reviewed_percent"] =  round(float(100)*self.use_oa_peer_reviewed/self.use_total)
+
+        # impact
+        table_row["downloads"] = round(self.downloads_total)
+        table_row["citations"] = round(self.num_citations, 1)
+        table_row["authorships"] = round(self.num_authorships, 1)
+
+        return table_row
+
+
     def to_dict_cost(self):
         response = OrderedDict()
         response["meta"] = {"issn_l": self.issn_l,

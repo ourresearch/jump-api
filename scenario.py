@@ -639,6 +639,16 @@ class Scenario(object):
         return response
 
 
+    def to_dict_journals(self):
+        response = {
+                "_debug": {"summary": self.to_dict_summary_dict(), "_settings": self.settings.to_dict()},
+                "journals": [j.to_dict_journals() for j in self.journals_sorted_ncppu],
+            }
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
+        return response
+
+
     def to_dict_raw(self):
         response = {
                 "_settings": self.settings.to_dict(),
