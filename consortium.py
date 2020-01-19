@@ -11,6 +11,7 @@ from multiprocessing.pool import ThreadPool
 import threading
 import requests
 from flask_jwt_extended import create_access_token, get_jwt_identity
+import os
 
 from app import db
 from app import get_db_cursor
@@ -22,12 +23,13 @@ class Consortium(object):
         self.jwt = my_jwt
 
         command = """select package_id, scenario_id 
-            from jump_account_package_scenario_view 
+            from jump_account_combo_view 
             where consortium_package_id='{}' order by package_id asc""".format(self.package_id)
         with get_db_cursor() as cursor:
             cursor.execute(command)
             rows = cursor.fetchall()
 
+        print rows
         self.org_ids = rows
 
         if not hasattr(threading.current_thread(), "_children"):
@@ -37,7 +39,9 @@ class Consortium(object):
 
         def call_cached_version(org_id_dict):
 
-            url = u"https://cdn.unpaywalljournals.org/scenario/{}/raw?jwt={}".format(org_id_dict["scenario_id"], self.jwt)
+            # url = u"http://localhost:5004/scenario/{}/raw?secret={}".format(org_id_dict["scenario_id"], os.getenv("JWT_SECRET_KEY"))
+            url = u"https://cdn.unpaywalljournals.org/scenario/{}/raw?secret={}".format(org_id_dict["scenario_id"], os.getenv("JWT_SECRET_KEY"))
+            # url = u"https://cdn.unpaywalljournals.org/scenario/{}/raw?jwt={}".format(org_id_dict["scenario_id"], self.jwt)
 
             # print u"starting cache request for {}".format(url)
             headers = {"Cache-Control": "public, max-age=31536000",
@@ -51,14 +55,14 @@ class Consortium(object):
                 data["package_id"] = org_id_dict["package_id"]
                 data["status_code"] = r.status_code
                 data["url"] = url
-                # print u"success in call_cached_version with {}".format(url)
+                print u"success in call_cached_version with {}".format(url)
             else:
                 data = {}
                 data["scenario_id"] = org_id_dict["scenario_id"]
                 data["package_id"] = org_id_dict["package_id"]
                 data["status_code"] = r.status_code
                 data["url"] = url
-                # print u"not success in call_cached_version with {}".format(url)
+                print u"not success in call_cached_version with {}".format(url)
             return data
 
         self.consortium_org_responses = my_thread_pool.imap_unordered(call_cached_version, self.org_ids)
