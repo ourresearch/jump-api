@@ -224,8 +224,9 @@ class ConsortiumJournal(object):
             table_row["ncppu"] = self.ncppu
         else:
             table_row["ncppu"] = "no paywalled usage"
+        table_row["ncppu_rank"] = None
         table_row["cost"] = self.cost_actual
-        table_row["use"] = self.use_total
+        table_row["usage"] = self.use_total
         table_row["instant_usage_percent"] = self.use_instant_percent
         table_row["free_instant_usage_percent"] = self.use_free_instant_percent
 
@@ -233,15 +234,18 @@ class ConsortiumJournal(object):
         table_row["scenario_cost"] = round(self.cost_actual)
         table_row["subscription_cost"] = round(self.cost_subscription)
         table_row["ill_cost"] = round(self.cost_ill)
-        table_row["real_cost"] = round(self.cost_subscription_minus_ill)
+        table_row["subscription_minus_ill_cost"] = round(self.cost_subscription_minus_ill)
+        table_row["old_school_cpu"] = None
+        table_row["old_school_cpu_rank"] = None
 
         # fulfillment
-        table_row["use_asns"] = round(float(100)*self.use_actual["social_networks"]/self.use_total)
-        table_row["use_oa"] = round(float(100)*self.use_actual["oa"]/self.use_total)
-        table_row["use_backfile"] = round(float(100)*self.use_actual["backfile"]/self.use_total)
-        table_row["use_subscription"] = round(float(100)*self.use_actual["subscription"]/self.use_total)
-        table_row["use_ill"] = round(float(100)*self.use_actual["ill"]/self.use_total)
-        table_row["use_other_delayed"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
+        table_row["use_asns_percent"] = round(float(100)*self.use_actual["social_networks"]/self.use_total)
+        table_row["use_oa_percent"] = round(float(100)*self.use_actual["oa"]/self.use_total)
+        table_row["use_backfile_percent"] = round(float(100)*self.use_actual["backfile"]/self.use_total)
+        table_row["use_subscription_percent"] = round(float(100)*self.use_actual["subscription"]/self.use_total)
+        table_row["use_ill_percent"] = round(float(100)*self.use_actual["ill"]/self.use_total)
+        table_row["use_other_delayed_percent"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
+        table_row["use_other_delayed_percent"] =  None
 
         # oa
         table_row["use_oa_percent"] = round(float(100)*self.use_actual["oa"]/self.use_total)
