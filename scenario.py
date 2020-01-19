@@ -41,6 +41,7 @@ def get_fresh_journal_list(scenario, my_jwt):
     issn_ls = scenario.data["unpaywall_downloads_dict"].keys()
     issnls_to_build = [issn_l for issn_l in issn_ls if issn_l not in journals_to_exclude]
     if scenario.is_consortium:
+        print "here in is_consortium"
         my_consortium = Consortium(scenario.package_id, my_jwt)
         journals = my_consortium.journals
     else:
