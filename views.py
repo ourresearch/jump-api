@@ -529,7 +529,7 @@ def scenario_id_overview_get(scenario_id):
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_overview())
 
 @app.route('/scenario/<scenario_id>/raw', methods=['GET'])
-@jwt_required
+@jwt_optional
 def scenario_id_raw_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_raw())
