@@ -73,6 +73,14 @@ class ConsortiumJournal(object):
         return response
 
     @cached_property
+    def has_perpetual_access(self):
+        response = False
+        for my_org_dict in self.org_data:
+            if my_org_dict.has_perpetual_access:
+                response = True
+        return response
+
+    @cached_property
     def title(self):
         return self.meta_data["title"]
 
@@ -245,7 +253,7 @@ class ConsortiumJournal(object):
         table_row["use_subscription_percent"] = round(float(100)*self.use_actual["subscription"]/self.use_total)
         table_row["use_ill_percent"] = round(float(100)*self.use_actual["ill"]/self.use_total)
         table_row["use_other_delayed_percent"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
-        table_row["use_other_delayed_percent"] =  None
+        table_row["has_perpetual_access"] = self.has_perpetual_access
 
         # oa
         table_row["use_oa_percent"] = round(float(100)*self.use_actual["oa"]/self.use_total)
