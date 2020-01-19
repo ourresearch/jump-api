@@ -69,7 +69,7 @@ class ConsortiumJournal(object):
     def sum_attribute(self, attribute_name):
         response = 0
         for my_org_dict in self.org_data:
-            response += my_org_dict[attribute_name] or 0
+            response += my_org_dict.get(attribute_name, 0) or 0
         return response
 
     @cached_property
