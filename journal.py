@@ -1542,11 +1542,11 @@ class Journal(object):
         table_row["use_other_delayed"] =  self.use_other_delayed
 
         # oa
-        table_row["downloads_green"] = self.downloads_oa_green
-        table_row["downloads_hybrid"] = self.downloads_oa_hybrid
-        table_row["downloads_bronze"] = self.downloads_oa_bronze
-        table_row["downloads_a"] = self.downloads_oa
-        table_row["downloads_peer_reviewed"] =  self.downloads_oa_peer_reviewed
+        # table_row["downloads_green"] = self.downloads_oa_green
+        # table_row["downloads_hybrid"] = self.downloads_oa_hybrid
+        # table_row["downloads_bronze"] = self.downloads_oa_bronze
+        # table_row["downloads_a"] = self.downloads_oa
+        # table_row["downloads_peer_reviewed"] =  self.downloads_oa_peer_reviewed
 
         # impact
         table_row["total_usage"] = round(self.use_total, 2)
