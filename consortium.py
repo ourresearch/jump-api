@@ -105,7 +105,6 @@ class Consortium(object):
         for org_response in self.consortium_org_responses:
             if org_response["status_code"] == 200:
                 for journal_dict in org_response["journals"]:
-                    print "here"
                     if journal_dict and "table_row" in journal_dict:
                         # print journal_dict["meta"]["issn_l"]
                         journal_dict["table_row"]["org_package_id"] = org_response["package_id"]

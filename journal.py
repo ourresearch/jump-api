@@ -1554,6 +1554,8 @@ class Journal(object):
         table_row["citations"] = round(self.num_citations, 2)
         table_row["authorships"] = round(self.num_authorships, 2)
 
+        table_row["has_perpetual_access"] = self.has_perpetual_access
+
         response["table_row"] = table_row
 
         return response
