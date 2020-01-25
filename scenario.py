@@ -609,7 +609,7 @@ class Scenario(object):
                         {"text": "ILL Cost", "value": "ill_cost", "percent": None, "raw": self.cost_ill, "display": "currency_int"},
                         {"text": "Subscription minus ILL Cost", "value": "subscription_minus_ill_cost", "percent": None, "raw": self.cost_subscription_minus_ill, "display": "currency_int"},
                         {"text": "Cost per Use", "value": "old_school_cpu", "percent": None, "raw": None, "display": "currency"},
-                        {"text": "CPU Rank", "value": "old_school_cpu_rank", "percent": None, "raw": None, "display": "currency"},
+                        {"text": "CPU Rank", "value": "old_school_cpu_rank", "percent": None, "raw": None, "display": "number"},
 
                         # fulfillment
                         {"text": "Percent of Usage from ASNs", "value": "use_asns_percent", "percent": round(float(100)*self.use_social_networks/self.use_total), "raw": self.use_social_networks, "display": "percent"},
