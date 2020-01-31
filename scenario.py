@@ -107,7 +107,7 @@ class Scenario(object):
         self.data["prices"] = {}
 
         prices_to_consider = [DEMO_PACKAGE_ID]
-        if get_parent_consortium_package_id(self.package_id) in ["68f1af1d"]:
+        if get_parent_consortium_package_id(self.package_id) in ["68f1af1d", "P2NFgz7B", "PN3juRC5"]:
             prices_to_consider += ["68f1af1d", "93YfzkaA"]
 
         # print self.data["prices_raw"]
@@ -758,6 +758,15 @@ class Scenario(object):
         return response
 
     def to_dict_summary(self):
+        response = {
+                "_settings": self.settings.to_dict(),
+                "_summary": self.to_dict_summary_dict(),
+            }
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
+        return response
+
+    def to_dict_minimal(self):
         response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": self.to_dict_summary_dict(),
