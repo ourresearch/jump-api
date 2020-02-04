@@ -135,6 +135,14 @@ class SavedScenario(db.Model):
         }
         return response
 
+    def to_dict_minimal(self):
+        response = {
+            "id": self.scenario_id,
+            "name": self.scenario_name,
+            "pkgId": self.package_id,
+        }
+        return response
+
     def __repr__(self):
         return u"<{} ({}) {}>".format(self.__class__.__name__, self.scenario_id, self.scenario_name)
 
