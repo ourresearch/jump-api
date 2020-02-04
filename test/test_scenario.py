@@ -49,16 +49,20 @@ class MyTest(unittest.TestCase):
         self.slider_journals = self.slider_dict["journals"]
 
     def test_stable_summaries(self):
-        assert_allclose(self.slider_dict["_summary"]["use_free_instant_percent"], 57.1, atol=0.1)
-        assert_allclose(self.slider_dict["_summary"]["cost_percent"], 11.3, atol=0.1)
+        assert_allclose(self.slider_dict["_summary"]["use_free_instant_percent"], 57.2, atol=0.2)
+        assert_allclose(self.slider_dict["_summary"]["cost_percent"], 11.4, atol=0.2)
 
     def test_curve_fit(self):
         my_journal_objects = self.live_scenario.journals
         num_with_default_download_curves = len([1 for j in my_journal_objects if j.use_default_download_curve])
         num_with_non_default_download_curves = len([1 for j in my_journal_objects if not j.use_default_download_curve])
-        assert_true(num_with_default_download_curves < 200)
-        assert_true(num_with_non_default_download_curves > 1600)
+        assert_true(num_with_default_download_curves < 200) # 189
+        assert_true(num_with_non_default_download_curves > 1600) # 1666
 
+        num_with_default_num_papers_curves = len([1 for j in my_journal_objects if j.use_default_num_papers_curve])
+        num_with_non_default_num_papers_curves = len([1 for j in my_journal_objects if not j.use_default_num_papers_curve])
+        assert_true(num_with_default_num_papers_curves < 50)  #41
+        assert_true(num_with_non_default_num_papers_curves > 1800) # 1814
 
     def test_nonzero(self):
         number_that_have_zeros = 0

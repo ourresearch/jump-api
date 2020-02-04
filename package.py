@@ -414,7 +414,13 @@ class Package(db.Model):
                 "hasCustomPrices": self.has_custom_prices,
                 "hasCoreJournalList": self.has_core_journal_list,
                 "hasCustomPerpetualAccess": self.has_custom_perpetual_access,
-                "numJournals": self.num_journals,
+                # "numJournals": self.num_journals,
+        }
+
+    def to_dict_minimal(self):
+        return {
+                "id": self.package_id,
+                "name": self.package_name
         }
 
     def __repr__(self):

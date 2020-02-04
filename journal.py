@@ -38,6 +38,7 @@ class Journal(object):
         self.package_id = package_id
         self.subscribed = False
         self.use_default_download_curve = False
+        self.use_default_num_papers_curve = False
 
     def set_scenario(self, scenario):
         if scenario:
@@ -547,7 +548,9 @@ class Journal(object):
 
         return {"y_fit": y_fit,
                 "r_squared": r_squared,
-                "params": pars}
+                "params": list(pars),
+                "input_y": list(y)}
+
 
 
     @cached_property
@@ -556,10 +559,13 @@ class Journal(object):
         downloads_by_age_before_counter_correction = [val if val else 0 for val in downloads_by_age_before_counter_correction]
         return downloads_by_age_before_counter_correction
 
+
     @cached_property
     def downloads_by_age(self):
         self.use_default_download_curve = False
 
+        # although the curve fit is on downloads, download number probably off if there are some years with no papers,
+        # so in those cases just use the default
         nonzero_paper_years = [year for year in self.years if self.raw_num_papers_historical_by_year[year]]
         if len(nonzero_paper_years) == 5:
             scipy_lock.acquire()
@@ -846,8 +852,9 @@ class Journal(object):
 
         response = {"y_fit": y_fit,
                 "r_squared": r_squared,
-                "params": pars,
-                "y_extrap": y_extrap
+                "params": list(pars),
+                "y_extrap": y_extrap,
+                "input_y": list(y)
                 }
         return response
 
@@ -869,13 +876,20 @@ class Journal(object):
     def num_papers_by_year(self):
         my_curve_fit = None
         nonzero_paper_years = [year for year in self.years if self.raw_num_papers_historical_by_year[year]]
-        if len(nonzero_paper_years) >= 4 and (2018 in nonzero_paper_years):
+        # make sure it includes at least 3 years and the most recent year
+        if len(nonzero_paper_years) >= 3 and self.papers_2018:
             scipy_lock.acquire()
             my_curve_fit = self.curve_fit_for_num_papers
             scipy_lock.release()
-        if not my_curve_fit:
+        if my_curve_fit and my_curve_fit["r_squared"] >= -0.1:
+            # print u"GREAT curve fit for {}, r_squared {}".format(self.issn_l, my_curve_fit.get("r_squared", "no r_squared"))
+            self.use_default_num_papers_curve = False
+            # only let it drop down below 25% of the most recent year
+            return [max(int(self.papers_2018 * 0.25), num) for num in my_curve_fit["y_extrap"]]
+        else:
+            # print u"bad curve fit for {}, r_squared {}".format(self.issn_l, my_curve_fit.get("r_squared", "no r_squared"))
+            self.use_default_num_papers_curve = True
             return [self.papers_2018 for year in self.years]
-        return [max(0, num) for num in my_curve_fit["y_extrap"]]
 
     @cached_property
     def raw_num_papers_historical_by_year(self):
@@ -1485,6 +1499,9 @@ class Journal(object):
         response_debug["use_oa"] = self.use_oa
         response_debug["downloads_total_by_year"] = self.downloads_total_by_year
         response_debug["use_default_download_curve"] = self.use_default_download_curve
+        response_debug["use_default_num_papers_curve"] = self.use_default_num_papers_curve
+        response_debug["curve_fit_for_num_papers"] = self.curve_fit_for_num_papers
+        response_debug["curve_fit_for_downloads"] = self.curve_fit_for_downloads
         response_debug["downloads_total_older_than_five_years"] = self.downloads_total_older_than_five_years
         response_debug["raw_downloads_by_age"] = self.raw_downloads_by_age
         response_debug["downloads_by_age"] = self.downloads_by_age
