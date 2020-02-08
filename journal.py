@@ -315,6 +315,8 @@ class Journal(object):
 
     @cached_property
     def has_perpetual_access(self):
+        # print "has_perpetual_access", self.perpetual_access_years
+
         if not self.perpetual_access_years:
             return False
         return True
