@@ -78,6 +78,43 @@ class MyTest(unittest.TestCase):
                     number_that_have_zeros += 1
         assert_true(number_that_have_zeros < 100)
 
+    def test_counter_input(self):
+        import glob
+        import re
+        from util import get_sql_answer
+        from util import get_sql_answers
+        from app import db
+
+        bad_usernames = set()
+
+        q = """select username from jump_account_combo_view where consortium_package_id is null and not is_consortium"""
+        usernames = get_sql_answers(db, q)
+        usernames = [u for u in usernames if u not in ["demo", "mit", "suny connect", "uva"]]
+        for username in usernames:
+            my_file = "/Users/hpiwowar/Dropbox/ti/unpaywall-journals-data/counter-clean/{}_Elsevier_2018_clean.tsv".format(username)
+            lines = open(my_file).readlines()
+            for issn_l in ['0140-6736', '0747-5632', '0960-9822', '0020-7489', '0360-1315']:
+                matching_lines = [line for line in lines if issn_l in line]
+                for matching_line in matching_lines:
+                    matching_line = matching_line.strip()
+                    columns = matching_line.split("\t")
+                    int_columns = [int(num) for num in columns if re.match("^\d+$", num)]
+                    my_max = None
+                    if int_columns:
+                        my_max = max(int_columns)
+
+                    q = """select total from jump_account_combo_view join jump_counter on jump_account_combo_view.package_id = jump_counter.package_id where issn_l='{}' and username='{}'""".format(issn_l, username)
+                    total = int(get_sql_answer(db, q))
+
+                    if my_max == total:
+                        pass
+                        print "match", issn_l, username, my_max, total
+                    else:
+                        print "nope", issn_l, username, my_max, total
+                        bad_usernames.add(username)
+
+        print "bad_usernames", bad_usernames
+        assert_true(len(bad_usernames) == 0)
 
 
     def test_total_sums(self):

@@ -56,20 +56,20 @@ def convert_date_spaces_to_dashes(filename):
 def build_counter_import_file(filename):
 
     rows = read_csv_file(filename)
-    # todo just one for now
     reports = {}
     lines = []
+    publisher = "Elsevier"
     for row in rows:
         if row["add_now"] == "1":
             print "row:", row["username"], row["display_name"], row["grid_id"], row["add_now"]
+            my_files = glob.glob("/Users/hpiwowar/Downloads/{}_counter.csv".format(row["username"]))
 
-            my_files = glob.glob("/Users/hpiwowar/Downloads/{}.*".format(row["username"]))
-            if my_files:
+            for counter_file in my_files:
                 report = None
 
-                counter_file = my_files[0]
                 print counter_file
                 try:
+                    raise UnknownReportTypeError
                     report = reporter.parse(counter_file)
                     # print report
                     reports[row["username"]] = report
@@ -83,49 +83,27 @@ def build_counter_import_file(filename):
                 #     return import_counter(filename)
 
                 except UnknownReportTypeError:
-                    class MockJournal(object):
-                        pass
+
+                    my_account = Account.query.filter(Account.username == row["username"]).first()
+                    package_id = my_account.packages[0].package_id
 
                     # counter_file = convert_from_utf16_to_utf8(counter_file)
                     counter_rows = read_csv_file(counter_file)
-                    report = []
                     for counter_row in counter_rows:
-                        my_journal = MockJournal()
-                        my_journal.issn = counter_row["ISSN"]
-                        my_journal.html_total = counter_row["Total"]
-                        my_journal.pdf_total = 0
-                        my_journal.publisher = None
-                        report += [my_journal]
-                    reports[row["username"]] = report
-
-                # except AttributeError:
-                #     report = None
-                #     print "error on", my_files
-                #     reports[row["username"]] = "error"
-
-                if report:
-                    my_account = Account.query.filter(Account.username == row["username"]).first()
-                    package_id = my_account.packages[0].package_id
-                    for journal in report:
                         export_dict = {}
                         export_dict["organization"] = row["username"]
                         export_dict["package_id"] = package_id
-                        export_dict["publisher"] = journal.publisher
-                        export_dict["issn"] = journal.issn
-                        try:
-                            if report.report_type == "TR_J1":
-                                export_dict["total"] = journal.total_usage
-                            else:
-                                export_dict["total"] = journal.html_total + journal.pdf_total
-                        except AttributeError:
-                            export_dict["total"] = journal.html_total
-
+                        export_dict["publisher"] = publisher
+                        export_dict["issn"] = counter_row["ISSN"]
+                        export_dict["total"] = counter_row["Total"]
                         lines.append(export_dict)
+
 
     print reports
     for username, report in reports.iteritems():
-        first_journal = list(report)[0]
-        publisher = first_journal.publisher
+        # first_journal = list(report)[0]
+        # publisher = first_journal.publisher
+
         try:
             report.write_tsv(u"/Users/hpiwowar/Downloads/{}_{}_2018_clean.tsv".format(username, publisher))
         except AttributeError:
@@ -181,7 +159,7 @@ def import_consortium_counter_xls(xls_filename):
 
 def import_perpetual_access_files():
     results = []
-    my_files = glob.glob("/Users/hpiwowar/Downloads/SUNY-PTA-files/2*.xlsx")
+    my_files = glob.glob("/Users/hpiwowar/*/2*.xlsx")
     my_files.reverse()
     for my_file in my_files:
         print my_file

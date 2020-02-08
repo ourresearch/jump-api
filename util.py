@@ -73,9 +73,9 @@ class DelayedAdapter(HTTPAdapter):
         # logger.info(u"   HTTPAdapter.send for {} took {} seconds".format(request.url, elapsed(start_time, 2)))
         return response
 
-def read_csv_file(filename):
+def read_csv_file(filename, sep=","):
     with open(filename, "r") as csv_file:
-        my_reader = csv.DictReader(csv_file)
+        my_reader = csv.DictReader(csv_file, delimiter=sep)
         rows = [row for row in my_reader]
     return rows
 

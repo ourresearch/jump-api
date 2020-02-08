@@ -263,7 +263,7 @@ def live_account_get():
         "id": my_account.id,
         "name": my_account.display_name,
         "is_demo_account": my_account.is_demo_account,
-        "packages": [package.to_dict_summary() for package in my_account.unique_packages],
+        "packages": [package.to_dict_minimal() for package in my_account.unique_packages],
     }
     my_timing.log_timing("after to_dict()")
     account_dict["_timing"] = my_timing.to_dict()
@@ -332,7 +332,7 @@ def live_package_id_get(package_id):
 
     package_dict = my_package.to_dict_summary()
     my_timing.log_timing("after my_package.to_dict_summary()")
-    package_dict["scenarios"] = [saved_scenario.to_dict_definition() for saved_scenario in my_package.unique_saved_scenarios]
+    package_dict["scenarios"] = [saved_scenario.to_dict_minimal() for saved_scenario in my_package.unique_saved_scenarios]
     my_timing.log_timing("after scenarios()")
     package_dict["journal_detail"] = my_package.get_package_counter_breakdown()
     my_timing.log_timing("after journal_detail()")
