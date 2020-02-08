@@ -78,7 +78,10 @@ class Journal(object):
 
     @cached_property
     def papers_2018(self):
-        return self.my_scenario_data_row.get("num_papers_2018", 0)
+        response = self.my_scenario_data_row.get("num_papers_2018", 0)
+        if not response:
+            return 0
+        return response
 
     @cached_property
     def num_citations_historical_by_year(self):
