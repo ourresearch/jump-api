@@ -81,6 +81,22 @@ class ConsortiumJournal(Journal):
         return response
 
     @cached_property
+    def perpetual_access_years(self):
+        response = False
+        for my_org_dict in self.org_data:
+            if my_org_dict.get("perpetual_access_years", None):
+                return my_org_dict.get("perpetual_access_years", None)
+        return []
+
+    @cached_property
+    def baseline_access(self):
+        response = False
+        for my_org_dict in self.org_data:
+            if my_org_dict.get("baseline_access", None):
+                return my_org_dict.get("baseline_access", None)
+        return None
+
+    @cached_property
     def title(self):
         return self.meta_data["title"]
 
