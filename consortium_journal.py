@@ -76,24 +76,22 @@ class ConsortiumJournal(Journal):
     def has_perpetual_access(self):
         response = False
         for my_org_dict in self.org_data:
-            if my_org_dict.get("has_perpetual_access", False):
+            if my_org_dict.get("has_perpetual_access"):
                 response = True
         return response
 
     @cached_property
     def perpetual_access_years(self):
-        response = False
         for my_org_dict in self.org_data:
-            if my_org_dict.get("perpetual_access_years", None):
-                return my_org_dict.get("perpetual_access_years", None)
+            if my_org_dict.get("perpetual_access_years"):
+                return my_org_dict.get("perpetual_access_years")
         return []
 
     @cached_property
     def baseline_access(self):
-        response = False
         for my_org_dict in self.org_data:
-            if my_org_dict.get("baseline_access", None):
-                return my_org_dict.get("baseline_access", None)
+            if my_org_dict.get("baseline_access"):
+                return my_org_dict.get("baseline_access")
         return None
 
     @cached_property

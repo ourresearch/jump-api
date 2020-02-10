@@ -1705,8 +1705,9 @@ class Journal(object):
         table_row["downloads"] = round(self.downloads_total, 2)
         table_row["citations"] = round(self.num_citations, 2)
         table_row["authorships"] = round(self.num_authorships, 2)
-        table_row["perpetual_access_years_text"] = self.display_perpetual_access_years
         table_row["has_perpetual_access"] = self.has_perpetual_access
+        table_row["perpetual_access_years"] = self.perpetual_access_years
+        table_row["baseline_access"] = self.baseline_access
 
         response["table_row"] = table_row
 
