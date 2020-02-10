@@ -40,7 +40,8 @@ class Consortium(object):
         def call_cached_version(org_id_dict):
 
             # url = u"http://localhost:5004/scenario/{}/raw?secret={}".format(org_id_dict["scenario_id"], os.getenv("JWT_SECRET_KEY"))
-            url = u"https://cdn.unpaywalljournals.org/scenario/{}/raw?secret={}".format(org_id_dict["scenario_id"], os.getenv("JWT_SECRET_KEY"))
+            url = u"https://unpaywall-jump-api.herokuapp.com/scenario/{}/raw?secret={}".format(org_id_dict["scenario_id"], os.getenv("JWT_SECRET_KEY"))
+            # url = u"https://cdn.unpaywalljournals.org/scenario/{}/raw?secret={}".format(org_id_dict["scenario_id"], os.getenv("JWT_SECRET_KEY"))
             # url = u"https://cdn.unpaywalljournals.org/scenario/{}/raw?jwt={}".format(org_id_dict["scenario_id"], self.jwt)
 
             # print u"starting cache request for {}".format(url)
