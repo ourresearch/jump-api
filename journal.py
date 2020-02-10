@@ -314,6 +314,8 @@ class Journal(object):
     def display_perpetual_access_years(self):
         if not self.perpetual_access_years:
             return ""
+        if min(self.perpetual_access_years) == min(self.year_by_perpetual_access_years):
+            return "<{}-{}".format(min(self.perpetual_access_years), max(self.perpetual_access_years))
         return "{}-{}".format(min(self.perpetual_access_years), max(self.perpetual_access_years))
 
     @cached_property
@@ -330,18 +332,44 @@ class Journal(object):
 
     @cached_property
     def perpetual_access_years(self):
+        # if no perpetual access data for any journals in this scenario, then we are acting like it has perpetual access to everything
+        # else, for this journal
+        #   if two dates, that is the perpetual access range
+        #   if a start date and no end date, then has perpetual access till the model says it doesn't
+        #   if no start date, then no perpetual access
+        #   if not there, then no perpetual access
+
         # print self._scenario_data["perpetual_access"]
+
+        # if no perpetual access data for any journals in this scenario, then we are acting like it has perpetual access to everything
         data_dict = self._scenario_data["perpetual_access"]
         if not data_dict:
             return self.year_by_perpetual_access_years
 
+        #   if journal not there, then no perpetual access
         if not self.issn_l in data_dict:
             return []
 
+        #   if no dates, then no perpetual access
+        if not data_dict[self.issn_l]["start_date"]:
+            return []
+
+        #   if a start date and no end date, then has perpetual access till the model says it doesn't
+        if data_dict[self.issn_l]["start_date"] and not data_dict[self.issn_l]["end_date"]:
+            return self.year_by_perpetual_access_years
+
+        #   if two dates, that is the perpetual access range
         response = []
         for year in self.year_by_perpetual_access_years:
             working_date = datetime.datetime(year, 1, 2).isoformat()  # use January 2nd
-            if working_date > data_dict[self.issn_l]["start_date"] and working_date < data_dict[self.issn_l]["end_date"]:
+
+            # ugly.  working around whether cached or not cached
+            try:
+                in_range = working_date > data_dict[self.issn_l]["start_date"] and working_date < data_dict[self.issn_l]["end_date"]
+            except:
+                in_range = working_date > data_dict[self.issn_l]["start_date"].isoformat() and working_date < data_dict[self.issn_l]["end_date"].isoformat()
+
+            if in_range:
                 # print year, "yes", data_dict[self.issn_l]
                 response.append(year)
             else:
@@ -626,11 +654,22 @@ class Journal(object):
     @cached_property
     def num_oa_by_year(self):
         num_reversed = self.num_oa_historical_by_year[::-1]
-        return [min(self.num_papers_by_year[year], num_reversed[year]) for year in self.years]
+        num_scaled_by_num_papers = [num_reversed[year]*self.num_papers_growth_from_2018_by_year[year] for year in self.years]
+        # if self.issn_l == "0031-9406":
+        #     print "self.num_papers_growth_from_2018_by_year", self.num_papers_growth_from_2018_by_year
+        #     print num_reversed
+        #     print num_scaled_by_num_papers
+        #     print
+        return [min(self.num_papers_by_year[year], num_scaled_by_num_papers[year]) for year in self.years]
 
 
     @cached_property
     def downloads_oa_by_age(self):
+        # if self.issn_l == "0031-9406":
+        #     print "self.num_oa_by_year", self.num_oa_by_year
+        #     print "downloads_per_paper_by_age", self.downloads_per_paper_by_age
+        #     print "downloads_by_age", self.downloads_by_age
+        #     print "downloads_by_age_before_counter_correction", self.downloads_by_age_before_counter_correction
         response = [(float(self.downloads_per_paper_by_age[age])*self.num_oa_by_year[age]) for age in self.years]
         return response
 
@@ -833,8 +872,14 @@ class Journal(object):
 
     @cached_property
     def curve_fit_for_num_papers(self):
-        x = np.array(self.years)
-        y = np.array(self.raw_num_papers_historical_by_year)
+        x_list = []
+        y_list = []
+        for year in self.years:
+            if self.raw_num_papers_historical_by_year[year] >= 0.25 * self.raw_num_papers_historical_by_year[4]:
+                x_list.append(year)
+                y_list.append(self.raw_num_papers_historical_by_year[year])
+        x = np.array(x_list)
+        y = np.array(y_list)
 
         initial_guess = (float(np.mean(y)), 0.05)  # determined empirically
 
@@ -864,6 +909,12 @@ class Journal(object):
         return response
 
     @cached_property
+    def num_papers_slope(self):
+        if not self.num_papers_by_year[0]:
+            return None
+        return round((self.num_papers_by_year[4] - self.num_papers_by_year[0])/(5.0 * self.num_papers_by_year[0]), 2)
+
+    @cached_property
     def growth_scaling_downloads(self):
         return self.num_papers_growth_from_2018_by_year
 
@@ -880,9 +931,10 @@ class Journal(object):
     @cached_property
     def num_papers_by_year(self):
         my_curve_fit = None
-        nonzero_paper_years = [year for year in self.years if self.raw_num_papers_historical_by_year[year]]
-        # make sure it includes at least 3 years and the most recent year
-        if len(nonzero_paper_years) >= 3 and self.papers_2018:
+        nonzero_paper_years = [year for year in self.years if self.raw_num_papers_historical_by_year[year] >= 0.25*self.raw_num_papers_historical_by_year[4]]
+        # make sure it includes at least 4 years and the most recent year
+        # if len(nonzero_paper_years) >= 4 and self.papers_2018:
+        if False:
             scipy_lock.acquire()
             my_curve_fit = self.curve_fit_for_num_papers
             scipy_lock.release()
@@ -890,23 +942,26 @@ class Journal(object):
             # print u"GREAT curve fit for {}, r_squared {}".format(self.issn_l, my_curve_fit.get("r_squared", "no r_squared"))
             self.use_default_num_papers_curve = False
             # only let it drop down below 25% of the most recent year
-            return [max(int(self.papers_2018 * 0.25), num) for num in my_curve_fit["y_extrap"]]
+            return [max(int(self.papers_2018 * 0.5), num) for num in my_curve_fit["y_extrap"]]
         else:
             # print u"bad curve fit for {}, r_squared {}".format(self.issn_l, my_curve_fit.get("r_squared", "no r_squared"))
             self.use_default_num_papers_curve = True
             return [self.papers_2018 for year in self.years]
 
+
     @cached_property
     def raw_num_papers_historical_by_year(self):
+        # if self.issn_l == "0031-9406":
+        #     print "num_papers", self._scenario_data["num_papers"][self.issn_l]
         if self.issn_l in self._scenario_data["num_papers"]:
             my_raw_numbers = self._scenario_data["num_papers"][self.issn_l]
             # historical goes up to 2019 but we don't have all the data for that yet
 
             # yeah this is ugly depends on whether cached or not yuck
             if isinstance(my_raw_numbers.keys()[0], int):
-                response = [my_raw_numbers.get(year-1, 0) for year in self.historical_years_by_year]
+                response = [my_raw_numbers.get(year, 0) for year in self.historical_years_by_year]
             else:
-                response = [my_raw_numbers.get(str(year-1), 0) for year in self.historical_years_by_year]
+                response = [my_raw_numbers.get(str(year), 0) for year in self.historical_years_by_year]
         else:
             response = [self.papers_2018 for year in self.years]
 
@@ -1137,6 +1192,14 @@ class Journal(object):
         is_society_journal = self._scenario_data["society"].get(self.issn_l, "YES")
         return is_society_journal == "YES"
 
+    @cached_property
+    def baseline_access(self):
+        from scenario import get_core_list_from_db
+        rows = get_core_list_from_db(self.package_id)
+        if not self.issn_l in rows:
+            return None
+        return rows[self.issn_l]["baseline_access"]
+
     def to_dict_report(self):
         response = {"issn_l": self.issn_l,
                     "title": self.title,
@@ -1225,7 +1288,8 @@ class Journal(object):
         table_row["use_subscription_percent"] = round(float(100)*self.use_actual["subscription"]/self.use_total)
         table_row["use_ill_percent"] = round(float(100)*self.use_actual["ill"]/self.use_total)
         table_row["use_other_delayed_percent"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
-        table_row["has_perpetual_access"] = self.has_perpetual_access
+        table_row["perpetual_access_years_text"] = self.display_perpetual_access_years
+        table_row["baseline_access_text"] = self.baseline_access
 
         # oa
         table_row["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
@@ -1287,7 +1351,7 @@ class Journal(object):
         table_row["use_subscription_percent"] = round(float(100)*self.use_actual["subscription"]/self.use_total)
         table_row["use_ill_percent"] = round(float(100)*self.use_actual["ill"]/self.use_total)
         table_row["use_other_delayed_percent"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
-        table_row["has_perpetual_access"] = self.has_perpetual_access
+        table_row["perpetual_access_years_text"] = self.display_perpetual_access_years
 
         # oa
         table_row["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
@@ -1383,8 +1447,9 @@ class Journal(object):
             }
         response["fulfillment"]["use_actual_by_year"] = self.use_actual_by_year
         response["fulfillment"]["downloads_per_paper_by_age"] = self.downloads_per_paper_by_age
-        response["fulfillment"]["perpetual_access_years"] = self.perpetual_access_years
+        response["fulfillment"]["perpetual_access_years_text"] = self.perpetual_access_years
         response["fulfillment"]["display_perpetual_access_years"] = self.display_perpetual_access_years
+        response["fulfillment"]["has_perpetual_access"] = self.has_perpetual_access
 
         oa_list = []
         for oa_type in ["green", "hybrid", "bronze"]:
@@ -1482,6 +1547,11 @@ class Journal(object):
         }
 
         response_debug = OrderedDict()
+        response_debug["num_papers_slope"] = self.num_papers_slope
+        response_debug["num_papers_by_year"] = self.num_papers_by_year
+        response_debug["oa_data"] = self.get_oa_data()
+        response_debug["num_hybrid_historical_by_year"] = self.num_hybrid_historical_by_year
+        response_debug["num_hybrid_by_year"] = self.num_hybrid_by_year
         response_debug["scenario_settings"] = self.settings.to_dict()
         response_debug["use_instant_percent"] = self.use_instant_percent
         response_debug["use_instant_percent_by_year"] = self.use_instant_percent_by_year
@@ -1635,7 +1705,7 @@ class Journal(object):
         table_row["downloads"] = round(self.downloads_total, 2)
         table_row["citations"] = round(self.num_citations, 2)
         table_row["authorships"] = round(self.num_authorships, 2)
-
+        table_row["perpetual_access_years_text"] = self.display_perpetual_access_years
         table_row["has_perpetual_access"] = self.has_perpetual_access
 
         response["table_row"] = table_row

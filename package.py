@@ -92,7 +92,7 @@ class Package(db.Model):
         q = """
             select 
             core.issn_l, 
-            title as title 
+            title as title
             from jump_core_journals core
             left outer join ricks_journal on core.issn_l = ricks_journal.issn_l
             where package_id='{package_id}' 
@@ -138,7 +138,6 @@ class Package(db.Model):
             """.format(package_id=self.package_id_for_db, and_where=and_where)
         rows = get_sql_dict_rows(q)
         return rows
-
 
     @cached_property
     def get_published_in_2019(self):

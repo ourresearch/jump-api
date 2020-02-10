@@ -81,9 +81,11 @@ class Scenario(object):
         self.log_timing("setup")
 
         self.data = get_common_package_data_from_cache(self.package_id)
-        # self.data = get_common_package_data(self.package_id)
         self.log_timing("get_common_package_data_from_cache")
         logger.debug("get_common_package_data_from_cache")
+        # self.data = get_common_package_data(self.package_id)
+        # self.log_timing("get_common_package_data_ NOT FROM from_cache")
+        # logger.debug("get_common_package_data_NOT FROM from_cache")
 
         self.set_clean_data()  #order for this one matters, after get common, before build journals
         self.log_timing("set_clean_data")
@@ -618,7 +620,8 @@ class Scenario(object):
                         {"text": "Percent of Usage from Subscription", "value": "use_subscription_percent", "percent": round(float(100)*self.use_subscription/self.use_total), "raw": self.use_subscription, "display": "percent"},
                         {"text": "Percent of Usage from ILL", "value": "use_ill_percent", "percent": round(float(100)*self.use_ill/self.use_total), "raw": self.use_ill, "display": "percent"},
                         {"text": "Percent of Usage from Other (delayed)", "value": "use_other_delayed_percent", "percent": round(float(100)*self.use_other_delayed/self.use_total), "raw": self.use_other_delayed, "display": "percent"},
-                        {"text": "Has perpetual access", "value": "has_perpetual_access", "percent": None, "raw": None, "display": "boolean"},
+                        {"text": "Perpetual access", "value": "perpetual_access_years_text", "percent": None, "raw": None, "display": "text"},
+                        {"text": "Baseline access", "value": "baseline_access_text", "percent": None, "raw": None, "display": "text"},
 
                         # oa
                         {"text": "Percent of Usage from Green OA", "value": "use_green_percent", "percent": round(float(100)*self.use_green/self.use_total), "raw": self.use_green, "display": "percent"},
@@ -934,7 +937,7 @@ def get_perpetual_access_data_from_db(input_package_id):
 
 @cache
 def get_core_list_from_db(input_package_id):
-    command = "select issn_l from jump_core_journals where package_id='{}'".format(input_package_id)
+    command = "select issn_l, baseline_access from jump_core_journals where package_id='{}'".format(input_package_id)
     with get_db_cursor() as cursor:
         cursor.execute(command)
         rows = cursor.fetchall()
