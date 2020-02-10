@@ -958,10 +958,17 @@ class Journal(object):
             # historical goes up to 2019 but we don't have all the data for that yet
 
             # yeah this is ugly depends on whether cached or not yuck
-            if isinstance(my_raw_numbers.keys()[0], int):
-                response = [my_raw_numbers.get(year, 0) for year in self.historical_years_by_year]
+            if False:
+                if isinstance(my_raw_numbers.keys()[0], int):
+                    response = [my_raw_numbers.get(year, 0) for year in self.historical_years_by_year]
+                else:
+                    response = [my_raw_numbers.get(str(year), 0) for year in self.historical_years_by_year]
             else:
-                response = [my_raw_numbers.get(str(year), 0) for year in self.historical_years_by_year]
+                if isinstance(my_raw_numbers.keys()[0], int):
+                    response = [my_raw_numbers.get(year-1, 0) for year in self.historical_years_by_year]
+                else:
+                    response = [my_raw_numbers.get(str(year-1), 0) for year in self.historical_years_by_year]
+
         else:
             response = [self.papers_2018 for year in self.years]
 
