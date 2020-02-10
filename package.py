@@ -71,6 +71,8 @@ class Package(db.Model):
         package_ids_with_prices = prices_rows.keys()
         if self.package_id in package_ids_with_prices or self.consortium_package_id in package_ids_with_prices:
             return True
+        if self.consortium_package_id in ["68f1af1d", "P2NFgz7B", "PN3juRC5"]:
+            return True
         return False
 
     @property
