@@ -933,11 +933,11 @@ class Journal(object):
         my_curve_fit = None
         nonzero_paper_years = [year for year in self.years if self.raw_num_papers_historical_by_year[year] >= 0.25*self.raw_num_papers_historical_by_year[4]]
         # make sure it includes at least 4 years and the most recent year
-        # if len(nonzero_paper_years) >= 4 and self.papers_2018:
         if False:
-            scipy_lock.acquire()
-            my_curve_fit = self.curve_fit_for_num_papers
-            scipy_lock.release()
+            if len(nonzero_paper_years) >= 4 and self.papers_2018:
+                scipy_lock.acquire()
+                my_curve_fit = self.curve_fit_for_num_papers
+                scipy_lock.release()
         if my_curve_fit and my_curve_fit["r_squared"] >= -0.1:
             # print u"GREAT curve fit for {}, r_squared {}".format(self.issn_l, my_curve_fit.get("r_squared", "no r_squared"))
             self.use_default_num_papers_curve = False
@@ -990,16 +990,17 @@ class Journal(object):
         return [round(100 * float(self.use_instant_by_year[year]) / self.use_total_by_year[year], 4) if self.use_total_by_year[year] else None for year in self.years]
 
 
-    @cached_property
-    def num_oa_papers_multiplier(self):
-        oa_adjustment_dict = self._scenario_data["oa_adjustment"].get(self.issn_l, None)
-        if not oa_adjustment_dict:
-            return 1.0
-        if not oa_adjustment_dict["unpaywall_measured_fraction_3_years_oa"]:
-            return 1.0
-        response = float(oa_adjustment_dict["mturk_max_oa_rate"]) / (oa_adjustment_dict["unpaywall_measured_fraction_3_years_oa"])
-        # print "num_oa_papers_multiplier", response, float(oa_adjustment_dict["mturk_max_oa_rate"]), (oa_adjustment_dict["unpaywall_measured_fraction_3_years_oa"])
-        return response
+    # @cached_property
+    # def num_oa_papers_multiplier(self):
+    #     oa_adjustment_dict = self._scenario_data["oa_adjustment"].get(self.issn_l, None)
+    #     if not oa_adjustment_dict:
+    #         return 1.0
+    #     if not oa_adjustment_dict["unpaywall_measured_fraction_3_years_oa"]:
+    #         return 1.0
+    #     response = float(oa_adjustment_dict["mturk_max_oa_rate"]) / (oa_adjustment_dict["unpaywall_measured_fraction_3_years_oa"])
+    #     # print "num_oa_papers_multiplier", response, float(oa_adjustment_dict["mturk_max_oa_rate"]), (oa_adjustment_dict["unpaywall_measured_fraction_3_years_oa"])
+    #     return response
+
 
     def get_oa_data(self, only_peer_reviewed=False):
         if only_peer_reviewed:
