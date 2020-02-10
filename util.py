@@ -74,8 +74,8 @@ class DelayedAdapter(HTTPAdapter):
         return response
 
 def read_csv_file(filename, sep=","):
-    with open(filename, "r") as csv_file:
-        my_reader = csv.DictReader(csv_file, delimiter=sep)
+    with open(filename, "rU") as csv_file:
+        my_reader = csv.DictReader(csv_file, delimiter=sep, encoding='utf-8-sig')
         rows = [row for row in my_reader]
     return rows
 

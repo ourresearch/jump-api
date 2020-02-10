@@ -159,43 +159,58 @@ def import_consortium_counter_xls(xls_filename):
 
 def import_perpetual_access_files():
     results = []
-    my_files = glob.glob("/Users/hpiwowar/*/2*.xlsx")
+    my_files = glob.glob("/Users/hpiwowar/Downloads/wvu_perpetual_access.csv")
     my_files.reverse()
     for my_file in my_files:
         print my_file
-        xlsx_file = open(my_file, "rb")
-        workbook = openpyxl.load_workbook(xlsx_file, read_only=True)
-        sheetnames = list(workbook.sheetnames)
+        if False:
+            xlsx_file = open(my_file, "rb")
+            workbook = openpyxl.load_workbook(xlsx_file, read_only=True)
+            sheetnames = list(workbook.sheetnames)
 
-        for sheetname in sheetnames:
-            sheet = workbook[sheetname]
+            for sheetname in sheetnames:
+                sheet = workbook[sheetname]
 
-            column_names = {}
-            for i, column in enumerate(list(sheet.iter_rows(min_row=1, max_row=1))[0]):
-                column_names[column.value] = i
+                column_names = {}
+                for i, column in enumerate(list(sheet.iter_rows(min_row=1, max_row=1))[0]):
+                    column_names[column.value] = i
 
-            for row_cells in sheet.iter_rows(min_row=1):
-                university = row_cells[column_names['Account Name']].value
-                issn = row_cells[column_names['ISSN (FS split)']].value
-                start_date = row_cells[column_names['Content Start Date']].value
-                end_date = row_cells[column_names['Content End Date']].value
-                if is_issn(issn):
-                    new_dict = {
-                        "university": university,
-                        "issn": issn,
-                        "start_date": start_date,
-                        "end_date": end_date
-                    }
-                    results.append(new_dict)
-                    # print new_dict
-                    print ".",
+                for row_cells in sheet.iter_rows(min_row=1):
+                    username = row_cells[column_names['Account Name']].value
+                    issn = row_cells[column_names['ISSN (FS split)']].value
+                    start_date = row_cells[column_names['Content Start Date']].value
+                    end_date = row_cells[column_names['Content End Date']].value
+                    if is_issn(issn):
+                        new_dict = {
+                            "username": username,
+                            "issn": issn,
+                            "start_date": start_date,
+                            "end_date": end_date
+                        }
+                        results.append(new_dict)
+                        # print new_dict
+                        print ".",
+        else:
+            rows = read_csv_file(my_file)
+            for row in rows:
+                print row
+                new_dict = {
+                    "username": "wvu",
+                    "issn": row["issn"],
+                    "start_date": row["start_date"],
+                    "end_date": row["end_date"]
+                }
+                results.append(new_dict)
+                # print new_dict
+                print ".",
 
     with open("/Users/hpiwowar/Downloads/perpetual_access_cleaned.csv", "w") as csv_file:
         csv_writer = csv.writer(csv_file, encoding='utf-8')
-        header = ["university", "issn", "start_date", "end_date"]
+        header = ["username", "issn", "start_date", "end_date"]
         csv_writer.writerow(header)
         for my_dict in results:
             csv_writer.writerow([my_dict[k] for k in header])
+    print "/Users/hpiwowar/Downloads/perpetual_access_cleaned.csv"
 
 
 def create_accounts(filename):
@@ -265,10 +280,10 @@ if __name__ == "__main__":
 
 
     # check_passwords()
-    # import_perpetual_access_files()
+    import_perpetual_access_files()
 
-    create_accounts(parsed_vars["filename"])
-    build_counter_import_file(parsed_vars["filename"])
+    # create_accounts(parsed_vars["filename"])
+    # build_counter_import_file(parsed_vars["filename"])
 
 
     # then import it into jump_counter_input
