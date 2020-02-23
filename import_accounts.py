@@ -53,6 +53,43 @@ def convert_date_spaces_to_dashes(filename):
                 targetFile.write(contents)
     return new_filename
 
+def build_counter_import_file_for_one(counter_file):
+    report = None
+
+    print counter_file
+    try:
+        raise UnknownReportTypeError
+        report = reporter.parse(counter_file)
+        # print report
+        reports[row["username"]] = report
+
+    # except ValueError:
+    #     convert_date_spaces_to_dashes(counter_file)
+    #     return import_counter(filename)
+    #
+    # except UnicodeDecodeError:
+    #     convert_from_utf16_to_utf8(counter_file)
+    #     return import_counter(filename)
+
+    except UnknownReportTypeError:
+
+        my_account = Account.query.filter(Account.username == row["username"]).first()
+        package_id = my_account.packages[0].package_id
+
+        # counter_file = convert_from_utf16_to_utf8(counter_file)
+        counter_rows = read_csv_file(counter_file)
+        for counter_row in counter_rows:
+            export_dict = {}
+            export_dict["organization"] = row["username"]
+            export_dict["package_id"] = package_id
+            export_dict["publisher"] = publisher
+            export_dict["issn"] = counter_row["ISSN"]
+            export_dict["total"] = counter_row["Total"]
+            lines.append(export_dict)
+    return report
+
+
+
 def build_counter_import_file(filename):
 
     rows = read_csv_file(filename)
@@ -62,42 +99,12 @@ def build_counter_import_file(filename):
     for row in rows:
         if row["add_now"] == "1":
             print "row:", row["username"], row["display_name"], row["grid_id"], row["add_now"]
-            my_files = glob.glob("/Users/hpiwowar/Downloads/{}_counter.csv".format(row["username"]))
+            my_files = glob.glob("/Users/hpiwowar/Downloads/{}_counter.csv".format(row["username"].replace(" ", "_")))
 
             for counter_file in my_files:
-                report = None
-
-                print counter_file
-                try:
-                    raise UnknownReportTypeError
-                    report = reporter.parse(counter_file)
-                    # print report
+                report = build_counter_import_file_for_one(counter_file)
+                if report:
                     reports[row["username"]] = report
-
-                # except ValueError:
-                #     convert_date_spaces_to_dashes(counter_file)
-                #     return import_counter(filename)
-                #
-                # except UnicodeDecodeError:
-                #     convert_from_utf16_to_utf8(counter_file)
-                #     return import_counter(filename)
-
-                except UnknownReportTypeError:
-
-                    my_account = Account.query.filter(Account.username == row["username"]).first()
-                    package_id = my_account.packages[0].package_id
-
-                    # counter_file = convert_from_utf16_to_utf8(counter_file)
-                    counter_rows = read_csv_file(counter_file)
-                    for counter_row in counter_rows:
-                        export_dict = {}
-                        export_dict["organization"] = row["username"]
-                        export_dict["package_id"] = package_id
-                        export_dict["publisher"] = publisher
-                        export_dict["issn"] = counter_row["ISSN"]
-                        export_dict["total"] = counter_row["Total"]
-                        lines.append(export_dict)
-
 
     print reports
     for username, report in reports.iteritems():
@@ -118,6 +125,8 @@ def build_counter_import_file(filename):
             csv_writer.writerow([line[k] for k in keys])
 
     print "/Users/hpiwowar/Downloads/counter_import.csv"
+
+
 
 
 def import_consortium_counter_xls(xls_filename):
@@ -280,10 +289,10 @@ if __name__ == "__main__":
 
 
     # check_passwords()
-    import_perpetual_access_files()
+    # import_perpetual_access_files()
 
-    # create_accounts(parsed_vars["filename"])
-    # build_counter_import_file(parsed_vars["filename"])
+    create_accounts(parsed_vars["filename"])
+    build_counter_import_file(parsed_vars["filename"])
 
 
     # then import it into jump_counter_input

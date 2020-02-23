@@ -421,7 +421,7 @@ class ConsortiumJournal(Journal):
         # response_debug["old_school_cpu_rank"] = self.old_school_cpu_rank
         # response_debug["downloads_oa_by_age"] = self.downloads_oa_by_age
         # response_debug["num_oa_historical_by_year"] = self.num_oa_historical_by_year
-        # response_debug["num_oa_by_year"] = self.num_oa_by_year
+        # response_debug["num_oa_historical_by_year"] = self.num_oa_historical_by_year
         # response_debug["num_bronze_by_year"] = self.num_bronze_by_year
         # response_debug["num_hybrid_by_year"] = self.num_hybrid_by_year
         # response_debug["num_green_by_year"] = self.num_green_by_year

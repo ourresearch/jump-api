@@ -5,11 +5,15 @@ import simplejson as json
 import datetime
 import shortuuid
 from flask_jwt_extended import jwt_required, jwt_optional, create_access_token, get_jwt_identity
+from collections import OrderedDict
+from time import time
+from sqlalchemy import orm
 
 from app import db
 from app import get_db_cursor
 from scenario import Scenario
 from app import DEMO_PACKAGE_ID
+from util import elapsed
 
 def save_raw_scenario_to_db(scenario_id, raw_scenario_definition, ip):
     scenario_json = json.dumps(raw_scenario_definition)
@@ -73,6 +77,15 @@ class SavedScenario(db.Model):
         self.scenario_input = scenario_input
         self.live_scenario = None
 
+    @orm.reconstructor
+    def on_load(self):
+        self.timing_messages = [];
+        self.section_time = time()
+
+    def log_timing(self, message):
+        self.timing_messages.append("{: <30} {: >6}s".format(message, elapsed(self.section_time, 2)))
+        self.section_time = time()
+
     def save_live_scenario_to_db(self, ip):
         if self.is_demo_account:
             tablename = "jump_scenario_details_demo"
@@ -135,12 +148,43 @@ class SavedScenario(db.Model):
         }
         return response
 
+    def to_dict_saved(self):
+        self.set_live_scenario()  # in case not done
+
+        response = {
+            "subrs": [j.issn_l for j in self.live_scenario.subscribed],
+            "customSubrs": [],
+            "configs": self.live_scenario.settings.to_dict(),
+        }
+        return response
+
     def to_dict_minimal(self):
         response = {
             "id": self.scenario_id,
             "name": self.scenario_name,
             "pkgId": self.package_id,
         }
+        return response
+
+    def meta(self):
+        response = OrderedDict()
+        response["scenario_id"] = self.scenario_id
+        response["scenario_name"] = self.scenario_name
+        response["package_id"] = self.package_id
+        response["package_name"] = self.package_real.package_name
+        response["account_id"] = self.package_real.account_id
+        response["account_name"] = self.package_real.account.display_name
+        response["account_username"] = self.package_real.account.username
+        return response
+
+    def to_dict_journals(self):
+        response = OrderedDict()
+        response["meta"] = self.meta()
+        response["saved"] = self.to_dict_saved()
+        response["journals"] = [j.to_dict_journals() for j in self.live_scenario.journals_sorted_ncppu]
+        response["_debug"] = {"summary": self.live_scenario.to_dict_summary_dict()}
+        self.log_timing("to dict")
+        response["_timing"] = self.timing_messages
         return response
 
     def __repr__(self):

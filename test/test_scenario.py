@@ -60,11 +60,42 @@ class MyTest(unittest.TestCase):
         assert_true(num_with_default_download_curves < 200) # 189
         assert_true(num_with_non_default_download_curves > 1600) # 1666
 
-        if False:
+        from app import USE_PAPER_GROWTH
+        if USE_PAPER_GROWTH:
             num_with_default_num_papers_curves = len([1 for j in my_journal_objects if j.use_default_num_papers_curve])
             num_with_non_default_num_papers_curves = len([1 for j in my_journal_objects if not j.use_default_num_papers_curve])
             assert_true(num_with_default_num_papers_curves < 200)  #169
             assert_true(num_with_non_default_num_papers_curves > 1600)
+
+            # num_with_all_free_access = len([1 for j in my_journal_objects if j.use_instant_percent > .99])
+            # assert_true(num_with_all_free_access < 1)
+
+    def test_embargo(self):
+        from app import USE_PAPER_GROWTH
+        if USE_PAPER_GROWTH:
+            my_journal_objects = self.live_scenario.journals
+            for my_journal in my_journal_objects:
+                if my_journal.oa_embargo_months:
+                    for year in range(0, 5):
+                        if year*12 > my_journal.oa_embargo_months:
+                            for group in ["backfile", "social_networks", "ill", "other_delayed"]:
+                                if my_journal.use_actual_by_year[group][year] != 0:
+                                    print "here, is not zero", group, year, my_journal.issn_l, my_journal.use_actual_by_year[group][year]
+                                assert_true(my_journal.use_actual_by_year[group][year] == 0)
+                            assert_true(my_journal.use_actual_by_year["oa"][year] == my_journal.use_actual_by_year["total"][year])
+
+
+    def test_non_embargo(self):
+        from app import USE_PAPER_GROWTH
+        if USE_PAPER_GROWTH:
+            my_journal_objects = self.live_scenario.journals
+            for my_journal in my_journal_objects:
+                if not my_journal.oa_embargo_months:
+                    for year in range(0, 5):
+                        if my_journal.use_actual_by_year["backfile"][year] == 0:
+                            print "here, is zero", year, my_journal.issn_l, my_journal.use_actual_by_year["backfile"][year]
+                        assert_true(my_journal.use_actual_by_year["backfile"][year] != 0)
+
 
     def test_nonzero(self):
         number_that_have_zeros = 0
