@@ -245,10 +245,9 @@ class Journal(object):
 
     @cached_property
     def downloads_social_network_multiplier(self):
-        if self.settings.include_social_networks:
-            return self._scenario_data["social_networks"].get(self.issn_l, 0)
-        else:
+        if not self.settings.include_social_networks:
             return 0.0
+        return self._scenario_data["social_networks"].get(self.issn_l, 0)
 
     @cached_property
     def downloads_social_networks_by_year(self):
@@ -435,6 +434,15 @@ class Journal(object):
                 value *= (1 - self.downloads_social_network_multiplier)
                 value = max(0, value)
                 response[obs_key][pub_key] = int(value)
+
+            from app import USE_PAPER_GROWTH
+            if USE_PAPER_GROWTH:
+                if self.downloads_total_by_year[2020 - obs_year]:
+                    sum_for_this_obs_year = np.sum(response[obs_key].values())
+                    if (sum_for_this_obs_year + self.downloads_oa_by_year[2020 - obs_year])/self.downloads_total_by_year[2020 - obs_year] >= 0.9:
+                        for pub_key in response[obs_key].keys():
+                            response[obs_key][pub_key] = 0
+
         return response
 
     def obs_pub_matrix(self, by_age, by_age_old, growth_scaling):
@@ -492,7 +500,7 @@ class Journal(object):
         return round(response, 4)
 
     @cached_property
-    def num_oa_historical_by_year(self):
+    def raw_num_oa_historical_by_year(self):
         return [self.num_green_historical_by_year[year]+self.num_bronze_historical_by_year[year]+self.num_hybrid_historical_by_year[year] for year in self.years]
 
     @cached_property
@@ -650,27 +658,53 @@ class Journal(object):
         return per_paper
 
 
+    @cached_property
+    def proportion_oa_historical_by_year(self):
+        response = []
+        for year in self.years:
+            if self.raw_num_papers_historical_by_year[year]:
+                response.append(float(self.raw_num_oa_historical_by_year[year] or 0) / self.raw_num_papers_historical_by_year[year])
+            else:
+                response.append(None)
+
+        if self.issn_l == "0031-9406":
+            print "self.raw_num_oa_historical_by_year", self.raw_num_oa_historical_by_year
+            print self.raw_num_papers_historical_by_year
+            print "response", response
+            print
+        return response
+
 
     @cached_property
-    def num_oa_by_year(self):
-        num_reversed = self.num_oa_historical_by_year[::-1]
-        num_scaled_by_num_papers = [num_reversed[year]*self.num_papers_growth_from_2018_by_year[year] for year in self.years]
-        # if self.issn_l == "0031-9406":
-        #     print "self.num_papers_growth_from_2018_by_year", self.num_papers_growth_from_2018_by_year
-        #     print num_reversed
-        #     print num_scaled_by_num_papers
-        #     print
-        return [min(self.num_papers_by_year[year], num_scaled_by_num_papers[year]) for year in self.years]
+    def num_oa_historical_by_year(self):
+        oa_proportion_reversed = self.proportion_oa_historical_by_year[::-1]
+
+        num_scaled_by_num_papers = []
+        for year in self.years:
+            if oa_proportion_reversed[year] and oa_proportion_reversed[year]:
+                num_scaled_by_num_papers.append(oa_proportion_reversed[year]*self.num_papers_by_year[year])
+            else:
+                num_scaled_by_num_papers.append(0)
+
+        if self.issn_l == "0031-9406":
+            print "self.num_papers_growth_from_2018_by_year", self.num_papers_growth_from_2018_by_year
+            print oa_proportion_reversed, "oa_proportion_reversed"
+            print num_scaled_by_num_papers, "num_scaled_by_num_papers"
+            print self.num_papers_by_year, "num_papers_by_year"
+            print
+
+        return [int(min(self.num_papers_by_year[year], num_scaled_by_num_papers[year])) for year in self.years]
 
 
     @cached_property
     def downloads_oa_by_age(self):
-        # if self.issn_l == "0031-9406":
-        #     print "self.num_oa_by_year", self.num_oa_by_year
-        #     print "downloads_per_paper_by_age", self.downloads_per_paper_by_age
-        #     print "downloads_by_age", self.downloads_by_age
-        #     print "downloads_by_age_before_counter_correction", self.downloads_by_age_before_counter_correction
-        response = [(float(self.downloads_per_paper_by_age[age])*self.num_oa_by_year[age]) for age in self.years]
+        response = [(float(self.downloads_per_paper_by_age[age])*self.num_oa_historical_by_year[age]) for age in self.years]
+        if self.issn_l == "0031-9406":
+            print "self.num_oa_historical_by_year", self.num_oa_historical_by_year
+            print "downloads_per_paper_by_age", self.downloads_per_paper_by_age
+            print "downloads_by_age", self.downloads_by_age
+            print "downloads_by_age_before_counter_correction", self.downloads_by_age_before_counter_correction
+            print "downloads_oa_by_age", response
         return response
 
     @cached_property
@@ -874,8 +908,13 @@ class Journal(object):
     def curve_fit_for_num_papers(self):
         x_list = []
         y_list = []
+        threshold = 0.25
+        from app import USE_PAPER_GROWTH
+        if USE_PAPER_GROWTH:
+            threshold = 0.1
+
         for year in self.years:
-            if self.raw_num_papers_historical_by_year[year] >= 0.25 * self.raw_num_papers_historical_by_year[4]:
+            if self.raw_num_papers_historical_by_year[year] >= threshold * self.raw_num_papers_historical_by_year[4]:
                 x_list.append(year)
                 y_list.append(self.raw_num_papers_historical_by_year[year])
         x = np.array(x_list)
@@ -901,6 +940,7 @@ class Journal(object):
         y_extrap = [func(a, pars[0], pars[1]) for a in range(5, 10)]
 
         response = {"y_fit": y_fit,
+                "x": x_list,
                 "r_squared": r_squared,
                 "params": list(pars),
                 "y_extrap": y_extrap,
@@ -909,10 +949,10 @@ class Journal(object):
         return response
 
     @cached_property
-    def num_papers_slope(self):
+    def num_papers_slope_percent(self):
         if not self.num_papers_by_year[0]:
             return None
-        return round((self.num_papers_by_year[4] - self.num_papers_by_year[0])/(5.0 * self.num_papers_by_year[0]), 2)
+        return int(float(100)*(self.num_papers_by_year[4] - self.num_papers_by_year[0])/(5.0 * self.num_papers_by_year[0]))
 
     @cached_property
     def growth_scaling_downloads(self):
@@ -931,9 +971,10 @@ class Journal(object):
     @cached_property
     def num_papers_by_year(self):
         my_curve_fit = None
-        nonzero_paper_years = [year for year in self.years if self.raw_num_papers_historical_by_year[year] >= 0.25*self.raw_num_papers_historical_by_year[4]]
+        nonzero_paper_years = [year for year in self.years if self.raw_num_papers_historical_by_year[year] >= 0.1*self.raw_num_papers_historical_by_year[4]]
         # make sure it includes at least 4 years and the most recent year
-        if False:
+        from app import USE_PAPER_GROWTH
+        if USE_PAPER_GROWTH:
             if len(nonzero_paper_years) >= 4 and self.papers_2018:
                 scipy_lock.acquire()
                 my_curve_fit = self.curve_fit_for_num_papers
@@ -958,7 +999,8 @@ class Journal(object):
             # historical goes up to 2019 but we don't have all the data for that yet
 
             # yeah this is ugly depends on whether cached or not yuck
-            if False:
+            from app import USE_PAPER_GROWTH
+            if USE_PAPER_GROWTH:
                 if isinstance(my_raw_numbers.keys()[0], int):
                     response = [my_raw_numbers.get(year, 0) for year in self.historical_years_by_year]
                 else:
@@ -1298,6 +1340,7 @@ class Journal(object):
         table_row["use_other_delayed_percent"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
         table_row["perpetual_access_years_text"] = self.display_perpetual_access_years
         table_row["baseline_access_text"] = self.baseline_access
+        table_row["num_papers_slope_percent"] = self.num_papers_slope_percent
 
         # oa
         table_row["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
@@ -1455,8 +1498,8 @@ class Journal(object):
             }
         response["fulfillment"]["use_actual_by_year"] = self.use_actual_by_year
         response["fulfillment"]["downloads_per_paper_by_age"] = self.downloads_per_paper_by_age
-        response["fulfillment"]["perpetual_access_years_text"] = self.perpetual_access_years
-        response["fulfillment"]["display_perpetual_access_years"] = self.display_perpetual_access_years
+        response["fulfillment"]["perpetual_access_years_text"] = self.display_perpetual_access_years
+        response["fulfillment"]["perpetual_access_years"] = self.perpetual_access_years
         response["fulfillment"]["has_perpetual_access"] = self.has_perpetual_access
 
         oa_list = []
@@ -1545,6 +1588,41 @@ class Journal(object):
             "data": cost_list
             }
 
+        num_papers_list = []
+        num_papers_dict = OrderedDict()
+        for year in self.years:
+            num_papers_dict["year_" + str(2015 + year)] = int(self.raw_num_papers_historical_by_year[year])
+        num_papers_list += [num_papers_dict]
+        response["num_papers"] = {
+            "headers": [
+                {"text": "2015", "value": "year_2015"},
+                {"text": "2016", "value": "year_2016"},
+                {"text": "2017", "value": "year_2017"},
+                {"text": "2018", "value": "year_2018"},
+                {"text": "2019", "value": "year_2019"},
+                {"text": "2020", "value": "year_2020"},
+                {"text": "2021", "value": "year_2021"},
+                {"text": "2022", "value": "year_2022"},
+                {"text": "2023", "value": "year_2023"},
+                {"text": "2024", "value": "year_2024"}
+            ],
+            "data": num_papers_list
+            }
+
+        num_papers_list = []
+        num_papers_dict = OrderedDict()
+        if not self.use_default_num_papers_curve:
+            if self.curve_fit_for_num_papers and "x" in self.curve_fit_for_num_papers:
+                for i, year in enumerate(self.curve_fit_for_num_papers["x"]):
+                    # print self.curve_fit_for_num_papers["x"]
+                    # print self.curve_fit_for_num_papers["y_fit"]
+                    num_papers_dict["year_" + str(2015 + year)] = int(self.curve_fit_for_num_papers["y_fit"][i])
+        for year in self.years:
+            num_papers_dict["year_" + str(2020 + year)] = int(self.num_papers_by_year[year])
+        num_papers_list += [num_papers_dict]
+        response["num_papers_forecast"] = {"headers": response["num_papers"]["headers"], "data": num_papers_list}
+
+
         from apc_journal import ApcJournal
         my_apc_journal = ApcJournal(self.issn_l, self._scenario_data)
         response["apc"] = {
@@ -1555,7 +1633,7 @@ class Journal(object):
         }
 
         response_debug = OrderedDict()
-        response_debug["num_papers_slope"] = self.num_papers_slope
+        response_debug["num_papers_slope_percent"] = self.num_papers_slope_percent
         response_debug["num_papers_by_year"] = self.num_papers_by_year
         response_debug["oa_data"] = self.get_oa_data()
         response_debug["num_hybrid_historical_by_year"] = self.num_hybrid_historical_by_year
@@ -1603,7 +1681,7 @@ class Journal(object):
         response_debug["old_school_cpu_rank"] = self.old_school_cpu_rank
         response_debug["downloads_oa_by_age"] = self.downloads_oa_by_age
         response_debug["num_oa_historical_by_year"] = self.num_oa_historical_by_year
-        response_debug["num_oa_by_year"] = self.num_oa_by_year
+        response_debug["raw_num_oa_historical_by_year"] = self.raw_num_oa_historical_by_year
         response_debug["num_bronze_by_year"] = self.num_bronze_by_year
         response_debug["num_hybrid_by_year"] = self.num_hybrid_by_year
         response_debug["num_green_by_year"] = self.num_green_by_year

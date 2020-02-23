@@ -4,6 +4,7 @@ from cached_property import cached_property
 import numpy as np
 import pandas as pd
 from collections import defaultdict
+from collections import OrderedDict
 import weakref
 from kids.cache import cache
 import pickle
@@ -41,7 +42,7 @@ def get_fresh_journal_list(scenario, my_jwt):
     issn_ls = scenario.data["unpaywall_downloads_dict"].keys()
     issnls_to_build = [issn_l for issn_l in issn_ls if issn_l not in journals_to_exclude]
     if scenario.is_consortium:
-        print "here in is_consortium"
+        # print "here in is_consortium"
         my_consortium = Consortium(scenario.package_id, my_jwt)
         journals = my_consortium.journals
     else:
@@ -80,7 +81,8 @@ class Scenario(object):
 
         self.log_timing("setup")
 
-        if False:
+        from app import USE_PAPER_GROWTH
+        if USE_PAPER_GROWTH:
             self.data = get_common_package_data(self.package_id)
             self.log_timing("get_common_package_data_ NOT FROM from_cache")
             logger.debug("get_common_package_data_NOT FROM from_cache")
@@ -625,6 +627,7 @@ class Scenario(object):
                         {"text": "Percent of Usage from Other (delayed)", "value": "use_other_delayed_percent", "percent": round(float(100)*self.use_other_delayed/self.use_total), "raw": self.use_other_delayed, "display": "percent"},
                         {"text": "Perpetual access", "value": "perpetual_access_years_text", "percent": None, "raw": None, "display": "text"},
                         {"text": "Baseline access", "value": "baseline_access_text", "percent": None, "raw": None, "display": "text"},
+                        {"text": "Journal growth", "value": "num_papers_slope_percent", "percent": None, "raw": None, "display": "percent"},
 
                         # oa
                         {"text": "Percent of Usage from Green OA", "value": "use_green_percent", "percent": round(float(100)*self.use_green/self.use_total), "raw": self.use_green, "display": "percent"},
@@ -639,16 +642,6 @@ class Scenario(object):
 
                 ],
                 "journals": [j.to_dict_table() for j in self.journals_sorted_ncppu],
-            }
-        self.log_timing("to dict")
-        response["_timing"] = self.timing_messages
-        return response
-
-
-    def to_dict_journals(self):
-        response = {
-                "_debug": {"summary": self.to_dict_summary_dict(), "_settings": self.settings.to_dict()},
-                "journals": [j.to_dict_journals() for j in self.journals_sorted_ncppu],
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages

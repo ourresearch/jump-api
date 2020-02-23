@@ -11,6 +11,7 @@ import shortuuid
 from app import db
 from app import get_db_cursor
 from app import DEMO_PACKAGE_ID
+from app import my_memcached
 from saved_scenario import SavedScenario
 from scenario import get_prices_from_db
 from scenario import get_core_list_from_db
@@ -22,7 +23,6 @@ from util import get_sql_dict_rows
 def get_ids():
     rows = get_sql_dict_rows("""select * from jump_account_package_scenario_view order by username""")
     return rows
-
 
 class Package(db.Model):
     __tablename__ = 'jump_account_package'
@@ -277,10 +277,13 @@ class Package(db.Model):
         return package_id
 
 
-
-
     def get_package_counter_breakdown(self):
         package_id = self.package_id_for_db
+
+        memcached_key = "package.get_package_counter_breakdown.package_id_for_db.{}".format(self.package_id_for_db)
+        my_memcached_results = my_memcached.get(memcached_key)
+        if my_memcached_results:
+            return my_memcached_results
 
         response = OrderedDict()
         response["counts"] = OrderedDict()
@@ -321,6 +324,7 @@ class Package(db.Model):
 
         # response["papers"]["good_to_use"] =  self.get_in_scenario
 
+        my_memcached.set(memcached_key, response)
         return response
 
 

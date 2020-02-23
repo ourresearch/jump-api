@@ -27,6 +27,7 @@ from sqlalchemy import exc
 from sqlalchemy import event
 from sqlalchemy.pool import NullPool
 from sqlalchemy.pool import Pool
+import bmemcached
 
 from util import safe_commit
 from util import elapsed
@@ -34,6 +35,7 @@ from util import HTTPMethodOverrideMiddleware
 
 HEROKU_APP_NAME = "jump-api"
 DEMO_PACKAGE_ID = "658349d9"
+USE_PAPER_GROWTH = False
 
 # set up logging
 # see http://wiki.pylonshq.com/display/pylonscookbook/Alternative+logging+configuration
@@ -173,6 +175,13 @@ def get_db_cursor(commit=False):
           cursor.close()
           pass
 
+
+memcached_servers = os.environ.get('MEMCACHIER_SERVERS', '').split(',')
+memcached_user = os.environ.get('MEMCACHIER_USERNAME', '')
+memcached_password = os.environ.get('MEMCACHIER_PASSWORD', '')
+my_memcached = bmemcached.Client(memcached_servers, username=memcached_user, password=memcached_password)
+my_memcached.enable_retry_delay(True)  # Enabled by default. Sets retry delay to 5s.
+my_memcached.flush_all()
 
 use_groups_lookup = OrderedDict()
 use_groups_lookup["oa"] = {"display": "OA", "free_instant": True}

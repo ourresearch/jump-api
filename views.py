@@ -12,6 +12,7 @@ from flask import send_file
 from flask_jwt_extended import jwt_required, jwt_optional, create_access_token, get_jwt_identity
 from werkzeug.security import safe_str_cmp
 from werkzeug.security import generate_password_hash, check_password_hash
+
 import simplejson as json
 import os
 import sys
@@ -23,11 +24,15 @@ import datetime
 from threading import Thread
 import requests
 import dateparser
+import functools
+import hashlib
+import pickle
 
 from app import app
 from app import logger
 from app import jwt
 from app import db
+from app import my_memcached
 from scenario import Scenario
 from account import Account
 from package import Package
@@ -52,11 +57,60 @@ from fast_mock_slider import fast_mock_slider
 
 from app import DEMO_PACKAGE_ID
 
-# warm the cache
-# print "warming the cache"
-# start_time = time()
-# Scenario(get_clean_package_id(None))
-# print "done, took {} seconds".format(elapsed(start_time, 2))
+def build_cache_key(module_name, function_name, extra_key, *args, **kwargs):
+    # Hash function args
+    items = kwargs.items()
+    items.sort()
+    jwt = get_jwt()
+    if not jwt and is_authorized_superuser():
+        jwt = "superuser"
+    hashable_args = (args, tuple(items), jwt)
+    args_key = hashlib.md5(pickle.dumps(hashable_args)).hexdigest()
+
+    # Generate unique cache key
+    cache_key = '{0}-{1}-{2}-{3}'.format(
+        module_name,
+        function_name,
+        args_key,
+        extra_key() if hasattr(extra_key, '__call__') else extra_key
+    )
+    return cache_key
+
+def cached(extra_key=None):
+    def _cached(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+
+            cache_key = build_cache_key(func.__module__, func.__name__, extra_key, args, kwargs)
+
+            # Return cached version if allowed and available
+            result = my_memcached.get(cache_key)
+            if result is not None:
+                return result
+
+            # Generate output
+            result = func(*args, **kwargs)
+
+            # Cache output if allowed
+            if result is not None:
+                my_memcached.set(cache_key, result)
+
+                # from https://stackoverflow.com/a/27468294/596939
+                # Retry loop, probably it should be limited to some reasonable retries
+                while True:
+                  list_of_this_key = my_memcached.gets(cache_key)
+                  if list_of_this_key == None:
+                      list_of_this_key = []
+                  if my_memcached.cas(cache_key, list_of_this_key + ["D"]):
+                    break
+
+            return result
+
+        return wrapper
+
+    return _cached
+
+
 
 @app.after_request
 def after_request_stuff(resp):
@@ -87,8 +141,11 @@ def base_endpoint():
 # def favicon():
 #     return redirect(url_for("static", filename="img/favicon.ico", _external=True, _scheme='https'))
 
+# hi heather
+
 @app.route('/scenario/<scenario_id>/journal/<issn_l>', methods=['GET'])
-@jwt_required
+@jwt_optional
+# @my_memcached.cached(timeout=7*24*60*60)
 def jump_scenario_issn_get(scenario_id, issn_l):
     my_saved_scenario = get_saved_scenario(scenario_id)
     scenario = my_saved_scenario.live_scenario
@@ -201,6 +258,9 @@ def get_saved_scenario(scenario_id, test_mode=False):
     if not my_saved_scenario:
         abort_json(404, "Scenario not found")
 
+    if not test_mode:
+        print "test_mode", test_mode
+        print "is_authorized_superuser()", is_authorized_superuser()
     if not test_mode and not is_authorized_superuser():
         identity_dict = get_jwt_identity()
         if not identity_dict:
@@ -282,7 +342,7 @@ def live_account_get():
 def get_jwt():
     if request.args and request.args.get("jwt", None):
         return request.args.get("jwt")
-    if request.headers["Authorization"] and "Bearer " in request.headers["Authorization"]:
+    if "Authorization" in request.headers and request.headers["Authorization"] and "Bearer " in request.headers["Authorization"]:
         return request.headers["Authorization"].replace("Bearer ", "")
     return None
 
@@ -490,6 +550,7 @@ def subscriptions_scenario_id_post(scenario_id):
 # @app.route('/live/scenario/<scenario_id>', methods=['GET'])
 @app.route('/scenario/<scenario_id>', methods=['GET'])
 @jwt_optional
+# @my_memcached.cached(timeout=7*24*60*60)
 def live_scenario_id_get(scenario_id):
 
     if request.args.get("fast-mock-scenario", False):
@@ -513,6 +574,7 @@ def live_scenario_id_get(scenario_id):
 
 @app.route('/scenario/<scenario_id>/summary', methods=['GET'])
 @jwt_optional
+# @my_memcached.cached(timeout=7*24*60*60)
 def scenario_id_summary_get(scenario_id):
     my_timing = TimingMessages()
     my_saved_scenario = get_saved_scenario(scenario_id)
@@ -522,9 +584,10 @@ def scenario_id_summary_get(scenario_id):
 
 @app.route('/scenario/<scenario_id>/journals', methods=['GET'])
 @jwt_optional
+# @cached()
 def scenario_id_journals_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
-    response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_journals())
+    response = jsonify_fast_no_sort(my_saved_scenario.to_dict_journals())
     cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
     response.headers["Cache-Tag"] = u",".join(cache_tags_list)
     return response
@@ -533,6 +596,7 @@ def scenario_id_journals_get(scenario_id):
 
 @app.route('/scenario/<scenario_id>/raw', methods=['GET'])
 @jwt_optional
+# @my_memcached.cached(timeout=7*24*60*60)
 def scenario_id_raw_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_raw())
@@ -542,6 +606,7 @@ def check_authorized():
 
 @app.route('/scenario/<scenario_id>/details', methods=['GET'])
 @jwt_optional
+# @my_memcached.cached(timeout=7*24*60*60)
 def scenario_id_details_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_details())
@@ -555,6 +620,7 @@ def scenario_id_details_get(scenario_id):
 # @app.route('/live/scenario/<scenario_id>/table', methods=['GET'])
 @app.route('/scenario/<scenario_id>/table', methods=['GET'])
 @jwt_optional
+# @my_memcached.cached(timeout=7*24*60*60)
 def live_scenario_id_table_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
     response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table())
@@ -572,6 +638,7 @@ def live_scenario_id_table_get(scenario_id):
 # @app.route('/live/scenario/<scenario_id>/slider', methods=['GET'])
 @app.route('/scenario/<scenario_id>/slider', methods=['GET'])
 @jwt_optional
+# @my_memcached.cached(timeout=7*24*60*60)
 def live_scenario_id_slider_get(scenario_id):
 
     if request.args.get("fast-mock-slider", False):
@@ -716,7 +783,6 @@ def jump_debug_issn_get(issn_l):
 
 @app.route('/debug/scenario/journals', methods=['GET'])
 def jump_debug_journals_get():
-    print("hi heather")
     scenario_id = "demo-debug"
     my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_journals())
