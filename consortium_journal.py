@@ -237,6 +237,11 @@ class ConsortiumJournal(Journal):
             return self.scenario.ncppu_rank_lookup[self.issn_l]
         return None
 
+    @cached_property
+    def num_papers_slope_percent(self):
+        # need to figure out how to do this well here @todo
+        return None
+
 
     def to_dict_details(self):
         response = OrderedDict()
