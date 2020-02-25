@@ -114,11 +114,16 @@ class Scenario(object):
         self.data["prices"] = {}
 
         prices_to_consider = [DEMO_PACKAGE_ID]
-        if get_parent_consortium_package_id(self.package_id) in ["68f1af1d", "P2NFgz7B", "PN3juRC5"]:
+        from app import suny_consortium_package_ids
+
+        print "package_id", self.package_id, get_parent_consortium_package_id(self.package_id)
+        if get_parent_consortium_package_id(self.package_id) in suny_consortium_package_ids or self.package_id in suny_consortium_package_ids:
             prices_to_consider += ["68f1af1d", "93YfzkaA"]
 
         # print self.data["prices_raw"]
+        print "prices_to_consider", prices_to_consider
         for package_id_for_prices in prices_to_consider:
+            print "package_id_for_prices", package_id_for_prices
             if package_id_for_prices in self.data["prices_raw"]:
                 for my_issnl, price in self.data["prices_raw"][package_id_for_prices].iteritems():
                     if price != 0 and price is not None:
@@ -126,6 +131,7 @@ class Scenario(object):
                             prices_dict[my_issnl] = price
                         else:
                             prices_dict[my_issnl] = min(prices_dict[my_issnl], price)
+                        # print package_id_for_prices, my_issnl, price, "prices_dict[my_issnl]", prices_dict[my_issnl]
 
         self.data["prices"] = prices_dict
 

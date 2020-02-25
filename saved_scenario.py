@@ -166,7 +166,7 @@ class SavedScenario(db.Model):
         }
         return response
 
-    def meta(self):
+    def to_dict_meta(self):
         response = OrderedDict()
         response["scenario_id"] = self.scenario_id
         response["scenario_name"] = self.scenario_name
@@ -179,7 +179,7 @@ class SavedScenario(db.Model):
 
     def to_dict_journals(self):
         response = OrderedDict()
-        response["meta"] = self.meta()
+        response["meta"] = self.to_dict_meta()
         response["saved"] = self.to_dict_saved()
         response["journals"] = [j.to_dict_journals() for j in self.live_scenario.journals_sorted_ncppu]
         response["_debug"] = {"summary": self.live_scenario.to_dict_summary_dict()}

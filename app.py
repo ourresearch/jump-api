@@ -193,3 +193,5 @@ use_groups_lookup["other_delayed"] = {"display": "Other", "free_instant": False}
 use_groups_lookup["total"] = {"display": "*Total*", "free_instant": False}
 use_groups = use_groups_lookup.keys()
 use_groups_free_instant = [k for k, v in use_groups_lookup.iteritems() if v["free_instant"]]
+
+suny_consortium_package_ids = ["P2NFgz7B", "PN3juRC5", "2k4Qs74v", "uwdhDaJ2"]

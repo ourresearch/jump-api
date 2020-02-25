@@ -96,6 +96,13 @@ class MyTest(unittest.TestCase):
                             print "here, is zero", year, my_journal.issn_l, my_journal.use_actual_by_year["backfile"][year]
                         assert_true(my_journal.use_actual_by_year["backfile"][year] != 0)
 
+    def test_consortium(self):
+        consortium_scenario_id = "Szj4jutA"  #sunya
+        self.my_saved_scenario = get_saved_scenario(consortium_scenario_id, test_mode=True)
+        my_journal_objects = self.my_saved_scenario.live_scenario.journals
+
+        assert_equals(len(my_journal_objects), 2045)
+
 
     def test_nonzero(self):
         number_that_have_zeros = 0

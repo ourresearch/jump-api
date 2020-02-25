@@ -63,7 +63,8 @@ class Package(db.Model):
         perpetual_access_rows = get_perpetual_access_data_from_db(self.package_id)
         if perpetual_access_rows:
             return True
-        if self.package_id in ["68f1af1d", "P2NFgz7B", "PN3juRC5"]:
+        from app import suny_consortium_package_ids
+        if self.package_id in suny_consortium_package_ids or self.consortium_package_id in suny_consortium_package_ids:
             return True
         return False
 
@@ -73,7 +74,8 @@ class Package(db.Model):
         package_ids_with_prices = prices_rows.keys()
         if self.package_id in package_ids_with_prices or self.consortium_package_id in package_ids_with_prices:
             return True
-        if self.package_id in ["68f1af1d", "P2NFgz7B", "PN3juRC5"]:
+        from app import suny_consortium_package_ids
+        if self.package_id in suny_consortium_package_ids:
             return True
         return False
 
