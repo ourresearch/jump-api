@@ -181,7 +181,7 @@ memcached_user = os.environ.get('MEMCACHIER_USERNAME', '')
 memcached_password = os.environ.get('MEMCACHIER_PASSWORD', '')
 my_memcached = bmemcached.Client(memcached_servers, username=memcached_user, password=memcached_password)
 my_memcached.enable_retry_delay(True)  # Enabled by default. Sets retry delay to 5s.
-my_memcached.flush_all()
+# my_memcached.flush_all()
 
 use_groups_lookup = OrderedDict()
 use_groups_lookup["oa"] = {"display": "OA", "free_instant": True}
