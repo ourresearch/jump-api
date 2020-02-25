@@ -670,11 +670,11 @@ class Journal(object):
             else:
                 response.append(None)
 
-        if self.issn_l == "0031-9406":
-            print "self.raw_num_oa_historical_by_year", self.raw_num_oa_historical_by_year
-            print self.raw_num_papers_historical_by_year
-            print "response", response
-            print
+        # if self.issn_l == "0031-9406":
+        #     print "self.raw_num_oa_historical_by_year", self.raw_num_oa_historical_by_year
+        #     print self.raw_num_papers_historical_by_year
+        #     print "response", response
+        #     print
         return response
 
 
@@ -689,12 +689,12 @@ class Journal(object):
             else:
                 num_scaled_by_num_papers.append(0)
 
-        if self.issn_l == "0031-9406":
-            print "self.num_papers_growth_from_2018_by_year", self.num_papers_growth_from_2018_by_year
-            print oa_proportion_reversed, "oa_proportion_reversed"
-            print num_scaled_by_num_papers, "num_scaled_by_num_papers"
-            print self.num_papers_by_year, "num_papers_by_year"
-            print
+        # if self.issn_l == "0031-9406":
+        #     print "self.num_papers_growth_from_2018_by_year", self.num_papers_growth_from_2018_by_year
+        #     print oa_proportion_reversed, "oa_proportion_reversed"
+        #     print num_scaled_by_num_papers, "num_scaled_by_num_papers"
+        #     print self.num_papers_by_year, "num_papers_by_year"
+        #     print
 
         return [int(min(self.num_papers_by_year[year], num_scaled_by_num_papers[year])) for year in self.years]
 
