@@ -702,12 +702,12 @@ class Journal(object):
     @cached_property
     def downloads_oa_by_age(self):
         response = [(float(self.downloads_per_paper_by_age[age])*self.num_oa_historical_by_year[age]) for age in self.years]
-        if self.issn_l == "0031-9406":
-            print "self.num_oa_historical_by_year", self.num_oa_historical_by_year
-            print "downloads_per_paper_by_age", self.downloads_per_paper_by_age
-            print "downloads_by_age", self.downloads_by_age
-            print "downloads_by_age_before_counter_correction", self.downloads_by_age_before_counter_correction
-            print "downloads_oa_by_age", response
+        # if self.issn_l == "0031-9406":
+        #     print "self.num_oa_historical_by_year", self.num_oa_historical_by_year
+        #     print "downloads_per_paper_by_age", self.downloads_per_paper_by_age
+        #     print "downloads_by_age", self.downloads_by_age
+        #     print "downloads_by_age_before_counter_correction", self.downloads_by_age_before_counter_correction
+        #     print "downloads_oa_by_age", response
         return response
 
     @cached_property

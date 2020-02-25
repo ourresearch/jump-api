@@ -35,7 +35,7 @@ class Consortium(object):
         if not hasattr(threading.current_thread(), "_children"):
             threading.current_thread()._children = weakref.WeakKeyDictionary()
 
-        my_thread_pool = ThreadPool(10)
+        my_thread_pool = ThreadPool(25)
 
         def call_cached_version(org_id_dict):
 
