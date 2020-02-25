@@ -160,8 +160,11 @@ class Journal(object):
 
     @cached_property
     def cost_subscription_by_year(self):
-        response = [round(((1+self.settings.cost_alacart_increase/float(100))**year) * self.cost_subscription_2018 )
-                                            for year in self.years]
+        if self.cost_subscription_2018:
+            response = [round(((1+self.settings.cost_alacart_increase/float(100))**year) * self.cost_subscription_2018 )
+                                                for year in self.years]
+        else:
+            response = [None for year in self.years]
         return response
 
     @cached_property
