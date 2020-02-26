@@ -95,14 +95,16 @@ def cached(extra_key=None):
             if result is not None:
                 my_memcached.set(cache_key, result)
 
-                # from https://stackoverflow.com/a/27468294/596939
-                # Retry loop, probably it should be limited to some reasonable retries
-                while True:
-                  list_of_this_key = my_memcached.gets(cache_key)
-                  if list_of_this_key == None:
-                      list_of_this_key = []
-                  if my_memcached.cas(cache_key, list_of_this_key + ["D"]):
-                    break
+                # later use this to store keys by scenario_id etc
+                # # from https://stackoverflow.com/a/27468294/596939
+                # # Retry loop, probably it should be limited to some reasonable retries
+                # while True:
+                #   scenario_id_key = "scenario_id:" + scenario_id
+                #   list_of_this_key = my_memcached.gets(scenario_id_key)
+                #   if list_of_this_key == None:
+                #       list_of_this_key = []
+                #   if my_memcached.set(scenario_id_key, list_of_this_key + [cache_key]):
+                #     break
 
             return result
 
@@ -596,7 +598,7 @@ def scenario_id_journals_get(scenario_id):
 
 @app.route('/scenario/<scenario_id>/raw', methods=['GET'])
 @jwt_optional
-# @my_memcached.cached(timeout=7*24*60*60)
+@cached()
 def scenario_id_raw_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_raw())
