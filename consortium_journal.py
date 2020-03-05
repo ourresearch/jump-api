@@ -27,7 +27,8 @@ class ConsortiumJournal(Journal):
         self.issn_l = issn_l
         self.org_data = org_data
         self.meta_data = meta_data
-        self.subscribed = False
+        self.subscribed_bulk = False
+        self.subscribed_custom = False
         self.use_default_download_curve = False
 
     def set_scenario(self, scenario):
@@ -42,20 +43,6 @@ class ConsortiumJournal(Journal):
     def set_scenario_data(self, scenario_data):
         # [j.set_scenario_data(scenario_data) for j in self.consortium_journals]
         self._scenario_data = scenario_data
-
-    def set_subscribe(self):
-        self.subscribed = True
-        # invalidate cache
-        for key in self.__dict__:
-            if "actual" in key:
-                del self.__dict__[key]
-
-    def set_unsubscribe(self):
-        self.subscribed = False
-        # invalidate cache
-        for key in self.__dict__:
-            if "actual" in key:
-                del self.__dict__[key]
 
     @cached_property
     def years_by_year(self):
@@ -253,6 +240,8 @@ class ConsortiumJournal(Journal):
                 # "publisher": self.publisher,
                 # "is_society_journal": self.is_society_journal,
                 "subscribed": self.subscribed,
+                "subscribed_bulk": self.subscribed_bulk,
+                "subscribed_custom": self.subscribed_custom,
                 # "num_papers": self.num_papers,
                 "cost_subscription": format_currency(self.cost_subscription),
                 "cost_ill": format_currency(self.cost_ill),

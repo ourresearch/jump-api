@@ -71,30 +71,16 @@ class MyTest(unittest.TestCase):
             # assert_true(num_with_all_free_access < 1)
 
     def test_embargo(self):
-        from app import USE_PAPER_GROWTH
-        if USE_PAPER_GROWTH:
-            my_journal_objects = self.live_scenario.journals
-            for my_journal in my_journal_objects:
-                if my_journal.oa_embargo_months:
-                    for year in range(0, 5):
-                        if year*12 > my_journal.oa_embargo_months:
-                            for group in ["backfile", "social_networks", "ill", "other_delayed"]:
-                                if my_journal.use_actual_by_year[group][year] != 0:
-                                    print "here, is not zero", group, year, my_journal.issn_l, my_journal.use_actual_by_year[group][year]
-                                assert_true(my_journal.use_actual_by_year[group][year] == 0)
-                            assert_true(my_journal.use_actual_by_year["oa"][year] == my_journal.use_actual_by_year["total"][year])
-
-
-    def test_non_embargo(self):
-        from app import USE_PAPER_GROWTH
-        if USE_PAPER_GROWTH:
-            my_journal_objects = self.live_scenario.journals
-            for my_journal in my_journal_objects:
-                if not my_journal.oa_embargo_months:
-                    for year in range(0, 5):
-                        if my_journal.use_actual_by_year["backfile"][year] == 0:
-                            print "here, is zero", year, my_journal.issn_l, my_journal.use_actual_by_year["backfile"][year]
-                        assert_true(my_journal.use_actual_by_year["backfile"][year] != 0)
+        pass
+        my_journal_objects = self.live_scenario.journals
+        for my_journal in my_journal_objects:
+            if my_journal.oa_embargo_months:
+                for year in range(0, 5):
+                    if year*12 >= my_journal.oa_embargo_months:
+                        for group in ["backfile"]:
+                            if my_journal.use_actual_by_year[group][year] != 0:
+                                print "here, is not zero", group, year, my_journal.title, my_journal.issn_l, my_journal.use_actual_by_year[group][year]
+                            assert_equals(my_journal.use_actual_by_year[group][year], 0)
 
     def test_consortium(self):
         consortium_scenario_id = "Szj4jutA"  #sunya

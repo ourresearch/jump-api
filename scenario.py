@@ -69,12 +69,8 @@ class Scenario(object):
         self.timing_messages = []; 
         self.section_time = time()        
         self.settings = Assumptions(http_request_args)
-        self.starting_subscriptions = []
         self.is_consortium = False
         self.package_id = get_clean_package_id({"package": package_id})
-
-        if http_request_args:
-            self.starting_subscriptions += http_request_args.get("subrs", []) + http_request_args.get("customSubrs", [])
 
         if get_consortium_package_ids(self.package_id):
             self.is_consortium = True
@@ -102,9 +98,12 @@ class Scenario(object):
             [j.set_scenario_data(self.data) for j in self.journals]
             self.log_timing("set data in journals")
 
-        for journal in self.journals:
-            if journal.issn_l in self.starting_subscriptions:
-                journal.set_subscribe()
+        if http_request_args:
+            for journal in self.journals:
+                if journal.issn_l in http_request_args.get("subrs", []):
+                    journal.set_subscribe_bulk()
+                if journal.issn_l in http_request_args.get("customSubrs", []):
+                    journal.set_subscribe_custom()
         self.log_timing("subscribing to all journals")
 
 
@@ -181,6 +180,14 @@ class Scenario(object):
     @cached_property
     def subscribed(self):
         return [j for j in self.journals_sorted_ncppu if j.subscribed]
+
+    @cached_property
+    def subscribed_bulk(self):
+        return [j for j in self.journals_sorted_ncppu if j.subscribed_bulk]
+
+    @cached_property
+    def subscribed_custom(self):
+        return [j for j in self.journals_sorted_ncppu if j.subscribed_custom]
 
     @cached_property
     def cost_subscription_fuzzed_lookup(self):
@@ -379,13 +386,13 @@ class Scenario(object):
         for journal in self.journals_sorted_ncppu:
             if journal.cost_subscription_minus_ill < 0:
                 my_spend_so_far += journal.cost_subscription_minus_ill
-                journal.set_subscribe()
+                journal.set_subscribe_bulk()
 
         for journal in self.journals_sorted_ncppu:
             my_spend_so_far += journal.cost_subscription_minus_ill
             if my_spend_so_far > my_max:
                 return
-            journal.set_subscribe()
+            journal.set_subscribe_bulk()
 
     @cached_property
     def historical_years_by_year(self):

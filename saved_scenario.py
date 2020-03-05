@@ -131,6 +131,19 @@ class SavedScenario(db.Model):
         self.live_scenario.jwt = my_jwt
         return self.live_scenario
 
+
+    def to_dict_saved(self):
+        self.set_live_scenario()  # in case not done
+
+        response = {
+            "subrs": [j.issn_l for j in self.live_scenario.subscribed_bulk],
+            "customSubrs": [j.issn_l for j in self.live_scenario.subscribed_custom],
+            "configs": self.live_scenario.settings.to_dict(),
+            "scenario_name": self.scenario_name
+        }
+        return response
+
+
     def to_dict_definition(self):
         self.set_live_scenario()  # in case not done
 
@@ -139,22 +152,12 @@ class SavedScenario(db.Model):
             "name": self.scenario_name,
             "pkgId": self.package_id,
             "summary": self.live_scenario.to_dict_summary_dict(),
-            "subrs": [j.issn_l for j in self.live_scenario.subscribed],
-            "customSubrs": [],
+            "subrs": [j.issn_l for j in self.live_scenario.subscribed_bulk],
+            "customSubrs": [j.issn_l for j in self.live_scenario.subscribed_custom],
             "configs": self.live_scenario.settings.to_dict(),
             "_debug": {
                 "package_name": self.package_real.package_name
             }
-        }
-        return response
-
-    def to_dict_saved(self):
-        self.set_live_scenario()  # in case not done
-
-        response = {
-            "subrs": [j.issn_l for j in self.live_scenario.subscribed],
-            "customSubrs": [],
-            "configs": self.live_scenario.settings.to_dict(),
         }
         return response
 
