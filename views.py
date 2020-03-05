@@ -33,6 +33,7 @@ from app import logger
 from app import jwt
 from app import db
 from app import my_memcached
+from app import get_db_cursor
 from scenario import Scenario
 from account import Account
 from package import Package
@@ -131,7 +132,7 @@ def after_request_stuff(resp):
     return resp
 
 
-@app.route('/', methods=["GET", "POST", "POST"])
+@app.route('/', methods=["GET", "POST"])
 def base_endpoint():
     return jsonify_fast({
         "version": "0.0.1",
@@ -443,36 +444,37 @@ def post_subscription_guts(scenario_id):
     # need to save before purging, to make sure don't have race condition
     save_raw_scenario_to_db(scenario_id, request.get_json(), get_ip(request))
 
-    tags_to_purge = ["scenario_{}".format(scenario_id)]
-    url = "https://api.cloudflare.com/client/v4/zones/{}/purge_cache".format(os.getenv("CLOUDFLARE_ZONE_ID"))
-    headers = {"X-Auth-Email": "heather@ourresearch.org",
-               "X-Auth-Key": os.getenv("CLOUDFLARE_GLOBAL_API")}
-    r = requests.post(url, headers=headers, json={"tags": tags_to_purge})
-    if r.status_code != 200:
-        abort_json(500, "Couldn't purge cache")
+    # tags_to_purge = ["scenario_{}".format(scenario_id)]
+    # url = "https://api.cloudflare.com/client/v4/zones/{}/purge_cache".format(os.getenv("CLOUDFLARE_ZONE_ID"))
+    # headers = {"X-Auth-Email": "heather@ourresearch.org",
+    #            "X-Auth-Key": os.getenv("CLOUDFLARE_GLOBAL_API")}
+    # r = requests.post(url, headers=headers, json={"tags": tags_to_purge})
+    # if r.status_code != 200:
+    #     abort_json(500, "Couldn't purge cache")
     return
 
 
+# used for saving scenario contents, also updating scenario name
 @app.route('/scenario/<scenario_id>', methods=['POST'])
 @app.route('/scenario/<scenario_id>/post', methods=['GET'])  # just for debugging
 @jwt_required
 def scenario_id_post(scenario_id):
 
-    date_before_purge = datetime.datetime.utcnow()
+    if not request.is_json:
+        return abort_json(400, "This post requires data.")
+
+    scenario_name = request.json.get('scenario_name', None)
+    if scenario_name:
+        # doing it this way makes sure we have permission to acces and therefore rename the scenario
+        my_saved_scenario = get_saved_scenario(scenario_id)
+        command = "update jump_package_scenario set scenario_name = '{}' where scenario_id = '{}'".format(scenario_name, scenario_id)
+        with get_db_cursor() as cursor:
+            cursor.execute(command)
+        return jsonify_fast_no_sort({"response": "success"})
 
     my_timing = TimingMessages()
     post_subscription_guts(scenario_id)
     my_timing.log_timing("after post_subscription_guts()")
-
-    # if False:
-    #     # kick this off now, as early as possible
-    #     my_jwt = get_jwt()
-    #     # doing this next one below
-    #     RunAsyncToRequestResponse("scenario/{}".format(scenario_id), my_jwt).start()
-    #     RunAsyncToRequestResponse("scenario/{}/slider".format(scenario_id), my_jwt).start()
-    #     RunAsyncToRequestResponse("scenario/{}/table".format(scenario_id), my_jwt).start()
-    #     RunAsyncToRequestResponse("scenario/{}/apc".format(scenario_id), my_jwt).start()
-    #     my_timing.log_timing("after start RunAsyncToRequestResponse")
 
     my_newly_saved_scenario = get_saved_scenario(scenario_id)
     my_timing.log_timing("after re-getting live scenario")
@@ -480,25 +482,6 @@ def scenario_id_post(scenario_id):
 
     my_timing.log_timing("after to_dict()")
     response["_timing"] = my_timing.to_dict()
-
-    # if False:
-    #     # stall for log enough to make sure slider is accurate
-    #     new_cache_hit = False
-    #     url = u"https://cdn.unpaywalljournals.org/live/scenario/{}/slider?jwt={}".format(scenario_id, get_jwt())
-    #     print u"getting cached request from {}".format(url)
-    #     headers = {"Cache-Control": "public, max-age=31536000"}
-    #     while not new_cache_hit:
-    #         print "calling {}".format(url)
-    #         r = requests.get(url, headers=headers)
-    #         if r.status_code == 200:
-    #             if r.headers["CF-Cache-Status"] == "HIT":
-    #                 # print r.headers["Date"]
-    #                 # print dateparser.parse(r.headers["Date"])
-    #                 # print date_before_purge
-    #                 if dateparser.parse(r.headers["Date"], settings={'RETURN_AS_TIMEZONE_AWARE': False}) > date_before_purge:
-    #                     print "is a hit from after purge"
-    #                     new_cache_hit = True
-    #                     print "new_cache_hit True"
 
     return jsonify_fast_no_sort(response)
 
@@ -655,6 +638,33 @@ def live_scenario_id_slider_get(scenario_id):
     return response
 
 
+@app.route('/package/<package_id>/apc', methods=['GET'])
+@jwt_optional
+def live_package_id_apc_get(package_id):
+    identity_dict = get_jwt_identity()
+
+    if not identity_dict:
+        if not is_authorized_superuser():
+            return abort_json(401, "Not authorized, need secret.")
+
+    if package_id.startswith("demo"):
+        my_package = Package.query.get("demo")
+        my_package.package_id = package_id
+    else:
+        my_package = Package.query.get(package_id)
+
+    if not my_package:
+        abort_json(404, "Package not found")
+
+    if not package_id.startswith("demo"):
+        if my_package.account_id != identity_dict["account_id"]:
+            abort_json(401, "Not authorized to view this package")
+
+    my_scenario = my_package.unique_saved_scenarios[0]
+    scenario_id = my_scenario.scenario_id
+    return live_scenario_id_apc_get(scenario_id)
+
+
 @app.route('/scenario/<scenario_id>/apc', methods=['GET'])
 @jwt_optional
 def live_scenario_id_apc_get(scenario_id):
@@ -715,6 +725,39 @@ def scenario_id_export_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
     contents = export_get(my_saved_scenario)
     return Response(contents, mimetype="text/text")
+
+
+@app.route('/scenario', methods=['POST'])
+@jwt_optional
+def scenario_post():
+    copy_scenario_id = request.args.get('copy', None)
+    return jsonify_fast_no_sort({"response": copy_scenario_id})
+
+
+    # is_a_copy = True
+    # if is_a_copy:
+    #     my_saved_scenario_to_copy_from = get_saved_scenario(scenario_id)
+    # # write a new one
+    #
+    # return jsonify_fast_no_sort(my_new_scenario.to_dict_meta())
+
+
+
+@app.route('/scenario/<scenario_id>', methods=['DELETE'])
+@jwt_optional
+def scenario_delete(scenario_id):
+    # just delete it out of the table, leave the saves
+    # doing it this way makes sure we have permission to acces and therefore delete the scenario
+    my_saved_scenario = get_saved_scenario(scenario_id)
+    command = "delete from jump_account_scenario where scenario_id = '{}'".format(scenario_id)
+
+    from app import get_db_cursor
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+
+    return jsonify_fast_no_sort({"response": "success"})
+
 
 @app.route('/debug/export', methods=['GET'])
 def debug_export_get():
@@ -777,7 +820,7 @@ def jump_debug_issn_get(issn_l):
     scenario = my_saved_scenario.live_scenario
     my_journal = scenario.get_journal(issn_l)
     if subscribe:
-        my_journal.subscribed = True
+        my_journal.set_subscribe_custom()
     if not my_journal:
         abort_json(404, "journal not found")
     return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
