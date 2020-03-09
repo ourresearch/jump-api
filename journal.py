@@ -415,9 +415,9 @@ class Journal(object):
     def downloads_backfile_by_year(self):
         if self.settings.include_backfile:
             response = self.sum_obs_pub_matrix_by_obs(self.backfile_obs_pub)
-            if self.issn_l == "0167-6423":
-                print self.backfile_obs_pub
-                print self.sum_obs_pub_matrix_by_obs(self.backfile_obs_pub)
+            # if self.issn_l == "0167-6423":
+            #     print self.backfile_obs_pub
+            #     print self.sum_obs_pub_matrix_by_obs(self.backfile_obs_pub)
             response = [min(response[year], self.downloads_total_by_year[year] - self.downloads_oa_by_year[year]) for year in self.years]
             return response
         else:

@@ -94,7 +94,7 @@ class SavedScenario(db.Model):
         scenario_json = json.dumps(self.to_dict_definition())
         print "got json"
         scenario_json = scenario_json.replace("'", "''")
-        print "\n\n scenario_json", scenario_json
+        # print "\n\n scenario_json", scenario_json
         with get_db_cursor() as cursor:
             print "got cursor"
             command = u"""INSERT INTO {} (scenario_id, updated, ip, scenario_json) values ('{}', sysdate, '{}', '{}');""".format(
