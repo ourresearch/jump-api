@@ -470,7 +470,6 @@ def scenario_id_post(scenario_id):
         command = "update jump_package_scenario set scenario_name = '{}' where scenario_id = '{}'".format(scenario_name, scenario_id)
         with get_db_cursor() as cursor:
             cursor.execute(command)
-        return jsonify_fast_no_sort({"response": "success"})
 
     my_timing = TimingMessages()
     post_subscription_guts(scenario_id)
