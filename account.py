@@ -34,18 +34,18 @@ class Account(db.Model):
 
     @property
     def is_demo_account(self):
-        return self.username == "demo"
+        return self.username.startswith("demo")
 
     def make_unique_demo_packages(self, login_uuid):
         self.login_uuid = login_uuid
 
     @property
     def unique_packages(self):
-        if self.is_demo_account:
-            unique_packages = self.packages
-            for package in unique_packages:
-                package.package_id = u"demo-package-{}".format(self.login_uuid)
-            return unique_packages
+        # if self.is_demo_account:
+        #     unique_packages = self.packages
+        #     for package in unique_packages:
+        #         package.package_id = u"demo-package-{}".format(self.login_uuid)
+        #     return unique_packages
         return self.packages
 
     @property

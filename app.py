@@ -184,8 +184,8 @@ my_memcached.enable_retry_delay(True)  # Enabled by default. Sets retry delay to
 # my_memcached.flush_all()
 
 use_groups_lookup = OrderedDict()
-use_groups_lookup["oa"] = {"display": "OA", "free_instant": True}
-use_groups_lookup["social_networks"] = {"display": "ASNs", "free_instant": True}
+use_groups_lookup["oa_plus_social_networks"] = {"display": "OA", "free_instant": True}
+# use_groups_lookup["social_networks"] = {"display": "ASNs", "free_instant": True}
 use_groups_lookup["backfile"] = {"display": "Backfile", "free_instant": True}
 use_groups_lookup["subscription"] = {"display": "Subscription", "free_instant": False}
 use_groups_lookup["ill"] = {"display": "ILL", "free_instant": False}

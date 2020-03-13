@@ -43,6 +43,7 @@ from saved_scenario import get_latest_scenario
 from saved_scenario import save_raw_scenario_to_db
 from scenario import get_common_package_data
 from scenario import get_clean_package_id
+from account_grid_id import AccountGridId
 from util import jsonify_fast
 from util import jsonify_fast_no_sort
 from util import str2bool
@@ -160,6 +161,8 @@ def jump_data_package_id_get(package_id):
     if not is_authorized_superuser():
         abort_json(500, "Secret doesn't match, not getting package")
 
+    if package_id.startswith("demo"):
+        package_id = DEMO_PACKAGE_ID
     response = get_common_package_data(package_id)
 
     response = jsonify_fast_no_sort(response)
@@ -170,7 +173,7 @@ def jump_data_package_id_get(package_id):
 # Provide a method to create access tokens. The create_access_token()
 # function is used to actually generate the token, and you can return
 # it to the caller however you choose.
-@app.route('/login', methods=["GET", 'POST'])
+@app.route('/login', methods=["GET", "POST"])
 def login():
     my_timing = TimingMessages()
 
@@ -192,6 +195,37 @@ def login():
     if not my_account or not check_password_hash(my_account.password_hash, password):
         if not (os.getenv("JWT_SECRET_KEY") == password):
             return abort_json(401, "Bad username or password")
+
+    if my_account.is_demo_account:
+        base_demo_account = my_account
+        new_account = Account()
+        my_uuid = shortuuid.uuid()[0:8]
+        new_account.id = "demo-account-{}".format(my_uuid)
+        new_account.username = "demo{}".format(my_uuid)
+        new_account.password_hash = generate_password_hash("demo")
+        new_account.display_name = "Elsevier Demo"
+        new_account.is_consortium = False
+
+        new_account_grid_object = AccountGridId()
+        new_account_grid_object.grid_id = base_demo_account.grid_ids[0]
+
+        new_package = Package()
+        new_package.package_id = "demo-package-{}".format(my_uuid)
+        new_package.publisher = "Elsevier"
+        new_package.package_name = u"Elsevier"
+
+        scenario_id = "demo-scenario-{}".format(my_uuid)
+        new_saved_scenario = SavedScenario(True, scenario_id, None)
+        new_saved_scenario.scenario_name = u"My first scenario"
+
+        new_package.saved_scenarios = [new_saved_scenario]
+        new_account.packages = [new_package]
+        new_account.grid_id_objects = [new_account_grid_object]
+
+        db.session.add(new_account)
+        safe_commit(db)
+
+        my_account = new_account
 
     # Identity can be any data that is json serializable.  Include timestamp so is unique for each demo start.
     identity_dict = {
@@ -248,15 +282,15 @@ def is_authorized_superuser():
 
 def get_saved_scenario(scenario_id, test_mode=False):
 
-    is_demo_account = scenario_id.startswith("demo")
-
-    if is_demo_account:
-        my_saved_scenario = SavedScenario.query.get(scenario_id)
-        if not my_saved_scenario:
-            my_saved_scenario = SavedScenario.query.get("demo")
-            my_saved_scenario.scenario_id = scenario_id
-    else:
-        my_saved_scenario = SavedScenario.query.get(scenario_id)
+    # is_demo_account = scenario_id.startswith("demo")
+    #
+    # if is_demo_account:
+    #     my_saved_scenario = SavedScenario.query.get(scenario_id)
+    #     if not my_saved_scenario:
+    #         my_saved_scenario = SavedScenario.query.get("demo")
+    #         my_saved_scenario.scenario_id = scenario_id
+    # else:
+    my_saved_scenario = SavedScenario.query.get(scenario_id)
 
     if not my_saved_scenario:
         abort_json(404, "Scenario not found")
@@ -315,7 +349,6 @@ def live_account_get():
 
     my_timing = TimingMessages()
 
-
     identity_dict = get_jwt_identity()
     my_account = Account.query.get(identity_dict["account_id"])
     if identity_dict["is_demo_account"]:
@@ -357,7 +390,7 @@ def get_jwt():
 #
 # @app.route('/live/package/<package_id>', methods=['GET'])
 @app.route('/package/<package_id>', methods=['GET'])
-@jwt_required
+@jwt_optional
 def live_package_id_get(package_id):
     if request.args.get("fast-mock-package", False):
         return '{"hasCustomPerpetualAccess": false, "numJournals": 1855, "id": "demo-package-f5ue5QCEf2", "hasCounterData": true, "scenarios": [{"summary": {"use_ill_percent": 2.1, "cost_scenario_ill": 263913.33, "use_free_instant_percent": 57.1, "use_subscription_percent": 0.0, "cost_scenario": 263913.33, "use_instant_percent": 57.08, "cost_scenario_subscription": 0.0, "cost_bigdeal_projected": 2320765.2, "num_journals_subscribed": 0, "cost_percent": 11.3718, "num_journals_total": 1855}, "pkgId": "demo-package-f5ue5QCEf2", "configs": {"cost_content_fee_percent": 5.7, "ill_request_percent_of_delayed": 5.0, "weight_citation": 10.0, "cost_bigdeal": 2100000.0, "weight_authorship": 100.0, "package": "658349d9", "cost_ill": 17.0, "include_backfile": true, "include_bronze": true, "backfile_contribution": 100.0, "cost_alacart_increase": 8.0, "include_social_networks": true, "cost_bigdeal_increase": 5.0, "include_submitted_version": true}, "_debug": {"package_name": "my Elsevier Freedom Package"}, "customSubrs": [], "name": "First Scenario", "subrs": [], "id": "demo-scenario-f5ue5QCEf2"}], "_timing": ["after getting package            0.02s", "after kicking off cache requests    0.0s", "after my_package.to_dict_summary()   4.78s", "after scenarios()                0.01s", "after journal_detail()           2.76s", "TOTAL                            7.58s"], "name": "my Elsevier Freedom Package", "hasCustomPrices": false, "journal_detail": {"counts": {"counter_rows": 3627, "counter_unique_rows": 3616, "published_in_2019": 2754, "toll_access_published_in_2019": 2252, "toll_access_published_in_2019_with_elsevier": 2094, "published_toll_access_in_2019_with_elsevier_have_price": 1824, "in_scenario": 1855}, "diff_counts": {"diff_non_unique": 11, "diff_not_published_in_2019": 862, "diff_open_access_journals": 502, "diff_changed_publisher": 158, "diff_no_price": 270, "diff_missing_from_scenario": 0, "diff_extra_in_scenario": 31}, "package_id": "658349d9"}}'
@@ -367,17 +400,22 @@ def live_package_id_get(package_id):
 
     identity_dict = get_jwt_identity()
 
-    if package_id.startswith("demo"):
-        my_package = Package.query.get("demo")
-        my_package.package_id = package_id
-    else:
-        my_package = Package.query.get(package_id)
+    # if package_id.startswith("demo"):
+    #     my_package = Package.query.get("demo")
+    #     my_package.package_id = package_id
+    # else:
+    #     my_package = Package.query.get(package_id)
+
+    my_package = Package.query.get(package_id)
+
+    if not is_authorized_superuser():
+        if not identity_dict:
+            abort_json(401, "Not authorized to view this package")
+        if my_package.account_id != identity_dict["account_id"]:
+            abort_json(401, "Not authorized to view this package")
 
     if not my_package:
         abort_json(404, "Package not found")
-
-    if my_package.account_id != identity_dict["account_id"]:
-        abort_json(401, "Not authorized to view this package")
 
     my_timing.log_timing("after getting package")
 
@@ -440,22 +478,20 @@ def jump_debug_counter_diff_type_package_id(package_id, diff_type):
 
 
 
-def post_subscription_guts(scenario_id):
+def post_subscription_guts(scenario_id, scenario_name=None):
     # need to save before purging, to make sure don't have race condition
     save_raw_scenario_to_db(scenario_id, request.get_json(), get_ip(request))
 
-    # tags_to_purge = ["scenario_{}".format(scenario_id)]
-    # url = "https://api.cloudflare.com/client/v4/zones/{}/purge_cache".format(os.getenv("CLOUDFLARE_ZONE_ID"))
-    # headers = {"X-Auth-Email": "heather@ourresearch.org",
-    #            "X-Auth-Key": os.getenv("CLOUDFLARE_GLOBAL_API")}
-    # r = requests.post(url, headers=headers, json={"tags": tags_to_purge})
-    # if r.status_code != 200:
-    #     abort_json(500, "Couldn't purge cache")
+    dict_to_save = request.get_json()
+    if scenario_name:
+        dict_to_save["scenario_name"] = scenario_name
+    save_raw_scenario_to_db(scenario_id, dict_to_save, get_ip(request))
+
     return
 
 
 # used for saving scenario contents, also updating scenario name
-@app.route('/scenario/<scenario_id>', methods=['POST'])
+@app.route('/scenario/<scenario_id>', methods=["POST"])
 @app.route('/scenario/<scenario_id>/post', methods=['GET'])  # just for debugging
 @jwt_required
 def scenario_id_post(scenario_id):
@@ -463,7 +499,7 @@ def scenario_id_post(scenario_id):
     if not request.is_json:
         return abort_json(400, "This post requires data.")
 
-    scenario_name = request.json.get('scenario_name', None)
+    scenario_name = request.json.get('name', None)
     if scenario_name:
         # doing it this way makes sure we have permission to acces and therefore rename the scenario
         my_saved_scenario = get_saved_scenario(scenario_id)
@@ -472,17 +508,32 @@ def scenario_id_post(scenario_id):
             cursor.execute(command)
 
     my_timing = TimingMessages()
-    post_subscription_guts(scenario_id)
+    post_subscription_guts(scenario_id, scenario_name)
     my_timing.log_timing("after post_subscription_guts()")
+    return jsonify_fast_no_sort({"status": "success"})
 
-    my_newly_saved_scenario = get_saved_scenario(scenario_id)
-    my_timing.log_timing("after re-getting live scenario")
-    response = my_newly_saved_scenario.to_dict_definition()
 
-    my_timing.log_timing("after to_dict()")
-    response["_timing"] = my_timing.to_dict()
+# used for saving scenario contents, also updating scenario name
+@app.route('/scenario/<scenario_id>', methods=["POST"])
+@app.route('/scenario/<scenario_id>/post', methods=['GET'])  # just for debugging
+@jwt_required
+def scenario_id_post(scenario_id):
 
-    return jsonify_fast_no_sort(response)
+    if not request.is_json:
+        return abort_json(400, "This post requires data.")
+
+    scenario_name = request.json.get('name', None)
+    if scenario_name:
+        # doing it this way makes sure we have permission to acces and therefore rename the scenario
+        my_saved_scenario = get_saved_scenario(scenario_id)
+        command = "update jump_package_scenario set scenario_name = '{}' where scenario_id = '{}'".format(scenario_name, scenario_id)
+        with get_db_cursor() as cursor:
+            cursor.execute(command)
+
+    my_timing = TimingMessages()
+    post_subscription_guts(scenario_id, scenario_name)
+    my_timing.log_timing("after post_subscription_guts()")
+    return jsonify_fast_no_sort({"status": "success"})
 
 
 # only call from cloudflare workers POST to prevent circularities
@@ -726,20 +777,46 @@ def scenario_id_export_get(scenario_id):
     return Response(contents, mimetype="text/text")
 
 
-@app.route('/scenario', methods=['POST'])
+@app.route('/package/<package_id>/scenario', methods=["POST"])
 @jwt_optional
-def scenario_post():
+def scenario_post(package_id):
+    new_scenario_id = shortuuid.uuid()[0:8]
+    if package_id.startswith("demo-package"):
+        new_scenario_id = "demo-scenario-" + new_scenario_id
+    new_scenario_name = "New Scenario"
+    my_saved_scenario_to_copy_from = None
+
     copy_scenario_id = request.args.get('copy', None)
-    return jsonify_fast_no_sort({"response": copy_scenario_id})
+    if copy_scenario_id:
+        my_saved_scenario_to_copy_from = get_saved_scenario(copy_scenario_id)
+        new_scenario_name = u"Copy of {}".format(my_saved_scenario_to_copy_from.scenario_name)
+    if request.json.get('name', None):
+        new_scenario_name = request.json.get('name')
 
+    print "new_scenario_id", new_scenario_id
+    new_saved_scenario = SavedScenario(False, new_scenario_id, None)
+    new_saved_scenario.package_id = package_id
+    new_saved_scenario.scenario_name = new_scenario_name
+    db.session.add(new_saved_scenario)
+    safe_commit(db)
 
-    # is_a_copy = True
-    # if is_a_copy:
-    #     my_saved_scenario_to_copy_from = get_saved_scenario(scenario_id)
-    # # write a new one
-    #
-    # return jsonify_fast_no_sort(my_new_scenario.to_dict_meta())
+    print "new_saved_scenario", new_saved_scenario
 
+    if my_saved_scenario_to_copy_from:
+        dict_to_save = my_saved_scenario_to_copy_from.to_dict_saved()
+    else:
+        dict_to_save = new_saved_scenario.to_dict_saved()
+
+    print "my_saved_scenario_to_copy_from", my_saved_scenario_to_copy_from
+    print "dict_to_save", dict_to_save
+
+    save_raw_scenario_to_db(new_scenario_id, dict_to_save, get_ip(request))
+
+    print "new_scenario_id", new_scenario_id
+
+    my_new_scenario = get_saved_scenario(new_scenario_id)
+
+    return jsonify_fast_no_sort(my_new_scenario.to_dict_meta())
 
 
 @app.route('/scenario/<scenario_id>', methods=['DELETE'])
@@ -748,12 +825,10 @@ def scenario_delete(scenario_id):
     # just delete it out of the table, leave the saves
     # doing it this way makes sure we have permission to acces and therefore delete the scenario
     my_saved_scenario = get_saved_scenario(scenario_id)
-    command = "delete from jump_account_scenario where scenario_id = '{}'".format(scenario_id)
+    command = "delete from jump_package_scenario where scenario_id = '{}'".format(scenario_id)
 
-    from app import get_db_cursor
     with get_db_cursor() as cursor:
         cursor.execute(command)
-        rows = cursor.fetchall()
 
     return jsonify_fast_no_sort({"response": "success"})
 
@@ -876,15 +951,6 @@ def jump_debug_ids():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5004))
     app.run(host='0.0.0.0', port=port, debug=True, threaded=True, use_reloader=True)
-
-
-
-
-
-
-
-
-
 
 
 

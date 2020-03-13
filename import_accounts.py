@@ -227,7 +227,7 @@ def create_accounts(filename):
 
             scenario_id = shortuuid.uuid()[0:8]
             new_saved_scenario = SavedScenario(False, scenario_id, None)
-            new_saved_scenario.scenario_name = u"First Scenario".format(new_package.package_name)
+            new_saved_scenario.scenario_name = u"My first scenario"
 
             new_package.saved_scenarios = [new_saved_scenario]
             new_account.packages = [new_package]

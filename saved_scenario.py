@@ -68,10 +68,10 @@ class SavedScenario(db.Model):
     created = db.Column(db.DateTime)
 
     def __init__(self, is_demo_account, scenario_id, scenario_input):
-        if is_demo_account:
-            demo_saved_scenario = SavedScenario.query.get("demo")
-            self.scenario_name = demo_saved_scenario.scenario_name
-            self.package_id = DEMO_PACKAGE_ID
+        # if is_demo_account:
+        #     demo_saved_scenario = SavedScenario.query.get("demo")
+        #     self.scenario_name = demo_saved_scenario.scenario_name
+        #     self.package_id = DEMO_PACKAGE_ID
         self.created = datetime.datetime.utcnow().isoformat()
         self.scenario_id = scenario_id
         self.scenario_input = scenario_input
@@ -139,7 +139,7 @@ class SavedScenario(db.Model):
             "subrs": [j.issn_l for j in self.live_scenario.subscribed_bulk],
             "customSubrs": [j.issn_l for j in self.live_scenario.subscribed_custom],
             "configs": self.live_scenario.settings.to_dict(),
-            "scenario_name": self.scenario_name
+            "name": self.scenario_name
         }
         return response
 
