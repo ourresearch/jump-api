@@ -295,9 +295,9 @@ def get_saved_scenario(scenario_id, test_mode=False):
     if not my_saved_scenario:
         abort_json(404, "Scenario not found")
 
-    if not test_mode:
-        print "test_mode", test_mode
-        print "is_authorized_superuser()", is_authorized_superuser()
+    # if not test_mode:
+    #     print "test_mode", test_mode
+    #     print "is_authorized_superuser()", is_authorized_superuser()
     if not test_mode and not is_authorized_superuser():
         identity_dict = get_jwt_identity()
         if not identity_dict:

@@ -468,7 +468,7 @@ class Scenario(object):
 
     @cached_property
     def use_social_networks(self):
-        return round(np.sum([j.use_actual["social_networks"] for j in self.journals]))
+        return round(np.sum([j.use_social_networks for j in self.journals]))
 
     @cached_property
     def use_oa(self):
