@@ -1809,7 +1809,7 @@ class Journal(object):
                 "use_instant": self.use_instant,
                 "use_instant_percent": self.use_instant_percent,
                 }
-        response["use_groups_free_instant"] = self.__getattribute__("use_{}".format(group))
+        response["use_groups_free_instant"] = {"oa": self.use_oa_plus_social_networks, "backfile": self.use_backfile}
         response["use_groups_if_subscribed"] = {"subscription": self.use_subscription}
         response["use_groups_if_not_subscribed"] = {"ill": self.use_ill, "other_delayed": self.use_other_delayed}
         return response
