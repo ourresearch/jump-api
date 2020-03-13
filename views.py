@@ -513,29 +513,6 @@ def scenario_id_post(scenario_id):
     return jsonify_fast_no_sort({"status": "success"})
 
 
-# used for saving scenario contents, also updating scenario name
-@app.route('/scenario/<scenario_id>', methods=["POST"])
-@app.route('/scenario/<scenario_id>/post', methods=['GET'])  # just for debugging
-@jwt_required
-def scenario_id_post(scenario_id):
-
-    if not request.is_json:
-        return abort_json(400, "This post requires data.")
-
-    scenario_name = request.json.get('name', None)
-    if scenario_name:
-        # doing it this way makes sure we have permission to acces and therefore rename the scenario
-        my_saved_scenario = get_saved_scenario(scenario_id)
-        command = "update jump_package_scenario set scenario_name = '{}' where scenario_id = '{}'".format(scenario_name, scenario_id)
-        with get_db_cursor() as cursor:
-            cursor.execute(command)
-
-    my_timing = TimingMessages()
-    post_subscription_guts(scenario_id, scenario_name)
-    my_timing.log_timing("after post_subscription_guts()")
-    return jsonify_fast_no_sort({"status": "success"})
-
-
 # only call from cloudflare workers POST to prevent circularities
 @app.route('/cloudflare_prefetch_wrapper/<path:the_rest>', methods=['GET'])
 @jwt_optional
