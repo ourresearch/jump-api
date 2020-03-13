@@ -71,6 +71,9 @@ class Scenario(object):
         self.settings = Assumptions(http_request_args)
         self.is_consortium = False
         self.package_id = get_clean_package_id({"package": package_id})
+        self.package_id_for_db = self.package_id
+        if self.package_id.startswith("demo"):
+            self.package_id_for_db = DEMO_PACKAGE_ID
 
         if get_consortium_package_ids(self.package_id):
             self.is_consortium = True
@@ -79,11 +82,11 @@ class Scenario(object):
 
         from app import USE_PAPER_GROWTH
         if USE_PAPER_GROWTH:
-            self.data = get_common_package_data(self.package_id)
+            self.data = get_common_package_data(self.package_id_for_db)
             self.log_timing("get_common_package_data_ NOT FROM from_cache")
             logger.debug("get_common_package_data_NOT FROM from_cache")
         else:
-            self.data = get_common_package_data_from_cache(self.package_id)
+            self.data = get_common_package_data_from_cache(self.package_id_for_db)
             self.log_timing("get_common_package_data_from_cache")
             # logger.debug("get_common_package_data_from_cache")
 
@@ -115,7 +118,7 @@ class Scenario(object):
         prices_to_consider = [DEMO_PACKAGE_ID]
         from app import suny_consortium_package_ids
 
-        # print "package_id", self.package_id, get_parent_consortium_package_id(self.package_id)
+        # print "package_id", self.package_id_for_db, get_parent_consortium_package_id(self.package_id_for_db)
         if get_parent_consortium_package_id(self.package_id) in suny_consortium_package_ids or self.package_id in suny_consortium_package_ids:
             prices_to_consider += ["68f1af1d", "93YfzkaA"]
 
@@ -617,8 +620,8 @@ class Scenario(object):
                 "description": "Understand your scenario at the journal level.",
                 "figure": [],
                 "headers": [
-                        {"text": "Net cost per paid use", "value": "ncppu", "percent": None, "raw": self.ncppu, "display": "currency"},
-                        {"text": "NCPPU Rank", "value": "ncppu_rank", "percent": None, "raw": None, "display": "number"},
+                        {"text": "Cost per Use", "value": "ncppu", "percent": None, "raw": self.ncppu, "display": "currency"},
+                        {"text": "CPU Rank", "value": "ncppu_rank", "percent": None, "raw": None, "display": "number"},
                         {"text": "Cost", "value": "cost", "percent": None, "raw": self.cost, "display": "currency_int"},
                         {"text": "Usage", "value": "usage", "percent": None, "raw": self.use_total, "display": "number"},
                         {"text": "Instant Usage Percent", "value": "instant_usage_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent, "display": "percent"},
@@ -628,8 +631,8 @@ class Scenario(object):
                         {"text": "Subscription Cost", "value": "subscription_cost", "percent": None, "raw": self.cost_subscription, "display": "currency_int"},
                         {"text": "ILL Cost", "value": "ill_cost", "percent": None, "raw": self.cost_ill, "display": "currency_int"},
                         {"text": "Subscription minus ILL Cost", "value": "subscription_minus_ill_cost", "percent": None, "raw": self.cost_subscription_minus_ill, "display": "currency_int"},
-                        {"text": "Cost per Use", "value": "old_school_cpu", "percent": None, "raw": None, "display": "currency"},
-                        {"text": "CPU Rank", "value": "old_school_cpu_rank", "percent": None, "raw": None, "display": "number"},
+                        # {"text": "Cost per Use", "value": "old_school_cpu", "percent": None, "raw": None, "display": "currency"},
+                        # {"text": "CPU Rank", "value": "old_school_cpu_rank", "percent": None, "raw": None, "display": "number"},
 
                         # fulfillment
                         {"text": "Percent of Usage from ASNs", "value": "use_asns_percent", "percent": round(float(100)*self.use_social_networks/self.use_total), "raw": self.use_social_networks, "display": "percent"},
@@ -689,7 +692,7 @@ class Scenario(object):
                 "description": "Understand your scenario at the journal level.",
                 "figure": [],
                 "headers": [
-                        {"text": "Net cost per paid use", "value": "ncppu", "percent": None, "raw": self.ncppu, "display": "currency"},
+                        {"text": "Cost per use", "value": "ncppu", "percent": None, "raw": self.ncppu, "display": "currency"},
                         {"text": "Cost", "value": "cost", "percent": None, "raw": self.cost, "display": "currency_int"},
                         {"text": "Usage", "value": "use", "percent": None, "raw": self.use_total, "display": "number"},
                         {"text": "Instant Usage Percent", "value": "instant_usage_percent", "percent": self.use_instant_percent, "raw": self.use_instant_percent, "display": "percent"},

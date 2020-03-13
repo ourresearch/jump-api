@@ -36,6 +36,9 @@ class Journal(object):
         self.set_scenario_data(scenario_data)
         self.issn_l = issn_l
         self.package_id = package_id
+        self.package_id_for_db = self.package_id
+        if self.package_id.startswith("demo"):
+            self.package_id_for_db = DEMO_PACKAGE_ID
         self.subscribed_bulk = False
         self.subscribed_custom = False
         self.use_default_download_curve = False
@@ -91,9 +94,9 @@ class Journal(object):
     @cached_property
     def num_citations_historical_by_year(self):
         try:
-            my_dict = self._scenario_data[self.package_id]["citation_dict"].get(self.issn_l, {})
+            my_dict = self._scenario_data[self.package_id_for_db]["citation_dict"].get(self.issn_l, {})
         except KeyError:
-            print "key error in num_citations_historical_by_year for {}".format(self.issn_l)
+            # print "key error in num_citations_historical_by_year for {}".format(self.issn_l)
             return [0 for year in self.years]
         # the year is a string key alas
         if my_dict and isinstance(my_dict.keys()[0], int):
@@ -108,9 +111,9 @@ class Journal(object):
     @cached_property
     def num_authorships_historical_by_year(self):
         try:
-            my_dict = self._scenario_data[self.package_id]["authorship_dict"].get(self.issn_l, {})
+            my_dict = self._scenario_data[self.package_id_for_db]["authorship_dict"].get(self.issn_l, {})
         except KeyError:
-            print "key error in num_authorships_historical_by_year for {}".format(self.issn_l)
+            # print "key error in num_authorships_historical_by_year for {}".format(self.issn_l)
             return [0 for year in self.years]
 
         # the year is a string key alas
@@ -538,9 +541,20 @@ class Journal(object):
         return [self.num_green_historical_by_year[year]+self.num_bronze_historical_by_year[year]+self.num_hybrid_historical_by_year[year] for year in self.years]
 
     @cached_property
+    def use_oa_plus_social_networks(self):
+        return self.use_oa + self.use_social_networks
+
+    @cached_property
+    def use_oa_plus_social_networks_by_year(self):
+        return [self.use_oa_by_year[year] + self.use_social_networks_by_year[year] for year in self.years]
+
+    @cached_property
     def downloads_oa_by_year(self):
         return self.sum_obs_pub_matrix_by_obs(self.oa_obs_pub)
 
+    @cached_property
+    def downloads_oa_plus_social_networks_by_year(self):
+        return [self.downloads_oa_by_year[year] + self.downloads_social_networks_by_year[year] for year in self.years]
 
     @cached_property
     def use_oa(self):
@@ -826,13 +840,14 @@ class Journal(object):
     @cached_property
     def use_actual(self):
         response = defaultdict(int)
-        for group in use_groups:
+        for group in use_groups + ["oa_plus_social_networks"]:
             response[group] = self.__getattribute__("use_{}".format(group))
             if self.subscribed:
                 response["ill"] = 0
                 response["other_delayed"] = 0
             else:
                 response["subscription"] = 0
+        response["oa_no_social_networks"] = response["oa"]
         return response
 
     @cached_property
@@ -881,7 +896,7 @@ class Journal(object):
     @cached_property
     def downloads_counter_multiplier(self):
         try:
-            counter_for_this_journal = self._scenario_data[self.package_id]["counter_dict"][self.issn_l]
+            counter_for_this_journal = self._scenario_data[self.package_id_for_db]["counter_dict"][self.issn_l]
             counter_multiplier = float(counter_for_this_journal) / self.downloads_total_before_counter_correction
         except:
             counter_multiplier = float(0)
@@ -1285,7 +1300,7 @@ class Journal(object):
     @cached_property
     def baseline_access(self):
         from scenario import get_core_list_from_db
-        rows = get_core_list_from_db(self.package_id)
+        rows = get_core_list_from_db(self.package_id_for_db)
         if not self.issn_l in rows:
             return None
         return rows[self.issn_l]["baseline_access"]
@@ -1414,9 +1429,7 @@ class Journal(object):
         table_row["use_instant_percent"] = self.use_instant_percent
 
         # keep this format
-        table_row["use_groups_free_instant"] = {}
-        for group in use_groups_free_instant:
-            table_row["use_groups_free_instant"][group] = self.__getattribute__("use_{}".format(group))
+        table_row["use_groups_free_instant"] = {"oa": self.use_oa_plus_social_networks, "backfile": self.use_backfile}
         table_row["use_groups_if_subscribed"] = {"subscription": self.use_subscription}
         table_row["use_groups_if_not_subscribed"] = {"ill": self.use_ill, "other_delayed": self.use_other_delayed}
 
@@ -1432,12 +1445,9 @@ class Journal(object):
         table_row["subscription_cost"] = round(self.cost_subscription)
         table_row["ill_cost"] = round(self.cost_ill)
         table_row["subscription_minus_ill_cost"] = round(self.cost_subscription_minus_ill)
-        table_row["old_school_cpu"] = display_usage(self.old_school_cpu)
-        table_row["old_school_cpu_rank"] = display_usage(self.old_school_cpu_rank)
 
         # fulfillment
-        table_row["use_asns_percent"] = round(float(100)*self.use_actual["social_networks"]/self.use_total)
-        table_row["use_oa_percent"] = round(float(100)*self.use_actual["oa"]/self.use_total)
+        table_row["use_oa_percent"] = round(float(100)*self.use_actual["oa_plus_social_networks"]/self.use_total)
         table_row["use_backfile_percent"] = round(float(100)*self.use_actual["backfile"]/self.use_total)
         table_row["use_subscription_percent"] = round(float(100)*self.use_actual["subscription"]/self.use_total)
         table_row["use_ill_percent"] = round(float(100)*self.use_actual["ill"]/self.use_total)
@@ -1445,6 +1455,8 @@ class Journal(object):
         table_row["perpetual_access_years_text"] = self.display_perpetual_access_years
 
         # oa
+        table_row["use_oa_percent"] = round(float(100)*self.use_actual["oa_plus_social_networks"]/self.use_total)
+        table_row["use_asns_percent"] = round(float(100)*self.use_actual["social_networks"]/self.use_total)
         table_row["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
         table_row["use_hybrid_percent"] = round(float(100)*self.use_oa_hybrid/self.use_total)
         table_row["use_bronze_percent"] = round(float(100)*self.use_oa_bronze/self.use_total)
@@ -1543,6 +1555,10 @@ class Journal(object):
         response["fulfillment"]["has_perpetual_access"] = self.has_perpetual_access
 
         oa_list = []
+        oa_list += [OrderedDict([("oa_status", "ResearchGate, etc."),
+                                # ("num_papers", round(self.num_oa_historical)),
+                                ("usage", format_with_commas(self.use_social_networks)),
+                                ("usage_percent", format_percent(round(100*float(self.use_social_networks)/self.use_total)))])]
         for oa_type in ["green", "hybrid", "bronze"]:
             oa_dict = OrderedDict()
             use = self.__getattribute__("use_oa_{}".format(oa_type))
@@ -1553,8 +1569,8 @@ class Journal(object):
             oa_list += [oa_dict]
         oa_list += [OrderedDict([("oa_status", "*Total*"),
                                 # ("num_papers", round(self.num_oa_historical)),
-                                ("usage", format_with_commas(self.use_oa)),
-                                ("usage_percent", format_percent(round(100*float(self.use_oa)/self.use_total)))])]
+                                ("usage", format_with_commas(self.use_oa_plus_social_networks)),
+                                ("usage_percent", format_percent(round(100*float(self.use_oa_plus_social_networks)/self.use_total)))])]
         response["oa"] = {
             "oa_embargo_months": self.oa_embargo_months,
             "headers": [
@@ -1793,9 +1809,7 @@ class Journal(object):
                 "use_instant": self.use_instant,
                 "use_instant_percent": self.use_instant_percent,
                 }
-        response["use_groups_free_instant"] = {}
-        for group in use_groups_free_instant:
-            response["use_groups_free_instant"][group] = self.__getattribute__("use_{}".format(group))
+        response["use_groups_free_instant"] = self.__getattribute__("use_{}".format(group))
         response["use_groups_if_subscribed"] = {"subscription": self.use_subscription}
         response["use_groups_if_not_subscribed"] = {"ill": self.use_ill, "other_delayed": self.use_other_delayed}
         return response
