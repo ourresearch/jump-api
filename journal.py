@@ -1424,12 +1424,11 @@ class Journal(object):
         table_row["use_total"] = self.use_total
         table_row["cost_subscription"] = self.cost_subscription
         table_row["cost_ill"] = self.cost_ill
-        table_row["cost_subscription_minus_ill"] = self.cost_subscription_minus_ill,
         table_row["use_instant"] = self.use_instant
         table_row["use_instant_percent"] = self.use_instant_percent
 
         # keep this format
-        table_row["use_groups_free_instant"] = {"oa": self.use_oa_plus_social_networks, "backfile": self.use_backfile}
+        table_row["use_groups_free_instant"] = {"oa": self.use_oa_plus_social_networks, "backfile": self.use_backfile, "social_networks": 0}
         table_row["use_groups_if_subscribed"] = {"subscription": self.use_subscription}
         table_row["use_groups_if_not_subscribed"] = {"ill": self.use_ill, "other_delayed": self.use_other_delayed}
 
