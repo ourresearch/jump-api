@@ -139,7 +139,8 @@ class SavedScenario(db.Model):
             "subrs": [j.issn_l for j in self.live_scenario.subscribed_bulk],
             "customSubrs": [j.issn_l for j in self.live_scenario.subscribed_custom],
             "configs": self.live_scenario.settings.to_dict(),
-            "name": self.scenario_name
+            "name": self.scenario_name,
+            "id": self.scenario_id
         }
         return response
 
