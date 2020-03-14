@@ -234,6 +234,7 @@ def login():
         "created": datetime.datetime.utcnow().isoformat(),
         "is_demo_account": my_account.is_demo_account
     }
+    print "identity_dict", identity_dict
     logger.info(u"login to account {} with {}".format(my_account.username, identity_dict))
     access_token = create_access_token(identity=identity_dict)
 
@@ -305,11 +306,11 @@ def get_saved_scenario(scenario_id, test_mode=False):
 
         if my_saved_scenario.package_real.account_id != identity_dict["account_id"]:
             if not my_saved_scenario.package_real.consortium_package_id:
-                abort_json(401, "Not authorized to view this package")
+                abort_json(401, "Not authorized to view this package: mismatched account_id")
             else:
                 consortium_package = Package.query.filter(Package.package_id==my_saved_scenario.package_real.consortium_package_id).first()
                 if consortium_package.account_id != identity_dict["account_id"]:
-                    abort_json(401, "Not authorized to view this package")
+                    abort_json(401, "Not authorized to view this package: mismatched consortium account")
 
     my_saved_scenario.set_live_scenario(None)
 
@@ -334,12 +335,6 @@ def get_saved_scenario(scenario_id, test_mode=False):
 #         print u"cache RunAsyncToRequestResponse response header:", r.headers["CF-Cache-Status"]
 
 
-# @app.route('/account', methods=['GET'])
-# @jwt_required
-# def precache_account_get():
-#     return get_cached_response("account")
-#
-# @app.route('/live/account', methods=['GET'])
 @app.route('/account', methods=['GET'])
 @jwt_required
 def live_account_get():
@@ -382,13 +377,7 @@ def get_jwt():
         return request.headers["Authorization"].replace("Bearer ", "")
     return None
 
-# @app.route('/package/<package_id>', methods=['GET'])
-# @jwt_required
-# def precache_package_id_get(package_id):
-#     return get_cached_response("package/{}".format(package_id))
-#
-#
-# @app.route('/live/package/<package_id>', methods=['GET'])
+
 @app.route('/package/<package_id>', methods=['GET'])
 @jwt_optional
 def live_package_id_get(package_id):
@@ -553,13 +542,6 @@ def subscriptions_scenario_id_post(scenario_id):
 
 
 
-
-# @app.route('/scenario/<scenario_id>', methods=['GET'])
-# @jwt_required
-# def precache_scenario_id_get(scenario_id):
-#     return get_cached_response("scenario/{}".format(scenario_id))
-#
-# @app.route('/live/scenario/<scenario_id>', methods=['GET'])
 @app.route('/scenario/<scenario_id>', methods=['GET'])
 @jwt_optional
 # @my_memcached.cached(timeout=7*24*60*60)
@@ -596,7 +578,6 @@ def scenario_id_summary_get(scenario_id):
 
 @app.route('/scenario/<scenario_id>/journals', methods=['GET'])
 @jwt_optional
-# @cached()
 def scenario_id_journals_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
     response = jsonify_fast_no_sort(my_saved_scenario.to_dict_journals())
@@ -624,12 +605,7 @@ def scenario_id_details_get(scenario_id):
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_details())
 
 
-# @app.route('/scenario/<scenario_id>/table', methods=['GET'])
-# @jwt_required
-# def precache_scenario_id_table_get(scenario_id):
-#     return get_cached_response("scenario/{}/table".format(scenario_id))
-#
-# @app.route('/live/scenario/<scenario_id>/table', methods=['GET'])
+
 @app.route('/scenario/<scenario_id>/table', methods=['GET'])
 @jwt_optional
 # @my_memcached.cached(timeout=7*24*60*60)
@@ -641,13 +617,7 @@ def live_scenario_id_table_get(scenario_id):
     return response
 
 
-# @app.route('/scenario/<scenario_id>/slider', methods=['GET'])
-# @jwt_required
-# def precache_scenario_id_slider_get(scenario_id):
-#     return get_cached_response("scenario/{}/slider".format(scenario_id))
-#     # return cache_scenario_id_slider_get(scenario_id)
-#
-# @app.route('/live/scenario/<scenario_id>/slider', methods=['GET'])
+
 @app.route('/scenario/<scenario_id>/slider', methods=['GET'])
 @jwt_optional
 # @my_memcached.cached(timeout=7*24*60*60)
