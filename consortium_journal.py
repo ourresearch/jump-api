@@ -144,7 +144,7 @@ class ConsortiumJournal(Journal):
         # include the if to skip this if no useage
         if self.use_total:
             # true regardless
-            for group in use_groups_free_instant + ["total"]:
+            for group in use_groups_free_instant + ["total", "oa_plus_social_networks", "oa", "social_networks"]:
                 my_dict[group] = self.__getattribute__("use_{}".format(group))
             # depends
             if self.subscribed:
@@ -152,7 +152,9 @@ class ConsortiumJournal(Journal):
             else:
                 my_dict["ill"] = self.use_ill
                 my_dict["other_delayed"] = self.use_other_delayed
+            my_dict["oa_no_social_networks"] = my_dict["oa"]
         return my_dict
+
 
     @cached_property
     def use_social_networks(self):
