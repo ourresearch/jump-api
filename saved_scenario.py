@@ -166,6 +166,7 @@ class SavedScenario(db.Model):
             "id": self.scenario_id,
             "name": self.scenario_name,
             "pkgId": self.package_id,
+            "saved": self.to_dict_saved()
         }
         return response
 

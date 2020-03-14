@@ -389,12 +389,6 @@ def live_package_id_get(package_id):
 
     identity_dict = get_jwt_identity()
 
-    # if package_id.startswith("demo"):
-    #     my_package = Package.query.get("demo")
-    #     my_package.package_id = package_id
-    # else:
-    #     my_package = Package.query.get(package_id)
-
     my_package = Package.query.get(package_id)
 
     if not is_authorized_superuser():
@@ -740,26 +734,19 @@ def scenario_post(package_id):
     if request.json.get('name', None):
         new_scenario_name = request.json.get('name')
 
-    print "new_scenario_id", new_scenario_id
     new_saved_scenario = SavedScenario(False, new_scenario_id, None)
     new_saved_scenario.package_id = package_id
     new_saved_scenario.scenario_name = new_scenario_name
     db.session.add(new_saved_scenario)
     safe_commit(db)
 
-    print "new_saved_scenario", new_saved_scenario
 
     if my_saved_scenario_to_copy_from:
         dict_to_save = my_saved_scenario_to_copy_from.to_dict_saved()
     else:
         dict_to_save = new_saved_scenario.to_dict_saved()
 
-    print "my_saved_scenario_to_copy_from", my_saved_scenario_to_copy_from
-    print "dict_to_save", dict_to_save
-
     save_raw_scenario_to_db(new_scenario_id, dict_to_save, get_ip(request))
-
-    print "new_scenario_id", new_scenario_id
 
     my_new_scenario = get_saved_scenario(new_scenario_id)
 
