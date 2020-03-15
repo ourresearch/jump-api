@@ -217,6 +217,7 @@ def login():
         scenario_id = "demo-scenario-{}".format(my_uuid)
         new_saved_scenario = SavedScenario(True, scenario_id, None)
         new_saved_scenario.scenario_name = u"My first scenario"
+        new_saved_scenario.is_base_scenario = True
 
         new_package.saved_scenarios = [new_saved_scenario]
         new_account.packages = [new_package]
@@ -737,6 +738,7 @@ def scenario_post(package_id):
     new_saved_scenario = SavedScenario(False, new_scenario_id, None)
     new_saved_scenario.package_id = package_id
     new_saved_scenario.scenario_name = new_scenario_name
+    new_saved_scenario.is_base_scenario = False
     db.session.add(new_saved_scenario)
     safe_commit(db)
 
