@@ -66,6 +66,7 @@ class SavedScenario(db.Model):
     scenario_id = db.Column(db.Text, primary_key=True)
     scenario_name = db.Column(db.Text)
     created = db.Column(db.DateTime)
+    is_base_scenario = db.Column(db.Boolean)
 
     def __init__(self, is_demo_account, scenario_id, scenario_input):
         # if is_demo_account:
@@ -180,6 +181,8 @@ class SavedScenario(db.Model):
         response["account_id"] = self.package_real.account_id
         response["account_name"] = self.package_real.account.display_name
         response["account_username"] = self.package_real.account.username
+        response["scenario_created"] = self.created
+        response["is_base_scenario"] = self.is_base_scenario
         return response
 
     def to_dict_journals(self):
