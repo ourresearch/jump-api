@@ -27,6 +27,7 @@ import dateparser
 import functools
 import hashlib
 import pickle
+import tempfile
 
 from app import app
 from app import logger
@@ -36,8 +37,10 @@ from app import my_memcached
 from app import get_db_cursor
 from scenario import Scenario
 from account import Account
+from journal_price import JournalPrice
 from package import Package
 from package import get_ids
+from perpetual_access import PerpetualAccess
 from saved_scenario import SavedScenario
 from saved_scenario import get_latest_scenario
 from saved_scenario import save_raw_scenario_to_db
@@ -113,6 +116,25 @@ def cached(extra_key=None):
 
     return _cached
 
+
+def package_authenticated(func):
+    @functools.wraps(func)
+    def wrapper(package_id):
+        package = Package.query.get(package_id)
+
+        if is_authorized_superuser():
+            if not package:
+                return abort_json(404, "Package not found")
+        else:
+            jwt_identity = get_jwt_identity()
+            account = Account.query.get(get_jwt_identity()['account_id']) if jwt_identity else None
+
+            if not (package and account and package.account_id == account.id):
+                return abort_json(401, u'not authorized to view or modify package {}'.format(package_id))
+
+        return func(package_id)
+
+    return wrapper
 
 
 @app.after_request
@@ -438,6 +460,72 @@ def jump_debug_counter_diff_type_package_id(package_id, diff_type):
 
     return jsonify_fast_no_sort({"count": len(rows), "list": my_list})
 
+
+def _long_error_message():
+    return u"Something is wrong with the input file. This is placeholder for a message describing it. It's a little longer than the longest real message."
+
+
+@app.route('/package/<package_id>/counter', methods=['GET', 'POST'])
+@jwt_optional
+@package_authenticated
+def jump_counter(package_id):
+    if request.method == 'GET':
+        if package_id.startswith("demo"):
+            my_package = Package.query.get("demo")
+            my_package.package_id = package_id
+        else:
+            my_package = Package.query.get(package_id)
+
+        response = my_package.get_package_counter_breakdown()
+        return jsonify_fast_no_sort(response)
+    else:
+        if request.args.get("error", False):
+            return abort_json(400, _long_error_message())
+        else:
+            if len(request.files) == 1:
+                return jsonify_fast_no_sort(u'inserted N COUNTER rows for package {}'.format(package_id))
+            else:
+                return abort_json(400, u'expected exactly one uploaded file, but got {}'.format(len(request.files)))
+
+
+@app.route('/package/<package_id>/perpetual-access', methods=['GET', 'POST'])
+@jwt_optional
+@package_authenticated
+def jump_perpetual_access(package_id):
+    if request.method == 'GET':
+        rows = PerpetualAccess.query.filter(PerpetualAccess.package_id == package_id).all()
+        if rows:
+            return jsonify_fast_no_sort({"rows": [row.to_dict() for row in rows]})
+        else:
+            return abort_json(404, u'no perpetual access file for package {}'.format(package_id))
+    else:
+        if request.args.get("error", False):
+            return abort_json(400, _long_error_message())
+        else:
+            if len(request.files) == 1:
+                return jsonify_fast_no_sort(u'inserted N perpetual access rows for package {}'.format(package_id))
+            else:
+                return abort_json(400, u'expected exactly one uploaded file, but got {}'.format(len(request.files)))
+
+
+@app.route('/package/<package_id>/prices', methods=['GET', 'POST'])
+@jwt_optional
+@package_authenticated
+def jump_journal_prices(package_id):
+    if request.method == 'GET':
+        rows = JournalPrice.query.filter(JournalPrice.package_id == package_id).all()
+        if rows:
+            return jsonify_fast_no_sort({"rows": [row.to_dict() for row in rows]})
+        else:
+            return abort_json(404, u'no journal price file for package {}'.format(package_id))
+    else:
+        if request.args.get("error", False):
+            return abort_json(400, _long_error_message())
+        else:
+            if len(request.files) == 1:
+                return jsonify_fast_no_sort(u'inserted N journal prices for package {}'.format(package_id))
+            else:
+                return abort_json(400, u'expected exactly one uploaded file, but got {}'.format(len(request.files)))
 
 
 def post_subscription_guts(scenario_id):
