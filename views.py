@@ -505,7 +505,7 @@ def jump_counter(package_id):
             return abort_json(400, _long_error_message())
         else:
             if len(request.files) == 1:
-                return jsonify_fast_no_sort(u'inserted N COUNTER rows for package {}'.format(package_id))
+                return jsonify_fast_no_sort({'message': u'inserted N COUNTER rows for package {}'.format(package_id)})
             else:
                 return abort_json(400, u'expected exactly one uploaded file, but got {}'.format(len(request.files)))
 
@@ -525,7 +525,7 @@ def jump_perpetual_access(package_id):
             return abort_json(400, _long_error_message())
         else:
             if len(request.files) == 1:
-                return jsonify_fast_no_sort(u'inserted N perpetual access rows for package {}'.format(package_id))
+                return jsonify_fast_no_sort({'message': u'inserted N perpetual access rows for package {}'.format(package_id)})
             else:
                 return abort_json(400, u'expected exactly one uploaded file, but got {}'.format(len(request.files)))
 
@@ -545,7 +545,7 @@ def jump_journal_prices(package_id):
             return abort_json(400, _long_error_message())
         else:
             if len(request.files) == 1:
-                return jsonify_fast_no_sort(u'inserted N journal prices for package {}'.format(package_id))
+                return jsonify_fast_no_sort({'message': u'inserted N journal prices for package {}'.format(package_id)})
             else:
                 return abort_json(400, u'expected exactly one uploaded file, but got {}'.format(len(request.files)))
 
