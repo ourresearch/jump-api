@@ -492,7 +492,7 @@ def _json_to_temp_file(req):
     if 'file' in req.json and 'name' in req.json:
         temp_filename = tempfile.mkstemp(suffix=req.json['name'] or '')[1]
         with open(temp_filename, "wb") as temp_file:
-            temp_file.write(req.json['file'].decode('base64'))
+            temp_file.write(req.json['file'].split(',')[-1].decode('base64'))
         return temp_filename
     else:
         return None
