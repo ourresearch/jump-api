@@ -69,7 +69,7 @@ class PackageInput:
     @classmethod
     def load(cls, package_id, file_name):
         if package_id != 'BwfVyRm9':
-            raise ValueError('only loading files for test package BwfVyRm9 for now')
+            return False, u'only loading files for test package BwfVyRm9 for now'
 
         if file_name.endswith(u'.xls') or file_name.endswith(u'.xlsx'):
             file_name = convert_spreadsheet_to_csv(file_name)
