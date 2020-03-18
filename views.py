@@ -501,11 +501,16 @@ def _json_to_temp_file(req):
 def _load_package_file(package_id, req, table_class):
     temp_file = _json_to_temp_file(req)
     if temp_file:
-        success, message = table_class.load(package_id, temp_file)
-        if success:
-            return jsonify_fast_no_sort({'message': message})
+        if package_id != 'BwfVyRm9':
+            return jsonify_fast_no_sort(
+                {'message': u'Simulated loading {} for package {}.'.format(table_class.__name__, package_id)}
+            )
         else:
-            return abort_json(400, message)
+            success, message = table_class.load(package_id, temp_file)
+            if success:
+                return jsonify_fast_no_sort({'message': message})
+            else:
+                return abort_json(400, message)
     else:
         return abort_json(
             400, u'expected a JSON object like {file: <base64-encoded file>, name: <file name>}'
