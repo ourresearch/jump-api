@@ -68,9 +68,6 @@ class PackageInput:
 
     @classmethod
     def load(cls, package_id, file_name):
-        if package_id != 'BwfVyRm9':
-            return False, u'only loading files for test package BwfVyRm9 for now'
-
         if file_name.endswith(u'.xls') or file_name.endswith(u'.xlsx'):
             file_name = convert_spreadsheet_to_csv(file_name)
 
@@ -105,11 +102,15 @@ class PackageInput:
                 normalized_row.update({'package_id': package_id})
                 rows.append(normalized_row)
                 row_no += 1
-        try:
-            db.session.query(cls).filter(cls.package_id == package_id).delete()
-            db.session.bulk_save_objects([cls(**row) for row in rows])
-            safe_commit(db)
-        except Exception as e:
-            return False, e.message
 
-        return True, u'Inserted {} {} rows for package {}.'.format(len(rows), cls.__name__, package_id)
+        if package_id == 'BwfVyRm9':
+            try:
+                db.session.query(cls).filter(cls.package_id == package_id).delete()
+                db.session.bulk_save_objects([cls(**row) for row in rows])
+                safe_commit(db)
+            except Exception as e:
+                return False, e.message
+
+            return True, u'Inserted {} {} rows for package {}.'.format(len(rows), cls.__name__, package_id)
+        else:
+            return True, u'Simulated inserting {} {} rows for package {}.'.format(len(rows), cls.__name__, package_id)
