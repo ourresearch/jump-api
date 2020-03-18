@@ -38,10 +38,10 @@ from app import my_memcached
 from app import get_db_cursor
 from scenario import Scenario
 from account import Account
-from journal_price import JournalPrice
+from journal_price import JournalPrice, JournalPriceInput
 from package import Package
 from package import get_ids
-from perpetual_access import PerpetualAccess
+from perpetual_access import PerpetualAccess, PerpetualAccessInput
 from saved_scenario import SavedScenario
 from saved_scenario import get_latest_scenario
 from saved_scenario import save_raw_scenario_to_db
@@ -488,6 +488,30 @@ def _long_error_message():
     return u"Something is wrong with the input file. This is placeholder for a message describing it. It's a little longer than the longest real message."
 
 
+def _json_to_temp_file(req):
+    if 'file' in req.json and 'filename' in req.json:
+        temp_filename = tempfile.mkstemp(suffix=req.json['filename'] or '')[1]
+        with open(temp_filename, "wb") as temp_file:
+            temp_file.write(req.json['file'].decode('base64'))
+        return temp_filename
+    else:
+        return None
+
+
+def _load_package_file(package_id, req, table_class):
+    temp_file = _json_to_temp_file(req)
+    if temp_file:
+        success, message = table_class.load(package_id, temp_file)
+        if success:
+            return jsonify_fast_no_sort({'message': message})
+        else:
+            return abort_json(400, message)
+    else:
+        return abort_json(
+            400, u'expected a JSON object like {file: <base64-encoded file>, filename: <file name>}'
+        )
+
+
 @app.route('/package/<package_id>/counter', methods=['GET', 'POST'])
 @jwt_optional
 @package_authenticated
@@ -505,14 +529,16 @@ def jump_counter(package_id):
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
-            if 'file' in request.json:
-                file_bytes = base64.b64decode(request.json['file'])
+            temp_file = _json_to_temp_file(request)
+            if temp_file:
                 return jsonify_fast_no_sort(
-                    {'message': u'inserted N COUNTER rows for package {} from {} byte file'.format(
-                        package_id, len(file_bytes)
+                    {'message': u'inserted N COUNTER rows for package {} from {}'.format(
+                        package_id, temp_file
                     )})
             else:
-                return abort_json(400, u'expected a JSON object like {file: <base64-encoded file>}')
+                return abort_json(
+                    400, u'expected a JSON object like {file: <base64-encoded file>, filename: <file name>}'
+                )
 
 
 @app.route('/package/<package_id>/perpetual-access', methods=['GET', 'POST'])
@@ -529,14 +555,7 @@ def jump_perpetual_access(package_id):
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
-            if 'file' in request.json:
-                file_bytes = base64.b64decode(request.json['file'])
-                return jsonify_fast_no_sort(
-                    {'message': u'inserted N journal prices for package {} from {} byte file'.format(
-                        package_id, len(file_bytes)
-                    )})
-            else:
-                return abort_json(400, u'expected a JSON object like {file: <base64-encoded file>}')
+            return _load_package_file(package_id, request, PerpetualAccessInput)
 
 
 @app.route('/package/<package_id>/prices', methods=['GET', 'POST'])
@@ -553,14 +572,7 @@ def jump_journal_prices(package_id):
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
-            if 'file' in request.json:
-                file_bytes = base64.b64decode(request.json['file'])
-                return jsonify_fast_no_sort(
-                    {'message': u'inserted N journal prices for package {} from {} byte file'.format(
-                        package_id, len(file_bytes)
-                    )})
-            else:
-                return abort_json(400, u'expected a JSON object like {file: <base64-encoded file>}')
+            return _load_package_file(package_id, request, JournalPriceInput)
 
 
 def post_subscription_guts(scenario_id, scenario_name=None):
