@@ -489,8 +489,8 @@ def _long_error_message():
 
 
 def _json_to_temp_file(req):
-    if 'file' in req.json and 'filename' in req.json:
-        temp_filename = tempfile.mkstemp(suffix=req.json['filename'] or '')[1]
+    if 'file' in req.json and 'name' in req.json:
+        temp_filename = tempfile.mkstemp(suffix=req.json['name'] or '')[1]
         with open(temp_filename, "wb") as temp_file:
             temp_file.write(req.json['file'].decode('base64'))
         return temp_filename
@@ -508,7 +508,7 @@ def _load_package_file(package_id, req, table_class):
             return abort_json(400, message)
     else:
         return abort_json(
-            400, u'expected a JSON object like {file: <base64-encoded file>, filename: <file name>}'
+            400, u'expected a JSON object like {file: <base64-encoded file>, name: <file name>}'
         )
 
 
