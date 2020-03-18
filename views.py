@@ -13,6 +13,7 @@ from flask_jwt_extended import jwt_required, jwt_optional, create_access_token, 
 from werkzeug.security import safe_str_cmp
 from werkzeug.security import generate_password_hash, check_password_hash
 
+import base64
 import simplejson as json
 import os
 import sys
@@ -504,10 +505,14 @@ def jump_counter(package_id):
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
-            if len(request.files) == 1:
-                return jsonify_fast_no_sort({'message': u'inserted N COUNTER rows for package {}'.format(package_id)})
+            if 'file' in request.json:
+                file_bytes = base64.b64decode(request.json['file'])
+                return jsonify_fast_no_sort(
+                    {'message': u'inserted N COUNTER rows for package {} from {} byte file'.format(
+                        package_id, len(file_bytes)
+                    )})
             else:
-                return abort_json(400, u'expected exactly one uploaded file, but got {}'.format(len(request.files)))
+                return abort_json(400, u'expected a JSON object like {file: <base64-encoded file>}')
 
 
 @app.route('/package/<package_id>/perpetual-access', methods=['GET', 'POST'])
@@ -524,10 +529,14 @@ def jump_perpetual_access(package_id):
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
-            if len(request.files) == 1:
-                return jsonify_fast_no_sort({'message': u'inserted N perpetual access rows for package {}'.format(package_id)})
+            if 'file' in request.json:
+                file_bytes = base64.b64decode(request.json['file'])
+                return jsonify_fast_no_sort(
+                    {'message': u'inserted N journal prices for package {} from {} byte file'.format(
+                        package_id, len(file_bytes)
+                    )})
             else:
-                return abort_json(400, u'expected exactly one uploaded file, but got {}'.format(len(request.files)))
+                return abort_json(400, u'expected a JSON object like {file: <base64-encoded file>}')
 
 
 @app.route('/package/<package_id>/prices', methods=['GET', 'POST'])
@@ -544,10 +553,14 @@ def jump_journal_prices(package_id):
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
-            if len(request.files) == 1:
-                return jsonify_fast_no_sort({'message': u'inserted N journal prices for package {}'.format(package_id)})
+            if 'file' in request.json:
+                file_bytes = base64.b64decode(request.json['file'])
+                return jsonify_fast_no_sort(
+                    {'message': u'inserted N journal prices for package {} from {} byte file'.format(
+                        package_id, len(file_bytes)
+                    )})
             else:
-                return abort_json(400, u'expected exactly one uploaded file, but got {}'.format(len(request.files)))
+                return abort_json(400, u'expected a JSON object like {file: <base64-encoded file>}')
 
 
 def post_subscription_guts(scenario_id, scenario_name=None):
