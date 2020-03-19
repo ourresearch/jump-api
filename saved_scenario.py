@@ -172,6 +172,12 @@ class SavedScenario(db.Model):
         }
         return response
 
+    def to_dict_micro(self):
+        response = {
+            "id": self.scenario_id,
+        }
+        return response
+
     def to_dict_meta(self):
         response = OrderedDict()
         response["scenario_id"] = self.scenario_id
