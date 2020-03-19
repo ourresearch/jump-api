@@ -1,14 +1,18 @@
-import unicodecsv as csv
+import json
+import os
 import re
+import tempfile
+from re import sub
 
+import boto3
 import dateutil.parser
+import shortuuid
+import unicodecsv as csv
 
 from app import db, logger
 from excel import convert_spreadsheet_to_csv
 from util import safe_commit
-from re import sub
-import json
-from sqlalchemy.dialects import postgresql
+
 
 class PackageInput:
     @staticmethod
@@ -50,7 +54,7 @@ class PackageInput:
                 sub_pattern = ur'[^\d{}]'.format(decimal)
                 price = sub(sub_pattern, '', price)
                 price = sub(',', '.', price)
-                return round(float(price))
+                return int(round(float(price)))
             except Exception:
                 raise ValueError(u"unrecognized price format")
         else:
@@ -90,6 +94,15 @@ class PackageInput:
                     return {canonical_name: spec['normalize'](column_value)}
 
         return None
+
+    @classmethod
+    def _copy_to_s3(cls, package_id, filename):
+        s3 = boto3.client('s3')
+        bucket_name = 'jump-redshift-staging'
+        object_name = '{}_{}_{}'.format(package_id, cls.__name__, shortuuid.uuid())
+        s3.upload_file(filename, bucket_name, object_name)
+        return 's3://{}/{}'.format(bucket_name, object_name)
+
 
     @classmethod
     def load(cls, package_id, file_name):
@@ -158,12 +171,33 @@ class PackageInput:
             logger.info(u'normalized row: {}'.format(json.dumps(row)))
 
         if package_id == 'BwfVyRm9':
-            try:
-                db.session.query(cls).filter(cls.package_id == package_id).delete()
-                db.session.bulk_insert_mappings(cls, normalized_rows, render_nulls=True)
+            db.session.query(cls).filter(cls.package_id == package_id).delete()
+
+            if normalized_rows:
+                sorted_fields = sorted(normalized_rows[0].keys())
+                normalized_csv_filename = tempfile.mkstemp()[1]
+                with open(normalized_csv_filename, 'w') as normalized_csv_file:
+                    writer = csv.DictWriter(normalized_csv_file, delimiter=',', encoding='utf-8', fieldnames=sorted_fields)
+                    for row in normalized_rows:
+                        writer.writerow(row)
+
+                s3_object = cls._copy_to_s3(package_id, normalized_csv_filename)
+
+                copy_cmd = '''
+                    copy {table}({fields})
+                    from '{s3_object}'
+                    credentials 'aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}'
+                    format as csv;
+                '''.format(
+                    table=cls.__tablename__,
+                    fields=', '.join(sorted_fields),
+                    s3_object=s3_object,
+                    aws_key=os.getenv('AWS_ACCESS_KEY_ID'),
+                    aws_secret=os.getenv('AWS_SECRET_ACCESS_KEY')
+                )
+
+                db.session.execute(copy_cmd)
                 safe_commit(db)
-            except Exception as e:
-                return False, e.message
 
             return True, u'Inserted {} {} rows for package {}.'.format(len(normalized_rows), cls.__name__, package_id)
         else:
