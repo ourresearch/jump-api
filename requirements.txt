@@ -1,3 +1,4 @@
+boto3==1.12.25
 cached-property==1.5.1
 dateparser==0.7.2
 executor==18.0

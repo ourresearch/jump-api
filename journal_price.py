@@ -40,22 +40,25 @@ class JournalPriceInput(db.Model, PackageInput):
         return {
             'publisher': {
                 'normalize': lambda x: x,
-                'name_snippets': [u'publisher']
+                'name_snippets': [u'publisher'],
+                'required': False,
             },
             'issn': {
                 'normalize': cls.normalize_issn,
-                'name_snippets': [u'issn']
+                'name_snippets': [u'issn'],
             },
             'subject': {
                 'normalize': lambda x: x,
-                'name_snippets': [u'subj']
+                'name_snippets': [u'subj'],
+                'required': False,
             },
             'usa_usd': {
                 'normalize': cls.normalize_price,
-                'name_snippets': [u'price', u'usd', u'cost']
+                'name_snippets': [u'price', u'usd', u'cost'],
             },
             'year': {
                 'normalize': cls.normalize_year,
-                'name_snippets': [u'year', u'date']
+                'name_snippets': [u'year', u'date'],
+                'required': False,
             }
         }

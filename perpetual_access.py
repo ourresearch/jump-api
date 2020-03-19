@@ -30,14 +30,17 @@ class PerpetualAccessInput(db.Model, PackageInput):
         return {
             'start_date': {
                 'normalize': cls.normalize_date,
-                'name_snippets': [u'start', u'begin']
+                'name_snippets': [u'start', u'begin'],
+                'required': True
             },
             'end_date': {
                 'normalize': cls.normalize_date,
-                'name_snippets': [u'end']
+                'name_snippets': [u'end'],
+                'required': True
             },
             'issn': {
                 'normalize': cls.normalize_issn,
-                'name_snippets': [u'issn']
+                'name_snippets': [u'issn'],
+                'required': True
             }
         }

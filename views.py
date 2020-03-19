@@ -36,6 +36,7 @@ from app import jwt
 from app import db
 from app import my_memcached
 from app import get_db_cursor
+from counter import Counter, CounterInput
 from scenario import Scenario
 from account import Account
 from journal_price import JournalPrice, JournalPriceInput
@@ -494,7 +495,9 @@ def _long_error_message():
 
 def _json_to_temp_file(req):
     if 'file' in req.json and 'name' in req.json:
-        temp_filename = tempfile.mkstemp(suffix=req.json['name'] or '')[1]
+        file_name = req.json['name'] or u''
+        suffix = u'.{}'.format(file_name.split('.')[-1]) if u'.' in file_name else ''
+        temp_filename = tempfile.mkstemp(suffix=suffix)[1]
         with open(temp_filename, "wb") as temp_file:
             temp_file.write(req.json['file'].split(',')[-1].decode('base64'))
         return temp_filename
@@ -521,28 +524,25 @@ def _load_package_file(package_id, req, table_class):
 @package_authenticated
 def jump_counter(package_id):
     if request.method == 'GET':
-        if package_id.startswith("demo"):
-            my_package = Package.query.get("demo")
-            my_package.package_id = package_id
-        else:
-            my_package = Package.query.get(package_id)
+        # if package_id.startswith("demo"):
+        #     my_package = Package.query.get("demo")
+        #     my_package.package_id = package_id
+        # else:
+        #     my_package = Package.query.get(package_id)
+        #
+        # response = my_package.get_package_counter_breakdown()
+        # return jsonify_fast_no_sort(response)
 
-        response = my_package.get_package_counter_breakdown()
-        return jsonify_fast_no_sort(response)
+        rows = Counter.query.filter(Counter.package_id == package_id).all()
+        if rows:
+            return jsonify_fast_no_sort({"rows": [row.to_dict() for row in rows]})
+        else:
+            return abort_json(404, u'no counter file for package {}'.format(package_id))
     else:
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
-            temp_file = _json_to_temp_file(request)
-            if temp_file:
-                return jsonify_fast_no_sort(
-                    {'message': u'inserted N COUNTER rows for package {} from {}'.format(
-                        package_id, temp_file
-                    )})
-            else:
-                return abort_json(
-                    400, u'expected a JSON object like {file: <base64-encoded file>, filename: <file name>}'
-                )
+            return _load_package_file(package_id, request, CounterInput)
 
 
 @app.route('/package/<package_id>/perpetual-access', methods=['GET', 'POST'])

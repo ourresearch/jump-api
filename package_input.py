@@ -1,12 +1,17 @@
-import csv
+import json
+import os
 import re
+import tempfile
+from re import sub
 
+import boto3
 import dateutil.parser
+import shortuuid
+import unicodecsv as csv
 
-from app import db
+from app import db, logger
 from excel import convert_spreadsheet_to_csv
 from util import safe_commit
-from re import sub
 
 
 class PackageInput:
@@ -31,6 +36,17 @@ class PackageInput:
             return None
 
     @staticmethod
+    def normalize_int(value):
+        if value:
+            try:
+                value = sub(ur'[^\d]', '', value)
+                return int(value)
+            except Exception:
+                raise ValueError(u"unrecognized integer format")
+        else:
+            return None
+
+    @staticmethod
     def normalize_price(price):
         if price:
             try:
@@ -38,7 +54,7 @@ class PackageInput:
                 sub_pattern = ur'[^\d{}]'.format(decimal)
                 price = sub(sub_pattern, '', price)
                 price = sub(',', '.', price)
-                return round(float(price))
+                return int(round(float(price)))
             except Exception:
                 raise ValueError(u"unrecognized price format")
         else:
@@ -46,71 +62,143 @@ class PackageInput:
 
     @staticmethod
     def normalize_issn(issn):
-        if issn and re.search('[0-9X]{4}-[0-9X]{4}', issn.strip().upper()):
-            return issn.strip().upper()
+        if issn:
+            issn = sub(ur'[^\dFSX-]', '', issn)
+            if re.search(ur'(?:FS|\d\d)\d\d-\d{3}(?:X|\d)', issn.strip().upper()):
+                return issn.strip().upper()
+            else:
+                raise ValueError(u'invalid ISSN format')
         else:
-            raise ValueError(u'invalid ISSN format')
+            return None
 
     @classmethod
     def csv_columns(cls):
         raise NotImplementedError()
 
     @classmethod
-    def normalize_column(cls, column_name, column_value):
+    def translate_row(cls, row):
+        return [row]
+
+    @classmethod
+    def ignore_row(cls, row):
+        return False
+
+    @classmethod
+    def normalize_cell(cls, column_name, column_value):
         for canonical_name, spec in cls.csv_columns().items():
             for snippet in spec['name_snippets']:
-                if snippet in column_name:
+                snippet = snippet.lower()
+                column_name = column_name.strip().lower()
+                exact_name = spec.get('exact_name', False)
+                if (exact_name and snippet == column_name) or (not exact_name and snippet in column_name.lower()):
                     return {canonical_name: spec['normalize'](column_value)}
 
-        raise ValueError(u'unexpected column {}, possible values are {}'.format(
-            column_name, ', '.join(cls.csv_columns().keys())
-        ))
+        return None
+
+    @classmethod
+    def _copy_to_s3(cls, package_id, filename):
+        s3 = boto3.client('s3')
+        bucket_name = 'jump-redshift-staging'
+        object_name = '{}_{}_{}'.format(package_id, cls.__name__, shortuuid.uuid())
+        s3.upload_file(filename, bucket_name, object_name)
+        return 's3://{}/{}'.format(bucket_name, object_name)
+
 
     @classmethod
     def load(cls, package_id, file_name):
         if file_name.endswith(u'.xls') or file_name.endswith(u'.xlsx'):
-            file_name = convert_spreadsheet_to_csv(file_name)
+            csv_file_name = convert_spreadsheet_to_csv(file_name, parsed=False)
+            if csv_file_name is None:
+                return False, u'{} could not be opened as a spreadsheet'.format(file_name)
+            else:
+                file_name = csv_file_name
 
         with open(file_name, 'r') as csv_file:
-            dialect = csv.Sniffer().sniff(csv_file.read(1024))
-
+            dialect = csv.Sniffer().sniff(csv_file.readline())
             csv_file.seek(0)
-            reader = csv.DictReader(csv_file, dialect=dialect)
 
-            rows = []
+            # skip to the first complete header row
+            max_columns = 0
+            header_index = None
+            row_no = 0
+            parsed_rows = []
+            for line in csv.reader(csv_file, dialect=dialect):
+                if len(line) > max_columns and all(line):
+                    max_columns = len(line)
+                    header_index = row_no
+                    logger.info(u'candidate header row: {}'.format(u', '.join(line)))
+
+                parsed_rows.append(line)
+                row_no += 1
+
+            if header_index is None:
+                return False, u"Couldn't identify a header row in the file"
+
+            row_dicts = [dict(zip(parsed_rows[header_index], x)) for x in parsed_rows[header_index+1:]]
+
+            normalized_rows = []
             row_no = 1
-            for row in reader:
+            for row in row_dicts:
                 normalized_row = {}
 
                 for column_name in row.keys():
                     try:
-                        normalized_row.update(cls.normalize_column(column_name, row[column_name]))
+                        normalized_cell = cls.normalize_cell(column_name, row[column_name])
+                        if normalized_cell:
+                            normalized_row = dict(normalized_cell.items() + normalized_row.items())
                     except Exception as e:
                         return False, u'Error reading row {}: {} for {}'.format(
-                            row_no, e.message, unicode(row[column_name], 'utf-8')
+                            row_no, e.message, row[column_name]
                         )
 
-                row_keys = sorted(normalized_row.keys())
-                expected_keys = sorted(cls.csv_columns().keys())
+                if cls.ignore_row(normalized_row):
+                    continue
 
-                if set(row_keys).symmetric_difference(set(expected_keys)):
+                row_keys = sorted(normalized_row.keys())
+                expected_keys = sorted([k for k, v in cls.csv_columns().items() if v.get('required', True)])
+
+                if set(expected_keys).difference(set(row_keys)):
                     return False, u'Missing expected columns. Expected {} but got {}.'.format(
                         ', '.join(expected_keys),
-                        ', '.join(normalized_row)
+                        ', '.join(row.keys())
                     )
 
-                normalized_row.update({'package_id': package_id})
-                rows.append(normalized_row)
+                normalized_rows.extend(cls.translate_row(normalized_row))
                 row_no += 1
 
-        if package_id == 'BwfVyRm9':
-            try:
-                db.session.query(cls).filter(cls.package_id == package_id).delete()
-                db.session.bulk_save_objects([cls(**row) for row in rows])
-                safe_commit(db)
-            except Exception as e:
-                return False, e.message
+        for row in normalized_rows:
+            row.update({'package_id': package_id})
+            logger.info(u'normalized row: {}'.format(json.dumps(row)))
 
-            return True, u'Inserted {} {} rows for package {}.'.format(len(rows), cls.__name__, package_id)
+        if package_id == 'BwfVyRm9':
+            db.session.query(cls).filter(cls.package_id == package_id).delete()
+
+            if normalized_rows:
+                sorted_fields = sorted(normalized_rows[0].keys())
+                normalized_csv_filename = tempfile.mkstemp()[1]
+                with open(normalized_csv_filename, 'w') as normalized_csv_file:
+                    writer = csv.DictWriter(normalized_csv_file, delimiter=',', encoding='utf-8', fieldnames=sorted_fields)
+                    for row in normalized_rows:
+                        writer.writerow(row)
+
+                s3_object = cls._copy_to_s3(package_id, normalized_csv_filename)
+
+                copy_cmd = '''
+                    copy {table}({fields})
+                    from '{s3_object}'
+                    credentials 'aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}'
+                    format as csv;
+                '''.format(
+                    table=cls.__tablename__,
+                    fields=', '.join(sorted_fields),
+                    s3_object=s3_object,
+                    aws_key=os.getenv('AWS_ACCESS_KEY_ID'),
+                    aws_secret=os.getenv('AWS_SECRET_ACCESS_KEY')
+                )
+
+                db.session.execute(copy_cmd)
+                safe_commit(db)
+
+            return True, u'Inserted {} {} rows for package {}.'.format(len(normalized_rows), cls.__name__, package_id)
         else:
-            return True, u'Simulated inserting {} {} rows for package {}.'.format(len(rows), cls.__name__, package_id)
+            return True, u'Simulated inserting {} {} rows for package {}.'.format(len(normalized_rows), cls.__name__, package_id)
