@@ -519,7 +519,7 @@ def _load_package_file(package_id, req, table_class):
         )
 
 
-@app.route('/package/<package_id>/counter', methods=['GET', 'POST'])
+@app.route('/package/<package_id>/counter', methods=['GET', 'POST', 'DELETE'])
 @jwt_optional
 @package_authenticated
 def jump_counter(package_id):
@@ -538,6 +538,8 @@ def jump_counter(package_id):
             return jsonify_fast_no_sort({"rows": [row.to_dict() for row in rows]})
         else:
             return abort_json(404, u'no counter file for package {}'.format(package_id))
+    elif request.method == 'DELETE':
+        return jsonify_fast_no_sort({'message': CounterInput.delete(package_id)})
     else:
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
@@ -545,7 +547,7 @@ def jump_counter(package_id):
             return _load_package_file(package_id, request, CounterInput)
 
 
-@app.route('/package/<package_id>/perpetual-access', methods=['GET', 'POST'])
+@app.route('/package/<package_id>/perpetual-access', methods=['GET', 'POST', 'DELETE'])
 @jwt_optional
 @package_authenticated
 def jump_perpetual_access(package_id):
@@ -555,6 +557,8 @@ def jump_perpetual_access(package_id):
             return jsonify_fast_no_sort({"rows": [row.to_dict() for row in rows]})
         else:
             return abort_json(404, u'no perpetual access file for package {}'.format(package_id))
+    elif request.method == 'DELETE':
+        return jsonify_fast_no_sort({'message': PerpetualAccessInput.delete(package_id)})
     else:
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
@@ -562,7 +566,7 @@ def jump_perpetual_access(package_id):
             return _load_package_file(package_id, request, PerpetualAccessInput)
 
 
-@app.route('/package/<package_id>/prices', methods=['GET', 'POST'])
+@app.route('/package/<package_id>/prices', methods=['GET', 'POST', 'DELETE'])
 @jwt_optional
 @package_authenticated
 def jump_journal_prices(package_id):
@@ -572,6 +576,8 @@ def jump_journal_prices(package_id):
             return jsonify_fast_no_sort({"rows": [row.to_dict() for row in rows]})
         else:
             return abort_json(404, u'no journal price file for package {}'.format(package_id))
+    elif request.method == 'DELETE':
+        return jsonify_fast_no_sort({'message': JournalPriceInput.delete(package_id)})
     else:
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
