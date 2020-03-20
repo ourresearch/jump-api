@@ -103,6 +103,15 @@ class PackageInput:
         s3.upload_file(filename, bucket_name, object_name)
         return 's3://{}/{}'.format(bucket_name, object_name)
 
+    @classmethod
+    def delete(cls, package_id):
+        if package_id == 'BwfVyRm9':
+            num_deleted = db.session.query(cls).filter(cls.package_id == package_id).delete()
+            safe_commit(db)
+            return u'Deleted {} {} rows for package {}.'.format(num_deleted, cls.__name__, package_id)
+        else:
+            num_rows = db.session.query(cls).filter(cls.package_id == package_id).count()
+            return u'Simulated deleting {} {} rows for package {}.'.format(num_rows, cls.__name__,package_id)
 
     @classmethod
     def load(cls, package_id, file_name):
@@ -187,7 +196,8 @@ class PackageInput:
                     copy {table}({fields})
                     from '{s3_object}'
                     credentials 'aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}'
-                    format as csv;
+                    format as csv
+                    timeformat 'auto';
                 '''.format(
                     table=cls.__tablename__,
                     fields=', '.join(sorted_fields),
