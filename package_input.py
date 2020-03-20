@@ -77,6 +77,14 @@ class PackageInput:
         raise NotImplementedError()
 
     @classmethod
+    def import_view_name(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    def destination_table(cls):
+        raise NotImplementedError()
+
+    @classmethod
     def translate_row(cls, row):
         return [row]
 
@@ -108,11 +116,40 @@ class PackageInput:
     def delete(cls, package_id):
         if package_id == 'BwfVyRm9':
             num_deleted = db.session.query(cls).filter(cls.package_id == package_id).delete()
+            db.session.execute("delete from {} where package_id = '{}'".format(cls.destination_table(), package_id))
             safe_commit(db)
             return u'Deleted {} {} rows for package {}.'.format(num_deleted, cls.__name__, package_id)
         else:
             num_rows = db.session.query(cls).filter(cls.package_id == package_id).count()
             return u'Simulated deleting {} {} rows for package {}.'.format(num_rows, cls.__name__,package_id)
+
+    @classmethod
+    def update_dest_table(cls, package_id):
+        # unload_cmd = text('''
+        #     unload
+        #     ('select * from {view} where package_id = \\'{package_id}\\'')
+        #     to 's3://jump-redshift-staging/{package_id}_{view}_{uuid}/'
+        #     with credentials :creds csv'''.format(
+        #         view=cls.import_view_name(),
+        #         package_id=package_id,
+        #         uuid=shortuuid.uuid(),
+        #     )
+        # )
+        #
+        # aws_creds = 'aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}'.format(
+        #     aws_key=os.getenv('AWS_ACCESS_KEY_ID'),
+        #     aws_secret=os.getenv('AWS_SECRET_ACCESS_KEY')
+        # )
+        #
+        # db.session.execute(unload_cmd.bindparams(creds=aws_creds))
+
+        db.session.execute("delete from {} where package_id = '{}'".format(cls.destination_table(), package_id))
+
+        db.session.execute(
+            "insert into {} (select * from {} where package_id = '{}')".format(
+                cls.destination_table(), cls.import_view_name(), package_id
+            )
+        )
 
     @classmethod
     def load(cls, package_id, file_name):
@@ -205,6 +242,7 @@ class PackageInput:
                 )
 
                 db.session.execute(copy_cmd.bindparams(creds=aws_creds))
+                cls.update_dest_table(package_id)
                 safe_commit(db)
 
             return True, u'Inserted {} {} rows for package {}.'.format(len(normalized_rows), cls.__name__, package_id)
