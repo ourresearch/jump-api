@@ -8,6 +8,7 @@ import boto3
 import dateutil.parser
 import shortuuid
 import unicodecsv as csv
+from sqlalchemy.sql import text
 
 from app import db, logger
 from excel import convert_spreadsheet_to_csv
@@ -188,21 +189,22 @@ class PackageInput:
 
                 s3_object = cls._copy_to_s3(package_id, normalized_csv_filename)
 
-                copy_cmd = '''
-                    copy {table}({fields})
-                    from '{s3_object}'
-                    credentials 'aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}'
-                    format as csv
+                copy_cmd = text('''
+                    copy {table}({fields}) from '{s3_object}'
+                    credentials :creds format as csv
                     timeformat 'auto';
                 '''.format(
                     table=cls.__tablename__,
                     fields=', '.join(sorted_fields),
                     s3_object=s3_object,
+                ))
+
+                aws_creds = 'aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}'.format(
                     aws_key=os.getenv('AWS_ACCESS_KEY_ID'),
                     aws_secret=os.getenv('AWS_SECRET_ACCESS_KEY')
                 )
 
-                db.session.execute(copy_cmd)
+                db.session.execute(copy_cmd.bindparams(creds=aws_creds))
                 safe_commit(db)
 
             return True, u'Inserted {} {} rows for package {}.'.format(len(normalized_rows), cls.__name__, package_id)
