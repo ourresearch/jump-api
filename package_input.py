@@ -129,16 +129,14 @@ class PackageInput:
             # skip to the first complete header row
             max_columns = 0
             header_index = None
-            row_no = 0
             parsed_rows = []
-            for line in csv.reader(csv_file, dialect=dialect):
+            for line_no, line in enumerate(csv.reader(csv_file, dialect=dialect)):
+                parsed_rows.append(line)
+
                 if len(line) > max_columns and all(line):
                     max_columns = len(line)
-                    header_index = row_no
+                    header_index = line_no
                     logger.info(u'candidate header row: {}'.format(u', '.join(line)))
-
-                parsed_rows.append(line)
-                row_no += 1
 
             if header_index is None:
                 return False, u"Couldn't identify a header row in the file"
@@ -146,8 +144,7 @@ class PackageInput:
             row_dicts = [dict(zip(parsed_rows[header_index], x)) for x in parsed_rows[header_index+1:]]
 
             normalized_rows = []
-            row_no = 1
-            for row in row_dicts:
+            for row_no, row in enumerate(row_dicts):
                 normalized_row = {}
 
                 for column_name in row.keys():
@@ -157,7 +154,7 @@ class PackageInput:
                             normalized_row = dict(normalized_cell.items() + normalized_row.items())
                     except Exception as e:
                         return False, u'Error reading row {}: {} for {}'.format(
-                            row_no, e.message, row[column_name]
+                            row_no + 1, e.message, row[column_name]
                         )
 
                 if cls.ignore_row(normalized_row):
@@ -173,7 +170,6 @@ class PackageInput:
                     )
 
                 normalized_rows.extend(cls.translate_row(normalized_row))
-                row_no += 1
 
         for row in normalized_rows:
             row.update({'package_id': package_id})
