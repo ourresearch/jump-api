@@ -41,6 +41,14 @@ class CounterInput(db.Model, PackageInput):
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
 
     @classmethod
+    def import_view_name(cls):
+        return 'jump_counter_view_flat'
+
+    @classmethod
+    def destination_table(cls):
+        return Counter.__tablename__
+
+    @classmethod
     def csv_columns(cls):
         return {
             'publisher': {

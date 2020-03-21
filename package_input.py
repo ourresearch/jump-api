@@ -8,6 +8,7 @@ import boto3
 import dateutil.parser
 import shortuuid
 import unicodecsv as csv
+from sqlalchemy.sql import text
 
 from app import db, logger
 from excel import convert_spreadsheet_to_csv
@@ -76,6 +77,14 @@ class PackageInput:
         raise NotImplementedError()
 
     @classmethod
+    def import_view_name(cls):
+        raise NotImplementedError()
+
+    @classmethod
+    def destination_table(cls):
+        raise NotImplementedError()
+
+    @classmethod
     def translate_row(cls, row):
         return [row]
 
@@ -103,6 +112,44 @@ class PackageInput:
         s3.upload_file(filename, bucket_name, object_name)
         return 's3://{}/{}'.format(bucket_name, object_name)
 
+    @classmethod
+    def delete(cls, package_id):
+        if package_id == 'BwfVyRm9':
+            num_deleted = db.session.query(cls).filter(cls.package_id == package_id).delete()
+            db.session.execute("delete from {} where package_id = '{}'".format(cls.destination_table(), package_id))
+            safe_commit(db)
+            return u'Deleted {} {} rows for package {}.'.format(num_deleted, cls.__name__, package_id)
+        else:
+            num_rows = db.session.query(cls).filter(cls.package_id == package_id).count()
+            return u'Simulated deleting {} {} rows for package {}.'.format(num_rows, cls.__name__,package_id)
+
+    @classmethod
+    def update_dest_table(cls, package_id):
+        # unload_cmd = text('''
+        #     unload
+        #     ('select * from {view} where package_id = \\'{package_id}\\'')
+        #     to 's3://jump-redshift-staging/{package_id}_{view}_{uuid}/'
+        #     with credentials :creds csv'''.format(
+        #         view=cls.import_view_name(),
+        #         package_id=package_id,
+        #         uuid=shortuuid.uuid(),
+        #     )
+        # )
+        #
+        # aws_creds = 'aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}'.format(
+        #     aws_key=os.getenv('AWS_ACCESS_KEY_ID'),
+        #     aws_secret=os.getenv('AWS_SECRET_ACCESS_KEY')
+        # )
+        #
+        # db.session.execute(unload_cmd.bindparams(creds=aws_creds))
+
+        db.session.execute("delete from {} where package_id = '{}'".format(cls.destination_table(), package_id))
+
+        db.session.execute(
+            "insert into {} (select * from {} where package_id = '{}')".format(
+                cls.destination_table(), cls.import_view_name(), package_id
+            )
+        )
 
     @classmethod
     def load(cls, package_id, file_name):
@@ -120,16 +167,14 @@ class PackageInput:
             # skip to the first complete header row
             max_columns = 0
             header_index = None
-            row_no = 0
             parsed_rows = []
-            for line in csv.reader(csv_file, dialect=dialect):
+            for line_no, line in enumerate(csv.reader(csv_file, dialect=dialect)):
+                parsed_rows.append(line)
+
                 if len(line) > max_columns and all(line):
                     max_columns = len(line)
-                    header_index = row_no
+                    header_index = line_no
                     logger.info(u'candidate header row: {}'.format(u', '.join(line)))
-
-                parsed_rows.append(line)
-                row_no += 1
 
             if header_index is None:
                 return False, u"Couldn't identify a header row in the file"
@@ -137,8 +182,7 @@ class PackageInput:
             row_dicts = [dict(zip(parsed_rows[header_index], x)) for x in parsed_rows[header_index+1:]]
 
             normalized_rows = []
-            row_no = 1
-            for row in row_dicts:
+            for row_no, row in enumerate(row_dicts):
                 normalized_row = {}
 
                 for column_name in row.keys():
@@ -148,7 +192,7 @@ class PackageInput:
                             normalized_row = dict(normalized_cell.items() + normalized_row.items())
                     except Exception as e:
                         return False, u'Error reading row {}: {} for {}'.format(
-                            row_no, e.message, row[column_name]
+                            row_no + 1, e.message, row[column_name]
                         )
 
                 if cls.ignore_row(normalized_row):
@@ -164,7 +208,6 @@ class PackageInput:
                     )
 
                 normalized_rows.extend(cls.translate_row(normalized_row))
-                row_no += 1
 
         for row in normalized_rows:
             row.update({'package_id': package_id})
@@ -183,20 +226,23 @@ class PackageInput:
 
                 s3_object = cls._copy_to_s3(package_id, normalized_csv_filename)
 
-                copy_cmd = '''
-                    copy {table}({fields})
-                    from '{s3_object}'
-                    credentials 'aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}'
-                    format as csv;
+                copy_cmd = text('''
+                    copy {table}({fields}) from '{s3_object}'
+                    credentials :creds format as csv
+                    timeformat 'auto';
                 '''.format(
                     table=cls.__tablename__,
                     fields=', '.join(sorted_fields),
                     s3_object=s3_object,
+                ))
+
+                aws_creds = 'aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}'.format(
                     aws_key=os.getenv('AWS_ACCESS_KEY_ID'),
                     aws_secret=os.getenv('AWS_SECRET_ACCESS_KEY')
                 )
 
-                db.session.execute(copy_cmd)
+                db.session.execute(copy_cmd.bindparams(creds=aws_creds))
+                cls.update_dest_table(package_id)
                 safe_commit(db)
 
             return True, u'Inserted {} {} rows for package {}.'.format(len(normalized_rows), cls.__name__, package_id)
