@@ -839,18 +839,17 @@ def scenario_id_export_get(scenario_id):
 @app.route('/package/<package_id>/scenario', methods=["POST"])
 @jwt_optional
 def scenario_post(package_id):
-    new_scenario_id = shortuuid.uuid()[0:8]
+    new_scenario_id = request.json.get('id', shortuuid.uuid()[0:8])
+    new_scenario_name = request.json.get('name', "New Scenario")
+
     if package_id.startswith("demo-package"):
         new_scenario_id = "demo-scenario-" + new_scenario_id
-    new_scenario_name = "New Scenario"
+
     my_saved_scenario_to_copy_from = None
 
     copy_scenario_id = request.args.get('copy', None)
     if copy_scenario_id:
         my_saved_scenario_to_copy_from = get_saved_scenario(copy_scenario_id)
-        new_scenario_name = u"Copy of {}".format(my_saved_scenario_to_copy_from.scenario_name)
-    if request.json.get('name', None):
-        new_scenario_name = request.json.get('name')
 
     new_saved_scenario = SavedScenario(False, new_scenario_id, None)
     new_saved_scenario.package_id = package_id
