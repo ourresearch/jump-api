@@ -848,7 +848,7 @@ def scenario_post(package_id):
     new_scenario_id = request.json.get('id', shortuuid.uuid()[0:8])
     new_scenario_name = request.json.get('name', "New Scenario")
 
-    if package_id.startswith("demo-package"):
+    if package_id.startswith("demo-package") and not new_scenario_id.startswith("demo-scenario-"):
         new_scenario_id = "demo-scenario-" + new_scenario_id
 
     my_saved_scenario_to_copy_from = None
