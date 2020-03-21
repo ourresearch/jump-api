@@ -13,8 +13,8 @@ class PerpetualAccess(db.Model):
         return {
             'package_id': self.package_id,
             'issn_l': self.issn_l,
-            'start_date': self.start_date.isoformat(),
-            'end_date': self.end_date.isoformat(),
+            'start_date': self.start_date and self.start_date.isoformat(),
+            'end_date': self.end_date and self.end_date.isoformat(),
         }
 
 
@@ -24,6 +24,14 @@ class PerpetualAccessInput(db.Model, PackageInput):
     issn = db.Column(db.Text, primary_key=True)
     start_date = db.Column(db.DateTime)
     end_date = db.Column(db.DateTime)
+
+    @classmethod
+    def import_view_name(cls):
+        return 'jump_perpetual_access_by_package_view'
+
+    @classmethod
+    def destination_table(cls):
+        return PerpetualAccess.__tablename__
 
     @classmethod
     def csv_columns(cls):

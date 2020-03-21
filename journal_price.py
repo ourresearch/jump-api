@@ -36,6 +36,14 @@ class JournalPriceInput(db.Model, PackageInput):
     year = db.Column(db.Numeric)
 
     @classmethod
+    def import_view_name(cls):
+        return 'jump_journal_prices_view'
+
+    @classmethod
+    def destination_table(cls):
+        return JournalPrice.__tablename__
+
+    @classmethod
     def csv_columns(cls):
         return {
             'publisher': {
