@@ -175,6 +175,7 @@ class SavedScenario(db.Model):
     def to_dict_micro(self):
         response = {
             "id": self.scenario_id,
+            "name": self.scenario_name,
         }
         return response
 
