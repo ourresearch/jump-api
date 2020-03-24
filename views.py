@@ -10,6 +10,7 @@ from flask import url_for
 from flask import Response
 from flask import send_file
 from flask_jwt_extended import jwt_required, jwt_optional, create_access_token, get_jwt_identity
+from sqlalchemy import or_
 from werkzeug.security import safe_str_cmp
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -17,6 +18,7 @@ import base64
 import simplejson as json
 import os
 import sys
+from collections import defaultdict
 from time import sleep
 from time import time
 import unicodecsv as csv
@@ -39,9 +41,11 @@ from app import get_db_cursor
 from counter import Counter, CounterInput
 from scenario import Scenario
 from account import Account
+from institution import Institution
 from journal_price import JournalPrice, JournalPriceInput
 from package import Package
 from package import get_ids
+from permission import Permission, UserInstitutionPermission
 from perpetual_access import PerpetualAccess, PerpetualAccessInput
 from saved_scenario import SavedScenario
 from saved_scenario import get_latest_scenario
@@ -306,7 +310,7 @@ def user_login():
     return jsonify({"access_token": access_token, "_timing": my_timing.to_dict()})
 
 
-@app.route('/user/register', methods=['POST'])
+@app.route('/user/demo', methods=['POST'])
 def register_demo_user():
     request_source = request.args
     if request.is_json:
@@ -319,26 +323,96 @@ def register_demo_user():
     existing_user = User.query.filter(User.username == username).first()
 
     if existing_user:
-        return user_login()
+        if check_password_hash(existing_user.password_hash, u''):
+            return user_login()
+        else:
+            return abort_json(409, u'A user with email {} already exists.'.format(username))
 
-    new_user = User()
-    new_user.username = username
-    new_user.password_hash = generate_password_hash('')
-    new_user.display_name = username
-    new_user.is_demo_user = True
+    demo_user = User()
+    demo_user.username = username
+    demo_user.password_hash = generate_password_hash('')
+    demo_user.display_name = username
+    demo_user.is_demo_user = True
 
-    db.session.add(new_user)
+    demo_institution = Institution()
+    demo_institution.display_name = 'Demo University'
+    demo_institution.is_demo_institution = True
+
+    db.session.add(demo_user)
+    db.session.add(demo_institution)
+
+    for permission_name in ['read', 'write', 'admin']:
+        permission = Permission.query.filter(Permission.name == permission_name).first()
+        user_perm = UserInstitutionPermission()
+        user_perm.permission_id = permission.id,
+        user_perm.user_id = demo_user.id,
+        user_perm.institution_id = demo_institution.id
+        db.session.add(user_perm)
+
     safe_commit(db)
 
-    return jsonify({
-        'message': 'User registered successfully',
-        'username': username
-    })
+    return user_login()
+
+
+@app.route('/user/new', methods=['POST'])
+@jwt_required
+def register_new_user():
+    if not request.is_json:
+        return abort_json(400, u'This post requires data.')
+
+    jwt_identity = get_jwt_identity()
+    login_user_id = jwt_identity.get('user_id', None) if jwt_identity else None
+    login_user = User.query.get(jwt_identity['user_id']) if login_user_id else None
+
+    new_username = request.json.get('email', None)
+
+    if not new_username:
+        return abort_json(400, u'Missing email parameter.')
+
+    if User.query.filter(User.username == new_username).first():
+        return abort_json(409, u'A user with email {} already exists.'.format(new_username))
+
+    password = request.json.get('password', u'')
+    display_name = request.json.get('name', new_username)
+
+    new_user = User()
+    new_user.username = new_username
+    new_user.password_hash = generate_password_hash(password)
+    new_user.display_name = display_name
+
+    db.session.add(new_user)
+
+    permissions_by_institution = defaultdict(set)
+    for permission_request in request.json.get('user_permissions', []):
+        try:
+            for permission_name in permission_request['permissions']:
+                permissions_by_institution[permission_request['institution_id']].add(permission_name)
+        except KeyError as e:
+            return abort_json(400, u'Missing key in user_permissions object: {}'.format(e.message))
+
+    for institution_id, permission_names in permissions_by_institution.items():
+        if login_user.has_permission(institution_id, 'admin'):
+            for permission_name in permission_names:
+                permission = Permission.query.filter(Permission.name == permission_name).first()
+                if permission:
+                    user_perm = UserInstitutionPermission()
+                    user_perm.permission_id = permission.id,
+                    user_perm.user_id = new_user.id,
+                    user_perm.institution_id = institution_id
+                    db.session.add(user_perm)
+                else:
+                    return abort_json(400, u'Unknown permission: {}.'.format(permission_name))
+        else:
+            return abort_json(403, u'Not authorized to create users for institution {}'.format(institution_id))
+
+    safe_commit(db)
+
+    return jsonify_fast_no_sort(new_user.to_dict())
 
 
 @app.route('/user/me', methods=['POST', 'GET'])
 @jwt_required
-def user_info():
+def my_user_info():
     jwt_identity = get_jwt_identity()
     user_id = jwt_identity.get('user_id', None) if jwt_identity else None
     login_user = User.query.get(jwt_identity['user_id']) if user_id else None
@@ -346,10 +420,37 @@ def user_info():
     if not login_user:
         return abort_json(401, u'user id {} not recognized '.format(user_id))
 
-    if request.method == 'GET':
-        return jsonify_fast_no_sort(login_user.to_dict())
     if request.method == 'POST':
-        return abort_json(501)
+        if not request.is_json:
+            return abort_json(400, u'Post a User object to change properties.')
+
+        email = request.json.get('email', None)
+        name = request.json.get('name', None)
+        password = request.json.get('password', None)
+
+        if email:
+            login_user.username = email
+        if name:
+            login_user.display_name = name
+        if password:
+            login_user.password_hash = generate_password_hash(password)
+
+        db.session.merge(login_user)
+        safe_commit(db)
+
+    return jsonify_fast_no_sort(login_user.to_dict())
+
+
+@app.route('/user/id/<user_id>', methods=['GET'], defaults={'email': None})
+@app.route('/user/email/<email>', methods=['GET'], defaults={'user_id': None})
+def user_info(user_id, email):
+    user = User.query.filter(or_(User.id == user_id, User.username == email)).first()
+
+    if user:
+        return jsonify_fast_no_sort(user.to_dict())
+    else:
+        return abort_json(404, u'User does not exist.')
+
 
 # curl -s -X POST -H 'Accept: application/json' -H 'Content-Type: application/json' --data '{"username":"test","password":"password","rememberMe":false}' http://localhost:5004/login
 # curl -H 'Accept: application/json' -H "Authorization: Bearer ${TOKEN}" http://localhost:5004/protected
