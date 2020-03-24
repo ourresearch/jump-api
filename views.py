@@ -58,6 +58,7 @@ from util import safe_commit
 from util import TimingMessages
 from util import get_ip
 from util import response_json
+from user import User
 from app import logger
 
 from app import DEMO_PACKAGE_ID
@@ -265,6 +266,90 @@ def login():
 
     return jsonify({"access_token": access_token, "_timing": my_timing.to_dict()})
 
+
+# copies the existing /login route but uses the new jump_user table
+
+@app.route('/user/login', methods=["POST"])
+def user_login():
+    my_timing = TimingMessages()
+
+    request_source = request.args
+    if request.is_json:
+        request_source = request.json
+    username = request_source.get('email', None)
+    password = request_source.get('password', '')
+
+    if not username:
+        return abort_json(400, "Missing email parameter")
+
+    my_timing.log_timing("before db get for account")
+    login_user = User.query.filter(User.username == username).first()
+    my_timing.log_timing("after db get for user")
+
+    if not login_user or not check_password_hash(login_user.password_hash, password):
+        if not (os.getenv("JWT_SECRET_KEY") == password):
+            return abort_json(401, "Bad username or password")
+
+    # Identity can be any data that is json serializable.  Include timestamp so is unique for each demo start.
+    identity_dict = {
+        "user_id": login_user.id,
+        "login_uuid": shortuuid.uuid()[0:10],
+        "created": datetime.datetime.utcnow().isoformat(),
+        "is_demo_user": login_user.is_demo_user
+    }
+    print "identity_dict", identity_dict
+    logger.info(u"login to account {} with {}".format(login_user.username, identity_dict))
+    access_token = create_access_token(identity=identity_dict)
+
+    my_timing.log_timing("after create_access_token")
+
+    return jsonify({"access_token": access_token, "_timing": my_timing.to_dict()})
+
+
+@app.route('/user/register', methods=['POST'])
+def register_demo_user():
+    request_source = request.args
+    if request.is_json:
+        request_source = request.json
+    username = request_source.get('email', None)
+
+    if not username:
+        return abort_json(400, "Missing email parameter")
+
+    existing_user = User.query.filter(User.username == username).first()
+
+    if existing_user:
+        return user_login()
+
+    new_user = User()
+    new_user.username = username
+    new_user.password_hash = generate_password_hash('')
+    new_user.display_name = username
+    new_user.is_demo_user = True
+
+    db.session.add(new_user)
+    safe_commit(db)
+
+    return jsonify({
+        'message': 'User registered successfully',
+        'username': username
+    })
+
+
+@app.route('/user/me', methods=['POST', 'GET'])
+@jwt_required
+def user_info():
+    jwt_identity = get_jwt_identity()
+    user_id = jwt_identity.get('user_id', None) if jwt_identity else None
+    login_user = User.query.get(jwt_identity['user_id']) if user_id else None
+
+    if not login_user:
+        return abort_json(401, u'user id {} not recognized '.format(user_id))
+
+    if request.method == 'GET':
+        return jsonify_fast_no_sort(login_user.to_dict())
+    if request.method == 'POST':
+        return abort_json(501)
 
 # curl -s -X POST -H 'Accept: application/json' -H 'Content-Type: application/json' --data '{"username":"test","password":"password","rememberMe":false}' http://localhost:5004/login
 # curl -H 'Accept: application/json' -H "Authorization: Bearer ${TOKEN}" http://localhost:5004/protected
