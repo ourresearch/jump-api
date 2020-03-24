@@ -316,6 +316,7 @@ def register_demo_user():
     if request.is_json:
         request_source = request.json
     username = request_source.get('email', None)
+    password = request_source.get('password', u'')
 
     if not username:
         return abort_json(400, "Missing email parameter")
@@ -323,14 +324,14 @@ def register_demo_user():
     existing_user = User.query.filter(User.username == username).first()
 
     if existing_user:
-        if check_password_hash(existing_user.password_hash, u''):
+        if check_password_hash(existing_user.password_hash, password):
             return user_login()
         else:
             return abort_json(409, u'A user with email {} already exists.'.format(username))
 
     demo_user = User()
     demo_user.username = username
-    demo_user.password_hash = generate_password_hash('')
+    demo_user.password_hash = generate_password_hash(password)
     demo_user.display_name = username
     demo_user.is_demo_user = True
 
