@@ -12,9 +12,10 @@ class Institution(db.Model):
     created = db.Column(db.DateTime)
     is_consortium = db.Column(db.Boolean)
     consortium_id = db.Column(db.Text)
+    is_demo_institution = db.Column(db.Boolean)
 
     def __init__(self, **kwargs):
-        self.id = shortuuid.uuid()[0:12]
+        self.id = u'institution-{}'.format(shortuuid.uuid()[0:12])
         self.created = datetime.datetime.utcnow().isoformat()
         super(Institution, self).__init__(**kwargs)
 

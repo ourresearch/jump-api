@@ -19,7 +19,7 @@ class User(db.Model):
     permissions = relationship(UserInstitutionPermission)
 
     def __init__(self, **kwargs):
-        self.id = shortuuid.uuid()[0:12]
+        self.id = u'user-{}'.format(shortuuid.uuid()[0:12])
         self.created = datetime.datetime.utcnow().isoformat()
         super(User, self).__init__(**kwargs)
 
@@ -28,10 +28,14 @@ class User(db.Model):
             'id': self.id,
             'name': self.display_name,
             'email': self.username,
-            'user_permissions': self.permission_dicts()
+            'user_permissions': self.permissions_list()
         }
 
-    def permission_dicts(self):
+    def permissions_list(self):
+        dicts = self.permissions_dict()
+        return dicts.values()
+
+    def permissions_dict(self):
         dicts = {}
         for permission in self.permissions:
             if permission.institution_id not in dicts:
@@ -44,7 +48,10 @@ class User(db.Model):
             else:
                 dicts[permission.institution_id]['permissions'].append(permission.permission.name)
 
-        return dicts.values()
+        return dicts
+
+    def has_permission(self, institution_id, permission_name):
+        return permission_name in self.permissions_dict().get(institution_id, {}).get('permissions', [])
 
     def __repr__(self):
         return u"<{} ({}) {}>".format(self.__class__.__name__, self.id, self.display_name)
