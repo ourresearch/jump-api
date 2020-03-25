@@ -143,6 +143,12 @@ def package_authenticated(func):
     return wrapper
 
 
+def authenticated_user():
+    jwt_identity = get_jwt_identity()
+    user_id = jwt_identity.get('user_id', None) if jwt_identity else None
+    return User.query.get(user_id) if user_id else None
+
+
 @app.after_request
 def after_request_stuff(resp):
     sys.stdout.flush()  # without this jason's heroku local buffers forever
@@ -451,6 +457,74 @@ def user_info(user_id, email):
         return jsonify_fast_no_sort(user.to_dict())
     else:
         return abort_json(404, u'User does not exist.')
+
+
+@app.route('/user-permissions', methods=['GET', 'POST'])
+@jwt_optional
+def user_permissions():
+    request_args = dict(request.args)
+    request_args.update(request.form)
+
+    if request.is_json:
+        request_args.update(request.json)
+
+    user_id = request_args.get('user_id', None)
+    institution_id = request_args.get('institution_id', None)
+
+    if not user_id:
+        return abort_json(400, u'Missing user_id parameter.')
+    elif isinstance(user_id, list):
+        user_id = user_id[0]
+    if not institution_id:
+        return abort_json(400, u'Missing institution_id parameter.')
+    elif isinstance(institution_id, list):
+        institution_id = institution_id[0]
+
+    if request.method == 'POST':
+        auth_user = authenticated_user()
+        if not auth_user:
+            return abort_json(401, u'Must be logged in.')
+
+        institution = Institution.query.get(institution_id)
+        if not institution:
+            return abort_json(404, u'Institution does not exist.')
+
+        if not auth_user.has_permission(institution_id, 'admin'):
+            return abort_json(403, u'Must have Admin permission to modify user permissions.')
+
+        if not User.query.filter(User.id == user_id).first():
+            return abort_json(404, u'User does not exist.')
+
+        permission_names = request_args.get('permissions', request_args.get('data', None))
+
+        if permission_names is None:
+            return abort_json(400, u'Missing permissions list.')
+
+        if not isinstance(permission_names, list):
+            permission_names = [permission_names]
+
+        UserInstitutionPermission.query.filter(
+            UserInstitutionPermission.user_id == user_id, UserInstitutionPermission.institution_id == institution_id
+        ).delete()
+
+        for permission_name in permission_names:
+            permission = Permission.query.filter(Permission.name == permission_name).first()
+            if permission:
+                user_perm = UserInstitutionPermission()
+                user_perm.permission_id = permission.id,
+                user_perm.user_id = user_id
+                user_perm.institution_id = institution_id
+                db.session.add(user_perm)
+            else:
+                return abort_json(400, u'Unknown permission: {}.'.format(permission_name))
+
+        safe_commit(db)
+
+    user = User.query.filter(User.id == user_id).first()
+    if not user:
+        return abort_json(404, u'User does not exist.')
+    else:
+        return jsonify_fast_no_sort(user.permissions_dict().get(institution_id, {}))
 
 
 # curl -s -X POST -H 'Accept: application/json' -H 'Content-Type: application/json' --data '{"username":"test","password":"password","rememberMe":false}' http://localhost:5004/login
