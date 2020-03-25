@@ -325,6 +325,7 @@ def register_demo_user():
         request_source = request.json
     username = request_source.get('email', None)
     password = request_source.get('password', u'')
+    display_name = request_source.get('name', username)
 
     if not username:
         return abort_json(400, "Missing email parameter")
@@ -340,7 +341,7 @@ def register_demo_user():
     demo_user = User()
     demo_user.username = username
     demo_user.password_hash = generate_password_hash(password)
-    demo_user.display_name = username
+    demo_user.display_name = display_name
     demo_user.is_demo_user = True
 
     demo_institution = Institution()
