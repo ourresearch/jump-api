@@ -386,6 +386,7 @@ def register_new_user():
     new_user.username = new_username
     new_user.password_hash = generate_password_hash(password)
     new_user.display_name = display_name
+    new_user.is_demo_user = login_user.is_demo_user
 
     db.session.add(new_user)
 
