@@ -47,6 +47,7 @@ from package import Package
 from package import get_ids
 from permission import Permission, UserInstitutionPermission
 from perpetual_access import PerpetualAccess, PerpetualAccessInput
+from publisher import Publisher
 from saved_scenario import SavedScenario
 from saved_scenario import get_latest_scenario
 from saved_scenario import save_raw_scenario_to_db
@@ -657,6 +658,21 @@ def get_jwt():
     if "Authorization" in request.headers and request.headers["Authorization"] and "Bearer " in request.headers["Authorization"]:
         return request.headers["Authorization"].replace("Bearer ", "")
     return None
+
+
+@app.route('/publisher/<publisher_id>', methods=['GET'])
+@jwt_required
+def get_publisher(publisher_id):
+    publisher = Publisher.query.get(publisher_id)
+
+    if not publisher:
+        abort_json(404, "Publisher not found")
+
+    auth_user = authenticated_user()
+    if not auth_user.has_permission(publisher.institution_id, 'read'):
+        abort_json(403, "Not authorized to view this publisher.")
+
+    return jsonify_fast_no_sort(publisher.to_dict())
 
 
 @app.route('/package/<package_id>', methods=['GET'])
