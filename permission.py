@@ -19,7 +19,7 @@ class UserInstitutionPermission(db.Model):
     institution_id = db.Column(db.Integer, ForeignKey('jump_institution.id'), primary_key=True)
     permission_id = db.Column(db.Integer, ForeignKey('jump_permission.id'), primary_key=True)
 
-    user = relationship('User')
-    institution = relationship('Institution')
+    user = relationship('User', uselist=False)
+    institution = relationship('Institution', uselist=False)
 
     permission = relationship(Permission)
