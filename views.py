@@ -360,8 +360,7 @@ def register_demo_user():
     db.session.add(GridId(institution_id=demo_institution.id, grid_id='grid.433631.0'))
     db.session.add(GridId(institution_id=demo_institution.id, grid_id='grid.424899.a'))
 
-    for permission_name in ['read', 'write', 'admin']:
-        permission = Permission.query.filter(Permission.name == permission_name).first()
+    for permission in [Permission.view(), Permission.modify(), Permission.admin()]:
         user_perm = UserInstitutionPermission()
         user_perm.permission_id = permission.id,
         user_perm.user_id = demo_user.id,
@@ -411,9 +410,9 @@ def register_new_user():
             return abort_json(400, u'Missing key in user_permissions object: {}'.format(e.message))
 
     for institution_id, permission_names in permissions_by_institution.items():
-        if login_user.has_permission(institution_id, 'admin'):
+        if login_user.has_permission(institution_id, Permission.admin()):
             for permission_name in permission_names:
-                permission = Permission.query.filter(Permission.name == permission_name).first()
+                permission = Permission.get(permission_name)
                 if permission:
                     user_perm = UserInstitutionPermission()
                     user_perm.permission_id = permission.id,
@@ -502,7 +501,7 @@ def user_permissions():
         if not institution:
             return abort_json(404, u'Institution does not exist.')
 
-        if not auth_user.has_permission(institution_id, 'admin'):
+        if not auth_user.has_permission(institution_id, Permission.admin()):
             return abort_json(403, u'Must have Admin permission to modify user permissions.')
 
         if not User.query.filter(User.id == user_id).first():
@@ -521,7 +520,7 @@ def user_permissions():
         ).delete()
 
         for permission_name in permission_names:
-            permission = Permission.query.filter(Permission.name == permission_name).first()
+            permission = Permission.get(permission_name)
             if permission:
                 user_perm = UserInstitutionPermission()
                 user_perm.permission_id = permission.id,
@@ -553,7 +552,7 @@ def institution(institution_id):
         return abort_json(404, u'Institution does not exist.')
 
     if request.method == 'POST':
-        if not auth_user.has_permission(inst.id, 'write'):
+        if not auth_user.has_permission(inst.id, Permission.modify()):
             return abort_json(403, u'Must have Write permission to modify institution properties.')
 
         request_args = request.args
@@ -567,7 +566,7 @@ def institution(institution_id):
         db.session.add(inst)
         safe_commit(db)
 
-    if not auth_user.has_permission(inst.id, 'read'):
+    if not auth_user.has_permission(inst.id, Permission.view()):
         return abort_json(403, u'Must have read permission to get institution properties.')
 
     return jsonify_fast_no_sort(inst.to_dict())
@@ -713,7 +712,7 @@ def get_publisher(publisher_id):
         abort_json(404, "Publisher not found")
 
     auth_user = authenticated_user()
-    if not auth_user.has_permission(publisher.institution_id, 'read'):
+    if not auth_user.has_permission(publisher.institution_id, Permission.view()):
         abort_json(403, "Not authorized to view this publisher.")
 
     return jsonify_fast_no_sort(publisher.to_dict())

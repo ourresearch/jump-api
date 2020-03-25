@@ -5,7 +5,7 @@ from sqlalchemy.orm import relationship
 from werkzeug.security import check_password_hash
 
 from app import db
-from permission import UserInstitutionPermission
+from permission import UserInstitutionPermission, Permission
 
 
 class User(db.Model):
@@ -55,8 +55,8 @@ class User(db.Model):
 
         return dicts
 
-    def has_permission(self, institution_id, permission_name):
-        return permission_name in self.permissions_dict().get(institution_id, {}).get('permissions', [])
+    def has_permission(self, institution_id, permission):
+        return permission.name in self.permissions_dict().get(institution_id, {}).get('permissions', [])
 
     def __repr__(self):
         return u"<{} ({}) {}>".format(self.__class__.__name__, self.id, self.display_name)
