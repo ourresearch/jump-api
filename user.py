@@ -43,7 +43,9 @@ class User(db.Model):
                     'institution_id': permission.institution_id,
                     'user_id': self.id,
                     'user_email': self.username,
-                    'permissions': [permission.permission.name]
+                    'permissions': [permission.permission.name],
+                    'institution_name': permission.institution.display_name,
+                    'user_name': self.display_name,
                 }
             else:
                 dicts[permission.institution_id]['permissions'].append(permission.permission.name)
