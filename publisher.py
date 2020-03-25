@@ -7,11 +7,11 @@ class Publisher(db.Model):
     __tablename__ = 'jump_publisher'
     id = db.Column(db.Integer, primary_key=True)
     old_package_id = db.Column(db.Text)
-    institution_id = db.Column(db.Text, ForeignKey('Institution.id'))
+    institution_id = db.Column(db.Text, ForeignKey('jump_institution.id'))
     publisher_name = db.Column(db.Text)
     name = db.Column(db.Text)
     created = db.Column(db.DateTime)
-    consortium_publisher_id = db.Column(db.Text, ForeignKey('Publisher.id'))
+    consortium_publisher_id = db.Column(db.Text, ForeignKey('jump_publisher.id'))
     is_demo = db.Column(db.Boolean)
 
     def to_dict(self):
