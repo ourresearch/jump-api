@@ -529,6 +529,39 @@ def user_permissions():
         return jsonify_fast_no_sort(user.permissions_dict().get(institution_id, {}))
 
 
+@app.route('/institution/<institution_id>', methods=['POST', 'GET'])
+@jwt_required
+def institution(institution_id):
+    auth_user = authenticated_user()
+
+    if not auth_user:
+        return abort_json(401, u'Authentication required.')
+
+    inst = Institution.query.get(institution_id)
+    if not inst:
+        return abort_json(404, u'Institution does not exist.')
+
+    if request.method == 'POST':
+        if not auth_user.has_permission(inst.id, 'write'):
+            return abort_json(403, u'Must have Write permission to modify institution properties.')
+
+        request_args = request.args
+        if request.is_json:
+            request_args = request.json
+
+        display_name = request_args.get('name', None)
+        if display_name:
+            inst.display_name = display_name
+
+        db.session.add(inst)
+        safe_commit(db)
+
+    if not auth_user.has_permission(inst.id, 'read'):
+        return abort_json(403, u'Must have read permission to get institution properties.')
+
+    return jsonify_fast_no_sort(inst.to_dict())
+
+
 # curl -s -X POST -H 'Accept: application/json' -H 'Content-Type: application/json' --data '{"username":"test","password":"password","rememberMe":false}' http://localhost:5004/login
 # curl -H 'Accept: application/json' -H "Authorization: Bearer ${TOKEN}" http://localhost:5004/protected
 

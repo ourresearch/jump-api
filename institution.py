@@ -1,8 +1,12 @@
 import datetime
 
 import shortuuid
+from sqlalchemy.orm import relationship
 
 from app import db
+from grid_id import GridId
+from permission import UserInstitutionPermission
+from user import User
 
 
 class Institution(db.Model):
@@ -13,6 +17,28 @@ class Institution(db.Model):
     is_consortium = db.Column(db.Boolean)
     consortium_id = db.Column(db.Text)
     is_demo_institution = db.Column(db.Boolean)
+
+    grid_ids = relationship(GridId)
+
+    def user_permissions(self):
+        user_ids = db.session.query(UserInstitutionPermission.user_id).filter(
+            UserInstitutionPermission.institution_id == self.id).distinct()
+
+        users = User.query.filter(User.id.in_(user_ids)).all()
+
+        return [u.permissions_dict()[self.id] for u in users]
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'grid_ids': [g.grid_id for g in self.grid_ids],
+            'name': self.display_name,
+            'is_demo': self.is_demo_institution,
+            'user_permissions': self.user_permissions(),
+            'publishers': [
+                # list of Publisher objects
+            ],
+        }
 
     def __init__(self, **kwargs):
         self.id = u'institution-{}'.format(shortuuid.uuid()[0:12])
