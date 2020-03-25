@@ -1,3 +1,6 @@
+import datetime
+
+import shortuuid
 from sqlalchemy import ForeignKey
 
 from app import db
@@ -31,6 +34,11 @@ class Publisher(db.Model):
             ]
 
         }
+
+    def __init__(self, **kwargs):
+        self.id = u'pub-{}'.format(shortuuid.uuid()[0:12])
+        self.created = datetime.datetime.utcnow().isoformat()
+        super(Publisher, self).__init__(**kwargs)
 
     def __repr__(self):
         return u"<{} ({}) {}>".format(self.__class__.__name__, self.id, self.name)
