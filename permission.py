@@ -3,11 +3,30 @@ from sqlalchemy.orm import relationship
 
 from app import db
 
+_permissions = {}
+
 
 class Permission(db.Model):
     __tablename__ = 'jump_permission'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Text, unique=True)
+
+    @staticmethod
+    def get(name):
+        global _permissions
+        return _permissions.setdefault(name, Permission.query.filter(Permission.name == name).first())
+
+    @staticmethod
+    def view():
+        return Permission.get('view')
+
+    @staticmethod
+    def admin():
+        return Permission.get('admin')
+
+    @staticmethod
+    def modify():
+        return Permission.get('modify')
 
     def __repr__(self):
         return u"<{} ({}) {}>".format(self.__class__.__name__, self.id, self.name)
