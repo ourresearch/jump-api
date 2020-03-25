@@ -39,6 +39,7 @@ from app import db
 from app import my_memcached
 from app import get_db_cursor
 from counter import Counter, CounterInput
+from grid_id import GridId
 from scenario import Scenario
 from account import Account
 from institution import Institution
@@ -346,8 +347,17 @@ def register_demo_user():
     demo_institution.display_name = 'Demo University'
     demo_institution.is_demo_institution = True
 
+    demo_publisher = Publisher()
+    demo_publisher.institution_id = demo_institution.id
+    demo_publisher.name = 'Demo University - Demo Publisher'
+    demo_publisher.publisher_name = 'Demo Publisher'
+    demo_publisher.is_demo = True
+
     db.session.add(demo_user)
     db.session.add(demo_institution)
+    db.session.add(demo_publisher)
+    db.session.add(GridId(institution_id=demo_institution.id, grid_id='grid.433631.0'))
+    db.session.add(GridId(institution_id=demo_institution.id, grid_id='grid.424899.a'))
 
     for permission_name in ['read', 'write', 'admin']:
         permission = Permission.query.filter(Permission.name == permission_name).first()
