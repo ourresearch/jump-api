@@ -2,6 +2,7 @@ import datetime
 
 import shortuuid
 from sqlalchemy.orm import relationship
+from werkzeug.security import check_password_hash
 
 from app import db
 from permission import UserInstitutionPermission
@@ -28,7 +29,9 @@ class User(db.Model):
             'id': self.id,
             'name': self.display_name,
             'email': self.username,
-            'user_permissions': self.permissions_list()
+            'is_demo': self.is_demo_user,
+            'is_password_set': not check_password_hash(self.password_hash, u''),
+            'user_permissions': self.permissions_list(),
         }
 
     def permissions_list(self):
