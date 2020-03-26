@@ -552,8 +552,4 @@ def clone_demo_package(institution):
         """.format(new_package.package_id, DEMO_PACKAGE_ID)
     )
 
-    safe_commit(db)
-
-    return new_package.package_id
-
-
+    return new_package
