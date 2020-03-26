@@ -1,33 +1,31 @@
 # coding: utf-8
 
+import bisect
+import collections
 import datetime
-import time
-import unicodedata
-import sqlalchemy
+import locale
 import logging
 import math
-import bisect
-import urlparse
-import re
 import os
-import collections
-import requests
+import re
+import time
+import traceback
+import unicodedata
+import urlparse
+
 import heroku3
+import requests
 import simplejson as json
-import copy
-from unidecode import unidecode
-from sqlalchemy import sql
-from sqlalchemy import exc
-from subprocess import call
-from requests.adapters import HTTPAdapter
+import sqlalchemy
 import unicodecsv as csv
 from flask import current_app
+from flask_jwt_extended import get_jwt_identity
+from requests.adapters import HTTPAdapter
 from simplejson import dumps
-import locale
+from sqlalchemy import exc
+from sqlalchemy import sql
+from unidecode import unidecode
 from werkzeug.wsgi import ClosingIterator
-import traceback
-from threading import Thread
-
 
 try:
     locale.setlocale(locale.LC_ALL, 'en_US.UTF-8') #use locale.format for commafication
@@ -871,3 +869,7 @@ class AfterResponseMiddleware:
             traceback.print_exc()
             return iterator
 
+
+def authenticated_user_id():
+    jwt_identity = get_jwt_identity()
+    return jwt_identity.get('user_id', None) if jwt_identity else None

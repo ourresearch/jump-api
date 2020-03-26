@@ -7,6 +7,7 @@ from werkzeug.security import check_password_hash
 from app import db
 from permission import UserInstitutionPermission
 
+from util import authenticated_user_id
 
 class User(db.Model):
     __tablename__ = 'jump_user'
@@ -49,6 +50,7 @@ class User(db.Model):
                     'permissions': [permission.permission.name],
                     'institution_name': permission.institution.display_name,
                     'user_name': self.display_name,
+                    'is_authenticated_user': authenticated_user_id() == self.id,
                 }
             else:
                 dicts[permission.institution_id]['permissions'].append(permission.permission.name)
