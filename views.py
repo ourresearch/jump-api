@@ -527,6 +527,9 @@ def user_permissions():
         if not isinstance(permission_names, list):
             permission_names = [permission_names]
 
+        if query_user.id == auth_user.id and Permission.admin().name not in permission_names:
+            return abort_json(400, u'Cannot revoke own admin permission.')
+
         UserInstitutionPermission.query.filter(
             UserInstitutionPermission.user_id == query_user.id,
             UserInstitutionPermission.institution_id == institution_id
