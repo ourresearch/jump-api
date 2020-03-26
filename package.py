@@ -12,13 +12,14 @@ from app import db
 from app import get_db_cursor
 from app import DEMO_PACKAGE_ID
 from app import my_memcached
+from counter import Counter, CounterInput
 from saved_scenario import SavedScenario
 from scenario import get_prices_from_db
 from scenario import get_core_list_from_db
 from scenario import get_perpetual_access_data_from_db
 from util import get_sql_answer
 from util import get_sql_rows
-from util import get_sql_dict_rows
+from util import get_sql_dict_rows, safe_commit
 
 def get_ids():
     rows = get_sql_dict_rows("""select * from jump_account_package_scenario_view order by username""")
@@ -27,6 +28,7 @@ def get_ids():
 class Package(db.Model):
     __tablename__ = 'jump_account_package'
     account_id = db.Column(db.Text, db.ForeignKey("jump_account.id"))
+    institution_id = db.Column(db.Text, db.ForeignKey("jump_institution.id"))
     package_id = db.Column(db.Text, primary_key=True)
     publisher = db.Column(db.Text)
     package_name = db.Column(db.Text)
@@ -434,5 +436,124 @@ class Package(db.Model):
 
     def __repr__(self):
         return u"<{} ({}) {}>".format(self.__class__.__name__, self.package_id, self.package_name)
+
+
+def clone_demo_package(institution):
+    demo_package = Package.query.filter(Package.package_id == DEMO_PACKAGE_ID).first()
+    now = datetime.datetime.utcnow().isoformat(),
+
+    # jump_account_package
+    new_package = Package(
+        package_id='package-{}'.format(shortuuid.uuid()[0:12]),
+        publisher=demo_package.publisher,
+        package_name=u'{} {}'.format(institution.display_name, demo_package.publisher),
+        created=now,
+        institution_id=institution.id
+    )
+
+    db.session.add(new_package)
+
+    # jump_package_scenario
+    demo_scenarios = SavedScenario.query.filter(SavedScenario.package_id == DEMO_PACKAGE_ID).all()
+    for scenario in demo_scenarios:
+        new_scenario = SavedScenario(False, 'scenario-{}'.format(shortuuid.uuid()[0:12]), None)
+        new_scenario.package_id = new_package.package_id
+        new_scenario.scenario_name = scenario.scenario_name
+        new_scenario.created = now
+        new_scenario.is_base_scenario = scenario.is_base_scenario
+
+        db.session.add(new_scenario)
+
+    # jump_counter
+    db.session.execute(
+        """
+            insert into jump_counter (issn_l, package_id, organization, publisher, issn, journal_name, total) (
+                select issn_l, '{}', organization, publisher, issn, journal_name, total 
+                from jump_counter
+                where package_id = '{}'
+            )
+        """.format(new_package.package_id, DEMO_PACKAGE_ID)
+    )
+
+    # 'jump_counter_input',
+    db.session.execute(
+        """
+            insert into jump_counter_input (organization, publisher, issn, journal_name, total, package_id) (
+                select organization, publisher, issn, journal_name, total, '{}'
+                from jump_counter_input
+                where package_id = '{}'
+            )
+        """.format(new_package.package_id, DEMO_PACKAGE_ID)
+    )
+
+    # jump_core_journals
+    db.session.execute(
+        """
+            insert into jump_core_journals (package_id, issn_l, baseline_access) (
+                select '{}', issn_l, baseline_access from jump_core_journals where package_id = '{}'
+            )
+        """.format(new_package.package_id, DEMO_PACKAGE_ID)
+    )
+
+    # 'jump_journal_prices'
+    db.session.execute(
+        """
+            insert into jump_journal_prices (package_id, publisher, title, issn_l, subject, usa_usd, year) (
+                select '{}', publisher, title, issn_l, subject, usa_usd, year 
+                from jump_journal_prices
+                where package_id = '{}'
+            )
+        """.format(new_package.package_id, DEMO_PACKAGE_ID)
+    )
+
+    # 'jump_journal_prices_input'
+    db.session.execute(
+        """
+            insert into jump_journal_prices_input (publisher, issn, subject, usa_usd, package_id, year) (
+                select publisher, issn, subject, usa_usd, '{}', year 
+                from jump_journal_prices_input
+                where package_id = '{}'
+            )
+        """.format(new_package.package_id, DEMO_PACKAGE_ID)
+    )
+
+    # 'jump_perpetual_access'
+    db.session.execute(
+        """
+            insert into jump_perpetual_access (package_id, issn_l, start_date, end_date) (
+                select '{}', issn_l, start_date, end_date 
+                from jump_perpetual_access
+                where package_id = '{}'
+            )
+        """.format(new_package.package_id, DEMO_PACKAGE_ID)
+    )
+
+    # 'jump_perpetual_access_input_by_package'
+    db.session.execute(
+        """
+            insert into jump_perpetual_access_input_by_package (package_id, issn, start_date, end_date) (
+                select '{}', issn, start_date, end_date 
+                from jump_perpetual_access_input_by_package
+                where package_id = '{}'
+            )
+        """.format(new_package.package_id, DEMO_PACKAGE_ID)
+    )
+
+    # 'jump_apc_authorships'
+    db.session.execute(
+        """
+            insert into jump_apc_authorships (
+                package_id, doi, num_authors_total, num_authors_from_uni, journal_name, issn_l, year, oa_status, apc
+            ) (
+                select '{}', doi, num_authors_total, num_authors_from_uni, journal_name, issn_l, year, oa_status, apc 
+                from jump_apc_authorships
+                where package_id = '{}'
+            )
+        """.format(new_package.package_id, DEMO_PACKAGE_ID)
+    )
+
+    safe_commit(db)
+
+    return new_package.package_id
 
 
