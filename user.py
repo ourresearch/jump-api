@@ -5,7 +5,7 @@ from sqlalchemy.orm import relationship
 from werkzeug.security import check_password_hash
 
 from app import db
-from permission import UserInstitutionPermission, Permission
+from permission import UserInstitutionPermission
 
 
 class User(db.Model):
