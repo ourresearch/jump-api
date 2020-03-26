@@ -3,8 +3,6 @@ from sqlalchemy.orm import relationship
 
 from app import db
 
-_permissions = {}
-
 
 class Permission(db.Model):
     __tablename__ = 'jump_permission'
@@ -13,8 +11,7 @@ class Permission(db.Model):
 
     @staticmethod
     def get(name):
-        global _permissions
-        return _permissions.setdefault(name, Permission.query.filter(Permission.name == name).first())
+        return Permission.query.filter(Permission.name == name).first()
 
     @staticmethod
     def view():
