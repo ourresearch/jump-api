@@ -1,21 +1,19 @@
 # coding: utf-8
 
-from cached_property import cached_property
-import numpy as np
-
 from util import str2bool
+
 
 class Assumptions(object):
     def __init__(self, http_request_args=None):
         self.cost_ill = 17
-        self.cost_bigdeal_increase = 5 #percent
-        self.cost_alacart_increase = 8 #percent
+        self.cost_bigdeal_increase = 5  # percent
+        self.cost_alacart_increase = 8  # percent
         self.cost_bigdeal = 2100000
         self.cost_content_fee_percent = 5.7
         self.ill_request_percent_of_delayed = 5
         self.weight_citation = 10
         self.weight_authorship = 100
-        self.backfile_contribution = 100 # percent
+        self.backfile_contribution = 100  # percent
         self.include_bronze = True
         self.include_submitted_version = True
         self.include_social_networks = True
@@ -37,14 +35,13 @@ class Assumptions(object):
             else:
                 try:
                     self.__setattr__(key, str2bool(value))
-                except:
+                except AttributeError:
                     self.__setattr__(key, value)
         else:
             try:
                 self.__setattr__(key, float(value))
-            except:
+            except (ValueError, TypeError):
                 self.__setattr__(key, value)
-
 
     def to_dict(self):
         my_dict = self.__dict__
