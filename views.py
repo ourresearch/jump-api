@@ -481,31 +481,43 @@ def user_permissions():
         request_args.update(request.json)
 
     user_id = request_args.get('user_id', None)
+    user_email = request_args.get('user_email', None)
     institution_id = request_args.get('institution_id', None)
 
-    if not user_id:
-        return abort_json(400, u'Missing user_id parameter.')
-    elif isinstance(user_id, list):
+    if not user_id and not user_email:
+        return abort_json(400, u'A user_id or user_email parameter is required.')
+
+    if isinstance(user_id, list):
         user_id = user_id[0]
+
+    if isinstance(user_email, list):
+        user_email = user_email[0]
+
     if not institution_id:
         return abort_json(400, u'Missing institution_id parameter.')
     elif isinstance(institution_id, list):
         institution_id = institution_id[0]
+
+    query_user = User.query.filter(or_(User.id == user_id, User.username == user_email)).all()
+
+    if len(query_user) > 1:
+        return abort_json(400, u'Email and user ID belong to different users.')
+    if len(query_user) == 0:
+        return abort_json(404, u'User does not exist.')
+
+    query_user = query_user[0]
 
     if request.method == 'POST':
         auth_user = authenticated_user()
         if not auth_user:
             return abort_json(401, u'Must be logged in.')
 
-        institution = Institution.query.get(institution_id)
-        if not institution:
+        inst = Institution.query.get(institution_id)
+        if not inst:
             return abort_json(404, u'Institution does not exist.')
 
         if not auth_user.has_permission(institution_id, Permission.admin()):
             return abort_json(403, u'Must have Admin permission to modify user permissions.')
-
-        if not User.query.filter(User.id == user_id).first():
-            return abort_json(404, u'User does not exist.')
 
         permission_names = request_args.get('permissions', request_args.get('data', None))
 
@@ -516,7 +528,8 @@ def user_permissions():
             permission_names = [permission_names]
 
         UserInstitutionPermission.query.filter(
-            UserInstitutionPermission.user_id == user_id, UserInstitutionPermission.institution_id == institution_id
+            UserInstitutionPermission.user_id == query_user.id,
+            UserInstitutionPermission.institution_id == institution_id
         ).delete()
 
         for permission_name in permission_names:
@@ -524,7 +537,7 @@ def user_permissions():
             if permission:
                 user_perm = UserInstitutionPermission()
                 user_perm.permission_id = permission.id,
-                user_perm.user_id = user_id
+                user_perm.user_id = query_user.id
                 user_perm.institution_id = institution_id
                 db.session.add(user_perm)
             else:
@@ -532,11 +545,7 @@ def user_permissions():
 
         safe_commit(db)
 
-    user = User.query.filter(User.id == user_id).first()
-    if not user:
-        return abort_json(404, u'User does not exist.')
-    else:
-        return jsonify_fast_no_sort(user.permissions_dict().get(institution_id, {}))
+    return jsonify_fast_no_sort(query_user.permissions_dict().get(institution_id, {}))
 
 
 @app.route('/institution/<institution_id>', methods=['POST', 'GET'])
