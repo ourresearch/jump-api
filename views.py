@@ -45,7 +45,7 @@ from account import Account
 from institution import Institution
 from journal_price import JournalPrice, JournalPriceInput
 from package import Package
-from package import get_ids
+from package import get_ids, clone_demo_package
 from permission import Permission, UserInstitutionPermission
 from perpetual_access import PerpetualAccess, PerpetualAccessInput
 from publisher import Publisher
@@ -320,12 +320,13 @@ def user_login():
 
 @app.route('/user/demo', methods=['POST'])
 def register_demo_user():
-    request_source = request.args
+    request_args = request.args
     if request.is_json:
-        request_source = request.json
-    username = request_source.get('email', None)
-    password = request_source.get('password', u'')
-    display_name = request_source.get('name', username)
+        request_args = request.json
+
+    username = request_args.get('email', None)
+    password = request_args.get('password', u'')
+    display_name = request_args.get('name', username)
 
     if not username:
         return abort_json(400, "Missing email parameter")
@@ -366,6 +367,9 @@ def register_demo_user():
         user_perm.user_id = demo_user.id,
         user_perm.institution_id = demo_institution.id
         db.session.add(user_perm)
+
+    demo_package = clone_demo_package(demo_institution)
+    db.session.add(demo_package)
 
     safe_commit(db)
 
