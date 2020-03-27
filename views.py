@@ -966,7 +966,7 @@ def scenario_id_post(scenario_id):
     scenario_name = request.json.get('name', None)
     if scenario_name:
         # doing it this way makes sure we have permission to acces and therefore rename the scenario
-        my_saved_scenario = get_saved_scenario(scenario_id)
+        my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.modify())
         command = "update jump_package_scenario set scenario_name = '{}' where scenario_id = '{}'".format(scenario_name, scenario_id)
         with get_db_cursor() as cursor:
             cursor.execute(command)
