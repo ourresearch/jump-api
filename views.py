@@ -1038,7 +1038,7 @@ def scenario_id_summary_get(scenario_id):
 @app.route('/scenario/<scenario_id>/journals', methods=['GET'])
 @jwt_optional
 def scenario_id_journals_get(scenario_id):
-    my_saved_scenario = get_saved_scenario(scenario_id)
+    my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
     response = jsonify_fast_no_sort(my_saved_scenario.to_dict_journals())
     cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
     response.headers["Cache-Tag"] = u",".join(cache_tags_list)
