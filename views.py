@@ -125,28 +125,37 @@ def cached(extra_key=None):
     return _cached
 
 
-def package_authenticated(func):
-    @functools.wraps(func)
-    def wrapper(package_id):
-        package = Package.query.get(package_id)
+def authenticate_for_publisher(package_id):
+    package = Package.query.get(package_id)
 
-        if not package:
-            return abort_json(404, "Package not found")
+    if not package:
+        abort_json(404, "Package not found")
 
-        if not is_authorized_superuser():
-            auth_user = authenticated_user()
+    if not is_authorized_superuser():
+        auth_user = authenticated_user()
 
-            if request.method == 'GET':
-                if not (auth_user and auth_user.has_permission(package.institution.id, Permission.view())):
-                    return abort_json(401, u'not authorized to view package {}'.format(package_id))
+        if not auth_user:
+            abort_json(401, u'Must be logged in.')
 
-            if request.method in ['DELETE', 'POST']:
-                if not (auth_user and auth_user.has_permission(package.institution.id, Permission.modify())):
-                    return abort_json(401, u'not authorized to modify package {}'.format(package_id))
+        required_permission = Permission.view() if request.method == 'GET' else Permission.modify()
 
-        return func(package_id)
+        if not package.institution:
+            abort_json(400, u'Publisher is not owned by any institution.')
 
-    return wrapper
+        if not auth_user.has_permission(package.institution.id, required_permission):
+            consortium_package = Package.query.filter(Package.package_id == package.consortium_package_id).scalar()
+
+            if not consortium_package:
+                abort_json(403, u'Missing required permission "{}" for institution {}.'.format(
+                    required_permission.name,
+                    package.institution.id)
+                )
+
+            if not auth_user.has_permission(consortium_package.institution.id, required_permission):
+                abort_json(403, u'Missing required permission "{}" for institution {}.'.format(
+                    required_permission.name,
+                    consortium_package.institution.id)
+                )
 
 
 def authenticated_user():
@@ -856,18 +865,10 @@ def _load_package_file(package_id, req, table_class):
 
 @app.route('/publisher/<package_id>/counter', methods=['GET', 'POST', 'DELETE'])
 @jwt_optional
-@package_authenticated
 def jump_counter(package_id):
-    if request.method == 'GET':
-        # if package_id.startswith("demo"):
-        #     my_package = Package.query.get("demo")
-        #     my_package.package_id = package_id
-        # else:
-        #     my_package = Package.query.get(package_id)
-        #
-        # response = my_package.get_package_counter_breakdown()
-        # return jsonify_fast_no_sort(response)
+    authenticate_for_publisher(package_id)
 
+    if request.method == 'GET':
         rows = Counter.query.filter(Counter.package_id == package_id).all()
         if rows:
             return jsonify_fast_no_sort({"rows": [row.to_dict() for row in rows]})
@@ -884,8 +885,9 @@ def jump_counter(package_id):
 
 @app.route('/publisher/<package_id>/perpetual-access', methods=['GET', 'POST', 'DELETE'])
 @jwt_optional
-@package_authenticated
 def jump_perpetual_access(package_id):
+    authenticate_for_publisher(package_id)
+
     if request.method == 'GET':
         rows = PerpetualAccess.query.filter(PerpetualAccess.package_id == package_id).all()
         if rows:
@@ -903,8 +905,9 @@ def jump_perpetual_access(package_id):
 
 @app.route('/publisher/<package_id>/prices', methods=['GET', 'POST', 'DELETE'])
 @jwt_optional
-@package_authenticated
 def jump_journal_prices(package_id):
+    authenticate_for_publisher(package_id)
+
     if request.method == 'GET':
         rows = JournalPrice.query.filter(JournalPrice.package_id == package_id).all()
         if rows:
