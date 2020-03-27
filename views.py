@@ -978,6 +978,7 @@ def cloudflare_noncircular_wrapper(the_rest):
 @app.route('/scenario/<scenario_id>/subscriptions', methods=['POST'])
 @jwt_required
 def subscriptions_scenario_id_post(scenario_id):
+    get_saved_scenario(scenario_id, required_permission=Permission.modify())
 
     my_timing = TimingMessages()
     post_subscription_guts(scenario_id)
