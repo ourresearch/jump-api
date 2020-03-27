@@ -129,7 +129,7 @@ def authenticate_for_publisher(publisher_id, required_permission):
     package = Package.query.get(publisher_id)
 
     if not package:
-        abort_json(404, "Package not found")
+        abort_json(404, "Publisher not found")
 
     if not is_authorized_superuser():
         auth_user = authenticated_user()
@@ -1117,10 +1117,25 @@ def live_package_id_apc_get(package_id):
     return live_scenario_id_apc_get(scenario_id)
 
 
+@app.route('/publisher/<publisher_id>/apc', methods=['GET'])
+@jwt_optional
+def live_publisher_id_apc_get(publisher_id):
+    authenticate_for_publisher(publisher_id, required_permission=Permission.view())
+
+    my_package = Package.query.get(publisher_id)
+
+    if not my_package:
+        abort_json(404, "Publisher not found")
+
+    my_scenario = my_package.unique_saved_scenarios[0]
+    scenario_id = my_scenario.scenario_id
+    return live_scenario_id_apc_get(scenario_id)
+
+
 @app.route('/scenario/<scenario_id>/apc', methods=['GET'])
 @jwt_optional
 def live_scenario_id_apc_get(scenario_id):
-    my_saved_scenario = get_saved_scenario(scenario_id)
+    my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
     response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_apc())
     cache_tags_list = ["apc", u"package_{}".format(my_saved_scenario.package_id)]
     response.headers["Cache-Tag"] = u",".join(cache_tags_list)
