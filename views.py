@@ -1243,7 +1243,7 @@ def publisher_scenario_post(publisher_id):
 
     my_new_scenario = get_saved_scenario(new_scenario_id, required_permission=Permission.view())
 
-    return jsonify_fast_no_sort(my_new_scenario.to_publisher_dict_meta())
+    return jsonify_fast_no_sort(my_new_scenario.to_dict_meta())
 
 
 @app.route('/scenario/<scenario_id>', methods=['DELETE'])
