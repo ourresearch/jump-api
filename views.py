@@ -125,7 +125,7 @@ def cached(extra_key=None):
     return _cached
 
 
-def authenticate_for_publisher(publisher_id, method):
+def authenticate_for_publisher(publisher_id, required_permission):
     package = Package.query.get(publisher_id)
 
     if not package:
@@ -136,8 +136,6 @@ def authenticate_for_publisher(publisher_id, method):
 
         if not auth_user:
             abort_json(401, u'Must be logged in.')
-
-        required_permission = Permission.view() if method == 'GET' else Permission.modify()
 
         if not package.institution:
             abort_json(400, u'Publisher is not owned by any institution.')
@@ -643,8 +641,8 @@ def is_authorized_superuser():
         return True
     return False
 
-def get_saved_scenario(scenario_id, test_mode=False):
 
+def get_saved_scenario(scenario_id, test_mode=False, required_permission=None):
     # is_demo_account = scenario_id.startswith("demo")
     #
     # if is_demo_account:
@@ -656,23 +654,33 @@ def get_saved_scenario(scenario_id, test_mode=False):
     my_saved_scenario = SavedScenario.query.get(scenario_id)
 
     if not my_saved_scenario:
-        abort_json(404, "Scenario not found")
+        abort_json(404, "Scenario {} not found.".format(scenario_id))
 
     # if not test_mode:
     #     print "test_mode", test_mode
     #     print "is_authorized_superuser()", is_authorized_superuser()
-    if not test_mode and not is_authorized_superuser():
-        identity_dict = get_jwt_identity()
-        if not identity_dict:
-            abort_json(401, "Not authorized to view this package: need jwt")
+    if my_saved_scenario.package.account_id:
+        if not test_mode and not is_authorized_superuser():
+            identity_dict = get_jwt_identity()
+            if not identity_dict:
+                abort_json(401, "Not authorized to view this package: need jwt")
 
-        if my_saved_scenario.package_real.account_id != identity_dict["account_id"]:
-            if not my_saved_scenario.package_real.consortium_package_id:
-                abort_json(401, "Not authorized to view this package: mismatched account_id")
-            else:
-                consortium_package = Package.query.filter(Package.package_id==my_saved_scenario.package_real.consortium_package_id).first()
-                if consortium_package.account_id != identity_dict["account_id"]:
-                    abort_json(401, "Not authorized to view this package: mismatched consortium account")
+            if my_saved_scenario.package_real.account_id != identity_dict["account_id"]:
+                if not my_saved_scenario.package_real.consortium_package_id:
+                    abort_json(401, "Not authorized to view this package: mismatched account_id")
+                else:
+                    consortium_package = Package.query.filter(Package.package_id==my_saved_scenario.package_real.consortium_package_id).first()
+                    if consortium_package.account_id != identity_dict["account_id"]:
+                        abort_json(401, "Not authorized to view this package: mismatched consortium account")
+    elif my_saved_scenario.package.institution_id:
+        authenticate_for_publisher(my_saved_scenario.package.package_id, required_permission)
+    else:
+        abort_json(
+            400,
+            u"Scenario package {} has no account_id or institution_id. Can't decide how to authenticate.".format(
+                my_saved_scenario.package.package_id
+            )
+        )
 
     my_saved_scenario.set_live_scenario(None)
 
@@ -877,7 +885,7 @@ def _load_package_file(package_id, req, table_class):
 @app.route('/publisher/<package_id>/counter', methods=['GET', 'POST', 'DELETE'])
 @jwt_optional
 def jump_counter(package_id):
-    authenticate_for_publisher(package_id, request.method)
+    authenticate_for_publisher(package_id, Permission.view() if request.method == 'GET' else Permission.modify())
 
     if request.method == 'GET':
         rows = Counter.query.filter(Counter.package_id == package_id).all()
@@ -897,7 +905,7 @@ def jump_counter(package_id):
 @app.route('/publisher/<package_id>/perpetual-access', methods=['GET', 'POST', 'DELETE'])
 @jwt_optional
 def jump_perpetual_access(package_id):
-    authenticate_for_publisher(package_id, request.method)
+    authenticate_for_publisher(package_id, Permission.view() if request.method == 'GET' else Permission.modify())
 
     if request.method == 'GET':
         rows = PerpetualAccess.query.filter(PerpetualAccess.package_id == package_id).all()
@@ -917,7 +925,7 @@ def jump_perpetual_access(package_id):
 @app.route('/publisher/<package_id>/prices', methods=['GET', 'POST', 'DELETE'])
 @jwt_optional
 def jump_journal_prices(package_id):
-    authenticate_for_publisher(package_id, request.method)
+    authenticate_for_publisher(package_id, Permission.view() if request.method == 'GET' else Permission.modify())
 
     if request.method == 'GET':
         rows = JournalPrice.query.filter(JournalPrice.package_id == package_id).all()
@@ -1220,7 +1228,7 @@ def scenario_post(package_id):
 @app.route('/publisher/<publisher_id>/scenario', methods=["POST"])
 @jwt_optional
 def publisher_scenario_post(publisher_id):
-    authenticate_for_publisher(publisher_id, request.method)
+    authenticate_for_publisher(publisher_id, Permission.modify())
 
     new_scenario_id = request.json.get('id', 'scenario-{}'.format(shortuuid.uuid()[0:12]))
     new_scenario_name = request.json.get('name', "New Scenario")
@@ -1255,7 +1263,7 @@ def publisher_scenario_post(publisher_id):
 def scenario_delete(scenario_id):
     # just delete it out of the table, leave the saves
     # doing it this way makes sure we have permission to acces and therefore delete the scenario
-    my_saved_scenario = get_saved_scenario(scenario_id)
+    get_saved_scenario(scenario_id, required_permission=Permission.modify())
     command = "delete from jump_package_scenario where scenario_id = '{}'".format(scenario_id)
 
     with get_db_cursor() as cursor:
