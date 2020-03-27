@@ -19,7 +19,7 @@ class Institution(db.Model):
     is_demo_institution = db.Column(db.Boolean)
 
     grid_ids = relationship(GridId)
-    publishers = relationship('Publisher')
+    packages = relationship('Package')
 
     def user_permissions(self):
         user_ids = db.session.query(UserInstitutionPermission.user_id).filter(
@@ -36,7 +36,7 @@ class Institution(db.Model):
             'name': self.display_name,
             'is_demo': self.is_demo_institution,
             'user_permissions': self.user_permissions(),
-            'publishers': [p.to_dict() for p in self.publishers],
+            'publishers': [p.to_publisher_dict() for p in self.packages],
         }
 
     def __init__(self, **kwargs):
