@@ -456,19 +456,19 @@ class Package(db.Model):
                 },
                 {
                     'name': 'perpetual-access',
-                    'uploaded': PerpetualAccessInput.query.filter(
+                    'uploaded': False if self.is_demo else PerpetualAccessInput.query.filter(
                         PerpetualAccessInput.package_id == self.package_id
                     ).count() > 0
                 },
                 {
                     'name': 'prices',
-                    'uploaded': JournalPriceInput.query.filter(
+                    'uploaded': False if self.is_demo else JournalPriceInput.query.filter(
                         JournalPriceInput.package_id == self.package_id
                     ).count() > 0
                 },
                 {
                     'name': 'core-journals',
-                    'uploaded': db.session.execute(
+                    'uploaded': False if self.is_demo else db.session.execute(
                         "select count(*) from jump_core_journals where package_id = '{}'".format(self.package_id)
                     ).scalar() > 0
                 },
