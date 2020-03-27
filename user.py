@@ -9,10 +9,11 @@ from permission import UserInstitutionPermission
 
 from util import authenticated_user_id
 
+
 class User(db.Model):
     __tablename__ = 'jump_user'
     id = db.Column(db.Text, primary_key=True)
-    username = db.Column(db.Text)
+    username = db.Column(db.Text, unique=True, nullable=False)
     display_name = db.Column(db.Text)
     password_hash = db.Column(db.Text)
     created = db.Column(db.DateTime)

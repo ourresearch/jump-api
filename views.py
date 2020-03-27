@@ -456,6 +456,8 @@ def my_user_info():
         password = request.json.get('password', None)
 
         if email:
+            if User.query.filter(User.username == email, User.id != login_user.id).scalar():
+                return abort_json(409, u'A user with email {} already exists.'.format(email))
             login_user.username = email
         if name:
             login_user.display_name = name
