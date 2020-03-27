@@ -125,8 +125,8 @@ def cached(extra_key=None):
     return _cached
 
 
-def authenticate_for_publisher(package_id):
-    package = Package.query.get(package_id)
+def authenticate_for_publisher(publisher_id, method):
+    package = Package.query.get(publisher_id)
 
     if not package:
         abort_json(404, "Package not found")
@@ -137,22 +137,22 @@ def authenticate_for_publisher(package_id):
         if not auth_user:
             abort_json(401, u'Must be logged in.')
 
-        required_permission = Permission.view() if request.method == 'GET' else Permission.modify()
+        required_permission = Permission.view() if method == 'GET' else Permission.modify()
 
         if not package.institution:
             abort_json(400, u'Publisher is not owned by any institution.')
 
         if not auth_user.has_permission(package.institution.id, required_permission):
-            consortium_package = Package.query.filter(Package.package_id == package.consortium_package_id).scalar()
+            consortium_package = Package.query.get(package.consortium_package_id)
 
             if not consortium_package:
-                abort_json(403, u'Missing required permission "{}" for institution {}.'.format(
+                abort_json(403, u"Missing required permission '{}' for institution {}.".format(
                     required_permission.name,
                     package.institution.id)
                 )
 
             if not auth_user.has_permission(consortium_package.institution.id, required_permission):
-                abort_json(403, u'Missing required permission "{}" for institution {}.'.format(
+                abort_json(403, u"Missing required permission '{}' for institution {}.".format(
                     required_permission.name,
                     consortium_package.institution.id)
                 )
@@ -679,6 +679,17 @@ def get_saved_scenario(scenario_id, test_mode=False):
     return my_saved_scenario
 
 
+def get_saved_scenario_publisher_authenticated(scenario_id):
+    my_saved_scenario = SavedScenario.query.get(scenario_id)
+
+    if not my_saved_scenario:
+        abort_json(404, "Scenario not found")
+
+    authenticate_for_publisher(my_saved_scenario.package.package_id, 'GET')
+    my_saved_scenario.set_live_scenario(None)
+    return my_saved_scenario
+
+
 # from https://stackoverflow.com/a/51480061/596939
 # class RunAsyncToRequestResponse(Thread):
 #     def __init__(self, url_end, my_jwt):
@@ -866,7 +877,7 @@ def _load_package_file(package_id, req, table_class):
 @app.route('/publisher/<package_id>/counter', methods=['GET', 'POST', 'DELETE'])
 @jwt_optional
 def jump_counter(package_id):
-    authenticate_for_publisher(package_id)
+    authenticate_for_publisher(package_id, request.method)
 
     if request.method == 'GET':
         rows = Counter.query.filter(Counter.package_id == package_id).all()
@@ -886,7 +897,7 @@ def jump_counter(package_id):
 @app.route('/publisher/<package_id>/perpetual-access', methods=['GET', 'POST', 'DELETE'])
 @jwt_optional
 def jump_perpetual_access(package_id):
-    authenticate_for_publisher(package_id)
+    authenticate_for_publisher(package_id, request.method)
 
     if request.method == 'GET':
         rows = PerpetualAccess.query.filter(PerpetualAccess.package_id == package_id).all()
@@ -906,7 +917,7 @@ def jump_perpetual_access(package_id):
 @app.route('/publisher/<package_id>/prices', methods=['GET', 'POST', 'DELETE'])
 @jwt_optional
 def jump_journal_prices(package_id):
-    authenticate_for_publisher(package_id)
+    authenticate_for_publisher(package_id, request.method)
 
     if request.method == 'GET':
         rows = JournalPrice.query.filter(JournalPrice.package_id == package_id).all()
@@ -1204,6 +1215,39 @@ def scenario_post(package_id):
     my_new_scenario = get_saved_scenario(new_scenario_id)
 
     return jsonify_fast_no_sort(my_new_scenario.to_dict_meta())
+
+
+@app.route('/publisher/<publisher_id>/scenario', methods=["POST"])
+@jwt_optional
+def publisher_scenario_post(publisher_id):
+    authenticate_for_publisher(publisher_id, request.method)
+
+    new_scenario_id = request.json.get('id', 'scenario-{}'.format(shortuuid.uuid()[0:12]))
+    new_scenario_name = request.json.get('name', "New Scenario")
+
+    my_saved_scenario_to_copy_from = None
+
+    copy_scenario_id = request.args.get('copy', None)
+    if copy_scenario_id:
+        my_saved_scenario_to_copy_from = get_saved_scenario_publisher_authenticated(copy_scenario_id)
+
+    new_saved_scenario = SavedScenario(False, new_scenario_id, None)
+    new_saved_scenario.package_id = publisher_id
+    new_saved_scenario.scenario_name = new_scenario_name
+    new_saved_scenario.is_base_scenario = False
+    db.session.add(new_saved_scenario)
+    safe_commit(db)
+
+    if my_saved_scenario_to_copy_from:
+        dict_to_save = my_saved_scenario_to_copy_from.to_dict_saved()
+    else:
+        dict_to_save = new_saved_scenario.to_dict_saved()
+
+    save_raw_scenario_to_db(new_scenario_id, dict_to_save, get_ip(request))
+
+    my_new_scenario = get_saved_scenario_publisher_authenticated(new_scenario_id)
+
+    return jsonify_fast_no_sort(my_new_scenario.to_publisher_dict_meta())
 
 
 @app.route('/scenario/<scenario_id>', methods=['DELETE'])

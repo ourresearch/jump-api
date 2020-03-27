@@ -192,6 +192,18 @@ class SavedScenario(db.Model):
         response["is_base_scenario"] = self.is_base_scenario
         return response
 
+    def to_publisher_dict_meta(self):
+        response = OrderedDict()
+        response["scenario_id"] = self.scenario_id
+        response["scenario_name"] = self.scenario_name
+        response["publisher_id"] = self.package_id
+        response["publisher_name"] = self.package.package_name
+        response["institution_id"] = self.package.institution.id
+        response["institution_name"] = self.package.institution.display_name
+        response["scenario_created"] = self.created
+        response["is_base_scenario"] = self.is_base_scenario
+        return response
+
     def to_dict_journals(self):
         response = OrderedDict()
         response["meta"] = self.to_dict_meta()
