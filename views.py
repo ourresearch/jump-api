@@ -583,7 +583,7 @@ def institution(institution_id):
         return abort_json(404, u'Institution does not exist.')
 
     if request.method == 'POST':
-        if not auth_user.has_permission(inst.id, Permission.modify()):
+        if not auth_user.has_permission(inst.id, Permission.modify()) and not is_authorized_superuser():
             return abort_json(403, u'Must have Write permission to modify institution properties.')
 
         request_args = request.args
@@ -597,7 +597,7 @@ def institution(institution_id):
         db.session.add(inst)
         safe_commit(db)
 
-    if not auth_user.has_permission(inst.id, Permission.view()):
+    if not auth_user.has_permission(inst.id, Permission.view()) and not is_authorized_superuser():
         return abort_json(403, u'Must have read permission to get institution properties.')
 
     return jsonify_fast_no_sort(inst.to_dict())
@@ -752,7 +752,7 @@ def get_publisher(publisher_id):
         abort_json(404, "Publisher not found")
 
     auth_user = authenticated_user()
-    if not auth_user.has_permission(package.institution_id, Permission.view()):
+    if not auth_user.has_permission(package.institution_id, Permission.view()) and not is_authorized_superuser():
         abort_json(403, "Not authorized to view this publisher.")
 
     return jsonify_fast_no_sort(package.to_publisher_dict())
