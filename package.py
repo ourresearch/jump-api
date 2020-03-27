@@ -488,7 +488,7 @@ def clone_demo_package(institution):
     new_package = Package(
         package_id='publisher-{}'.format(shortuuid.uuid()[0:12]),
         publisher=demo_package.publisher,
-        package_name=u'{} {}'.format(institution.display_name, demo_package.publisher),
+        package_name=demo_package.publisher,
         created=now,
         institution_id=institution.id,
         is_demo=True
