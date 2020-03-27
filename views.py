@@ -130,15 +130,19 @@ def package_authenticated(func):
     def wrapper(package_id):
         package = Package.query.get(package_id)
 
-        if is_authorized_superuser():
-            if not package:
-                return abort_json(404, "Package not found")
-        else:
-            jwt_identity = get_jwt_identity()
-            account = Account.query.get(get_jwt_identity()['account_id']) if jwt_identity else None
+        if not package:
+            return abort_json(404, "Package not found")
 
-            if not (package and account and package.account_id == account.id):
-                return abort_json(401, u'not authorized to view or modify package {}'.format(package_id))
+        if not is_authorized_superuser():
+            auth_user = authenticated_user()
+
+            if request.method == 'GET':
+                if not (auth_user and auth_user.has_permission(package.institution.id, Permission.view())):
+                    return abort_json(401, u'not authorized to view package {}'.format(package_id))
+
+            if request.method in ['DELETE', 'POST']:
+                if not (auth_user and auth_user.has_permission(package.institution.id, Permission.modify())):
+                    return abort_json(401, u'not authorized to modify package {}'.format(package_id))
 
         return func(package_id)
 
@@ -722,16 +726,16 @@ def get_jwt():
 @app.route('/publisher/<publisher_id>', methods=['GET'])
 @jwt_required
 def get_publisher(publisher_id):
-    publisher = Publisher.query.get(publisher_id)
+    package = Package.query.filter(Package.package_id == publisher_id).scalar()
 
-    if not publisher:
+    if not package:
         abort_json(404, "Publisher not found")
 
     auth_user = authenticated_user()
-    if not auth_user.has_permission(publisher.institution_id, Permission.view()):
+    if not auth_user.has_permission(package.institution_id, Permission.view()):
         abort_json(403, "Not authorized to view this publisher.")
 
-    return jsonify_fast_no_sort(publisher.to_dict())
+    return jsonify_fast_no_sort(package.to_publisher_dict())
 
 
 @app.route('/package/<package_id>', methods=['GET'])
@@ -846,7 +850,7 @@ def _load_package_file(package_id, req, table_class):
         )
 
 
-@app.route('/package/<package_id>/counter', methods=['GET', 'POST', 'DELETE'])
+@app.route('/publisher/<package_id>/counter', methods=['GET', 'POST', 'DELETE'])
 @jwt_optional
 @package_authenticated
 def jump_counter(package_id):
@@ -874,7 +878,7 @@ def jump_counter(package_id):
             return _load_package_file(package_id, request, CounterInput)
 
 
-@app.route('/package/<package_id>/perpetual-access', methods=['GET', 'POST', 'DELETE'])
+@app.route('/publisher/<package_id>/perpetual-access', methods=['GET', 'POST', 'DELETE'])
 @jwt_optional
 @package_authenticated
 def jump_perpetual_access(package_id):
@@ -893,7 +897,7 @@ def jump_perpetual_access(package_id):
             return _load_package_file(package_id, request, PerpetualAccessInput)
 
 
-@app.route('/package/<package_id>/prices', methods=['GET', 'POST', 'DELETE'])
+@app.route('/publisher/<package_id>/prices', methods=['GET', 'POST', 'DELETE'])
 @jwt_optional
 @package_authenticated
 def jump_journal_prices(package_id):

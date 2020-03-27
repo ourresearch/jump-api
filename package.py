@@ -12,7 +12,9 @@ from app import db
 from app import get_db_cursor
 from app import DEMO_PACKAGE_ID
 from app import my_memcached
-from counter import Counter, CounterInput
+from counter import CounterInput
+from journal_price import JournalPriceInput
+from perpetual_access import PerpetualAccessInput
 from saved_scenario import SavedScenario
 from scenario import get_prices_from_db
 from scenario import get_core_list_from_db
@@ -34,7 +36,10 @@ class Package(db.Model):
     package_name = db.Column(db.Text)
     consortium_package_id = db.Column(db.Text)
     created = db.Column(db.DateTime)
+    is_demo = db.Column(db.Boolean)
+
     saved_scenarios = db.relationship('SavedScenario', lazy='subquery', backref=db.backref("package", lazy="subquery"))
+    institution = db.relationship('Institution', uselist=False)
 
     def __init__(self, **kwargs):
         self.created = datetime.datetime.utcnow().isoformat()
@@ -434,6 +439,43 @@ class Package(db.Model):
                 "name": self.package_name
         }
 
+    def to_publisher_dict(self):
+        journal_detail = dict(self.get_package_counter_breakdown())
+        journal_detail['publisher_id'] = journal_detail.pop('package_id')
+
+        return {
+            'id': self.package_id,
+            'name': self.package_name,
+            'is_demo': self.is_demo,
+            'journal_detail': journal_detail,
+            'scenarios': [{'name': s.scenario_name, 'id': s.scenario_id} for s in self.saved_scenarios],
+            'data_files': [
+                {
+                    'name': 'counter',
+                    'uploaded': CounterInput.query.filter(CounterInput.package_id == self.package_id).count() > 0
+                },
+                {
+                    'name': 'perpetual-access',
+                    'uploaded': PerpetualAccessInput.query.filter(
+                        PerpetualAccessInput.package_id == self.package_id
+                    ).count() > 0
+                },
+                {
+                    'name': 'prices',
+                    'uploaded': JournalPriceInput.query.filter(
+                        JournalPriceInput.package_id == self.package_id
+                    ).count() > 0
+                },
+                {
+                    'name': 'core-journals',
+                    'uploaded': db.session.execute(
+                        "select count(*) from jump_core_journals where package_id = '{}'".format(self.package_id)
+                    ).scalar() > 0
+                },
+            ]
+
+        }
+
     def __repr__(self):
         return u"<{} ({}) {}>".format(self.__class__.__name__, self.package_id, self.package_name)
 
@@ -444,11 +486,12 @@ def clone_demo_package(institution):
 
     # jump_account_package
     new_package = Package(
-        package_id='package-{}'.format(shortuuid.uuid()[0:12]),
+        package_id='publisher-{}'.format(shortuuid.uuid()[0:12]),
         publisher=demo_package.publisher,
         package_name=u'{} {}'.format(institution.display_name, demo_package.publisher),
         created=now,
-        institution_id=institution.id
+        institution_id=institution.id,
+        is_demo=True
     )
 
     db.session.add(new_package)
