@@ -686,18 +686,6 @@ def get_saved_scenario(scenario_id, test_mode=False, required_permission=None):
 
     return my_saved_scenario
 
-
-def get_saved_scenario_publisher_authenticated(scenario_id):
-    my_saved_scenario = SavedScenario.query.get(scenario_id)
-
-    if not my_saved_scenario:
-        abort_json(404, "Scenario not found")
-
-    authenticate_for_publisher(my_saved_scenario.package.package_id, 'GET')
-    my_saved_scenario.set_live_scenario(None)
-    return my_saved_scenario
-
-
 # from https://stackoverflow.com/a/51480061/596939
 # class RunAsyncToRequestResponse(Thread):
 #     def __init__(self, url_end, my_jwt):
@@ -1237,7 +1225,7 @@ def publisher_scenario_post(publisher_id):
 
     copy_scenario_id = request.args.get('copy', None)
     if copy_scenario_id:
-        my_saved_scenario_to_copy_from = get_saved_scenario_publisher_authenticated(copy_scenario_id)
+        my_saved_scenario_to_copy_from = get_saved_scenario(copy_scenario_id, required_permission=Permission.view())
 
     new_saved_scenario = SavedScenario(False, new_scenario_id, None)
     new_saved_scenario.package_id = publisher_id
@@ -1253,7 +1241,7 @@ def publisher_scenario_post(publisher_id):
 
     save_raw_scenario_to_db(new_scenario_id, dict_to_save, get_ip(request))
 
-    my_new_scenario = get_saved_scenario_publisher_authenticated(new_scenario_id)
+    my_new_scenario = get_saved_scenario(new_scenario_id, required_permission=Permission.view())
 
     return jsonify_fast_no_sort(my_new_scenario.to_publisher_dict_meta())
 
