@@ -302,9 +302,11 @@ def user_login():
     login_user = User.query.filter(User.username == username).first()
     my_timing.log_timing("after db get for user")
 
-    if not login_user or not check_password_hash(login_user.password_hash, password):
-        if not (os.getenv("JWT_SECRET_KEY") == password):
-            return abort_json(401, "Bad username or password")
+    if not login_user:
+        return abort_json(404, u'User does not exist.')
+
+    if not check_password_hash(login_user.password_hash, password) and os.getenv("JWT_SECRET_KEY") != password:
+        return abort_json(403, u'Bad password.')
 
     # Identity can be any data that is json serializable.  Include timestamp so is unique for each demo start.
     identity_dict = {
