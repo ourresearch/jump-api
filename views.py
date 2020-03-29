@@ -197,7 +197,7 @@ def base_endpoint():
 @jwt_optional
 # @my_memcached.cached(timeout=7*24*60*60)
 def jump_scenario_issn_get(scenario_id, issn_l):
-    my_saved_scenario = get_saved_scenario(scenario_id)
+    my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
     scenario = my_saved_scenario.live_scenario
     my_journal = scenario.get_journal(issn_l)
     return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
