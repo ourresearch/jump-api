@@ -184,13 +184,7 @@ class SavedScenario(db.Model):
         response["scenario_id"] = self.scenario_id
         response["scenario_name"] = self.scenario_name
 
-        if self.package.account_id:
-            response["package_id"] = self.package_id
-            response["package_name"] = self.package_real.package_name
-            response["account_id"] = self.package_real.account_id
-            response["account_name"] = self.package_real.account.display_name
-            response["account_username"] = self.package_real.account.username
-        elif self.package.institution_id:
+        if self.package.institution_id:
             response["publisher_id"] = self.package_id
             response["publisher_name"] = self.package.package_name
             response["institution_id"] = self.package.institution.id
