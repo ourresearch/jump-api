@@ -23,7 +23,7 @@ class Consortium(object):
         self.jwt = my_jwt
 
         command = """select package_id, scenario_id 
-            from jump_account_combo_view 
+            from jump_institution_combo_view
             where consortium_package_id='{}' order by package_id asc""".format(self.package_id)
         with get_db_cursor() as cursor:
             cursor.execute(command)
