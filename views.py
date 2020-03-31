@@ -1009,10 +1009,8 @@ def subscriptions_scenario_id_post(scenario_id):
 @jwt_optional
 # @my_memcached.cached(timeout=7*24*60*60)
 def live_scenario_id_get(scenario_id):
-
-
     my_timing = TimingMessages()
-    my_saved_scenario = get_saved_scenario(scenario_id)
+    my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
     my_timing.log_timing("after setting live scenario")
     response = my_saved_scenario.to_dict_definition()
     my_timing.log_timing("after to_dict()")
