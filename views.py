@@ -371,7 +371,7 @@ def register_demo_user():
     db.session.add(demo_user)
     db.session.add(demo_institution)
     db.session.add(demo_publisher)
-    db.session.add(GridId(institution_id=demo_institution.id, grid_id='grid.27755.32'))
+    db.session.add(GridId(institution_id=demo_institution.id, grid_id='grid.433631.0'))
 
     for permission in [Permission.view(), Permission.modify(), Permission.admin()]:
         user_perm = UserInstitutionPermission()
