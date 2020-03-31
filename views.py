@@ -660,23 +660,10 @@ def get_saved_scenario(scenario_id, test_mode=False, required_permission=None):
     #     print "is_authorized_superuser()", is_authorized_superuser()
     if my_saved_scenario.package.institution_id:
         authenticate_for_publisher(my_saved_scenario.package.package_id, required_permission)
-    elif my_saved_scenario.package.account_id:
-        if not test_mode and not is_authorized_superuser():
-            identity_dict = get_jwt_identity()
-            if not identity_dict:
-                abort_json(401, "Not authorized to view this package: need jwt")
-
-            if my_saved_scenario.package_real.account_id != identity_dict["account_id"]:
-                if not my_saved_scenario.package_real.consortium_package_id:
-                    abort_json(401, "Not authorized to view this package: mismatched account_id")
-                else:
-                    consortium_package = Package.query.filter(Package.package_id==my_saved_scenario.package_real.consortium_package_id).first()
-                    if consortium_package.account_id != identity_dict["account_id"]:
-                        abort_json(401, "Not authorized to view this package: mismatched consortium account")
     else:
         abort_json(
             400,
-            u"Scenario package {} has no account_id or institution_id. Can't decide how to authenticate.".format(
+            u"Scenario package {} has no institution_id. Can't decide how to authenticate.".format(
                 my_saved_scenario.package.package_id
             )
         )
