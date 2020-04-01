@@ -162,6 +162,18 @@ def authenticated_user():
     return User.query.get(user_id) if user_id else None
 
 
+def lookup_user(user_id, email, username):
+        id_user = User.query.filter(User.id == user_id).scalar() if user_id else None
+        email_user = User.query.filter(User.email == email).scalar() if email else None
+        username_user = User.query.filter(User.username == username).scalar() if username else None
+
+        user_ids = set([user.id for user in [id_user, email_user, username_user] if user])
+        if len(user_ids) > 1:
+            return abort_json(400, u'Email, username, and user id are in use by different users.')
+
+        return id_user or email_user or username_user
+
+
 @app.after_request
 def after_request_stuff(resp):
     sys.stdout.flush()  # without this jason's heroku local buffers forever
@@ -294,20 +306,18 @@ def login():
 
 @app.route('/user/login', methods=["POST"])
 def user_login():
-    my_timing = TimingMessages()
-
-    request_source = request.args
+    request_args = request.args
     if request.is_json:
-        request_source = request.json
-    username = request_source.get('email', None)
-    password = request_source.get('password', '')
+        request_args = request.json
 
-    if not username:
-        return abort_json(400, "Missing email parameter")
+    username = request_args.get('username', None)
+    email = request_args.get('email', None)
+    password = request_args.get('password', '')
 
-    my_timing.log_timing("before db get for account")
-    login_user = User.query.filter(User.username == username).first()
-    my_timing.log_timing("after db get for user")
+    if not (username or email):
+        return abort_json(400, "Username or email parameter is required.")
+
+    login_user = lookup_user(user_id=None, email=email, username=username)
 
     if not login_user:
         return abort_json(404, u'User does not exist.')
@@ -326,9 +336,7 @@ def user_login():
     logger.info(u"login to account {} with {}".format(login_user.username, identity_dict))
     access_token = create_access_token(identity=identity_dict)
 
-    my_timing.log_timing("after create_access_token")
-
-    return jsonify({"access_token": access_token, "_timing": my_timing.to_dict()})
+    return jsonify({"access_token": access_token})
 
 
 @app.route('/user/demo', methods=['POST'])
@@ -337,23 +345,35 @@ def register_demo_user():
     if request.is_json:
         request_args = request.json
 
-    username = request_args.get('email', None)
+    username = request_args.get('username', None)
+    email = request_args.get('email', None)
     password = request_args.get('password', u'')
     display_name = request_args.get('name', username)
 
-    if not username:
-        return abort_json(400, "Missing email parameter")
+    if not (username or email):
+        return abort_json(400, u'Username or email parameter is required.')
 
-    existing_user = User.query.filter(User.username == username).first()
+    email_user = User.query.filter(User.email == email).scalar() if email else None
+    username_user = User.query.filter(User.username == username).scalar() if username else None
 
-    if existing_user:
-        if check_password_hash(existing_user.password_hash, password):
+    if email_user and username_user and email_user.id != username_user.id:
+        return abort_json(409, u'Username {} and email {} belong to existing users.'.format(username, email))
+
+    if email_user:
+        if check_password_hash(email_user.password_hash, password):
             return user_login()
         else:
-            return abort_json(409, u'A user with email {} already exists.'.format(username))
+            return abort_json(409, u'A user with email {} already exists.'.format(email))
+
+    if username_user:
+        if check_password_hash(username_user.password_hash, password):
+            return user_login()
+        else:
+            return abort_json(409, u'A user with username {} already exists.'.format(username))
 
     demo_user = User()
     demo_user.username = username
+    demo_user.email = email
     demo_user.password_hash = generate_password_hash(password)
     demo_user.display_name = display_name
     demo_user.is_demo_user = True
@@ -394,26 +414,32 @@ def register_new_user():
     if not request.is_json:
         return abort_json(400, u'This post requires data.')
 
-    jwt_identity = get_jwt_identity()
-    login_user_id = jwt_identity.get('user_id', None) if jwt_identity else None
-    login_user = User.query.get(jwt_identity['user_id']) if login_user_id else None
+    auth_user = authenticated_user()
 
-    new_username = request.json.get('email', None)
+    if not auth_user:
+        return abort_json(401, u'Must be logged in.')
 
-    if not new_username:
-        return abort_json(400, u'Missing email parameter.')
+    new_username = request.json.get('username', None)
+    new_email = request.json.get('email', None)
 
-    if User.query.filter(User.username == new_username).first():
-        return abort_json(409, u'A user with email {} already exists.'.format(new_username))
+    if not (new_username or new_email):
+        return abort_json(400, u'Email or username parameter is required.')
+
+    if new_username and User.query.filter(User.username == new_username).first():
+        return abort_json(409, u'A user with username {} already exists.'.format(new_username))
+
+    if new_email and User.query.filter(User.email == new_email).first():
+        return abort_json(409, u'A user with email {} already exists.'.format(new_email))
 
     password = request.json.get('password', u'')
     display_name = request.json.get('name', new_username)
 
     new_user = User()
     new_user.username = new_username
+    new_user.email = new_email
     new_user.password_hash = generate_password_hash(password)
     new_user.display_name = display_name
-    new_user.is_demo_user = login_user.is_demo_user
+    new_user.is_demo_user = auth_user.is_demo_user
 
     db.session.add(new_user)
 
@@ -426,7 +452,7 @@ def register_new_user():
             return abort_json(400, u'Missing key in user_permissions object: {}'.format(e.message))
 
     for institution_id, permission_names in permissions_by_institution.items():
-        if login_user.has_permission(institution_id, Permission.admin()):
+        if auth_user.has_permission(institution_id, Permission.admin()):
             for permission_name in permission_names:
                 permission = Permission.get(permission_name)
                 if permission:
@@ -448,25 +474,28 @@ def register_new_user():
 @app.route('/user/me', methods=['POST', 'GET'])
 @jwt_required
 def my_user_info():
-    jwt_identity = get_jwt_identity()
-    user_id = jwt_identity.get('user_id', None) if jwt_identity else None
-    login_user = User.query.get(jwt_identity['user_id']) if user_id else None
+    login_user = authenticated_user()
 
     if not login_user:
-        return abort_json(401, u'user id {} not recognized '.format(user_id))
+        return abort_json(401, u'Must be logged in.')
 
     if request.method == 'POST':
         if not request.is_json:
             return abort_json(400, u'Post a User object to change properties.')
 
         email = request.json.get('email', None)
+        username = request.json.get('username', None)
         name = request.json.get('name', None)
         password = request.json.get('password', None)
 
         if email:
-            if User.query.filter(User.username == email, User.id != login_user.id).scalar():
+            if User.query.filter(User.email == email, User.id != login_user.id).scalar():
                 return abort_json(409, u'A user with email {} already exists.'.format(email))
-            login_user.username = email
+            login_user.email = email
+        if username:
+            if User.query.filter(User.username == username, User.id != login_user.id).scalar():
+                return abort_json(409, u'A user with username {} already exists.'.format(username))
+            login_user.username = username
         if name:
             login_user.display_name = name
         if password:
@@ -478,10 +507,11 @@ def my_user_info():
     return jsonify_fast_no_sort(login_user.to_dict())
 
 
-@app.route('/user/id/<user_id>', methods=['GET'], defaults={'email': None})
-@app.route('/user/email/<email>', methods=['GET'], defaults={'user_id': None})
-def user_info(user_id, email):
-    user = User.query.filter(or_(User.id == user_id, User.username == email)).first()
+@app.route('/user/id/<user_id>', methods=['GET'], defaults={'email': None, 'username': None})
+@app.route('/user/email/<email>', methods=['GET'], defaults={'user_id': None, 'username': None})
+@app.route('/user/username/<username>', methods=['GET'], defaults={'email': None, 'user_id': None})
+def user_info(user_id, email, username):
+    user = lookup_user(user_id, email, username)
 
     if user:
         return jsonify_fast_no_sort(user.to_dict())
@@ -499,31 +529,31 @@ def user_permissions():
         request_args.update(request.json)
 
     user_id = request_args.get('user_id', None)
-    user_email = request_args.get('user_email', None)
+    email = request_args.get('user_email', None)
+    username = request_args.get('username', None)
     institution_id = request_args.get('institution_id', None)
 
-    if not user_id and not user_email:
-        return abort_json(400, u'A user_id or user_email parameter is required.')
+    if not (user_id or email or username):
+        return abort_json(400, u'A user_id, user_email, or username parameter is required.')
 
     if isinstance(user_id, list):
         user_id = user_id[0]
 
-    if isinstance(user_email, list):
-        user_email = user_email[0]
+    if isinstance(email, list):
+        email = email[0]
+
+    if isinstance(username, list):
+        username = username[0]
 
     if not institution_id:
         return abort_json(400, u'Missing institution_id parameter.')
     elif isinstance(institution_id, list):
         institution_id = institution_id[0]
 
-    query_user = User.query.filter(or_(User.id == user_id, User.username == user_email)).all()
+    query_user = lookup_user(user_id, email, username)
 
-    if len(query_user) > 1:
-        return abort_json(400, u'Email and user ID belong to different users.')
-    if len(query_user) == 0:
+    if not query_user:
         return abort_json(404, u'User does not exist.')
-
-    query_user = query_user[0]
 
     if request.method == 'POST':
         auth_user = authenticated_user()
