@@ -83,6 +83,12 @@ class Scenario(object):
 
         self.log_timing("setup")
 
+        from package import Package
+        my_package = Package.query.filter(Package.package_id == self.package_id_for_db).first()
+
+        if my_package and my_package.big_deal_cost:
+            self.settings.cost_bigdeal = float(my_package.big_deal_cost)
+
         from app import USE_PAPER_GROWTH
         if USE_PAPER_GROWTH:
             self.data = get_common_package_data(self.package_id_for_db)

@@ -37,6 +37,7 @@ class Package(db.Model):
     consortium_package_id = db.Column(db.Text)
     created = db.Column(db.DateTime)
     is_demo = db.Column(db.Boolean)
+    big_deal_cost = db.Column(db.Numeric)
 
     saved_scenarios = db.relationship('SavedScenario', lazy='subquery', backref=db.backref("package", lazy="subquery"))
     institution = db.relationship('Institution', uselist=False)
