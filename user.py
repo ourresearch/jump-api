@@ -13,11 +13,12 @@ from util import authenticated_user_id
 class User(db.Model):
     __tablename__ = 'jump_user'
     id = db.Column(db.Text, primary_key=True)
-    username = db.Column(db.Text, unique=True, nullable=False)
+    username = db.Column(db.Text, unique=True)
     display_name = db.Column(db.Text)
     password_hash = db.Column(db.Text)
     created = db.Column(db.DateTime)
     is_demo_user = db.Column(db.Boolean)
+    email = db.Column(db.Text, unique=True)
 
     permissions = relationship(UserInstitutionPermission)
 
@@ -30,7 +31,8 @@ class User(db.Model):
         return {
             'id': self.id,
             'name': self.display_name,
-            'email': self.username,
+            'email': self.email,
+            'username': self.username,
             'is_demo': self.is_demo_user,
             'is_password_set': not check_password_hash(self.password_hash, u''),
             'user_permissions': self.permissions_list(),
@@ -47,7 +49,8 @@ class User(db.Model):
                 dicts[permission.institution_id] = {
                     'institution_id': permission.institution_id,
                     'user_id': self.id,
-                    'user_email': self.username,
+                    'user_email': self.email,
+                    'username': self.username,
                     'permissions': [permission.permission.name],
                     'institution_name': permission.institution.display_name,
                     'user_name': self.display_name,
