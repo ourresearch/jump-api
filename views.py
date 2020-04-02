@@ -421,8 +421,8 @@ def notify_changed_permissions(user, admin, old_permissions, new_permissions):
         diff_lines = []
 
         for institution_id in set(old_permissions.keys() + new_permissions.keys()):
-            old_names = set(old_permissions.get(institution_id, u'{}').get('permissions', []))
-            new_names = set(new_permissions.get(institution_id, u'{}').get('permissions', []))
+            old_names = set(old_permissions.get(institution_id, {}).get('permissions', []))
+            new_names = set(new_permissions.get(institution_id, {}).get('permissions', []))
             if old_names != new_names:
                 institution_name = old_permissions.get(institution_id, new_permissions.get(institution_id))[
                     'institution_name']
