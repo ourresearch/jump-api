@@ -1,12 +1,13 @@
 import datetime
+import string
 
+import secrets
 import shortuuid
 from sqlalchemy.orm import relationship
 from werkzeug.security import check_password_hash
 
 from app import db
 from permission import UserInstitutionPermission
-
 from util import authenticated_user_id
 
 
@@ -66,3 +67,8 @@ class User(db.Model):
 
     def __repr__(self):
         return u"<{} ({}) {}>".format(self.__class__.__name__, self.id, self.display_name)
+
+
+def default_password():
+    chars = string.ascii_letters + string.digits
+    return u''.join([secrets.choice(chars) for x in range(16)])
