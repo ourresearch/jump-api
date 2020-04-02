@@ -12,6 +12,7 @@ from app import db
 from app import get_db_cursor
 from app import DEMO_PACKAGE_ID
 from app import my_memcached
+from assumptions import Assumptions
 from counter import CounterInput
 from journal_price import JournalPriceInput
 from perpetual_access import PerpetualAccessInput
@@ -450,7 +451,7 @@ class Package(db.Model):
             'is_demo': self.is_demo,
             'journal_detail': journal_detail,
             'scenarios': [{'name': s.scenario_name, 'id': s.scenario_id} for s in self.saved_scenarios],
-            'cost_bigdeal': self.big_deal_cost,
+            'cost_bigdeal': self.big_deal_cost or Assumptions().cost_bigdeal,
             'data_files': [
                 {
                     'name': 'counter',
