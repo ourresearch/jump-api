@@ -404,7 +404,7 @@ def register_demo_user():
         'display_name': display_name,
         'email': email,
         'password': password,
-        'site_url': request.url_root
+        'site_url': os.environ.get('JUMP_URL'),
     }})
 
     send(email, for_real=True)
@@ -516,7 +516,7 @@ def register_new_user():
             'display_name': display_name,
             'email': new_email,
             'password': password,
-            'site_url': request.url_root
+            'site_url': os.environ.get('JUMP_URL'),
         }})
 
         send(email, for_real=True)
