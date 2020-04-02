@@ -450,6 +450,7 @@ class Package(db.Model):
             'is_demo': self.is_demo,
             'journal_detail': journal_detail,
             'scenarios': [{'name': s.scenario_name, 'id': s.scenario_id} for s in self.saved_scenarios],
+            'cost_bigdeal': self.big_deal_cost,
             'data_files': [
                 {
                     'name': 'counter',
