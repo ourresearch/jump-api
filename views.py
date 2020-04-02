@@ -1377,6 +1377,15 @@ def request_password_reset():
     db.session.add(reset_request)
     safe_commit(db)
 
+    email = create_email(reset_user.email, u'Change your Unpaywall Journals password.', 'password_reset', {'data': {
+        'display_name': reset_user.display_name,
+        'email': reset_user.email,
+        'jump_url': os.environ.get('JUMP_URL'),
+        'token': reset_request.token,
+    }})
+
+    send(email, for_real=True)
+
     return jsonify_fast_no_sort({'message': 'reset request received'})
 
 
@@ -1406,7 +1415,7 @@ def reset_password():
         return abort_json(404, u'Unrecognized user id {}.'.format(reset_request.user_id))
 
     reset_user.password_hash = generate_password_hash(password)
-    db.session.delete(reset_request)
+    password_reset.ResetRequest.query.filter(password_reset.ResetRequest.user_id == reset_user.id).delete()
     safe_commit(db)
 
     return jsonify_fast_no_sort({'message': u'password reset for user {}'.format(reset_user.id)})
