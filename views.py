@@ -1309,6 +1309,9 @@ def request_password_reset():
     if not reset_user:
         return abort_json(404, u'User does not exist.')
 
+    if not reset_user.email:
+        return abort_json(404, u'User has no email address.')
+
     reset_request = password_reset.ResetRequest(user_id=reset_user.id)
     db.session.add(reset_request)
     safe_commit(db)
