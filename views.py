@@ -39,6 +39,7 @@ from app import jwt
 from app import db
 from app import my_memcached
 from app import get_db_cursor
+from emailer import create_email, send
 from counter import Counter, CounterInput
 from grid_id import GridId
 from scenario import Scenario
@@ -65,7 +66,7 @@ from util import safe_commit
 from util import TimingMessages
 from util import get_ip
 from util import response_json
-from user import User
+from user import User, default_password
 from app import logger
 
 from app import DEMO_PACKAGE_ID
@@ -228,7 +229,6 @@ def jump_data_package_id_get(package_id):
     response.headers["Cache-Tag"] = u",".join(["common", u"package_{}".format(package_id)])
     return response
 
-
 # Provide a method to create access tokens. The create_access_token()
 # function is used to actually generate the token, and you can return
 # it to the caller however you choose.
@@ -303,6 +303,16 @@ def login():
     return jsonify({"access_token": access_token, "_timing": my_timing.to_dict()})
 
 
+def make_identity_dict(user):
+    # Identity can be any data that is json serializable.  Include timestamp so is unique for each demo start.
+    return {
+        "user_id": user.id,
+        "login_uuid": shortuuid.uuid()[0:10],
+        "created": datetime.datetime.utcnow().isoformat(),
+        "is_demo_user": user.is_demo_user
+    }
+
+
 # copies the existing /login route but uses the new jump_user table
 
 @app.route('/user/login', methods=["POST"])
@@ -326,13 +336,7 @@ def user_login():
     if not check_password_hash(login_user.password_hash, password) and os.getenv("JWT_SECRET_KEY") != password:
         return abort_json(403, u'Bad password.')
 
-    # Identity can be any data that is json serializable.  Include timestamp so is unique for each demo start.
-    identity_dict = {
-        "user_id": login_user.id,
-        "login_uuid": shortuuid.uuid()[0:10],
-        "created": datetime.datetime.utcnow().isoformat(),
-        "is_demo_user": login_user.is_demo_user
-    }
+    identity_dict = make_identity_dict(login_user)
     print "identity_dict", identity_dict
     logger.info(u"login to account {} with {}".format(login_user.username, identity_dict))
     access_token = create_access_token(identity=identity_dict)
@@ -346,31 +350,21 @@ def register_demo_user():
     if request.is_json:
         request_args = request.json
 
-    username = request_args.get('username', None)
     email = request_args.get('email', None)
-    password = request_args.get('password', u'')
+    username = request_args.get('username', email)
     display_name = request_args.get('name', username)
+    password = request_args.get('password', default_password())
 
-    if not (username or email):
-        return abort_json(400, u'Username or email parameter is required.')
+    if not email:
+        return abort_json(400, u'Email parameter is required.')
 
-    email_user = User.query.filter(User.email == email).scalar() if email else None
-    username_user = User.query.filter(User.username == username).scalar() if username else None
+    existing_user = lookup_user(user_id=None, email=email, username=username)
 
-    if email_user and username_user and email_user.id != username_user.id:
-        return abort_json(409, u'Username {} and email {} belong to existing users.'.format(username, email))
-
-    if email_user:
-        if check_password_hash(email_user.password_hash, password):
+    if existing_user:
+        if check_password_hash(existing_user.password_hash, password):
             return user_login()
         else:
-            return abort_json(409, u'A user with email {} already exists.'.format(email))
-
-    if username_user:
-        if check_password_hash(username_user.password_hash, password):
-            return user_login()
-        else:
-            return abort_json(409, u'A user with username {} already exists.'.format(username))
+            return abort_json(409, u'A user with email {} or username {} already exists.'.format(email, username))
 
     demo_user = User()
     demo_user.username = username
@@ -406,7 +400,46 @@ def register_demo_user():
 
     safe_commit(db)
 
-    return user_login()
+    email = create_email(email, u'Welcome to Unpaywall Journals', 'new_user', {'data': {
+        'display_name': display_name,
+        'email': email,
+        'password': password,
+        'site_url': request.url_root
+    }})
+
+    send(email, for_real=True)
+
+    identity_dict = make_identity_dict(demo_user)
+    logger.info(u"login to account {} with {}".format(demo_user.username, identity_dict))
+    access_token = create_access_token(identity=identity_dict)
+
+    return jsonify({"access_token": access_token})
+
+
+def notify_changed_permissions(user, admin, old_permissions, new_permissions):
+    if old_permissions != new_permissions:
+        diff_lines = []
+
+        for institution_id in set(old_permissions.keys() + new_permissions.keys()):
+            old_names = set(old_permissions.get(institution_id, u'{}').get('permissions', []))
+            new_names = set(new_permissions.get(institution_id, u'{}').get('permissions', []))
+            if old_names != new_names:
+                institution_name = old_permissions.get(institution_id, new_permissions.get(institution_id))[
+                    'institution_name']
+                diff_lines.append(u'{} ({}):'.format(institution_name, institution_id))
+                diff_lines.append(u'old: {}'.format(u','.join(old_names) if old_names else '[None]'))
+                diff_lines.append(u'new: {}'.format(u','.join(new_names) if new_names else '[None]'))
+                diff_lines.append(u'')
+
+        email = create_email(user.email, u'Your Unpaywall Journals permissions were changed.', 'changed_permissions',
+                             {'data': {
+                                 'display_name': user.display_name,
+                                 'admin_name': admin.display_name,
+                                 'admin_email': admin.email,
+                                 'diff': u'\n'.join(diff_lines)
+                             }})
+
+        send(email, for_real=True)
 
 
 @app.route('/user/new', methods=['POST'])
@@ -423,14 +456,17 @@ def register_new_user():
     new_email = request.json.get('email', None)
     new_username = request.json.get('username', new_email)
     display_name = request.json.get('name', new_username)
-    password = request.json.get('password', u'')
+    password = request.json.get('password', default_password())
 
     if not new_email:
         return abort_json(400, u'Email parameter is required.')
 
     req_user = lookup_user(user_id=None, email=new_email, username=new_username)
 
+    new_user_created = False
+
     if not req_user:
+        new_user_created = True
         req_user = User()
         req_user.username = new_username
         req_user.email = new_email
@@ -447,6 +483,8 @@ def register_new_user():
                 permissions_by_institution[permission_request['institution_id']].add(permission_name)
         except KeyError as e:
             return abort_json(400, u'Missing key in user_permissions object: {}'.format(e.message))
+
+    old_permissions = req_user.permissions_dict()
 
     for institution_id, permission_names in permissions_by_institution.items():
         if auth_user.has_permission(institution_id, Permission.admin()):
@@ -469,6 +507,21 @@ def register_new_user():
             return abort_json(403, u'Not authorized to create users for institution {}'.format(institution_id))
 
     safe_commit(db)
+
+    db.session.refresh(req_user)
+    new_permissions = req_user.permissions_dict()
+
+    if new_user_created:
+        email = create_email(req_user.email, u'Welcome to Unpaywall Journals', 'new_user', {'data': {
+            'display_name': display_name,
+            'email': new_email,
+            'password': password,
+            'site_url': request.url_root
+        }})
+
+        send(email, for_real=True)
+    else:
+        notify_changed_permissions(req_user, auth_user, old_permissions, new_permissions)
 
     return jsonify_fast_no_sort(req_user.to_dict())
 
@@ -558,6 +611,8 @@ def user_permissions():
         return abort_json(404, u'User does not exist.')
 
     if request.method == 'POST':
+        old_permissions = query_user.permissions_dict()
+
         auth_user = authenticated_user()
         if not auth_user:
             return abort_json(401, u'Must be logged in.')
@@ -597,6 +652,11 @@ def user_permissions():
                 return abort_json(400, u'Unknown permission: {}.'.format(permission_name))
 
         safe_commit(db)
+
+        db.session.refresh(query_user)
+        new_permissions = query_user.permissions_dict()
+
+        notify_changed_permissions(query_user, auth_user, old_permissions, new_permissions)
 
     return jsonify_fast_no_sort(query_user.permissions_dict().get(institution_id, {}))
 
