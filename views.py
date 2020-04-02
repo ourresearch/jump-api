@@ -420,29 +420,25 @@ def register_new_user():
     if not auth_user:
         return abort_json(401, u'Must be logged in.')
 
-    new_username = request.json.get('username', None)
     new_email = request.json.get('email', None)
-
-    if not (new_username or new_email):
-        return abort_json(400, u'Email or username parameter is required.')
-
-    if new_username and User.query.filter(User.username == new_username).first():
-        return abort_json(409, u'A user with username {} already exists.'.format(new_username))
-
-    if new_email and User.query.filter(User.email == new_email).first():
-        return abort_json(409, u'A user with email {} already exists.'.format(new_email))
-
-    password = request.json.get('password', u'')
+    new_username = request.json.get('username', new_email)
     display_name = request.json.get('name', new_username)
+    password = request.json.get('password', u'')
 
-    new_user = User()
-    new_user.username = new_username
-    new_user.email = new_email
-    new_user.password_hash = generate_password_hash(password)
-    new_user.display_name = display_name
-    new_user.is_demo_user = auth_user.is_demo_user
+    if not new_email:
+        return abort_json(400, u'Email parameter is required.')
 
-    db.session.add(new_user)
+    req_user = lookup_user(user_id=None, email=new_email, username=new_username)
+
+    if not req_user:
+        req_user = User()
+        req_user.username = new_username
+        req_user.email = new_email
+        req_user.password_hash = generate_password_hash(password)
+        req_user.display_name = display_name
+        req_user.is_demo_user = auth_user.is_demo_user
+
+        db.session.add(req_user)
 
     permissions_by_institution = defaultdict(set)
     for permission_request in request.json.get('user_permissions', []):
@@ -454,12 +450,17 @@ def register_new_user():
 
     for institution_id, permission_names in permissions_by_institution.items():
         if auth_user.has_permission(institution_id, Permission.admin()):
+            UserInstitutionPermission.query.filter(
+                UserInstitutionPermission.user_id == req_user.id,
+                UserInstitutionPermission.institution_id == institution_id
+            ).delete()
+
             for permission_name in permission_names:
                 permission = Permission.get(permission_name)
                 if permission:
                     user_perm = UserInstitutionPermission()
                     user_perm.permission_id = permission.id,
-                    user_perm.user_id = new_user.id,
+                    user_perm.user_id = req_user.id,
                     user_perm.institution_id = institution_id
                     db.session.add(user_perm)
                 else:
@@ -469,7 +470,7 @@ def register_new_user():
 
     safe_commit(db)
 
-    return jsonify_fast_no_sort(new_user.to_dict())
+    return jsonify_fast_no_sort(req_user.to_dict())
 
 
 @app.route('/user/me', methods=['POST', 'GET'])
