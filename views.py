@@ -32,6 +32,7 @@ import hashlib
 import pickle
 import tempfile
 
+import password_reset
 from app import app
 from app import logger
 from app import jwt
@@ -1288,6 +1289,63 @@ def scenario_delete(scenario_id):
         cursor.execute(command)
 
     return jsonify_fast_no_sort({"response": "success"})
+
+
+@app.route('/password/request-reset', methods=['POST'])
+def request_password_reset():
+    request_args = request.args
+    if request.is_json:
+        request_args = request.json
+
+    username = request_args.get('username', None)
+    email = request_args.get('email', None)
+    user_id = request_args.get('user_id', None)
+
+    if not (username or email or user_id):
+        return abort_json(400, "User ID, username or email parameter is required.")
+
+    reset_user = lookup_user(user_id=user_id, email=email, username=username)
+
+    if not reset_user:
+        return abort_json(404, u'User does not exist.')
+
+    reset_request = password_reset.ResetRequest(user_id=reset_user.id)
+    db.session.add(reset_request)
+    safe_commit(db)
+
+    return jsonify_fast_no_sort({'message': 'reset request received'})
+
+
+@app.route('/password/reset', methods=['POST'])
+def reset_password():
+    request_args = request.args
+    if request.is_json:
+        request_args = request.json
+
+    token = request_args.get('token', None)
+    password = request_args.get('password', None)
+
+    if token is None:
+        return abort_json(400, u'Missing required parameter: token.')
+
+    if password is None:
+        return abort_json(400, u'Missing required parameter: password.')
+
+    reset_request = password_reset.ResetRequest.query.get(token)
+
+    if not reset_request or reset_request.expires < datetime.datetime.utcnow():
+        return abort_json(404, u'Unrecognized reset token {}.'.format(token))
+
+    reset_user = User.query.get(reset_request.user_id)
+
+    if not reset_user:
+        return abort_json(404, u'Unrecognized user id {}.'.format(reset_request.user_id))
+
+    reset_user.password_hash = generate_password_hash(password)
+    db.session.delete(reset_request)
+    safe_commit(db)
+
+    return jsonify_fast_no_sort({'message': u'password reset for user {}'.format(reset_user.id)})
 
 
 @app.route('/debug/export', methods=['GET'])
