@@ -24,6 +24,7 @@ pendulum==2.0.5
 psycopg2-binary==2.8.2
 python-dateutil==2.6.0
 python-binary-memcached==0.29.0
+python2-secrets==1.0.5
 pyexcel==0.5.15
 pyexcel-xls==0.5.8
 pyexcel-xlsx==0.5.8
