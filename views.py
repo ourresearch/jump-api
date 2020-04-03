@@ -164,10 +164,10 @@ def authenticated_user():
     return User.query.get(user_id) if user_id else None
 
 
-def lookup_user(user_id, email, username):
-        id_user = User.query.filter(User.id == user_id).scalar() if user_id else None
-        email_user = User.query.filter(User.email == email).scalar() if email else None
-        username_user = User.query.filter(User.username == username).scalar() if username else None
+def lookup_user(user_id=None, email=None, username=None):
+        id_user = User.query.filter(User.id == user_id).scalar() if user_id is not None else None
+        email_user = User.query.filter(User.email == email).scalar() if email is not None else None
+        username_user = User.query.filter(User.username == username).scalar() if username is not None else None
 
         user_ids = set([user.id for user in [id_user, email_user, username_user] if user])
         if len(user_ids) > 1:
@@ -323,12 +323,12 @@ def user_login():
 
     username = request_args.get('username', None)
     email = request_args.get('email', None)
-    password = request_args.get('password', '')
+    password = request_args.get('password', u'')
 
-    if not (username or email):
+    if username is None and email is None:
         return abort_json(400, "Username or email parameter is required.")
 
-    login_user = lookup_user(user_id=None, email=email, username=username)
+    login_user = lookup_user(email=email, username=username)
 
     if not login_user:
         return abort_json(404, u'User does not exist.')
@@ -351,20 +351,23 @@ def register_demo_user():
         request_args = request.json
 
     email = request_args.get('email', None)
-    username = request_args.get('username', email)
-    display_name = request_args.get('name', username)
+    username = request_args.get('username', None)
+    display_name = request_args.get('name', u'Anonymous User')
     password = request_args.get('password', default_password())
 
     if not email:
         return abort_json(400, u'Email parameter is required.')
 
-    existing_user = lookup_user(user_id=None, email=email, username=username)
+    existing_user = lookup_user(email=email, username=username)
 
     if existing_user:
         if check_password_hash(existing_user.password_hash, password):
             return user_login()
         else:
-            return abort_json(409, u'A user with email {} or username {} already exists.'.format(email, username))
+            if existing_user.email == email:
+                return abort_json(409, u'A user with email {} already exists.'.format(email))
+            else:
+                return abort_json(409, u'A user with username {} already exists.'.format(username))
 
     demo_user = User()
     demo_user.username = username
@@ -449,14 +452,14 @@ def register_new_user():
         return abort_json(401, u'Must be logged in.')
 
     new_email = request.json.get('email', None)
-    new_username = request.json.get('username', new_email)
-    display_name = request.json.get('name', new_username)
+    new_username = request.json.get('username', None)
+    display_name = request.json.get('name', u'Anonymous User')
     password = request.json.get('password', default_password())
 
     if not new_email:
         return abort_json(400, u'Email parameter is required.')
 
-    req_user = lookup_user(user_id=None, email=new_email, username=new_username)
+    req_user = lookup_user(email=new_email, username=new_username)
 
     new_user_created = False
 
@@ -531,23 +534,24 @@ def my_user_info():
         if not request.is_json:
             return abort_json(400, u'Post a User object to change properties.')
 
-        email = request.json.get('email', None)
-        username = request.json.get('username', None)
-        name = request.json.get('name', None)
-        password = request.json.get('password', None)
-
-        if email:
-            if User.query.filter(User.email == email, User.id != login_user.id).scalar():
-                return abort_json(409, u'A user with email {} already exists.'.format(email))
+        if 'email' in request.json:
+            email = request.json['email']
+            if not email:
+                return abort_json(400, u"Can't remove your email address.")
+            email_user = lookup_user(email=email)
+            if email_user and email_user.id != login_user.id:
+                return abort_json(409, u'A user with email "{}" already exists.'.format(email))
             login_user.email = email
-        if username:
-            if User.query.filter(User.username == username, User.id != login_user.id).scalar():
-                return abort_json(409, u'A user with username {} already exists.'.format(username))
+        if 'username' in request.json:
+            username = request.json['username']
+            username_user = lookup_user(username=username)
+            if username_user and username_user.id != login_user.id:
+                return abort_json(409, u'A user with username "{}" already exists.'.format(username))
             login_user.username = username
-        if name:
-            login_user.display_name = name
-        if password:
-            login_user.password_hash = generate_password_hash(password)
+        if 'name' in request.json:
+            login_user.display_name = request.json['name']
+        if 'password' in request.json:
+            login_user.password_hash = generate_password_hash(request.json['password'] or u'')
 
         db.session.merge(login_user)
         safe_commit(db)
@@ -559,7 +563,7 @@ def my_user_info():
 @app.route('/user/email/<email>', methods=['GET'], defaults={'user_id': None, 'username': None})
 @app.route('/user/username/<username>', methods=['GET'], defaults={'email': None, 'user_id': None})
 def user_info(user_id, email, username):
-    user = lookup_user(user_id, email, username)
+    user = lookup_user(user_id=user_id, email=email, username=username)
 
     if user:
         return jsonify_fast_no_sort(user.to_dict())
@@ -598,7 +602,7 @@ def user_permissions():
     elif isinstance(institution_id, list):
         institution_id = institution_id[0]
 
-    query_user = lookup_user(user_id, email, username)
+    query_user = lookup_user(user_id=user_id, email=email, username=username)
 
     if not query_user:
         return abort_json(404, u'User does not exist.')
