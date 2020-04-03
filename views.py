@@ -510,9 +510,14 @@ def register_new_user():
     new_permissions = req_user.permissions_dict()
 
     if new_user_created:
+        email_institution = Institution.query.get(
+            permissions_by_institution.keys()[0]
+        ) if permissions_by_institution else None
+
         email = create_email(req_user.email, u'Welcome to Unpaywall Journals', 'new_user', {'data': {
             'email': new_email,
             'password': password,
+            'institution_name': email_institution and email_institution.display_name
         }})
 
         send(email, for_real=True)
