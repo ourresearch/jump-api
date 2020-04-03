@@ -400,12 +400,7 @@ def register_demo_user():
 
     safe_commit(db)
 
-    email = create_email(email, u'Welcome to Unpaywall Journals', 'new_user', {'data': {
-        'display_name': display_name,
-        'email': email,
-        'password': password,
-        'site_url': os.environ.get('JUMP_URL'),
-    }})
+    email = create_email(email, u'Welcome to Unpaywall Journals', 'demo_user', {})
 
     send(email, for_real=True)
 
@@ -513,10 +508,8 @@ def register_new_user():
 
     if new_user_created:
         email = create_email(req_user.email, u'Welcome to Unpaywall Journals', 'new_user', {'data': {
-            'display_name': display_name,
             'email': new_email,
             'password': password,
-            'site_url': os.environ.get('JUMP_URL'),
         }})
 
         send(email, for_real=True)
