@@ -6,7 +6,7 @@
 <body>
 
 <p>
-    Hi {{ data.display_name }},
+    Hi{% if 'Anon' not in data.display_name %} {{ data.display_name }}{% endif %},
 </p>
 <p>
     Your Unpaywall Journals permissions were changed by {{ data.admin_name }} ({{ data.admin_email }}). The changes were:
