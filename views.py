@@ -415,7 +415,7 @@ def register_demo_user():
 
 
 def notify_changed_permissions(user, admin, old_permissions, new_permissions):
-    if old_permissions != new_permissions and user.id != admin.id:
+    if old_permissions != new_permissions and user.id != admin.id and user.email:
         diff_lines = []
 
         for institution_id in set(old_permissions.keys() + new_permissions.keys()):
