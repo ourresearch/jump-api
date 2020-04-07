@@ -947,6 +947,16 @@ def get_apc_data_from_db(input_package_id):
 
 
 @cache
+def get_journal_titles():
+    command = """select issn_l, title from ricks_journal"""
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+    my_dict = dict([(a["issn_l"], a["title"]) for a in rows])
+    return my_dict
+
+
+@cache
 def get_perpetual_access_data_from_db(input_package_id):
     command = """select * from jump_perpetual_access where package_id='{}'""".format(input_package_id)
     with get_db_cursor() as cursor:
