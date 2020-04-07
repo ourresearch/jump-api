@@ -17,6 +17,7 @@ from counter import CounterInput
 from journal_price import JournalPriceInput
 from perpetual_access import PerpetualAccessInput
 from saved_scenario import SavedScenario
+from scenario import get_journal_titles
 from scenario import get_prices_from_db
 from scenario import get_core_list_from_db
 from scenario import get_perpetual_access_data_from_db
@@ -122,19 +123,22 @@ class Package(db.Model):
 
     @cached_property
     def get_counter_rows(self):
+        return self.filter_by_core_list(self.get_unfiltered_counter_rows)
+
+    @cached_property
+    def get_unfiltered_counter_rows(self):
         q = """
-            select 
-            counter.issn_l, 
-            counter.issn as issns,
-            title, 
-            total::int as num_2018_downloads
-            from jump_counter counter
-            left outer join ricks_journal on counter.issn_l = ricks_journal.issn_l
-            where package_id='{package_id}' 
-            order by num_2018_downloads desc
-            """.format(package_id=self.package_id_for_db)
-        rows = get_sql_dict_rows(q)
-        return self.filter_by_core_list(rows)
+           select
+           counter.issn_l,
+           counter.issn as issns,
+           title,
+           total::int as num_2018_downloads
+           from jump_counter counter
+           left outer join ricks_journal on counter.issn_l = ricks_journal.issn_l
+           where package_id='{package_id}'
+           order by num_2018_downloads desc
+           """.format(package_id=self.package_id_for_db)
+        return get_sql_dict_rows(q)
 
     def get_base(self, and_where=""):
         q = """
@@ -338,6 +342,51 @@ class Package(db.Model):
         my_memcached.set(memcached_key, response)
         return response
 
+    def get_journal_attributes(self):
+        counter_rows = dict((x['issn_l'], x) for x in self.get_unfiltered_counter_rows)
+        counter_defaults = defaultdict(lambda: defaultdict(lambda: None), counter_rows)
+
+        pa_rows = get_perpetual_access_data_from_db(self.package_id)
+        pa_defaults = defaultdict(lambda: defaultdict(lambda: None), pa_rows)
+
+        prices = get_prices_from_db()[self.package_id]
+        price_defaults = defaultdict(lambda: None, prices)
+
+        open_access = set([x['issn_l'] for x in self.get_diff_open_access_journals])
+        not_published_2019 = set([x['issn_l'] for x in self.get_diff_not_published_in_2019])
+        changed_publisher = set([x['issn_l'] for x in self.get_diff_changed_publisher])
+
+        distinct_issnls = set([x for x in
+                               counter_rows.keys() +
+                               pa_rows.keys() +
+                               prices.keys() +
+                               list(open_access) +
+                               list(not_published_2019) +
+                               list(changed_publisher)
+                               if x
+                               ])
+
+        journal_titles = get_journal_titles()
+
+        return [{
+            'issn_l': issn_l,
+            'name': journal_titles.get(issn_l, None),
+            'upload_data': {
+                'counter_downloads': counter_defaults[issn_l]['num_2018_downloads'],
+                'perpetual_access_dates': [pa_defaults[issn_l]['start_date'], pa_defaults[issn_l]['end_date']],
+                'price': price_defaults[issn_l],
+            },
+            'has_upload_data': {
+                'counter': issn_l in counter_rows,
+                'perpetual_access': issn_l in pa_rows,
+                'price': issn_l in prices,
+            },
+            'attributes': {
+                'is_oa': issn_l in open_access,
+                'not_published_2019': issn_l in not_published_2019,
+                'changed_publisher': issn_l in changed_publisher,
+            }
+        } for issn_l in distinct_issnls]
 
     def get_unexpectedly_no_price(self):
         package_id = self.package_id_for_db
@@ -475,8 +524,8 @@ class Package(db.Model):
                         "select count(*) from jump_core_journals where package_id = '{}'".format(self.package_id)
                     ).scalar() > 0
                 },
-            ]
-
+            ],
+            'journals': self.get_journal_attributes(),
         }
 
     def __repr__(self):
