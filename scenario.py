@@ -947,12 +947,12 @@ def get_apc_data_from_db(input_package_id):
 
 
 @cache
-def get_journal_titles():
-    command = """select issn_l, title from ricks_journal"""
+def get_ricks_journal_rows():
+    command = """select issn_l, title, issns from ricks_journal"""
     with get_db_cursor() as cursor:
         cursor.execute(command)
         rows = cursor.fetchall()
-    my_dict = dict([(a["issn_l"], a["title"]) for a in rows])
+    my_dict = dict([(a["issn_l"], a) for a in rows])
     return my_dict
 
 
