@@ -7,6 +7,7 @@ import weakref
 from collections import OrderedDict
 import datetime
 import shortuuid
+import json
 
 from app import db
 from app import get_db_cursor
@@ -17,7 +18,7 @@ from counter import CounterInput
 from journal_price import JournalPriceInput
 from perpetual_access import PerpetualAccessInput
 from saved_scenario import SavedScenario
-from scenario import get_journal_titles
+from scenario import get_ricks_journal_rows
 from scenario import get_prices_from_db
 from scenario import get_core_list_from_db
 from scenario import get_perpetual_access_data_from_db
@@ -366,11 +367,17 @@ class Package(db.Model):
                                if x
                                ])
 
-        journal_titles = get_journal_titles()
+        journal_rows = get_ricks_journal_rows()
+
+        for issn_l, journal in journal_rows.items():
+            try:
+                journal['issns'] = json.loads(journal['issns'])
+            except (TypeError, ValueError):
+                journal['issns'] = None
 
         return [{
             'issn_l': issn_l,
-            'name': journal_titles.get(issn_l, None),
+            'name': journal_rows.get(issn_l, {}).get('title', None),
             'upload_data': {
                 'counter_downloads': counter_defaults[issn_l]['num_2018_downloads'],
                 'perpetual_access_dates': [pa_defaults[issn_l]['start_date'], pa_defaults[issn_l]['end_date']],
@@ -385,7 +392,8 @@ class Package(db.Model):
                 'is_oa': issn_l in open_access,
                 'not_published_2019': issn_l in not_published_2019,
                 'changed_publisher': issn_l in changed_publisher,
-            }
+            },
+            'issns': journal_rows.get(issn_l, {}).get('issns', None)
         } for issn_l in distinct_issnls]
 
     def get_unexpectedly_no_price(self):
