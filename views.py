@@ -32,6 +32,7 @@ import hashlib
 import pickle
 import tempfile
 
+import grid_search
 import password_reset
 from app import app
 from app import logger
@@ -1102,6 +1103,10 @@ def live_scenario_id_get(scenario_id):
     response.headers["Cache-Tag"] = u",".join(cache_tags_list)
     return response
 
+
+@app.route('/grid/autocomplete/<path:query>', methods=['GET'])
+def grid_autocomplete(query):
+    return jsonify_fast_no_sort({'results': grid_search.autocomplete(query)})
 
 
 @app.route('/scenario/<scenario_id>/summary', methods=['GET'])
