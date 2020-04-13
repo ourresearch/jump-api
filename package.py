@@ -536,6 +536,13 @@ class Package(db.Model):
             'journals': self.get_journal_attributes(),
         }
 
+    def to_dict_micro(self):
+        response = {
+            "id": self.package_id,
+            "name": self.package_name,
+        }
+        return response
+
     def __repr__(self):
         return u"<{} ({}) {}>".format(self.__class__.__name__, self.package_id, self.package_name)
 
