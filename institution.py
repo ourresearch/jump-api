@@ -16,6 +16,7 @@ class Institution(db.Model):
     created = db.Column(db.DateTime)
     is_consortium = db.Column(db.Boolean)
     consortium_id = db.Column(db.Text)
+    old_username = db.Column(db.Text)
     is_demo_institution = db.Column(db.Boolean)
 
     grid_ids = relationship(GridId)
