@@ -34,6 +34,7 @@ import tempfile
 
 import grid_search
 import password_reset
+import prepared_demo_publisher
 from app import app
 from app import logger
 from app import jwt
@@ -48,7 +49,7 @@ from account import Account
 from institution import Institution
 from journal_price import JournalPrice, JournalPriceInput
 from package import Package
-from package import get_ids, clone_demo_package
+from package import get_ids
 from permission import Permission, UserInstitutionPermission
 from perpetual_access import PerpetualAccess, PerpetualAccessInput
 from publisher import Publisher
@@ -399,8 +400,8 @@ def register_demo_user():
         user_perm.institution_id = demo_institution.id
         db.session.add(user_perm)
 
-    demo_package = clone_demo_package(demo_institution)
-    db.session.add(demo_package)
+    demo_publisher = prepared_demo_publisher.get_demo_publisher(demo_institution)
+    db.session.add(demo_publisher)
 
     safe_commit(db)
 
