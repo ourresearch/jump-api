@@ -1419,6 +1419,7 @@ class Journal(object):
         table_row["title"] = self.title
         table_row["subject"] = self.subject
         table_row["subscribed"] = self.subscribed
+        table_row["is_society_journal"] = self.is_society_journal
 
         # these are below but with different names
         table_row["use_total"] = self.use_total
@@ -1460,6 +1461,7 @@ class Journal(object):
         table_row["use_hybrid_percent"] = round(float(100)*self.use_oa_hybrid/self.use_total)
         table_row["use_bronze_percent"] = round(float(100)*self.use_oa_bronze/self.use_total)
         table_row["use_peer_reviewed_percent"] =  round(float(100)*self.use_oa_peer_reviewed/self.use_total)
+        table_row["oa_embargo_months"] = self.oa_embargo_months
 
         # impact
         table_row["downloads"] = round(self.downloads_total)
