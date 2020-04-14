@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import timeout_decorator
 from flask import make_response
 from flask import request
 from flask import redirect
@@ -193,6 +194,24 @@ def after_request_stuff(resp):
     resp.cache_control.public = True
 
     return resp
+
+
+class TimeoutError(Exception):
+    pass
+
+
+@app.errorhandler(500)
+def error_500(e):
+    response = jsonify({'message': 'Internal Server Error'})
+    response.status_code = 500
+    return response
+
+
+@app.errorhandler(TimeoutError)
+def error_timeout(e):
+    response = jsonify({'message': 'Timeout'})
+    response.status_code = 500
+    return response
 
 
 @app.route('/', methods=["GET", "POST"])
@@ -827,6 +846,7 @@ def get_jwt():
 
 @app.route('/publisher/<publisher_id>', methods=['GET'])
 @jwt_required
+@timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 def get_publisher(publisher_id):
     package = Package.query.filter(Package.package_id == publisher_id).scalar()
 
@@ -954,6 +974,7 @@ def _load_package_file(package_id, req, table_class):
 
 @app.route('/publisher/<package_id>/counter', methods=['GET', 'POST', 'DELETE'])
 @jwt_optional
+@timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 def jump_counter(package_id):
     authenticate_for_publisher(package_id, Permission.view() if request.method == 'GET' else Permission.modify())
 
@@ -974,6 +995,7 @@ def jump_counter(package_id):
 
 @app.route('/publisher/<package_id>/perpetual-access', methods=['GET', 'POST', 'DELETE'])
 @jwt_optional
+@timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 def jump_perpetual_access(package_id):
     authenticate_for_publisher(package_id, Permission.view() if request.method == 'GET' else Permission.modify())
 
@@ -993,6 +1015,7 @@ def jump_perpetual_access(package_id):
 
 
 @app.route('/publisher/<package_id>/prices', methods=['GET', 'POST', 'DELETE'])
+@timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 @jwt_optional
 def jump_journal_prices(package_id):
     authenticate_for_publisher(package_id, Permission.view() if request.method == 'GET' else Permission.modify())
@@ -1090,6 +1113,7 @@ def subscriptions_scenario_id_post(scenario_id):
 
 @app.route('/scenario/<scenario_id>', methods=['GET'])
 @jwt_optional
+@timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 # @my_memcached.cached(timeout=7*24*60*60)
 def live_scenario_id_get(scenario_id):
     my_timing = TimingMessages()
@@ -1122,6 +1146,7 @@ def scenario_id_summary_get(scenario_id):
 
 @app.route('/scenario/<scenario_id>/journals', methods=['GET'])
 @jwt_optional
+@timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 def scenario_id_journals_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
     response = jsonify_fast_no_sort(my_saved_scenario.to_dict_journals())
@@ -1133,6 +1158,7 @@ def scenario_id_journals_get(scenario_id):
 
 @app.route('/scenario/<scenario_id>/raw', methods=['GET'])
 @jwt_optional
+@timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 @cached()
 def scenario_id_raw_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
@@ -1143,6 +1169,7 @@ def check_authorized():
 
 @app.route('/scenario/<scenario_id>/details', methods=['GET'])
 @jwt_optional
+@timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 # @my_memcached.cached(timeout=7*24*60*60)
 def scenario_id_details_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
@@ -1152,6 +1179,7 @@ def scenario_id_details_get(scenario_id):
 
 @app.route('/scenario/<scenario_id>/table', methods=['GET'])
 @jwt_optional
+@timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 # @my_memcached.cached(timeout=7*24*60*60)
 def live_scenario_id_table_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
@@ -1164,6 +1192,7 @@ def live_scenario_id_table_get(scenario_id):
 
 @app.route('/scenario/<scenario_id>/slider', methods=['GET'])
 @jwt_optional
+@timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 # @my_memcached.cached(timeout=7*24*60*60)
 def live_scenario_id_slider_get(scenario_id):
 
@@ -1203,6 +1232,7 @@ def live_package_id_apc_get(package_id):
 
 @app.route('/publisher/<publisher_id>/apc', methods=['GET'])
 @jwt_optional
+@timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 def live_publisher_id_apc_get(publisher_id):
     authenticate_for_publisher(publisher_id, required_permission=Permission.view())
 
@@ -1315,6 +1345,7 @@ def scenario_post(package_id):
 
 @app.route('/publisher/<publisher_id>/scenario', methods=["POST"])
 @jwt_optional
+@timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 def publisher_scenario_post(publisher_id):
     authenticate_for_publisher(publisher_id, Permission.modify())
 
