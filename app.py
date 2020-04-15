@@ -111,6 +111,7 @@ app.config["SQLALCHEMY_BINDS"] = {
     "redshift_db": os.getenv("DATABASE_URL_REDSHIFT")
 }
 
+
 # from http://stackoverflow.com/a/12417346/596939
 # class NullPoolSQLAlchemy(SQLAlchemy):
 #     def apply_driver_hacks(self, app, info, options):
@@ -149,6 +150,8 @@ app.config['postgreSQL_pool'] = ThreadedConnectionPool(2, 5,
                                   password=redshift_url.password,
                                   host=redshift_url.hostname,
                                   port=redshift_url.port)
+
+app.config['PROFILE_REQUESTS'] = (os.getenv("PROFILE_REQUESTS", False) == "True")
 
 
 @contextmanager

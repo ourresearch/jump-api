@@ -10,7 +10,9 @@ from flask import jsonify
 from flask import url_for
 from flask import Response
 from flask import send_file
+from flask import g
 from flask_jwt_extended import jwt_required, jwt_optional, create_access_token, get_jwt_identity
+from pyinstrument import Profiler
 from sqlalchemy import or_
 from werkzeug.security import safe_str_cmp
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -179,6 +181,12 @@ def lookup_user(user_id=None, email=None, username=None):
         return id_user or email_user or username_user
 
 
+@app.before_request
+def before_request_stuff():
+    if app.config['PROFILE_REQUESTS']:
+        g.profiler = Profiler()
+        g.profiler.start()
+
 @app.after_request
 def after_request_stuff(resp):
     sys.stdout.flush()  # without this jason's heroku local buffers forever
@@ -192,6 +200,10 @@ def after_request_stuff(resp):
     # make cacheable
     resp.cache_control.max_age = 300
     resp.cache_control.public = True
+
+    if app.config['PROFILE_REQUESTS']:
+        g.profiler.stop()
+        print(g.profiler.output_text(unicode=True, color=True))
 
     return resp
 
@@ -846,7 +858,7 @@ def get_jwt():
 
 @app.route('/publisher/<publisher_id>', methods=['GET'])
 @jwt_required
-@timeout_decorator.timeout(25, timeout_exception=TimeoutError)
+#@timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 def get_publisher(publisher_id):
     package = Package.query.filter(Package.package_id == publisher_id).scalar()
 
@@ -857,7 +869,8 @@ def get_publisher(publisher_id):
     if not auth_user.has_permission(package.institution_id, Permission.view()) and not is_authorized_superuser():
         abort_json(403, "Not authorized to view this publisher.")
 
-    return jsonify_fast_no_sort(package.to_publisher_dict())
+    publisher_dict = package.to_publisher_dict()
+    return jsonify_fast_no_sort(publisher_dict)
 
 
 @app.route('/package/<package_id>', methods=['GET'])
