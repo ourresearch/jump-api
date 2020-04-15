@@ -859,7 +859,7 @@ def get_jwt():
 
 @app.route('/publisher/<publisher_id>', methods=['GET'])
 @jwt_required
-#@timeout_decorator.timeout(25, timeout_exception=TimeoutError)
+@timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 def get_publisher(publisher_id):
     package = Package.query.filter(Package.package_id == publisher_id).scalar()
 
