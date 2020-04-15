@@ -946,14 +946,20 @@ def get_apc_data_from_db(input_package_id):
     return rows
 
 
-@cache
-def get_ricks_journal_rows():
+def load_ricks_journal_rows():
     command = """select issn_l, title, issns from ricks_journal"""
     with get_db_cursor() as cursor:
         cursor.execute(command)
         rows = cursor.fetchall()
     my_dict = dict([(a["issn_l"], a) for a in rows])
     return my_dict
+
+
+_ricks_journal_rows = load_ricks_journal_rows()
+
+
+def get_ricks_journal_rows():
+    return  _ricks_journal_rows
 
 
 @cache
@@ -1008,8 +1014,8 @@ def get_num_papers_from_db():
         lookup_dict[row["issn_l"]][row["year"]] = row["num_papers"]
     return lookup_dict
 
-@cache
-def get_prices_from_db():
+
+def load_prices_from_db():
     command = "select issn_l, usa_usd, package_id from jump_journal_prices"
     with get_db_cursor() as cursor:
         cursor.execute(command)
@@ -1018,6 +1024,14 @@ def get_prices_from_db():
     for row in rows:
         lookup_dict[row["package_id"]][row["issn_l"]] = row["usa_usd"]
     return lookup_dict
+
+
+_prices_from_db = load_prices_from_db()
+
+
+def get_prices_from_db():
+    return _prices_from_db
+
 
 @cache
 def get_oa_recent_data_from_db():
