@@ -785,15 +785,16 @@ def get_saved_scenario(scenario_id, test_mode=False, required_permission=None):
     # if not test_mode:
     #     print "test_mode", test_mode
     #     print "is_authorized_superuser()", is_authorized_superuser()
-    if my_saved_scenario.package.institution_id:
-        authenticate_for_publisher(my_saved_scenario.package.package_id, required_permission)
-    else:
-        abort_json(
-            400,
-            u"Scenario package {} has no institution_id. Can't decide how to authenticate.".format(
-                my_saved_scenario.package.package_id
+    if required_permission:
+        if my_saved_scenario.package.institution_id:
+            authenticate_for_publisher(my_saved_scenario.package.package_id, required_permission)
+        else:
+            abort_json(
+                400,
+                u"Scenario package {} has no institution_id. Can't decide how to authenticate.".format(
+                    my_saved_scenario.package.package_id
+                )
             )
-        )
 
     my_saved_scenario.set_live_scenario(None)
 
