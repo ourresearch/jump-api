@@ -56,6 +56,7 @@ from package import get_ids
 from permission import Permission, UserInstitutionPermission
 from perpetual_access import PerpetualAccess, PerpetualAccessInput
 from publisher import Publisher
+from ror_id import RorId
 from saved_scenario import SavedScenario
 from saved_scenario import get_latest_scenario
 from saved_scenario import save_raw_scenario_to_db
@@ -423,6 +424,7 @@ def register_demo_user():
     db.session.add(demo_institution)
     db.session.add(demo_publisher)
     db.session.add(GridId(institution_id=demo_institution.id, grid_id='grid.433631.0'))
+    db.session.add(RorId(institution_id=demo_institution.id, ror_id='00xbe3815'))
 
     for permission in [Permission.view(), Permission.modify(), Permission.admin()]:
         user_perm = UserInstitutionPermission()
