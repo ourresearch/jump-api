@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 
 from app import db
 from grid_id import GridId
+from ror_id import RorId
 from permission import UserInstitutionPermission
 from user import User
 
@@ -19,7 +20,8 @@ class Institution(db.Model):
     old_username = db.Column(db.Text)
     is_demo_institution = db.Column(db.Boolean)
 
-    grid_ids = relationship(GridId)
+    grid_ids = relationship(GridId, lazy='subquery')
+    ror_ids = relationship(RorId, lazy='subquery')
     packages = relationship('Package')
 
     def user_permissions(self):
@@ -34,6 +36,7 @@ class Institution(db.Model):
         return {
             'id': self.id,
             'grid_ids': [g.grid_id for g in self.grid_ids],
+            'ror_ids': [r.ror_id for r in self.ror_ids],
             'name': self.display_name,
             'is_demo': self.is_demo_institution,
             'user_permissions': self.user_permissions(),
