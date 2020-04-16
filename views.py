@@ -1308,7 +1308,7 @@ def export_get(my_saved_scenario):
 @app.route('/scenario/<scenario_id>/export.csv', methods=['GET'])
 @jwt_required
 def scenario_id_export_csv_get(scenario_id):
-    my_saved_scenario = get_saved_scenario(scenario_id)
+    my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
     contents = export_get(my_saved_scenario)
     # return Response(contents, mimetype="text/text")
     return Response(contents, mimetype="text/csv")
