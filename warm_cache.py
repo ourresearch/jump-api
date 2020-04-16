@@ -6,6 +6,7 @@ import requests
 import time
 import argparse
 
+from institution import Institution
 from package import Package
 from util import elapsed
 
