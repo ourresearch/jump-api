@@ -90,6 +90,14 @@ class ConsortiumJournal(Journal):
         return self.meta_data["subject"]
 
     @cached_property
+    def is_society_journal(self):
+        return self.meta_data["is_society_journal"]
+
+    @cached_property
+    def oa_embargo_months(self):
+        return self.meta_data["oa_embargo_months"]
+
+    @cached_property
     def num_authorships(self):
         return self.sum_attribute("authorships")
 
