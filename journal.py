@@ -1820,6 +1820,8 @@ class Journal(object):
         response = OrderedDict()
         response["meta"] = {"issn_l": self.issn_l,
                     "title": self.title,
+                    "is_society_journal": self.is_society_journal,
+                    "oa_embargo_months": self.oa_embargo_months,
                     "subject": self.subject}
         table_row = OrderedDict()
 
