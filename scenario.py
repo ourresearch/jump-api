@@ -57,18 +57,8 @@ def get_fresh_journal_list(scenario, my_jwt):
     return journals
 
 
-def get_fresh_apc_journal_list(issn_ls, scenario):
-    df_dict = {}
-    if scenario.data["apc"]:
-        df = pd.DataFrame(scenario.data["apc"])
-        df["year"] = df["year"].astype(int)
-        df["authorship_fraction"] = df.num_authors_from_uni / df.num_authors_total
-        df["apc_fraction"] = df["apc"].astype(float) * df["authorship_fraction"]
-        df_by_issn_l_and_year = df.groupby(["issn_l", "year"]).apc_fraction.agg([np.size, np.sum]).reset_index().rename(
-            columns={'size': 'num_papers', "sum": "dollars"})
-        df_dict = {"df": df, "df_by_issn_l_and_year": df_by_issn_l_and_year}
-
-    return [ApcJournal(issn_l, scenario.data, df_dict, scenario) for issn_l in issn_ls]
+def get_fresh_apc_journal_list(issn_ls, apc_df, scenario):
+    return [ApcJournal(issn_l, scenario.data, apc_df, scenario) for issn_l in issn_ls]
 
 
 class Scenario(object):
@@ -181,7 +171,7 @@ class Scenario(object):
             df["apc_fraction"] = df["apc"].astype(float) * df["authorship_fraction"]
             df_by_issn_l_and_year = df.groupby(["issn_l", "year"]).apc_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'size': 'num_papers', "sum": "dollars"})
             my_dict = {"df": df, "df_by_issn_l_and_year": df_by_issn_l_and_year}
-            return get_fresh_apc_journal_list(my_dict["df"].issn_l.unique(), self)
+            return get_fresh_apc_journal_list(my_dict["df"].issn_l.unique(), my_dict, self)
         return []
 
     @cached_property
