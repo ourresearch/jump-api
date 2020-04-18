@@ -10,7 +10,7 @@ import pandas as pd
 class ApcJournal(object):
     years = range(0, 5)
 
-    def __init__(self, issn_l, scenario_data, scenario=None):
+    def __init__(self, issn_l, scenario_data, df_dict, scenario=None):
         self.issn_l = issn_l
         self.have_data = False
         self.is_in_package = False
@@ -23,20 +23,10 @@ class ApcJournal(object):
                 self.is_in_package = True
                 self.subscribed = matching_journal.subscribed
         self._scenario_data = scenario_data
+        self.my_df_dict = df_dict
         if self.issn_l in [issn_dict["issn_l"] for issn_dict in self._scenario_data["apc"]]:
             self.have_data = True
 
-    @cached_property
-    def my_df_dict(self):
-        my_dict = {}
-        if self._scenario_data["apc"]:
-            df = pd.DataFrame(self._scenario_data["apc"])
-            df["year"] = df["year"].astype(int)
-            df["authorship_fraction"] = df.num_authors_from_uni/df.num_authors_total
-            df["apc_fraction"] = df["apc"].astype(float) * df["authorship_fraction"]
-            df_by_issn_l_and_year = df.groupby(["issn_l", "year"]).apc_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'size': 'num_papers', "sum": "dollars"})
-            my_dict = {"df": df, "df_by_issn_l_and_year": df_by_issn_l_and_year}
-        return my_dict
 
     @cached_property
     def my_data_dict(self):
