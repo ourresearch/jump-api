@@ -57,8 +57,8 @@ def get_fresh_journal_list(scenario, my_jwt):
     return journals
 
 
-def get_fresh_apc_journal_list(issn_ls, apc_df, scenario):
-    return [ApcJournal(issn_l, scenario.data, apc_df, scenario) for issn_l in issn_ls]
+def get_fresh_apc_journal_list(issn_ls, apc_df_dict, scenario):
+    return [ApcJournal(issn_l, scenario.data, apc_df_dict, scenario) for issn_l in issn_ls]
 
 
 class Scenario(object):
