@@ -959,7 +959,21 @@ _ricks_journal_rows = load_ricks_journal_rows()
 
 
 def get_ricks_journal_rows():
-    return  _ricks_journal_rows
+    return _ricks_journal_rows
+
+
+def _load_hybrid_2019_from_db():
+    with get_db_cursor() as cursor:
+        cursor.execute('select issn_l from jump_hybrid_journals_2019')
+        rows = cursor.fetchall()
+    return {row["issn_l"] for row in rows}
+
+
+_hybrid_2019 = _load_hybrid_2019_from_db()
+
+
+def get_hybrid_2019():
+    return _hybrid_2019
 
 
 @cache

@@ -18,6 +18,7 @@ from counter import CounterInput
 from journal_price import JournalPriceInput
 from perpetual_access import PerpetualAccessInput
 from saved_scenario import SavedScenario
+from scenario import get_hybrid_2019
 from scenario import get_ricks_journal_rows
 from scenario import get_prices_from_db
 from scenario import get_core_list_from_db
@@ -392,6 +393,7 @@ class Package(db.Model):
                 'is_oa': issn_l in open_access,
                 'not_published_2019': issn_l in not_published_2019,
                 'changed_publisher': issn_l in changed_publisher,
+                'is_hybrid_2019': issn_l in get_hybrid_2019(),
             },
             'issns': journal_rows.get(issn_l, {}).get('issns', None)
         } for issn_l in distinct_issnls]
