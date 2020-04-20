@@ -1298,6 +1298,11 @@ class Journal(object):
         return is_society_journal == "YES"
 
     @cached_property
+    def is_hybrid_2019(self):
+        from scenario import get_hybrid_2019
+        return self.issn_l in get_hybrid_2019()
+
+    @cached_property
     def baseline_access(self):
         from scenario import get_core_list_from_db
         rows = get_core_list_from_db(self.package_id_for_db)
@@ -1462,6 +1467,7 @@ class Journal(object):
         table_row["use_bronze_percent"] = round(float(100)*self.use_oa_bronze/self.use_total)
         table_row["use_peer_reviewed_percent"] =  round(float(100)*self.use_oa_peer_reviewed/self.use_total)
         table_row["oa_embargo_months"] = self.oa_embargo_months
+        table_row["is_hybrid_2019"] = self.is_hybrid_2019
 
         # impact
         table_row["downloads"] = round(self.downloads_total)
