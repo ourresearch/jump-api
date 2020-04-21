@@ -66,7 +66,7 @@ class User(db.Model):
         return permission.name in self.permissions_dict().get(institution_id, {}).get('permissions', [])
 
     def __repr__(self):
-        return u"<{} ({}) {}>".format(self.__class__.__name__, self.id, self.display_name)
+        return u"<{} ({}) {}, {}>".format(self.__class__.__name__, self.id, self.email, self.display_name)
 
 
 def default_password():

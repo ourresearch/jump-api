@@ -39,3 +39,6 @@ class UserInstitutionPermission(db.Model):
     institution = relationship('Institution', uselist=False)
 
     permission = relationship(Permission)
+
+    def __repr__(self):
+        return u'<{} ({}, {}) {}>'.format(self.__class__.__name__, self.user, self.institution, self.permission.name)
