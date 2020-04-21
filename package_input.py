@@ -213,38 +213,35 @@ class PackageInput:
             row.update({'package_id': package_id})
             logger.info(u'normalized row: {}'.format(json.dumps(row)))
 
-        if package_id == 'BwfVyRm9':
-            db.session.query(cls).filter(cls.package_id == package_id).delete()
+        db.session.query(cls).filter(cls.package_id == package_id).delete()
 
-            if normalized_rows:
-                sorted_fields = sorted(normalized_rows[0].keys())
-                normalized_csv_filename = tempfile.mkstemp()[1]
-                with open(normalized_csv_filename, 'w') as normalized_csv_file:
-                    writer = csv.DictWriter(normalized_csv_file, delimiter=',', encoding='utf-8', fieldnames=sorted_fields)
-                    for row in normalized_rows:
-                        writer.writerow(row)
+        if normalized_rows:
+            sorted_fields = sorted(normalized_rows[0].keys())
+            normalized_csv_filename = tempfile.mkstemp()[1]
+            with open(normalized_csv_filename, 'w') as normalized_csv_file:
+                writer = csv.DictWriter(normalized_csv_file, delimiter=',', encoding='utf-8', fieldnames=sorted_fields)
+                for row in normalized_rows:
+                    writer.writerow(row)
 
-                s3_object = cls._copy_to_s3(package_id, normalized_csv_filename)
+            s3_object = cls._copy_to_s3(package_id, normalized_csv_filename)
 
-                copy_cmd = text('''
-                    copy {table}({fields}) from '{s3_object}'
-                    credentials :creds format as csv
-                    timeformat 'auto';
-                '''.format(
-                    table=cls.__tablename__,
-                    fields=', '.join(sorted_fields),
-                    s3_object=s3_object,
-                ))
+            copy_cmd = text('''
+                copy {table}({fields}) from '{s3_object}'
+                credentials :creds format as csv
+                timeformat 'auto';
+            '''.format(
+                table=cls.__tablename__,
+                fields=', '.join(sorted_fields),
+                s3_object=s3_object,
+            ))
 
-                aws_creds = 'aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}'.format(
-                    aws_key=os.getenv('AWS_ACCESS_KEY_ID'),
-                    aws_secret=os.getenv('AWS_SECRET_ACCESS_KEY')
-                )
+            aws_creds = 'aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}'.format(
+                aws_key=os.getenv('AWS_ACCESS_KEY_ID'),
+                aws_secret=os.getenv('AWS_SECRET_ACCESS_KEY')
+            )
 
-                db.session.execute(copy_cmd.bindparams(creds=aws_creds))
-                cls.update_dest_table(package_id)
-                safe_commit(db)
+            db.session.execute(copy_cmd.bindparams(creds=aws_creds))
+            cls.update_dest_table(package_id)
+            safe_commit(db)
 
-            return True, u'Inserted {} {} rows for package {}.'.format(len(normalized_rows), cls.__name__, package_id)
-        else:
-            return True, u'Simulated inserting {} {} rows for package {}.'.format(len(normalized_rows), cls.__name__, package_id)
+        return True, u'Inserted {} {} rows for package {}.'.format(len(normalized_rows), cls.__name__, package_id)
