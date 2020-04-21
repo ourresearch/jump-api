@@ -945,37 +945,6 @@ def get_apc_data_from_db(input_package_id):
 
     return rows
 
-
-def load_ricks_journal_rows():
-    command = """select issn_l, title, issns from ricks_journal"""
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
-    my_dict = dict([(a["issn_l"], a) for a in rows])
-    return my_dict
-
-
-_ricks_journal_rows = load_ricks_journal_rows()
-
-
-def get_ricks_journal_rows():
-    return _ricks_journal_rows
-
-
-def _load_hybrid_2019_from_db():
-    with get_db_cursor() as cursor:
-        cursor.execute('select issn_l from jump_hybrid_journals_2019')
-        rows = cursor.fetchall()
-    return {row["issn_l"] for row in rows}
-
-
-_hybrid_2019 = _load_hybrid_2019_from_db()
-
-
-def get_hybrid_2019():
-    return _hybrid_2019
-
-
 @cache
 def get_perpetual_access_data_from_db(input_package_id):
     command = """select * from jump_perpetual_access where package_id='{}'""".format(input_package_id)
@@ -1029,22 +998,71 @@ def get_num_papers_from_db():
     return lookup_dict
 
 
-def load_prices_from_db():
-    command = "select issn_l, usa_usd, package_id from jump_journal_prices"
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
-    lookup_dict = defaultdict(dict)
-    for row in rows:
-        lookup_dict[row["package_id"]][row["issn_l"]] = row["usa_usd"]
-    return lookup_dict
+_prices_from_db = None
 
 
-_prices_from_db = load_prices_from_db()
+def _load_prices_from_db():
+    global _prices_from_db
+
+    if _prices_from_db is None:
+        command = "select issn_l, usa_usd, package_id from jump_journal_prices"
+        with get_db_cursor() as cursor:
+            cursor.execute(command)
+            rows = cursor.fetchall()
+        lookup_dict = defaultdict(dict)
+        for row in rows:
+            lookup_dict[row["package_id"]][row["issn_l"]] = row["usa_usd"]
+
+        _prices_from_db = lookup_dict
 
 
 def get_prices_from_db():
+    _load_prices_from_db()
     return _prices_from_db
+
+
+_ricks_journal_rows = None
+
+
+def _load_ricks_journal_rows():
+    global _ricks_journal_rows
+
+    if _ricks_journal_rows is None:
+        command = """select issn_l, title, issns from ricks_journal"""
+        with get_db_cursor() as cursor:
+            cursor.execute(command)
+            rows = cursor.fetchall()
+        my_dict = dict([(a["issn_l"], a) for a in rows])
+        _ricks_journal_rows = my_dict
+
+
+def get_ricks_journal_rows():
+    _load_ricks_journal_rows()
+    return _ricks_journal_rows
+
+
+_hybrid_2019 = None
+
+
+def _load_hybrid_2019_from_db():
+    global _hybrid_2019
+
+    if _hybrid_2019 is None:
+        with get_db_cursor() as cursor:
+            cursor.execute('select issn_l from jump_hybrid_journals_2019')
+            rows = cursor.fetchall()
+        _hybrid_2019 = {row["issn_l"] for row in rows}
+
+
+def get_hybrid_2019():
+    _load_hybrid_2019_from_db()
+    return _hybrid_2019
+
+
+if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
+    _load_ricks_journal_rows()
+    _load_prices_from_db()
+    _load_hybrid_2019_from_db()
 
 
 @cache
