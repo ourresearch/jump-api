@@ -81,6 +81,10 @@ for a_library in libraries_to_mum_error:
     the_logger.propagate = True
     warnings.filterwarnings("ignore", category=UserWarning, module=a_library)
 
+logging.getLogger('pyexcel').setLevel(logging.WARNING)
+logging.getLogger('lml').setLevel(logging.WARNING)
+logging.getLogger('pyexcel_io').setLevel(logging.WARNING)
+
 with warnings.catch_warnings():
     warnings.filterwarnings('ignore', r'RuntimeWarning: overflow encountered in exp')
 
