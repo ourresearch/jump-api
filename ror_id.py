@@ -10,3 +10,12 @@ class RorId(db.Model):
 
     def __repr__(self):
         return u"<{} {}, {}>".format(self.__class__.__name__, self.institution_id, self.ror_id)
+
+
+class RorGridCrosswalk(db.Model):
+    __tablename__ = 'ror'
+    ror_id = db.Column(db.Text, primary_key=True)
+    grid_id = db.Column(db.Text, primary_key=True)
+
+    def __repr__(self):
+        return u"<{} {} -> {}>".format(self.__class__.__name__, self.ror_id, self.grid_id)
