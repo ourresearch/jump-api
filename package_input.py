@@ -114,14 +114,11 @@ class PackageInput:
 
     @classmethod
     def delete(cls, package_id):
-        if package_id == 'BwfVyRm9':
-            num_deleted = db.session.query(cls).filter(cls.package_id == package_id).delete()
-            db.session.execute("delete from {} where package_id = '{}'".format(cls.destination_table(), package_id))
-            safe_commit(db)
-            return u'Deleted {} {} rows for package {}.'.format(num_deleted, cls.__name__, package_id)
-        else:
-            num_rows = db.session.query(cls).filter(cls.package_id == package_id).count()
-            return u'Simulated deleting {} {} rows for package {}.'.format(num_rows, cls.__name__,package_id)
+        num_deleted = db.session.query(cls).filter(cls.package_id == package_id).delete()
+        db.session.execute("delete from {} where package_id = '{}'".format(cls.destination_table(), package_id))
+        safe_commit(db)
+        return u'Deleted {} {} rows for package {}.'.format(num_deleted, cls.__name__, package_id)
+
 
     @classmethod
     def update_dest_table(cls, package_id):
