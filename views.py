@@ -876,6 +876,77 @@ def get_publisher(publisher_id):
     return jsonify_fast_no_sort(publisher_dict)
 
 
+@app.route('/publisher/<publisher_id>', methods=['POST'])
+@jwt_required
+@timeout_decorator.timeout(25, timeout_exception=TimeoutError)
+def update_publisher(publisher_id):
+    authenticate_for_publisher(publisher_id, required_permission=Permission.modify())
+
+    publisher = Package.query.filter(Package.package_id == publisher_id).scalar()
+
+    if not request.is_json:
+        return abort_json(400, u'Post an object to change properties.')
+
+    if 'name' in request.json:
+        publisher.package_name = request.json['name']
+
+    db.session.merge(publisher)
+    safe_commit(db)
+
+    publisher_dict = publisher.to_publisher_dict()
+    return jsonify_fast_no_sort(publisher_dict)
+
+
+@app.route('/publisher/new', methods=['POST'])
+@jwt_required
+@timeout_decorator.timeout(25, timeout_exception=TimeoutError)
+def new_publisher():
+    auth_user = authenticated_user()
+
+    if not request.is_json:
+        return abort_json(400, u'Post an object to change properties.')
+
+    if 'institution_id' not in request.json:
+        return abort_json(400, u'institution_id is required')
+
+    pub_institution = Institution.query.get(request.json['institution_id'])
+
+    if not pub_institution:
+        abort_json(404, u'institution not found')
+
+    if not auth_user.has_permission(pub_institution.id, Permission.modify()):
+        abort_json(401, u'must have Modify permission for institution {}'.format(pub_institution.id))
+
+    if 'name' not in request.json:
+        return abort_json(400, u'name is required')
+
+    now = datetime.datetime.utcnow().isoformat()
+
+    new_pub = Package()
+    new_pub.package_id = 'publisher-{}'.format(shortuuid.uuid()[0:12])
+    new_pub.institution_id = pub_institution.id
+    new_pub.package_name = request.json['name']
+    new_pub.publisher = u'Elsevier'
+    new_pub.is_demo = pub_institution.is_demo_institution
+    new_pub.created = now
+
+    db.session.add(new_pub)
+
+    new_scenario = SavedScenario(False, u'scenario-{}'.format(shortuuid.uuid()[0:12]), None)
+    new_scenario.package_id = new_pub.package_id
+    new_scenario.scenario_name = u'First Scenario'
+    new_scenario.created = now
+    new_scenario.is_base_scenario = True
+
+    db.session.add(new_scenario)
+
+    safe_commit(db)
+
+    publisher_dict = new_pub.to_publisher_dict()
+    return jsonify_fast_no_sort(publisher_dict)
+
+
+
 @app.route('/package/<package_id>', methods=['GET'])
 @jwt_optional
 def live_package_id_get(package_id):
@@ -1484,7 +1555,6 @@ def debug_export_get():
     return Response(contents, mimetype="text/text")
 
 
-
 @app.route('/admin/change_password', methods=['GET'])
 @app.route('/admin/change-password', methods=['GET'])
 def admin_change_password():
@@ -1594,11 +1664,3 @@ def jump_debug_ids():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5004))
     app.run(host='0.0.0.0', port=port, debug=True, threaded=True, use_reloader=True)
-
-
-
-
-
-
-
-
