@@ -19,16 +19,16 @@ from user import User
 
 users = [
     {
-        'email': u'richard@impactstory.org',  # required
+        'email': u'jane@example.edu',  # required
         'password': u'password',  # required
-        'name': u'Richard Orr',  # default is None
+        'name': u'Jane',  # default is None
         'permissions': [u'view', u'modify', u'admin', ]  # default is view, modify, admin
     },
-    # {
-    #     'email': u'mike@example.edu',
-    #     'password': u'',
-    #     'name': u'Mike',
-    # }
+    {
+        'email': u'mike@example.edu',
+        'password': u'',
+        'name': u'Mike',
+    }
 ]
 
 institution_name = u'Eastern Example State'
@@ -69,10 +69,11 @@ if __name__ == "__main__":
         else:
             my_user = User()
             my_user.email = user_info['email']
-            my_user.password_hash = generate_password_hash(user_info['password'])
-            my_user.display_name = user_info.get('name', None)
-            db.session.add(my_user)
-            logger.info(u'  adding {}'.format(my_user))
+
+        my_user.password_hash = generate_password_hash(user_info['password'])
+        my_user.display_name = user_info.get('name', None)
+        db.session.merge(my_user)
+        logger.info(u'  saving {}'.format(my_user))
 
         permission_names = user_info.get('permissions', [u'view', u'modify', u'admin', ])
 
@@ -200,6 +201,29 @@ if __name__ == "__main__":
             for scenario in my_scenarios:
                 logger.info(u'  found an existing Scenario {}'.format(scenario))
             logger.info(u'  not adding a Scenario')
+
+        # jump_apc_authorships
+        logger.info(u'populating jump_apc_authorships for Publisher {}'.format(pub))
+
+        num_apc_authorship_rows = db.session.execute(
+            "select count(*) from jump_apc_authorships where package_id = '{}'".format(pub.package_id)
+        ).scalar()
+
+        if num_apc_authorship_rows:
+            logger.info(
+                u'  {} jump_apc_authorships rows already exist for Publisher {}'.format(num_apc_authorship_rows, pub)
+            )
+        else:
+            num_apc_authorship_rows = db.session.execute(
+                '''
+                    insert into jump_apc_authorships (
+                        select * from jump_institution_apc_authorships_view
+                        where package_id = '{}'
+                    )
+                '''.format(pub.package_id)
+            ).rowcount
+
+            logger.info(u'  created {} jump_apc_authorships rows for Publisher {}'.format(num_apc_authorship_rows, pub))
 
     if commit:
         logger.info('commit')
