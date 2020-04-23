@@ -13,7 +13,7 @@ from sqlalchemy.sql import text
 from app import db, logger
 from excel import convert_spreadsheet_to_csv
 from util import safe_commit
-
+import package
 
 class PackageInput:
     @staticmethod
@@ -116,7 +116,13 @@ class PackageInput:
     def delete(cls, package_id):
         num_deleted = db.session.query(cls).filter(cls.package_id == package_id).delete()
         db.session.execute("delete from {} where package_id = '{}'".format(cls.destination_table(), package_id))
+
+        my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
+        if my_package:
+            my_package.clear_package_counter_breakdown_cache()
+
         safe_commit(db)
+
         return u'Deleted {} {} rows for package {}.'.format(num_deleted, cls.__name__, package_id)
 
 
@@ -240,5 +246,9 @@ class PackageInput:
             db.session.execute(copy_cmd.bindparams(creds=aws_creds))
             cls.update_dest_table(package_id)
             safe_commit(db)
+
+        my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
+        if my_package:
+            my_package.clear_package_counter_breakdown_cache()
 
         return True, u'Inserted {} {} rows for package {}.'.format(len(normalized_rows), cls.__name__, package_id)

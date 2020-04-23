@@ -293,11 +293,16 @@ class Package(db.Model):
             package_id = DEMO_PACKAGE_ID
         return package_id
 
+    def clear_package_counter_breakdown_cache(self):
+        my_memcached.delete(self.get_package_counter_breakdown_memcached_key())
+
+    def get_package_counter_breakdown_memcached_key(self):
+        return "package.get_package_counter_breakdown.package_id_for_db.{}".format(self.package_id_for_db)
 
     def get_package_counter_breakdown(self):
         package_id = self.package_id_for_db
 
-        memcached_key = "package.get_package_counter_breakdown.package_id_for_db.{}".format(self.package_id_for_db)
+        memcached_key = self.get_package_counter_breakdown_memcached_key()
         my_memcached_results = my_memcached.get(memcached_key)
         if my_memcached_results:
             return my_memcached_results
