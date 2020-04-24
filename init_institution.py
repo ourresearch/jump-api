@@ -1,39 +1,53 @@
 import argparse
+import logging
 from datetime import datetime
 
 import shortuuid
+from sqlalchemy.orm.exc import MultipleResultsFound
 from werkzeug.security import generate_password_hash
 
 from account import Account
 from app import db
 from app import logger
+from counter import CounterInput
 from grid_id import GridId
 from institution import Institution
+from journal_price import JournalPriceInput
 from package import Package
 from permission import Permission, UserInstitutionPermission
+from perpetual_access import PerpetualAccessInput
 from ror_id import RorId, RorGridCrosswalk
 from saved_scenario import SavedScenario
 from user import User
+
+# heroku local:run python init_institution.py
 
 # configuration here
 
 users = [
     {
         'email': u'jane@example.edu',  # required
-        'password': u'password',  # required
+        'password': u'',  # required
         'name': u'Jane',  # default is None
         'permissions': [u'view', u'modify', u'admin', ]  # default is view, modify, admin
     },
     {
-        'email': u'mike@example.edu',
+        'email': u'mike2@example.edu',
         'password': u'',
         'name': u'Mike',
     }
 ]
 
-institution_name = u'Eastern Example State'
+institution_name = u'West Example State'
 
-ror_ids = [u'0207ad724', ]
+ror_ids = [u'049pfb863', ]
+
+# files can be xls, xlsx, or csv
+files = {
+    'prices': None,             # u'/path/to/journal-prices.xlsx',
+    'perpetual_access': None,   # u'/path/to/perpetual-access.xls',
+    'counter': None,            # u'/path/to/counter.csv',
+}
 
 # configuration above
 
@@ -162,72 +176,107 @@ if __name__ == "__main__":
 
     now = datetime.utcnow().isoformat()
 
-    my_publishers = db.session.query(Package).filter(Package.institution_id == my_institution.id).all()
-
-    if not my_publishers:
-        my_publisher = Package(
-            package_id=u'publisher-{}'.format(shortuuid.uuid()[0:12]),
-            publisher=u'Elsevier',
-            package_name=u'Elsevier',
-            created=now,
-            institution_id=my_institution.id,
-            is_demo=False
-        )
-        db.session.add(my_publisher)
-        logger.info(u'  adding {}'.format(my_publisher))
-        my_publishers = [my_publisher]
-    else:
-        for pub in my_publishers:
-            logger.info(u'  found an existing Publisher {}'.format(pub))
-        logger.info(u'  not adding a Publisher')
-
-    # add Scenario(s)
-
-    for pub in my_publishers:
-        logger.info(u'adding a Scenario for Publisher {}'.format(pub))
-        my_scenarios = db.session.query(SavedScenario).filter(SavedScenario.package_id == pub.package_id).all()
-
-        if not my_scenarios:
-            my_scenario = SavedScenario(False, u'scenario-{}'.format(shortuuid.uuid()[0:12]), None)
-            my_scenario.package_id = pub.package_id
-            my_scenario.scenario_name = u'First Scenario'
-            my_scenario.created = now
-            my_scenario.is_base_scenario = True
-
-            db.session.add(my_scenario)
-            logger.info(u'  adding {}'.format(my_scenario))
-            my_scenarios = [my_scenario]
+    try:
+        my_publisher = db.session.query(Package).filter(Package.institution_id == my_institution.id).scalar()
+        if my_publisher:
+            logger.info(u'  found an existing Publisher {}'.format(my_publisher))
         else:
-            for scenario in my_scenarios:
-                logger.info(u'  found an existing Scenario {}'.format(scenario))
-            logger.info(u'  not adding a Scenario')
-
-        # jump_apc_authorships
-        logger.info(u'populating jump_apc_authorships for Publisher {}'.format(pub))
-
-        num_apc_authorship_rows = db.session.execute(
-            "select count(*) from jump_apc_authorships where package_id = '{}'".format(pub.package_id)
-        ).scalar()
-
-        if num_apc_authorship_rows:
-            logger.info(
-                u'  {} jump_apc_authorships rows already exist for Publisher {}'.format(num_apc_authorship_rows, pub)
+            my_publisher = Package(
+                package_id=u'publisher-{}'.format(shortuuid.uuid()[0:12]),
+                publisher=u'Elsevier',
+                package_name=u'Elsevier',
+                created=now,
+                institution_id=my_institution.id,
+                is_demo=False
             )
-        else:
-            num_apc_authorship_rows = db.session.execute(
-                '''
-                    insert into jump_apc_authorships (
-                        select * from jump_institution_apc_authorships_view
-                        where package_id = '{}'
-                    )
-                '''.format(pub.package_id)
-            ).rowcount
+            db.session.add(my_publisher)
+            db.session.flush()
+            logger.info(u'  adding {}'.format(my_publisher))
+    except MultipleResultsFound as e:
+        raise MultipleResultsFound(u'more than one publisher already exists for {}')
 
-            logger.info(u'  created {} jump_apc_authorships rows for Publisher {}'.format(num_apc_authorship_rows, pub))
+    # add Scenario
+
+    logger.info(u'adding a Scenario for Publisher {}'.format(my_publisher))
+    my_scenarios = db.session.query(SavedScenario).filter(SavedScenario.package_id == my_publisher.package_id).all()
+
+    if not my_scenarios:
+        my_scenario = SavedScenario(False, u'scenario-{}'.format(shortuuid.uuid()[0:12]), None)
+        my_scenario.package_id = my_publisher.package_id
+        my_scenario.scenario_name = u'First Scenario'
+        my_scenario.created = now
+        my_scenario.is_base_scenario = True
+
+        db.session.add(my_scenario)
+        logger.info(u'  adding {}'.format(my_scenario))
+    else:
+        for scenario in my_scenarios:
+            logger.info(u'  found an existing Scenario {}'.format(scenario))
+
+    # jump_apc_authorships
+    logger.info(u'populating jump_apc_authorships for Publisher {}'.format(my_publisher))
+
+    num_apc_authorship_rows = db.session.execute(
+        "select count(*) from jump_apc_authorships where package_id = '{}'".format(my_publisher.package_id)
+    ).scalar()
+
+    if num_apc_authorship_rows:
+        logger.info(u'  {} jump_apc_authorships rows already exist for Publisher {}'.format(
+            num_apc_authorship_rows, my_publisher
+        ))
+    else:
+        num_apc_authorship_rows = db.session.execute(
+            '''
+                insert into jump_apc_authorships (
+                    select * from jump_institution_apc_authorships_view
+                    where package_id = '{}'
+                )
+            '''.format(my_publisher.package_id)
+        ).rowcount
+
+        logger.info(u'  created {} jump_apc_authorships rows for Publisher {}'.format(
+            num_apc_authorship_rows, my_publisher
+        ))
+
+    log_level = logging.getLogger('').level
+
+    if files.get('prices', None):
+        logger.info(u'loading journal price list {} for publisher {}'.format(files['prices'], my_publisher.package_id))
+        logging.getLogger('').setLevel(logging.WARNING)
+        success, message = JournalPriceInput.load(my_publisher.package_id, files['prices'], commit=False)
+        logging.getLogger('').setLevel(log_level)
+        if success:
+            logger.info(message)
+        else:
+            raise RuntimeError(message)
+
+    if files.get('perpetual_access', None):
+        logger.info(u'loading perpetual access list {} for publisher {}'.format(
+            files['perpetual_access'], my_publisher.package_id)
+        )
+        logging.getLogger('').setLevel(logging.WARNING)
+        success, message = PerpetualAccessInput.load(my_publisher.package_id, files['perpetual_access'], commit=False)
+        logging.getLogger('').setLevel(log_level)
+        if success:
+            logger.info(message)
+        else:
+            raise RuntimeError(message)
+
+    if files.get('counter', None):
+        logger.info(u'loading counter {} for publisher {}'.format(
+            files['counter'], my_publisher.package_id)
+        )
+        logging.getLogger('').setLevel(logging.WARNING)
+        success, message = CounterInput.load(my_publisher.package_id, files['counter'], commit=False)
+        logging.getLogger('').setLevel(log_level)
+        if success:
+            logger.info(message)
+        else:
+            raise RuntimeError(message)
 
     if commit:
         logger.info('commit')
         db.session.commit()
     else:
-        logger.info('rollback')
+        logger.info('rollback, run with --commit to commit')
         db.session.rollback()

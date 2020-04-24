@@ -155,7 +155,7 @@ class PackageInput:
         )
 
     @classmethod
-    def load(cls, package_id, file_name):
+    def load(cls, package_id, file_name, commit=False):
         if file_name.endswith(u'.xls') or file_name.endswith(u'.xlsx'):
             csv_file_name = convert_spreadsheet_to_csv(file_name, parsed=False)
             if csv_file_name is None:
@@ -245,7 +245,9 @@ class PackageInput:
 
             db.session.execute(copy_cmd.bindparams(creds=aws_creds))
             cls.update_dest_table(package_id)
-            safe_commit(db)
+
+            if commit:
+                safe_commit(db)
 
         my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
         if my_package:
