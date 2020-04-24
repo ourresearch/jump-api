@@ -1048,7 +1048,7 @@ def _json_to_temp_file(req):
 def _load_package_file(package_id, req, table_class):
     temp_file = _json_to_temp_file(req)
     if temp_file:
-        success, message = table_class.load(package_id, temp_file)
+        success, message = table_class.load(package_id, temp_file, commit=True)
         if success:
             return jsonify_fast_no_sort({'message': message})
         else:
