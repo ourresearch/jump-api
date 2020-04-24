@@ -20,7 +20,7 @@ from perpetual_access import PerpetualAccessInput
 from saved_scenario import SavedScenario
 from scenario import get_hybrid_2019
 from scenario import get_ricks_journal_rows
-from scenario import get_prices_from_db
+from scenario import get_prices_from_cache
 from scenario import get_core_list_from_db
 from scenario import get_perpetual_access_data_from_db
 from util import get_sql_answer
@@ -82,10 +82,12 @@ class Package(db.Model):
 
     @property
     def has_custom_prices(self):
-        prices_rows = get_prices_from_db()
-        package_ids_with_prices = prices_rows.keys()
-        if self.package_id in package_ids_with_prices or self.consortium_package_id in package_ids_with_prices:
-            return True
+        package_ids = [x for x in [self.package_id, self.consortium_package_id] if x]
+        if package_ids:
+            prices_rows = get_prices_from_cache(package_ids)
+            package_ids_with_prices = prices_rows.keys()
+            if self.package_id in package_ids_with_prices or self.consortium_package_id in package_ids_with_prices:
+                return True
         from app import suny_consortium_package_ids
         if self.package_id in suny_consortium_package_ids:
             return True
@@ -356,7 +358,7 @@ class Package(db.Model):
         pa_rows = get_perpetual_access_data_from_db(self.package_id)
         pa_defaults = defaultdict(lambda: defaultdict(lambda: None), pa_rows)
 
-        prices = get_prices_from_db()[self.package_id]
+        prices = get_prices_from_cache([self.package_id])[self.package_id]
         price_defaults = defaultdict(lambda: None, prices)
 
         open_access = set([x['issn_l'] for x in self.get_diff_open_access_journals])

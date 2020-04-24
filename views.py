@@ -60,7 +60,7 @@ from ror_id import RorId
 from saved_scenario import SavedScenario
 from saved_scenario import get_latest_scenario
 from saved_scenario import save_raw_scenario_to_db
-from scenario import get_common_package_data
+from scenario import get_common_package_data, refresh_cached_prices_from_db
 from scenario import get_clean_package_id
 from account_grid_id import AccountGridId
 from util import jsonify_fast
@@ -1045,11 +1045,13 @@ def _json_to_temp_file(req):
         return None
 
 
-def _load_package_file(package_id, req, table_class):
+def _load_package_file(package_id, req, table_class, cache_update_fn=None):
     temp_file = _json_to_temp_file(req)
     if temp_file:
         success, message = table_class.load(package_id, temp_file, commit=True)
         if success:
+            if cache_update_fn:
+                cache_update_fn(package_id)
             return jsonify_fast_no_sort({'message': message})
         else:
             return abort_json(400, message)
@@ -1119,7 +1121,7 @@ def jump_journal_prices(package_id):
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
-            return _load_package_file(package_id, request, JournalPriceInput)
+            return _load_package_file(package_id, request, JournalPriceInput, refresh_cached_prices_from_db)
 
 
 def post_subscription_guts(scenario_id, scenario_name=None):
