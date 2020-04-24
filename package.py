@@ -22,7 +22,7 @@ from scenario import get_hybrid_2019
 from scenario import get_ricks_journal_rows
 from scenario import get_prices_from_cache
 from scenario import get_core_list_from_db
-from scenario import get_perpetual_access_data_from_db
+from scenario import get_perpetual_access_from_cache
 from util import get_sql_answer
 from util import get_sql_rows
 from util import get_sql_dict_rows, safe_commit
@@ -72,7 +72,7 @@ class Package(db.Model):
 
     @property
     def has_custom_perpetual_access(self):
-        perpetual_access_rows = get_perpetual_access_data_from_db(self.package_id)
+        perpetual_access_rows = get_perpetual_access_from_cache(self.package_id)
         if perpetual_access_rows:
             return True
         from app import suny_consortium_package_ids
@@ -355,7 +355,7 @@ class Package(db.Model):
         counter_rows = dict((x['issn_l'], x) for x in self.get_unfiltered_counter_rows)
         counter_defaults = defaultdict(lambda: defaultdict(lambda: None), counter_rows)
 
-        pa_rows = get_perpetual_access_data_from_db(self.package_id)
+        pa_rows = get_perpetual_access_from_cache(self.package_id)
         pa_defaults = defaultdict(lambda: defaultdict(lambda: None), pa_rows)
 
         prices = get_prices_from_cache([self.package_id])[self.package_id]

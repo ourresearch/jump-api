@@ -60,7 +60,7 @@ from ror_id import RorId
 from saved_scenario import SavedScenario
 from saved_scenario import get_latest_scenario
 from saved_scenario import save_raw_scenario_to_db
-from scenario import get_common_package_data, refresh_cached_prices_from_db
+from scenario import get_common_package_data, refresh_cached_prices_from_db, refresh_perpetual_access_from_db
 from scenario import get_clean_package_id
 from account_grid_id import AccountGridId
 from util import jsonify_fast
@@ -1100,7 +1100,7 @@ def jump_perpetual_access(package_id):
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
-            return _load_package_file(package_id, request, PerpetualAccessInput)
+            return _load_package_file(package_id, request, PerpetualAccessInput, refresh_perpetual_access_from_db)
 
 
 @app.route('/publisher/<package_id>/prices', methods=['GET', 'POST', 'DELETE'])

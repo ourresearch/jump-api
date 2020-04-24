@@ -161,6 +161,8 @@ class Scenario(object):
 
         self.data["unpaywall_downloads_dict"] = clean_dict
 
+        self.data["perpetual_access"] = get_perpetual_access_from_cache(self.package_id)
+
     @cached_property
     def apc_journals(self):
         if self.data["apc"]:
@@ -945,14 +947,27 @@ def get_apc_data_from_db(input_package_id):
 
     return rows
 
-@cache
-def get_perpetual_access_data_from_db(input_package_id):
-    command = """select * from jump_perpetual_access where package_id='{}'""".format(input_package_id)
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
-    my_dict = dict([(a["issn_l"], a) for a in rows])
-    return my_dict
+
+def _perpetual_access_cache_key(package_id):
+    return u'scenario.get_perpetual_access.{}'.format(package_id)
+
+
+def refresh_perpetual_access_from_db(package_id):
+    command = text(
+        u'select * from jump_perpetual_access where package_id = :package_id'
+    ).bindparams(package_id=package_id)
+
+    rows = db.engine.execute(command).fetchall()
+    package_dict = dict([(a["issn_l"], a) for a in rows])
+
+    my_memcached.set(_perpetual_access_cache_key(package_id), package_dict)
+
+    return package_dict
+
+
+def get_perpetual_access_from_cache(package_id):
+    memcached_key = _perpetual_access_cache_key(package_id)
+    return my_memcached.get(memcached_key) or refresh_perpetual_access_from_db(package_id)
 
 
 @cache
@@ -1173,9 +1188,6 @@ def get_common_package_data(package_id):
 
     my_data["apc"] = get_apc_data_from_db(package_id)  # gets everything from consortium itself
     my_timing.log_timing("get_apc_data_from_db")
-
-    my_data["perpetual_access"] = get_perpetual_access_data_from_db(package_id)
-    my_timing.log_timing("get_perpetual_access_data_from_db")
 
     my_data["core_list"] = get_core_list_from_db(package_id)
     my_timing.log_timing("get_core_list_from_db")
