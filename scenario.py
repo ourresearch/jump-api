@@ -10,11 +10,13 @@ from kids.cache import cache
 import pickle
 import requests
 import os
+from sqlalchemy.sql import text
 
 from app import use_groups
 from app import get_db_cursor
 from app import DEMO_PACKAGE_ID
 from app import db
+from app import my_memcached
 from app import logger
 from time import time
 from util import elapsed
@@ -120,7 +122,6 @@ class Scenario(object):
 
 
     def set_clean_data(self):
-        clean_dict = {}
         prices_dict = {}
         self.data["prices"] = {}
 
@@ -131,12 +132,11 @@ class Scenario(object):
         if get_parent_consortium_package_id(self.package_id) in suny_consortium_package_ids or self.package_id in suny_consortium_package_ids:
             prices_to_consider += ["68f1af1d", "93YfzkaA"]
 
-        # print self.data["prices_raw"]
-        # print "prices_to_consider", prices_to_consider
+        prices_raw = get_prices_from_cache(prices_to_consider)
         for package_id_for_prices in prices_to_consider:
             # print "package_id_for_prices", package_id_for_prices
-            if package_id_for_prices in self.data["prices_raw"]:
-                for my_issnl, price in self.data["prices_raw"][package_id_for_prices].iteritems():
+            if package_id_for_prices in prices_raw:
+                for my_issnl, price in prices_raw[package_id_for_prices].iteritems():
                     if price != 0 and price is not None:
                         if not prices_dict.get(my_issnl, 0):
                             prices_dict[my_issnl] = price
@@ -998,27 +998,35 @@ def get_num_papers_from_db():
     return lookup_dict
 
 
-_prices_from_db = None
+def _journal_price_cache_key(package_id):
+    return u'scenario.get_journal_prices.{}'.format(package_id)
 
 
-def _load_prices_from_db():
-    global _prices_from_db
+def refresh_cached_prices_from_db(package_id):
+    package_dict = {}
+    command = text(
+        u'select issn_l, usa_usd from jump_journal_prices where package_id = :package_id'
+    ).bindparams(package_id=package_id)
 
-    if _prices_from_db is None:
-        command = "select issn_l, usa_usd, package_id from jump_journal_prices"
-        with get_db_cursor() as cursor:
-            cursor.execute(command)
-            rows = cursor.fetchall()
-        lookup_dict = defaultdict(dict)
-        for row in rows:
-            lookup_dict[row["package_id"]][row["issn_l"]] = row["usa_usd"]
+    rows = db.engine.execute(command).fetchall()
 
-        _prices_from_db = lookup_dict
+    for row in rows:
+        package_dict[row["issn_l"]] = row["usa_usd"]
+
+    my_memcached.set(_journal_price_cache_key(package_id), package_dict)
+
+    return package_dict
 
 
-def get_prices_from_db():
-    _load_prices_from_db()
-    return _prices_from_db
+def get_prices_from_cache(package_ids):
+    lookup_dict = defaultdict(dict)
+
+    for package_id in package_ids:
+        memcached_key = _journal_price_cache_key(package_id)
+        package_dict = my_memcached.get(memcached_key) or refresh_cached_prices_from_db(package_id)
+        lookup_dict[package_id] = package_dict
+
+    return lookup_dict
 
 
 _ricks_journal_rows = None
@@ -1061,7 +1069,6 @@ def get_hybrid_2019():
 
 if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
     _load_ricks_journal_rows()
-    _load_prices_from_db()
     _load_hybrid_2019_from_db()
 
 
@@ -1199,9 +1206,6 @@ def get_common_package_data(package_id):
 
     my_data["num_papers"] = get_num_papers_from_db()
     my_timing.log_timing("get_num_papers_from_db")
-
-    my_data["prices_raw"] = get_prices_from_db()
-    my_timing.log_timing("get_prices_from_db")
 
     my_data["_timing"] = my_timing.to_dict()
 
