@@ -412,6 +412,7 @@ class Journal(object):
             else:
                 pass
                 # print year, "no", data_dict[self.issn_l]
+
         return response
 
     @cached_property
