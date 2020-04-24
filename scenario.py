@@ -125,7 +125,7 @@ class Scenario(object):
         prices_dict = {}
         self.data["prices"] = {}
 
-        prices_to_consider = [self.package_id] if self.package_id else [DEMO_PACKAGE_ID]
+        prices_to_consider = [self.package_id, DEMO_PACKAGE_ID]
         from app import suny_consortium_package_ids
 
         # print "package_id", self.package_id_for_db, get_parent_consortium_package_id(self.package_id_for_db)
