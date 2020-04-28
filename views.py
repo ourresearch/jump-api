@@ -364,6 +364,10 @@ def user_login():
 
     login_user = lookup_user(email=email, username=username)
 
+    # maybe the username was passed as an email
+    if not login_user and email and not username:
+        login_user = lookup_user(username=email)
+
     if not login_user:
         return abort_json(404, u'User does not exist.')
 
