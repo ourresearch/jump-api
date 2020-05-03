@@ -59,6 +59,7 @@ libraries_to_mum_warning = [
     "paramiko",
     "chardet",
     "cryptography",
+    "bmemcached"
 ]
 
 
