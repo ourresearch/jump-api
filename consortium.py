@@ -29,7 +29,6 @@ class Consortium(object):
             cursor.execute(command)
             rows = cursor.fetchall()
 
-        print rows
         self.org_ids = rows
 
         if not hasattr(threading.current_thread(), "_children"):
