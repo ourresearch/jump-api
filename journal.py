@@ -1687,13 +1687,21 @@ class Journal(object):
         response["num_papers_forecast"] = {"headers": response["num_papers"]["headers"], "data": num_papers_list}
 
 
-        from apc_journal import ApcJournal
-        my_apc_journal = ApcJournal(self.issn_l, self._scenario_data)
+        # removed temporarily until can be fixed to work with new ApcJournal init approach
+        # from apc_journal import ApcJournal
+        # my_apc_journal = ApcJournal(self.issn_l, self._scenario_data)
+        # response["apc"] = {
+        #     "apc_price": my_apc_journal.apc_price_display,
+        #     "annual_projected_cost": my_apc_journal.cost_apc_historical,
+        #     "annual_projected_fractional_authorship": my_apc_journal.fractional_authorships_total,
+        #     "annual_projected_num_papers": my_apc_journal.num_apc_papers_historical,
+        # }
+
         response["apc"] = {
-            "apc_price": my_apc_journal.apc_price_display,
-            "annual_projected_cost": my_apc_journal.cost_apc_historical,
-            "annual_projected_fractional_authorship": my_apc_journal.fractional_authorships_total,
-            "annual_projected_num_papers": my_apc_journal.num_apc_papers_historical,
+            "apc_price": None,
+            "annual_projected_cost": None,
+            "annual_projected_fractional_authorship": None,
+            "annual_projected_num_papers": None,
         }
 
         response_debug = OrderedDict()
