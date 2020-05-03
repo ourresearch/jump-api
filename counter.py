@@ -84,19 +84,23 @@ class CounterInput(db.Model, PackageInput):
 
     @classmethod
     def translate_row(cls, row):
+        if not row['print_issn']:
+            print u"ERROR: no print_issn in the counter file"
+            raise ValueError
         rows = [{
-            'publisher': row['publisher'],
-            'issn': row['print_issn'],
-            'total': row['total'],
-            'journal_name': row['journal_name'],
-        }]
-
-        if row['online_issn']:
-            rows.append({
                 'publisher': row['publisher'],
-                'issn': row['online_issn'],
+                'issn': row['print_issn'],
                 'total': row['total'],
                 'journal_name': row['journal_name'],
-            })
+        }]
+
+        # don't add these, or else they add duplicates
+        # if row['online_issn']:
+        #     rows.append({
+        #         'publisher': row['publisher'],
+        #         'issn': row['online_issn'],
+        #         'total': row['total'],
+        #         'journal_name': row['journal_name'],
+        #     })
 
         return rows
