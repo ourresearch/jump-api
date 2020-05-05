@@ -703,19 +703,14 @@ def user_permissions():
 
 
 @app.route('/institution/<institution_id>', methods=['POST', 'GET'])
-@jwt_required
+@jwt_optional
 def institution(institution_id):
-    auth_user = authenticated_user()
-
-    if not auth_user:
-        return abort_json(401, u'Authentication required.')
-
     inst = Institution.query.get(institution_id)
     if not inst:
         return abort_json(404, u'Institution does not exist.')
 
     if request.method == 'POST':
-        if not auth_user.has_permission(inst.id, Permission.modify()) and not is_authorized_superuser():
+        if not authorize_institution(inst, Permission.modify()):
             return abort_json(403, u'Must have Write permission to modify institution properties.')
 
         request_args = request.args
@@ -729,7 +724,7 @@ def institution(institution_id):
         db.session.add(inst)
         safe_commit(db)
 
-    if not auth_user.has_permission(inst.id, Permission.view()) and not is_authorized_superuser():
+    if not authorize_institution(inst, Permission.view()):
         return abort_json(403, u'Must have read permission to get institution properties.')
 
     return jsonify_fast_no_sort(inst.to_dict())
@@ -772,6 +767,18 @@ def is_authorized_superuser():
     if secret and safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
         return True
     return False
+
+
+def authorize_institution(auth_institution, required_permission):
+    if is_authorized_superuser():
+        return True
+
+    auth_user = authenticated_user()
+
+    if not auth_user:
+        return abort_json(401, u'Authentication required.')
+
+    return auth_user.has_permission(auth_institution.id, required_permission)
 
 
 def get_saved_scenario(scenario_id, test_mode=False, required_permission=None):
