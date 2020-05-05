@@ -50,12 +50,14 @@ class TestInstitution(ResponseTest):
                     'required': [
                         'name',
                         'id',
+                        'is_deleted',
                     ],
 
                     'properties': {
                         'id': {'type': 'string'},
                         'name': {'type': ['string', 'null']},
-                    }
+                        'is_deleted': {'type': 'boolean'},
+                    },
                 }
             },
 
