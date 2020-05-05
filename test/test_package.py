@@ -288,27 +288,10 @@ class TestPackage(ResponseTest):
 
                     'additionalProperties': False,
                 },
-                # 'is_demo': {'type': 'boolean'},
-                # 'cost_bigdeal': {'type': 'number'},
-
-                # 'ror_ids': {
-                #     'type': 'array',
-                #     'items': {'type': 'string'}
-                # },
-                # 'name': {'type': 'string'},
                 'apc': {
                     'type': 'array',
                     'items': {'$ref': '#/definitions/apc_authorship'}
                 },
-                # 'journals': {
-                #     'type': 'array',
-                #     'items': {'$ref': '#/definitions/journal'}
-                # },
-                # 'grid_ids': {
-                #     'type': 'array',
-                #     'items': {'type': 'string'}
-                # },
-                # 'is_demo': {'type': 'boolean'},
             }
         }
 
