@@ -901,6 +901,20 @@ def update_publisher(publisher_id):
     if 'name' in request.json:
         publisher.package_name = request.json['name']
 
+    if 'cost_bigdeal' in request.json:
+        try:
+            cost = float(request.json['cost_bigdeal']) if request.json['cost_bigdeal'] is not None else None
+        except (ValueError, TypeError):
+            return abort_json(400, u"Couln't parse cost_bigdeal '{}' as a number.".format(request.json['cost_bigdeal']))
+
+        publisher.big_deal_cost = cost
+
+    if 'is_deleted' in request.json:
+        if not isinstance(request.json['is_deleted'], bool):
+            return abort_json(400, u"is_deleted must be a boolean. got {}.".format(request.json['is_deleted']))
+
+        publisher.is_deleted = request.json['is_deleted']
+
     db.session.merge(publisher)
     safe_commit(db)
 

@@ -42,6 +42,7 @@ class Package(db.Model):
     created = db.Column(db.DateTime)
     is_demo = db.Column(db.Boolean)
     big_deal_cost = db.Column(db.Numeric)
+    is_deleted = db.Column(db.Boolean)
 
     saved_scenarios = db.relationship('SavedScenario', lazy='subquery', backref=db.backref("package", lazy="subquery"))
     institution = db.relationship('Institution', uselist=False)
@@ -543,12 +544,14 @@ class Package(db.Model):
                 },
             ],
             'journals': self.get_journal_attributes(),
+            'is_deleted': self.is_deleted
         }
 
     def to_dict_micro(self):
         response = {
             "id": self.package_id,
             "name": self.package_name,
+            "is_deleted": self.is_deleted,
         }
         return response
 
