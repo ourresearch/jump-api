@@ -3,6 +3,7 @@ from saved_scenario import SavedScenario
 from test_package import packages_to_check
 from views import app
 from test_journal import journal_to_dict_journals_schema
+from test_journal import journal_to_dict_raw_schema
 
 scenarios_to_check = [
     s for s in [
@@ -102,11 +103,16 @@ scenario_saved_schema = {
 
 class TestScenario(ResponseTest):
     def test_scenario(self):
+        pass
+
+    def test_scenario_journals(self):
         schema = {
             'type': 'object',
 
             'required': [
                 'meta',
+                'saved',
+                'journals',
             ],
 
             'properties': {
@@ -129,11 +135,31 @@ class TestScenario(ResponseTest):
 
                 assert_schema(response, schema, test_name)
 
-    def test_scenario_journals(self):
-        pass
-
     def test_scenario_raw(self):
-        pass
+        schema = {
+            'type': 'object',
+
+            'required': [
+                'journals',
+            ],
+
+            'properties': {
+                'journals': {'type': 'array', 'items': journal_to_dict_raw_schema},
+            }
+        }
+
+        with app.app_context():
+            for test_scenario in scenarios_to_check:
+                url = dev_request_url('scenario/{}/raw'.format(test_scenario.scenario_id))
+                response = self.json_response(url)
+
+                test_name = u'{} ({}, from package {})'.format(
+                    test_scenario.scenario_name,
+                    test_scenario.scenario_id,
+                    test_scenario.package_id
+                )
+
+                assert_schema(response, schema, test_name)
 
     def test_scenario_slider(self):
         pass

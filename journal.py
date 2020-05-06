@@ -71,6 +71,10 @@ class Journal(object):
     def subject(self):
         return self.my_scenario_data_row.get("subject", "")
 
+    @property
+    def era_subjects(self):
+        return self._scenario_data["journal_era_subjects"].get(self.issn_l, [])
+
     @cached_property
     def publisher(self):
         return self.my_scenario_data_row.get("publisher", "")
@@ -1833,11 +1837,15 @@ class Journal(object):
 
     def to_dict_raw(self):
         response = OrderedDict()
-        response["meta"] = {"issn_l": self.issn_l,
-                    "title": self.title,
-                    "is_society_journal": self.is_society_journal,
-                    "oa_embargo_months": self.oa_embargo_months,
-                    "subject": self.subject}
+        response["meta"] = {
+            "issn_l": self.issn_l,
+            "title": self.title,
+            "is_society_journal": self.is_society_journal,
+            "oa_embargo_months": self.oa_embargo_months,
+            "subject": self.subject,
+            "era_subjects": self.era_subjects,
+        }
+
         table_row = OrderedDict()
 
         # cost
