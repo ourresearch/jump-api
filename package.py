@@ -617,28 +617,6 @@ def clone_demo_package(institution):
         """.format(new_package.package_id, DEMO_PACKAGE_ID)
     )
 
-    # 'jump_journal_prices'
-    db.session.execute(
-        """
-            insert into jump_journal_prices (package_id, publisher, title, issn_l, subject, usa_usd, year) (
-                select '{}', publisher, title, issn_l, subject, usa_usd, year 
-                from jump_journal_prices
-                where package_id = '{}'
-            )
-        """.format(new_package.package_id, DEMO_PACKAGE_ID)
-    )
-
-    # 'jump_journal_prices_input'
-    db.session.execute(
-        """
-            insert into jump_journal_prices_input (publisher, issn, subject, usa_usd, package_id, year) (
-                select publisher, issn, subject, usa_usd, '{}', year 
-                from jump_journal_prices_input
-                where package_id = '{}'
-            )
-        """.format(new_package.package_id, DEMO_PACKAGE_ID)
-    )
-
     # 'jump_perpetual_access'
     db.session.execute(
         """
