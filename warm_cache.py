@@ -14,7 +14,7 @@ def warm_the_cache():
 
     packages = Package.query.all()
     for package in packages:
-        if not package.is_demo_account:
+        if not package.is_demo_account and package.institution and not package.institution.is_demo_institution:
             print u"\nstart: {} {}".format(package.package_id, package)
             start_time = time.time()
             url = "https://cdn.unpaywalljournals.org/live/data/common/{}?secret={}".format(
