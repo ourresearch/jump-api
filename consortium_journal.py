@@ -89,6 +89,10 @@ class ConsortiumJournal(Journal):
     def subject(self):
         return self.meta_data["subject"]
 
+    @property
+    def era_subjects(self):
+        return self.meta_data.get("era_subjects", [])
+
     @cached_property
     def is_society_journal(self):
         return self.meta_data["is_society_journal"]

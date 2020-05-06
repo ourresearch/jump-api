@@ -1,3 +1,35 @@
+bottom_level_era_subject_schema = {
+    'type': 'object',
+
+    'required': ['subject_code', 'subject_description', 'is_explicit'],
+
+    'properties': {
+        'subject_code': {'type': 'string'},
+        'subject_description': {'type': 'string'},
+        'is_explicit': {'type': 'boolean'},
+    },
+
+    'additionalProperties': False,
+}
+
+top_level_era_subject_schema = {
+    'type': 'object',
+
+    'required': ['subject_code', 'subject_description', 'is_explicit', 'subdisciplines'],
+
+    'properties': {
+        'subject_code': {'type': 'string'},
+        'subject_description': {'type': 'string'},
+        'is_explicit': {'type': 'boolean'},
+        'subdisciplines': {
+            'type': 'array',
+            'items': bottom_level_era_subject_schema,
+        }
+    },
+
+    'additionalProperties': False,
+}
+
 journal_to_dict_journals_schema = {
     'type': 'object',
 
@@ -96,6 +128,89 @@ journal_to_dict_journals_schema = {
         'downloads': {'type': 'number'},
         'citations': {'type': 'number'},
         'authorships': {'type': 'number'},
+    },
+
+    'additionalProperties': False,
+}
+
+journal_to_dict_raw_schema = {
+    'type': 'object',
+
+    'required': [
+        'meta',
+        'table_row',
+    ],
+
+    'properties': {
+        'meta': {
+            'type': 'object',
+
+            'required': [
+                'issn_l',
+                'title',
+                'is_society_journal',
+                'oa_embargo_months',
+                'subject',
+                'era_subjects',
+            ],
+
+            'properties': {
+                'issn_l': {'type': ['null', 'string']},
+                'title': {'type': ['null', 'string']},
+                'is_society_journal': {'type': ['null', 'boolean']},
+                'oa_embargo_months': {'type': ['null', 'number']},
+                'subject': {'type': ['null', 'string']},
+                'era_subjects': {
+                    'type': 'array',
+                    'items': top_level_era_subject_schema,
+                },
+            },
+
+            'additionalProperties': False,
+        },
+
+        'table_row': {
+            'required': [
+                'subscription_cost',
+                'ill_cost',
+                'use_asns',
+                'use_oa',
+                'use_backfile',
+                'use_subscription',
+                'use_ill',
+                'use_other_delayed',
+                'total_usage',
+                'downloads',
+                'citations',
+                'authorships',
+                'has_perpetual_access',
+                'perpetual_access_years',
+                'baseline_access',
+            ],
+
+            'properties': {
+                'subscription_cost': {'type': 'number'},
+                'ill_cost': {'type': 'number'},
+                'use_asns': {'type': 'number'},
+                'use_oa': {'type': 'number'},
+                'use_backfile': {'type': 'number'},
+                'use_subscription': {'type': 'number'},
+                'use_ill': {'type': 'number'},
+                'use_other_delayed': {'type': 'number'},
+                'total_usage': {'type': 'number'},
+                'downloads': {'type': 'number'},
+                'citations': {'type': 'number'},
+                'authorships': {'type': 'number'},
+                'has_perpetual_access': {'type': 'boolean'},
+                'perpetual_access_years': {
+                    'type': 'array',
+                    'items': {'type': 'number'}
+                },
+                'baseline_access': {'type': ['string', 'null']},
+            },
+
+            'additionalProperties': False,
+        },
     },
 
     'additionalProperties': False,

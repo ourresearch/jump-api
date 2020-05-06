@@ -163,6 +163,8 @@ class Scenario(object):
 
         self.data["perpetual_access"] = get_perpetual_access_from_cache(self.package_id)
 
+        self.data["journal_era_subjects"] = get_journal_era_subjects()
+
     @cached_property
     def apc_journals(self):
         if self.data["apc"]:
@@ -674,7 +676,6 @@ class Scenario(object):
         response["_timing"] = self.timing_messages
         return response
 
-
     def to_dict_raw(self):
         response = {
                 "_settings": self.settings.to_dict(),
@@ -1082,9 +1083,60 @@ def get_hybrid_2019():
     return _hybrid_2019
 
 
+_journal_era_subjects = None
+
+
+def _load_journal_era_subjects_from_db():
+    global _journal_era_subjects
+
+    if _journal_era_subjects is None:
+        _journal_era_subjects = defaultdict(list)
+
+        with get_db_cursor() as cursor:
+            cursor.execute('select issn_l, subject_code, subject_description, explicit from jump_journal_era_subjects')
+            rows = cursor.fetchall()
+
+        for row in rows:
+            issn_l = row["issn_l"]
+            code = row["subject_code"]
+            description = row["subject_description"]
+            explicit = row["explicit"]
+
+            # initialize top-level subject
+            top_level_code = code[:2]
+
+            if not filter(lambda x: x['subject_code'] == top_level_code, _journal_era_subjects[issn_l])[:1]:
+                _journal_era_subjects[issn_l].append({
+                    'subject_code': top_level_code,
+                    'subdisciplines': [],
+                    'is_explicit': False,
+                    'subject_description': None,
+                })
+
+            top_level_dict = filter(lambda x: x['subject_code'] == top_level_code, _journal_era_subjects[issn_l])[0]
+
+            if len(code) == 2:
+                # top-level subject
+                top_level_dict['subject_description'] = description
+                top_level_dict['is_explicit'] = explicit
+            if len(code) == 4:
+                # second-level subject
+                top_level_dict['subdisciplines'].append({
+                    'subject_code': code,
+                    'subject_description': description,
+                    'is_explicit': explicit,
+                })
+
+
+def get_journal_era_subjects():
+    _load_journal_era_subjects_from_db()
+    return _journal_era_subjects
+
+
 if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
     _load_ricks_journal_rows()
     _load_hybrid_2019_from_db()
+    _load_journal_era_subjects_from_db()
 
 
 @cache
