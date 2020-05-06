@@ -208,3 +208,13 @@ class SavedScenario(db.Model):
         return u"<{} ({}) {}>".format(self.__class__.__name__, self.scenario_id, self.scenario_name)
 
 
+def default_scenario(package_id, created=None):
+    created = created or datetime.datetime.utcnow().isoformat()
+
+    new_scenario = SavedScenario(False, u'scenario-{}'.format(shortuuid.uuid()[0:12]), None)
+    new_scenario.package_id = package_id
+    new_scenario.scenario_name = u'First Scenario'
+    new_scenario.created = created
+    new_scenario.is_base_scenario = True
+
+    return new_scenario

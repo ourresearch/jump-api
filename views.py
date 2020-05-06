@@ -57,7 +57,7 @@ from permission import Permission, UserInstitutionPermission
 from perpetual_access import PerpetualAccess, PerpetualAccessInput
 from publisher import Publisher
 from ror_id import RorId
-from saved_scenario import SavedScenario
+from saved_scenario import SavedScenario, default_scenario
 from saved_scenario import get_latest_scenario
 from saved_scenario import save_raw_scenario_to_db
 from scenario import get_common_package_data, refresh_cached_prices_from_db, refresh_perpetual_access_from_db
@@ -957,12 +957,7 @@ def new_publisher():
 
     db.session.add(new_pub)
 
-    new_scenario = SavedScenario(False, u'scenario-{}'.format(shortuuid.uuid()[0:12]), None)
-    new_scenario.package_id = new_pub.package_id
-    new_scenario.scenario_name = u'First Scenario'
-    new_scenario.created = now
-    new_scenario.is_base_scenario = True
-
+    new_scenario = default_scenario(new_pub.package_id, now)
     db.session.add(new_scenario)
 
     safe_commit(db)
@@ -1339,7 +1334,13 @@ def live_package_id_apc_get(package_id):
         if my_package.account_id != identity_dict["account_id"]:
             abort_json(401, "Not authorized to view this package")
 
-    my_scenario = my_package.unique_saved_scenarios[0]
+    if my_package.unique_saved_scenarios:
+        my_scenario = my_package.unique_saved_scenarios[0]
+    else:
+        my_scenario = default_scenario(my_package.package_id)
+        db.session.add(my_scenario)
+        db.session.flush()
+
     scenario_id = my_scenario.scenario_id
     return live_scenario_id_apc_get(scenario_id)
 
@@ -1355,7 +1356,13 @@ def live_publisher_id_apc_get(publisher_id):
     if not my_package:
         abort_json(404, "Publisher not found")
 
-    my_scenario = my_package.unique_saved_scenarios[0]
+    if my_package.unique_saved_scenarios:
+        my_scenario = my_package.unique_saved_scenarios[0]
+    else:
+        my_scenario = default_scenario(my_package.package_id)
+        db.session.add(my_scenario)
+        db.session.flush()
+
     scenario_id = my_scenario.scenario_id
     return live_scenario_id_apc_get(scenario_id)
 
