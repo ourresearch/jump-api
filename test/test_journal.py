@@ -37,6 +37,7 @@ journal_to_dict_journals_schema = {
         'issn_l',
         'title',
         'subject',
+        'era_subjects',
         'subscribed',
         'is_society_journal',
         'use_total',
@@ -78,6 +79,10 @@ journal_to_dict_journals_schema = {
         'issn_l': {'type': ['null', 'string']},
         'title': {'type': 'string'},
         'subject': {'type': ['string', 'null']},
+        'era_subjects': {
+            'type': 'array',
+            'items': top_level_era_subject_schema,
+        },
         'subscribed': {'type': 'boolean'},
         'is_society_journal': {'type': 'boolean'},
         'use_total': {'type': 'number'},

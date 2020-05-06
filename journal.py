@@ -1428,6 +1428,7 @@ class Journal(object):
         table_row["issn_l"] = self.issn_l
         table_row["title"] = self.title
         table_row["subject"] = self.subject
+        table_row["era_subjects"] = self.era_subjects
         table_row["subscribed"] = self.subscribed
         table_row["is_society_journal"] = self.is_society_journal
 
