@@ -55,7 +55,6 @@ from package import Package
 from package import get_ids
 from permission import Permission, UserInstitutionPermission
 from perpetual_access import PerpetualAccess, PerpetualAccessInput
-from publisher import Publisher
 from ror_id import RorId
 from saved_scenario import SavedScenario, default_scenario
 from saved_scenario import get_latest_scenario
@@ -418,15 +417,8 @@ def register_demo_user():
     demo_institution.display_name = 'Demo University'
     demo_institution.is_demo_institution = True
 
-    demo_publisher = Publisher()
-    demo_publisher.institution_id = demo_institution.id
-    demo_publisher.name = 'Demo University - Demo Publisher'
-    demo_publisher.publisher_name = 'Demo Publisher'
-    demo_publisher.is_demo = True
-
     db.session.add(demo_user)
     db.session.add(demo_institution)
-    db.session.add(demo_publisher)
     db.session.add(GridId(institution_id=demo_institution.id, grid_id='grid.433631.0'))
     db.session.add(RorId(institution_id=demo_institution.id, ror_id='00xbe3815'))
 
