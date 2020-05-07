@@ -1,33 +1,16 @@
-bottom_level_era_subject_schema = {
-    'type': 'object',
+era_subject_schema = {
+    'type': 'array',
 
-    'required': ['subject_code', 'subject_description', 'is_explicit'],
-
-    'properties': {
-        'subject_code': {'type': 'string'},
-        'subject_description': {'type': 'string'},
-        'is_explicit': {'type': 'boolean'},
-    },
-
-    'additionalProperties': False,
-}
-
-top_level_era_subject_schema = {
-    'type': 'object',
-
-    'required': ['subject_code', 'subject_description', 'is_explicit', 'subdisciplines'],
-
-    'properties': {
-        'subject_code': {'type': 'string'},
-        'subject_description': {'type': 'string'},
-        'is_explicit': {'type': 'boolean'},
-        'subdisciplines': {
-            'type': 'array',
-            'items': bottom_level_era_subject_schema,
-        }
-    },
-
-    'additionalProperties': False,
+    'items': [
+        {
+            'type': 'string',
+            'minLength': 2,
+            'maxLength': 4,
+        },
+        {
+            'type': 'string',
+        },
+    ],
 }
 
 journal_to_dict_journals_schema = {
@@ -81,7 +64,7 @@ journal_to_dict_journals_schema = {
         'subject': {'type': ['string', 'null']},
         'era_subjects': {
             'type': 'array',
-            'items': top_level_era_subject_schema,
+            'items': era_subject_schema,
         },
         'subscribed': {'type': 'boolean'},
         'is_society_journal': {'type': 'boolean'},
@@ -167,7 +150,7 @@ journal_to_dict_raw_schema = {
                 'subject': {'type': ['null', 'string']},
                 'era_subjects': {
                     'type': 'array',
-                    'items': top_level_era_subject_schema,
+                    'items': era_subject_schema,
                 },
             },
 
