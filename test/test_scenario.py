@@ -1,9 +1,10 @@
 from response_test import ResponseTest, dev_request_url, assert_schema
 from saved_scenario import SavedScenario
-from test_package import packages_to_check
-from views import app
+from test_journal import era_subject_schema
 from test_journal import journal_to_dict_journals_schema
 from test_journal import journal_to_dict_raw_schema
+from test_package import packages_to_check
+from views import app
 
 scenarios_to_check = [
     s for s in [
@@ -162,13 +163,90 @@ class TestScenario(ResponseTest):
                 assert_schema(response, schema, test_name)
 
     def test_scenario_slider(self):
-        pass
+        # incomplete, only tests journal era subjects
+
+        schema = {
+            'type': 'object',
+            'required': [
+                'journals',
+            ],
+            'properties': {
+                'journals': {
+                    'type': 'array',
+                    'items': {
+                        'type': 'object',
+                        'required': ['era_subjects'],
+                        'properties': {
+                            'era_subjects': {
+                                'type': 'array',
+                                'items': era_subject_schema
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        with app.app_context():
+            for test_scenario in scenarios_to_check:
+                url = dev_request_url('scenario/{}/slider'.format(test_scenario.scenario_id))
+                response = self.json_response(url)
+
+                test_name = u'{} ({}, from package {})'.format(
+                    test_scenario.scenario_name,
+                    test_scenario.scenario_id,
+                    test_scenario.package_id
+                )
+
+                assert_schema(response, schema, test_name)
 
     def test_scenario_subscriptions(self):
         pass
 
     def test_scenario_table(self):
-        pass
+        # incomplete, only tests journal era subjects
+
+        schema = {
+            'type': 'object',
+            'required': [
+                'journals',
+            ],
+            'properties': {
+                'journals': {
+                    'type': 'array',
+
+                    'items': {
+                        'type': 'object',
+                        'required': ['meta'],
+                        'properties': {
+                            'meta': {
+                                'type': 'object',
+                                'required': ['era_subjects'],
+                                'properties': {
+                                    'era_subjects': {
+                                        'type': 'array',
+                                        'items': era_subject_schema
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        with app.app_context():
+            for test_scenario in scenarios_to_check:
+                url = dev_request_url('scenario/{}/table'.format(test_scenario.scenario_id))
+                response = self.json_response(url)
+
+                test_name = u'{} ({}, from package {})'.format(
+                    test_scenario.scenario_name,
+                    test_scenario.scenario_id,
+                    test_scenario.package_id
+                )
+
+                assert_schema(response, schema, test_name)
 
     def test_scenario_export(self):
         pass
