@@ -191,8 +191,10 @@ class Package(db.Model):
 
     @cached_property
     def get_in_scenario(self):
-        first_scenario = self.unique_saved_scenarios[0]
-        my_saved_scenario = SavedScenario.query.get(first_scenario.scenario_id)
+        my_saved_scenario = None
+        if self.unique_saved_scenarios:
+            first_scenario = self.unique_saved_scenarios[0]
+            my_saved_scenario = SavedScenario.query.get(first_scenario.scenario_id)
         if not my_saved_scenario:
             my_saved_scenario = SavedScenario.query.get("demo")
         my_saved_scenario.set_live_scenario(None)
