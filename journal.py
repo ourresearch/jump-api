@@ -1,21 +1,20 @@
 # coding: utf-8
 
-from cached_property import cached_property
-from collections import defaultdict
-import weakref
-from kids.cache import cache
-from collections import OrderedDict
-import numpy as np
-import scipy
 import datetime
-from scipy.optimize import curve_fit
+import weakref
+from collections import OrderedDict
+from collections import defaultdict
 from threading import Lock
 
+import numpy as np
+import scipy
+from cached_property import cached_property
+from scipy.optimize import curve_fit
+
+from app import DEMO_PACKAGE_ID
 from app import use_groups
 from app import use_groups_free_instant
 from app import use_groups_lookup
-from app import get_db_cursor
-from app import DEMO_PACKAGE_ID
 from util import format_currency
 from util import format_percent
 from util import format_with_commas
@@ -1319,6 +1318,7 @@ class Journal(object):
         response = {"issn_l": self.issn_l,
                     "title": self.title,
                     "subject": self.subject,
+                    "era_subjects": self.era_subjects,
                     "subscribed": self.subscribed,
                     "usage_total_fuzzed": self.use_total_fuzzed,
                     "num_authorships_fuzzed": self.num_authorships_fuzzed,
@@ -1335,6 +1335,7 @@ class Journal(object):
         response["meta"] = {"issn_l": self.issn_l,
                     "title": self.title,
                     "subject": self.subject,
+                    "era_subjects": self.era_subjects,
                     "subscribed": self.subscribed}
         table_row = OrderedDict()
         table_row["total_usage"] = round(self.use_total)
@@ -1349,6 +1350,7 @@ class Journal(object):
         response["meta"] = {"issn_l": self.issn_l,
                     "title": self.title,
                     "subject": self.subject,
+                    "era_subjects": self.era_subjects,
                     "subscribed": self.subscribed}
         table_row = OrderedDict()
         table_row["ncppu"] = display_usage(self.ncppu)
@@ -1378,6 +1380,7 @@ class Journal(object):
         response["meta"] = {"issn_l": self.issn_l,
                     "title": self.title,
                     "subject": self.subject,
+                    "era_subjects": self.era_subjects,
                     "subscribed": self.subscribed}
         table_row = OrderedDict()
 
@@ -1488,6 +1491,7 @@ class Journal(object):
         response["meta"] = {"issn_l": self.issn_l,
                     "title": self.title,
                     "subject": self.subject,
+                    "era_subjects": self.era_subjects,
                     "subscribed": self.subscribed}
         table_row = OrderedDict()
         table_row["ncppu"] = display_usage(self.ncppu)
@@ -1503,6 +1507,7 @@ class Journal(object):
         response = {"issn_l": self.issn_l,
                     "title": self.title,
                     "subject": self.subject,
+                    "era_subjects": self.era_subjects,
                     "subscribed": self.subscribed,
                     "year": self.years_by_year,
                     "year_historical": self.historical_years_by_year,
@@ -1526,6 +1531,7 @@ class Journal(object):
                 "issn_l": self.issn_l,
                 "title": self.title,
                 "subject": self.subject,
+                "era_subjects": self.era_subjects,
                 "publisher": self.publisher,
                 "is_society_journal": self.is_society_journal,
                 "subscribed": self.subscribed,
@@ -1783,6 +1789,7 @@ class Journal(object):
         response["meta"] = {"issn_l": self.issn_l,
                     "title": self.title,
                     "subject": self.subject,
+                    "era_subjects": self.era_subjects,
                     "subscribed": self.subscribed}
         table_row = OrderedDict()
         table_row["use_oa_percent"] = round(float(100)*self.use_actual["oa"]/self.use_total)
@@ -1799,6 +1806,7 @@ class Journal(object):
         response["meta"] = {"issn_l": self.issn_l,
                     "title": self.title,
                     "subject": self.subject,
+                    "era_subjects": self.era_subjects,
                     "subscribed": self.subscribed}
         table_row = OrderedDict()
         table_row["instant_usage_percent"] = round(self.use_instant_percent, 1)
@@ -1821,6 +1829,7 @@ class Journal(object):
         response = {"issn_l": self.issn_l,
                 "title": self.title,
                 "subject": self.subject,
+                "era_subjects": self.era_subjects,
                 "use_total": self.use_total,
                 "cost_subscription": self.cost_subscription,
                 "cost_ill": self.cost_ill,
@@ -1886,6 +1895,7 @@ class Journal(object):
         return {"issn_l": self.issn_l,
                 "title": self.title,
                 "subject": self.subject,
+                "era_subjects": self.era_subjects,
                 "num_authorships": self.num_authorships,
                 "num_citations": self.num_citations,
                 "use_paywalled": self.use_paywalled,
