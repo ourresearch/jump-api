@@ -949,9 +949,6 @@ def new_publisher():
 
     db.session.add(new_pub)
 
-    new_scenario = default_scenario(new_pub.package_id, now)
-    db.session.add(new_scenario)
-
     safe_commit(db)
 
     publisher_dict = new_pub.to_publisher_dict()
