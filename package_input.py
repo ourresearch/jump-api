@@ -15,6 +15,7 @@ from excel import convert_spreadsheet_to_csv
 from util import safe_commit
 import package
 
+
 class PackageInput:
     @staticmethod
     def normalize_date(date_str):
@@ -63,12 +64,11 @@ class PackageInput:
 
     @staticmethod
     def normalize_issn(issn):
-        raw_issn = issn
         if issn:
-            # this seems like a bug to me
-            # issn = sub(ur'[^\dFSX-]', '', issn)
-            if re.search(ur'(?:FS|\d\d)\d\d-\d{3}(?:X|\d)', issn.strip().upper()):
-                return issn.strip().upper()
+            raw_issn = issn
+            issn = sub(ur'\s', '', issn).upper()
+            if re.match(ur'^(?:FS|\d\d)\d\d-\d{3}(?:X|\d)$', issn):
+                return issn
             else:
                 raise ValueError(u'invalid ISSN format on {}'.format(raw_issn))
         else:
