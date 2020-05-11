@@ -63,12 +63,14 @@ class PackageInput:
 
     @staticmethod
     def normalize_issn(issn):
+        raw_issn = issn
         if issn:
-            issn = sub(ur'[^\dFSX-]', '', issn)
+            # this seems like a bug to me
+            # issn = sub(ur'[^\dFSX-]', '', issn)
             if re.search(ur'(?:FS|\d\d)\d\d-\d{3}(?:X|\d)', issn.strip().upper()):
                 return issn.strip().upper()
             else:
-                raise ValueError(u'invalid ISSN format')
+                raise ValueError(u'invalid ISSN format on {}'.format(raw_issn))
         else:
             return None
 
@@ -207,7 +209,7 @@ class PackageInput:
                 if set(expected_keys).difference(set(row_keys)):
                     return False, u'Missing expected columns. Expected {} but got {}.'.format(
                         ', '.join(expected_keys),
-                        ', '.join(row.keys())
+                        ', '.join(row_keys)
                     )
 
                 normalized_rows.extend(cls.translate_row(normalized_row))
