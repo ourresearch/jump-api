@@ -942,7 +942,7 @@ def new_publisher():
     new_pub = Package()
     new_pub.package_id = 'publisher-{}'.format(shortuuid.uuid()[0:12])
     new_pub.institution_id = pub_institution.id
-    new_pub.package_name = request.json['displayName']
+    new_pub.package_name = request.json['name']
     new_pub.publisher = u'Elsevier'
     new_pub.is_demo = pub_institution.is_demo_institution
     new_pub.created = now

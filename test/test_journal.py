@@ -1,3 +1,6 @@
+from response_test import ResponseTest, dev_request_url, assert_schema
+from views import app
+
 era_subject_schema = {
     'type': 'array',
 
@@ -203,3 +206,36 @@ journal_to_dict_raw_schema = {
 
     'additionalProperties': False,
 }
+
+
+class TestJournal(ResponseTest):
+    def test_dict_details(self):
+        # incomplete, only tests journal era subjects
+
+        schema = {
+            'type': 'object',
+            'required': ['journal'],
+            'properties': {
+                'journal': {
+                    'type': 'object',
+                    'required': ['top'],
+                    'properties': {
+                        'top': {
+                            'required': ['era_subjects'],
+                            'properties': {
+                                'era_subjects': {
+                                    'type': 'array',
+                                    'items': era_subject_schema,
+                                },
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        with app.app_context():
+            url = dev_request_url('/scenario/crwcRMtB/journal/1087-0792')
+            response = self.json_response(url)
+            test_name = u'scenario crwcRMtB, journal 1087-0792'
+            assert_schema(response, schema, test_name)
