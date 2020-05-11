@@ -10,10 +10,11 @@ import shortuuid
 import unicodecsv as csv
 from sqlalchemy.sql import text
 
+import package
 from app import db, logger
 from excel import convert_spreadsheet_to_csv
 from util import safe_commit
-import package
+from purge_cache import purge_the_cache
 
 
 class PackageInput:
@@ -254,5 +255,6 @@ class PackageInput:
         my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
         if my_package:
             my_package.clear_package_counter_breakdown_cache()
+            purge_the_cache(my_package.package_id)
 
         return True, u'Inserted {} {} rows for package {}.'.format(len(normalized_rows), cls.__name__, package_id)

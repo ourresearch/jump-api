@@ -1247,7 +1247,6 @@ def get_common_package_data(package_id):
     return my_data
 
 
-@cache
 def get_common_package_data_from_cache(package_id):
     from package import Package
     package_id_in_cache = package_id
@@ -1266,4 +1265,5 @@ def get_common_package_data_from_cache(package_id):
     else:
         data = get_common_package_data(package_id_in_cache)
         logger.info(u"not success in get_common_package_data_from_cache with {}, had to build locally".format(url))
+
     return data
