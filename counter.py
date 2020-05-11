@@ -57,7 +57,7 @@ class CounterInput(db.Model, PackageInput):
             },
             'print_issn': {
                 'normalize': cls.normalize_issn,
-                'name_snippets': [u'print issn'],
+                'name_snippets': [u'print issn', 'print_issn', 'issn'],
             },
             'online_issn': {
                 'normalize': cls.normalize_issn,
@@ -70,7 +70,7 @@ class CounterInput(db.Model, PackageInput):
             },
             'journal_name': {
                 'normalize': lambda x: x,
-                'name_snippets': [u'title', 'journal'],
+                'name_snippets': [u'title', 'journal', 'journal_name'],
                 'exact_name': True,
             },
         }
@@ -84,15 +84,18 @@ class CounterInput(db.Model, PackageInput):
 
     @classmethod
     def translate_row(cls, row):
-        if not row['print_issn']:
-            print u"ERROR: no print_issn in the counter file"
-            raise ValueError
-        rows = [{
-                'publisher': row['publisher'],
-                'issn': row['print_issn'],
-                'total': row['total'],
-                'journal_name': row['journal_name'],
-        }]
+        rows = []
+        if row['print_issn']:
+            rows.append({
+                    'publisher': row['publisher'],
+                    'issn': row['print_issn'],
+                    'total': row['total'],
+                    'journal_name': row['journal_name'],
+            })
+        else:
+            if row["journal_name"] != u"Total":
+                print u"warning: no print_issn in this row: {}".format(row)
+
 
         # don't add these, or else they add duplicates
         # if row['online_issn']:
