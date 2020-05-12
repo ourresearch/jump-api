@@ -228,7 +228,7 @@ if __name__ == "__main__":
         num_apc_authorship_rows = db.session.execute(
             '''
                 insert into jump_apc_authorships (
-                    select * from jump_institution_apc_authorships_view
+                    select * from jump_apc_authorships_view
                     where package_id = '{}'
                 )
             '''.format(my_publisher.package_id)
