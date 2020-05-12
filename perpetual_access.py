@@ -19,7 +19,7 @@ class PerpetualAccess(db.Model):
 
 
 class PerpetualAccessInput(db.Model, PackageInput):
-    __tablename__ = 'jump_perpetual_access_input_by_package'
+    __tablename__ = 'jump_perpetual_access_input'
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
     issn = db.Column(db.Text, primary_key=True)
     start_date = db.Column(db.DateTime)
