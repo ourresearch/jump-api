@@ -61,7 +61,6 @@ from saved_scenario import get_latest_scenario
 from saved_scenario import save_raw_scenario_to_db
 from scenario import get_common_package_data, refresh_cached_prices_from_db, refresh_perpetual_access_from_db
 from scenario import get_clean_package_id
-from account_grid_id import AccountGridId
 from util import jsonify_fast
 from util import jsonify_fast_no_sort
 from util import str2bool
@@ -262,78 +261,10 @@ def jump_data_package_id_get(package_id):
     response.headers["Cache-Tag"] = u",".join(["common", u"package_{}".format(package_id)])
     return response
 
-# Provide a method to create access tokens. The create_access_token()
-# function is used to actually generate the token, and you can return
-# it to the caller however you choose.
+
 @app.route('/login', methods=["GET", "POST"])
 def login():
-    my_timing = TimingMessages()
-
-    request_source = request.args
-    if request.is_json:
-        request_source = request.json
-    username = request_source.get('username', None)
-    password = request_source.get('password', None)
-
-    if not username:
-        return abort_json(400, "Missing username parameter")
-    if not password:
-        return abort_json(400, "Missing password parameter")
-
-    my_timing.log_timing("before db get for account")
-    my_account = Account.query.filter(Account.username == username).first()
-    my_timing.log_timing("after db get for account")
-
-    if not my_account or not check_password_hash(my_account.password_hash, password):
-        if not (os.getenv("JWT_SECRET_KEY") == password):
-            return abort_json(401, "Bad username or password")
-
-    if my_account.is_demo_account:
-        base_demo_account = my_account
-        new_account = Account()
-        my_uuid = shortuuid.uuid()[0:8]
-        new_account.id = "demo-account-{}".format(my_uuid)
-        new_account.username = "demo{}".format(my_uuid)
-        new_account.password_hash = generate_password_hash("demo")
-        new_account.display_name = "Elsevier Demo"
-        new_account.is_consortium = False
-
-        new_account_grid_object = AccountGridId()
-        new_account_grid_object.grid_id = base_demo_account.grid_ids[0]
-
-        new_package = Package()
-        new_package.package_id = "demo-package-{}".format(my_uuid)
-        new_package.publisher = "Elsevier"
-        new_package.package_name = u"Elsevier"
-
-        scenario_id = "demo-scenario-{}".format(my_uuid)
-        new_saved_scenario = SavedScenario(True, scenario_id, None)
-        new_saved_scenario.scenario_name = u"My first scenario"
-        new_saved_scenario.is_base_scenario = True
-
-        new_package.saved_scenarios = [new_saved_scenario]
-        new_account.packages = [new_package]
-        new_account.grid_id_objects = [new_account_grid_object]
-
-        db.session.add(new_account)
-        safe_commit(db)
-
-        my_account = new_account
-
-    # Identity can be any data that is json serializable.  Include timestamp so is unique for each demo start.
-    identity_dict = {
-        "account_id": my_account.id,
-        "login_uuid": shortuuid.uuid()[0:10],
-        "created": datetime.datetime.utcnow().isoformat(),
-        "is_demo_account": my_account.is_demo_account
-    }
-    print "identity_dict", identity_dict
-    logger.info(u"login to account {} with {}".format(my_account.username, identity_dict))
-    access_token = create_access_token(identity=identity_dict)
-
-    my_timing.log_timing("after create_access_token")
-
-    return jsonify({"access_token": access_token, "_timing": my_timing.to_dict()})
+    return user_login()
 
 
 def make_identity_dict(user):

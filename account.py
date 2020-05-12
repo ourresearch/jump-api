@@ -8,7 +8,6 @@ from collections import OrderedDict
 import datetime
 import shortuuid
 from package import Package
-from account_grid_id import AccountGridId
 
 from app import db
 
@@ -23,7 +22,6 @@ class Account(db.Model):
     is_consortium = db.Column(db.Boolean)
     consortium_id = db.Column(db.Text)
     packages = db.relationship('Package', lazy='subquery', backref=db.backref("account", lazy="subquery"))
-    grid_id_objects = db.relationship('AccountGridId', lazy='subquery', backref=db.backref("account", lazy="subquery"))
 
     def __init__(self, **kwargs):
         self.id = shortuuid.uuid()[0:8]
@@ -47,10 +45,6 @@ class Account(db.Model):
         #         package.package_id = u"demo-package-{}".format(self.login_uuid)
         #     return unique_packages
         return self.packages
-
-    @property
-    def grid_ids(self):
-        return [a.grid_id for a in self.grid_id_objects]
 
     def __repr__(self):
         return u"<{} ({}) {}>".format(self.__class__.__name__, self.id, self.display_name)
