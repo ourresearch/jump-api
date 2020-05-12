@@ -630,12 +630,12 @@ def clone_demo_package(institution):
         """.format(new_package.package_id, DEMO_PACKAGE_ID)
     )
 
-    # 'jump_perpetual_access_input_by_package'
+    # 'jump_perpetual_access_input'
     db.session.execute(
         """
-            insert into jump_perpetual_access_input_by_package (package_id, issn, start_date, end_date) (
+            insert into jump_perpetual_access_input (package_id, issn, start_date, end_date) (
                 select '{}', issn, start_date, end_date 
-                from jump_perpetual_access_input_by_package
+                from jump_perpetual_access_input
                 where package_id = '{}'
             )
         """.format(new_package.package_id, DEMO_PACKAGE_ID)
