@@ -27,7 +27,7 @@ class PerpetualAccessInput(db.Model, PackageInput):
 
     @classmethod
     def import_view_name(cls):
-        return 'jump_perpetual_access_by_package_view'
+        return 'jump_perpetual_access_view'
 
     @classmethod
     def destination_table(cls):
