@@ -48,7 +48,6 @@ from emailer import create_email, send
 from counter import Counter, CounterInput
 from grid_id import GridId
 from scenario import Scenario
-from account import Account
 from institution import Institution
 from journal_price import JournalPrice, JournalPriceInput
 from package import Package
@@ -663,7 +662,7 @@ def institution(institution_id):
 def protected():
     # Access the identity of the current user with get_jwt_identity
     identity_dict = get_jwt_identity()
-    return jsonify({"logged_in_as": identity_dict["account_id"]})
+    return jsonify({"logged_in_as": identity_dict["user_id"]})
 
 # Protect a view with jwt_required, which requires a valid access token
 # in the request to access.
@@ -757,32 +756,7 @@ def get_saved_scenario(scenario_id, test_mode=False, required_permission=None):
 @app.route('/account', methods=['GET'])
 @jwt_required
 def live_account_get():
-    my_timing = TimingMessages()
-
-    identity_dict = get_jwt_identity()
-    my_account = Account.query.get(identity_dict["account_id"])
-    if identity_dict["is_demo_account"]:
-        my_account.make_unique_demo_packages(identity_dict["login_uuid"])
-    my_timing.log_timing("after getting account")
-
-    account_dict = {
-        "id": my_account.id,
-        "name": my_account.display_name,
-        "is_demo_account": my_account.is_demo_account,
-        "packages": [package.to_dict_minimal() for package in my_account.unique_packages],
-    }
-    my_timing.log_timing("after to_dict()")
-    account_dict["_timing"] = my_timing.to_dict()
-
-    cache_tags_list = ["account"]
-    if identity_dict["is_demo_account"]:
-        my_account.make_unique_demo_packages(identity_dict["login_uuid"])
-        cache_tags_list += ["account_demo"]
-    cache_tags_list += [u"package_{}".format(p.package_id) for p in my_account.unique_packages]
-
-    response = jsonify_fast(account_dict)
-    response.headers["Cache-Tag"] = u",".join(cache_tags_list)
-    return response
+    return abort_json(404, 'Removed. Use /user/me or /institution/<institution_id>.')
 
 
 def get_jwt():
@@ -807,7 +781,12 @@ def get_publisher(publisher_id):
         abort_json(403, "Not authorized to view this publisher.")
 
     publisher_dict = package.to_publisher_dict()
-    return jsonify_fast_no_sort(publisher_dict)
+    response = jsonify_fast_no_sort(publisher_dict)
+
+    cache_tags_list = ["package", u"package_{}".format(package.package_id)]
+    cache_tags_list += ["scenario_{}".format(s.scenario_id) for s in package.unique_saved_scenarios]
+    response.headers["Cache-Tag"] = u",".join(cache_tags_list)
+    return response
 
 
 @app.route('/publisher/<publisher_id>', methods=['POST'])
@@ -886,67 +865,16 @@ def new_publisher():
     return jsonify_fast_no_sort(publisher_dict)
 
 
-
 @app.route('/package/<package_id>', methods=['GET'])
 @jwt_optional
 def live_package_id_get(package_id):
-    my_timing = TimingMessages()
-
-    identity_dict = get_jwt_identity()
-
-    my_package = Package.query.get(package_id)
-
-    if not is_authorized_superuser():
-        if not identity_dict:
-            abort_json(401, "Not authorized to view this package")
-        if my_package.account_id != identity_dict["account_id"]:
-            abort_json(401, "Not authorized to view this package")
-
-    if not my_package:
-        abort_json(404, "Package not found")
-
-    my_timing.log_timing("after getting package")
-
-    my_jwt = get_jwt()
-
-    # if False:
-    #     for my_scenario in my_package.unique_saved_scenarios:
-    #         RunAsyncToRequestResponse("scenario/{}".format(my_scenario.scenario_id), my_jwt).start()
-    #         RunAsyncToRequestResponse("scenario/{}/slider".format(my_scenario.scenario_id), my_jwt).start()
-    #         RunAsyncToRequestResponse("scenario/{}/table".format(my_scenario.scenario_id), my_jwt).start()
-    #         RunAsyncToRequestResponse("scenario/{}/apc".format(my_scenario.scenario_id), my_jwt).start()
-    #     RunAsyncToRequestResponse("package/{}".format(package_id), my_jwt).start()
-
-    my_timing.log_timing("after kicking off cache requests")
-
-    package_dict = my_package.to_dict_summary()
-    my_timing.log_timing("after my_package.to_dict_summary()")
-
-    # package_dict["scenarios"] = [saved_scenario.to_dict_minimal() for saved_scenario in my_package.unique_saved_scenarios]
-    package_dict["scenarios"] = [saved_scenario.to_dict_micro() for saved_scenario in my_package.unique_saved_scenarios]
-    my_timing.log_timing("after scenarios()")
-
-    package_dict["journal_detail"] = my_package.get_package_counter_breakdown()
-    my_timing.log_timing("after journal_detail()")
-
-    package_dict["_timing"] = my_timing.to_dict()
-
-    response = jsonify_fast_no_sort(package_dict)
-    cache_tags_list = ["package", u"package_{}".format(package_id)]
-    cache_tags_list += ["scenario_{}".format(saved_scenario.scenario_id) for saved_scenario in my_package.unique_saved_scenarios]
-    response.headers["Cache-Tag"] = u",".join(cache_tags_list)
-    return response
-
+    return get_publisher(package_id)
 
 
 @app.route('/package/<package_id>/counter/<diff_type>', methods=['GET'])
 @jwt_optional
 def jump_debug_counter_diff_type_package_id(package_id, diff_type):
-    identity_dict = get_jwt_identity()
-
-    if not identity_dict:
-        if not is_authorized_superuser():
-            return abort_json(401, "Not authorized, need secret.")
+    authenticate_for_publisher(package_id, Permission.view())
 
     if package_id.startswith("demo"):
         my_package = Package.query.get("demo")
@@ -956,10 +884,6 @@ def jump_debug_counter_diff_type_package_id(package_id, diff_type):
 
     if not my_package:
         abort_json(404, "Package not found")
-
-    if not package_id.startswith("demo"):
-        if my_package.account_id != identity_dict["account_id"]:
-            abort_json(401, "Not authorized to view this package")
 
     rows = getattr(my_package, "get_{}".format(diff_type))
     my_list = []
@@ -1235,11 +1159,7 @@ def live_scenario_id_slider_get(scenario_id):
 @app.route('/package/<package_id>/apc', methods=['GET'])
 @jwt_optional
 def live_package_id_apc_get(package_id):
-    identity_dict = get_jwt_identity()
-
-    if not identity_dict:
-        if not is_authorized_superuser():
-            return abort_json(401, "Not authorized, need secret.")
+    authenticate_for_publisher(package_id, Permission.view())
 
     if package_id.startswith("demo"):
         my_package = Package.query.get("demo")
@@ -1249,10 +1169,6 @@ def live_package_id_apc_get(package_id):
 
     if not my_package:
         abort_json(404, "Package not found")
-
-    if not package_id.startswith("demo"):
-        if my_package.account_id != identity_dict["account_id"]:
-            abort_json(401, "Not authorized to view this package")
 
     if my_package.unique_saved_scenarios:
         my_scenario = my_package.unique_saved_scenarios[0]
@@ -1512,45 +1428,12 @@ def debug_export_get():
 @app.route('/admin/change_password', methods=['GET'])
 @app.route('/admin/change-password', methods=['GET'])
 def admin_change_password():
-    username = request.args.get('username')
-    old_password = request.args.get('old_password')
-    if not old_password:
-        old_password = request.args.get('old-password')
-    new_password = request.args.get('new_password')
-    if not new_password:
-        new_password = request.args.get('new-password')
-    if not username or not old_password or not new_password:
-        return abort_json(400, "Missing parameters:  need username, old-password, new-password")
-
-    my_account = Account.query.filter(Account.username == username).first()
-
-    if not my_account:
-        return abort_json(401, "Bad username or bad old password")
-    if not check_password_hash(my_account.password_hash, old_password)\
-        and (os.getenv("JWT_SECRET_KEY") != old_password):
-        return abort_json(401, "Bad username or bad old password")
-    my_account.password_hash = generate_password_hash(new_password)
-    safe_commit(db)
-
-    return jsonify({'message': "Password updated successfully",
-                    "username": username,
-                    "display_name": my_account.display_name})
+    return abort_json(404, 'Removed. Use /user/me or /password-request-reset.')
 
 
 @app.route('/admin/register', methods=['GET'])
 def admin_register_user():
-    if not is_authorized_superuser():
-        abort_json(500, "Secret doesn't match, not saving user in database")
-
-    new_account = Account()
-    new_account.username = request.args.get('username')
-    new_account.password_hash = generate_password_hash(request.args.get('password'))
-    new_account.display_name = request.args.get('name',  None)
-    db.session.add(new_account)
-    safe_commit(db)
-
-    return jsonify({'message': 'User registered successfully',
-                    "username": request.args.get('username')})
+    return abort_json(404, 'Removed. Use /user/new or /user/demo.')
 
 
 @app.route('/debug/journal/<issn_l>', methods=['GET'])
