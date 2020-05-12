@@ -6,7 +6,6 @@ import shortuuid
 from sqlalchemy.orm.exc import MultipleResultsFound
 from werkzeug.security import generate_password_hash
 
-from account import Account
 from app import db
 from app import logger
 from counter import CounterInput

@@ -33,7 +33,6 @@ def get_ids():
 
 class Package(db.Model):
     __tablename__ = 'jump_account_package'
-    account_id = db.Column(db.Text, db.ForeignKey("jump_account.id"))
     institution_id = db.Column(db.Text, db.ForeignKey("jump_institution.id"))
     package_id = db.Column(db.Text, primary_key=True)
     publisher = db.Column(db.Text)

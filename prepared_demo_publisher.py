@@ -1,4 +1,3 @@
-from account import Account  # needed for foreign key on package.Package
 from app import db
 from app import logger
 from institution import Institution
