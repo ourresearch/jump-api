@@ -29,6 +29,9 @@ class Assumptions(object):
                     self.set_assumption(input_key, value)
 
     def set_assumption(self, key, value):
+        if value is None or value == '':
+            return
+
         if key.startswith("include_"):
             if isinstance(value, int):
                 self.__setattr__(key, value != 0)
