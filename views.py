@@ -308,6 +308,14 @@ def user_login():
     logger.info(u"login to account {} with {}".format(login_user.username, identity_dict))
     access_token = create_access_token(identity=identity_dict)
 
+    login_user_permissions =  db.session.query(UserInstitutionPermission).filter(
+        UserInstitutionPermission.user_id == login_user.id,
+    ).first()
+
+    if not login_user_permissions:
+        assign_demo_institution(login_user)
+        safe_commit(db)
+
     return jsonify({"access_token": access_token})
 
 
@@ -343,29 +351,13 @@ def register_demo_user():
     demo_user.display_name = display_name
     demo_user.is_demo_user = True
 
-    demo_institution = Institution()
-    demo_institution.display_name = 'Demo University'
-    demo_institution.is_demo_institution = True
-
     db.session.add(demo_user)
-    db.session.add(demo_institution)
-    db.session.add(GridId(institution_id=demo_institution.id, grid_id='grid.433631.0'))
-    db.session.add(RorId(institution_id=demo_institution.id, ror_id='00xbe3815'))
 
-    for permission in [Permission.view(), Permission.modify(), Permission.admin()]:
-        user_perm = UserInstitutionPermission()
-        user_perm.permission_id = permission.id,
-        user_perm.user_id = demo_user.id,
-        user_perm.institution_id = demo_institution.id
-        db.session.add(user_perm)
-
-    demo_publisher = prepared_demo_publisher.get_demo_publisher(demo_institution)
-    db.session.add(demo_publisher)
+    assign_demo_institution(demo_user)
 
     safe_commit(db)
 
     email = create_email(email, u'Welcome to Unpaywall Journals', 'demo_user', {})
-
     send(email, for_real=True)
 
     identity_dict = make_identity_dict(demo_user)
@@ -373,6 +365,26 @@ def register_demo_user():
     access_token = create_access_token(identity=identity_dict)
 
     return jsonify({"access_token": access_token})
+
+
+def assign_demo_institution(user):
+    demo_institution = Institution()
+    demo_institution.display_name = 'Demo University'
+    demo_institution.is_demo_institution = True
+
+    db.session.add(demo_institution)
+    db.session.add(GridId(institution_id=demo_institution.id, grid_id='grid.433631.0'))
+    db.session.add(RorId(institution_id=demo_institution.id, ror_id='00xbe3815'))
+
+    for permission in [Permission.view(), Permission.modify(), Permission.admin()]:
+        user_perm = UserInstitutionPermission()
+        user_perm.permission_id = permission.id,
+        user_perm.user_id = user.id,
+        user_perm.institution_id = demo_institution.id
+        db.session.add(user_perm)
+
+    demo_publisher = prepared_demo_publisher.get_demo_publisher(demo_institution)
+    db.session.add(demo_publisher)
 
 
 def notify_changed_permissions(user, admin, old_permissions, new_permissions):
