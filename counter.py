@@ -1,6 +1,7 @@
-from app import db
-from package_input import PackageInput
+import re
 
+from app import db, logger
+from package_input import PackageInput
 
 class Counter(db.Model):
     __tablename__ = 'jump_counter'
@@ -28,6 +29,9 @@ class CounterInput(db.Model, PackageInput):
     __tablename__ = 'jump_counter_input'
     organization = db.Column(db.Text)
     publisher = db.Column(db.Text)
+    report_name = db.Column(db.Text)
+    report_version = db.Column(db.Text)
+    report_year = db.Column(db.Numeric)
     start_date = db.Column(db.DateTime)
     end_date = db.Column(db.DateTime)
     issn = db.Column(db.Text, primary_key=True)
@@ -77,7 +81,8 @@ class CounterInput(db.Model, PackageInput):
 
     @classmethod
     def ignore_row(cls, row):
-        if u'all journals' in row.get('journal_name', u'').lower() and row.get('print_issn', None) is None:
+        journal_name = row.get('journal_name', u'').lower()
+        if (not journal_name or u'all journals' in journal_name) and row.get('print_issn', None) is None:
             return True
 
         return False
@@ -107,3 +112,58 @@ class CounterInput(db.Model, PackageInput):
         #     })
 
         return rows
+
+    @classmethod
+    def apply_header(cls, normalized_rows, header_rows):
+        # get the counter version and file format
+        version_labels = {
+            'Journal Report 1 (R4)': {
+                'report_name': 'JR1',
+                'report_version': '4'
+            },
+        }
+
+        report_name = None
+        report_version = None
+
+        normalized_header_text = u''.join([re.sub(ur'\s*', u'', u''.join(row)).lower() for row in header_rows])
+        for label, values in version_labels.items():
+            label = re.sub(ur'\s*', '', 'Journal Report 1 (R4)',).lower()
+            if label in normalized_header_text:
+                report_name = values['report_name']
+                report_version = values['report_version']
+                break
+
+        possible_names = [v['report_name'] for v in version_labels.values()]
+        if report_name not in possible_names:
+            logger.warn(u"Got {} as report name, expected one of {}.".format(report_name, possible_names))
+
+        possible_versions = [v['report_version'] for v in version_labels.values()]
+        if report_version not in possible_versions:
+            logger.warn(u"Got {} as report name, expected one of {}.".format(report_version, possible_versions))
+
+        # get the year
+        # get the header rows that look like months
+        # Mar/18, 2017-12-01 00:00:00
+        header_years = []
+        for cell in header_rows[-1]:
+            matches = re.findall(ur'\b(\d{4})\b', cell)
+            if len(matches) == 1:
+                header_years.append(int(matches[0]))
+            else:
+                matches = re.findall(ur'\b(\d{2})\b', cell)
+                if len(matches) == 1:
+                    header_years.append(2000 + int(matches[0]))
+
+        # sort them and take the one in the middle to be the year
+        report_year = sorted(header_years)[len(header_years)/2] if header_years else None
+
+        if report_year is None:
+            logger.warn(u"Couldn't guess a year from column headers: {}".format(header_rows[-1]))
+
+        for row in normalized_rows:
+            row['report_name'] = report_name
+            row['report_version'] = report_version
+            row['report_year'] = report_year
+
+        return normalized_rows

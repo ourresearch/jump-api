@@ -96,6 +96,10 @@ class PackageInput:
         return False
 
     @classmethod
+    def apply_header(cls, normalized_rows, header_rows):
+        return normalized_rows
+
+    @classmethod
     def normalize_cell(cls, column_name, column_value):
         for canonical_name, spec in cls.csv_columns().items():
             for snippet in spec['name_snippets']:
@@ -128,7 +132,6 @@ class PackageInput:
 
         return u'Deleted {} {} rows for package {}.'.format(num_deleted, cls.__name__, package_id)
 
-
     @classmethod
     def update_dest_table(cls, package_id):
         # unload_cmd = text('''
@@ -158,7 +161,7 @@ class PackageInput:
         )
 
     @classmethod
-    def load(cls, package_id, file_name, commit=False):
+    def normalize_rows(cls, file_name):
         if file_name.endswith(u'.xls') or file_name.endswith(u'.xlsx'):
             csv_file_name = convert_spreadsheet_to_csv(file_name, parsed=False)
             if csv_file_name is None:
@@ -170,17 +173,23 @@ class PackageInput:
             dialect = csv.Sniffer().sniff(csv_file.readline())
             csv_file.seek(0)
 
-            # skip to the first complete header row
+            # find the index of the first complete header row
             max_columns = 0
             header_index = None
             parsed_rows = []
-            for line_no, line in enumerate(csv.reader(csv_file, dialect=dialect)):
+            line_no = 0
+            for line in csv.reader(csv_file, dialect=dialect):
+                if not any([cell.strip() for cell in line]):
+                    continue
+
                 parsed_rows.append(line)
 
                 if len(line) > max_columns and all(line):
                     max_columns = len(line)
                     header_index = line_no
                     logger.info(u'candidate header row: {}'.format(u', '.join(line)))
+
+                line_no += 1
 
             if header_index is None:
                 return False, u"Couldn't identify a header row in the file"
@@ -214,6 +223,14 @@ class PackageInput:
                     )
 
                 normalized_rows.extend(cls.translate_row(normalized_row))
+
+            cls.apply_header(normalized_rows, parsed_rows[0:header_index+1])
+
+            return normalized_rows
+
+    @classmethod
+    def load(cls, package_id, file_name, commit=False):
+        normalized_rows = cls.normalize_rows(file_name)
 
         for row in normalized_rows:
             row.update({'package_id': package_id})
