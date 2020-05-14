@@ -90,10 +90,10 @@ class CounterInput(db.Model, PackageInput):
     @classmethod
     def translate_row(cls, row):
         rows = []
-        if row['print_issn']:
+        if row['print_issn'] or row['online_issn']:
             rows.append({
                     'publisher': row['publisher'],
-                    'issn': row['print_issn'],
+                    'issn': row['print_issn'] or row['online_issn'],
                     'total': row['total'],
                     'journal_name': row['journal_name'],
             })
