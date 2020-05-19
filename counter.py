@@ -140,7 +140,7 @@ class CounterInput(db.Model, PackageInput):
 
         possible_versions = [v['report_version'] for v in version_labels.values()]
         if report_version not in possible_versions:
-            logger.warn(u"Got {} as report name, expected one of {}.".format(report_version, possible_versions))
+            logger.warn(u"Got {} as report version, expected one of {}.".format(report_version, possible_versions))
 
         # get the year
         # get the header rows that look like months
