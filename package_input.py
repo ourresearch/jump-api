@@ -165,7 +165,7 @@ class PackageInput:
         if file_name.endswith(u'.xls') or file_name.endswith(u'.xlsx'):
             csv_file_name = convert_spreadsheet_to_csv(file_name, parsed=False)
             if csv_file_name is None:
-                return False, u'{} could not be opened as a spreadsheet'.format(file_name)
+                raise RuntimeError(u'{} could not be opened as a spreadsheet'.format(file_name))
             else:
                 file_name = csv_file_name
 
@@ -192,7 +192,7 @@ class PackageInput:
                 line_no += 1
 
             if header_index is None:
-                return False, u"Couldn't identify a header row in the file"
+                raise RuntimeError(u"Couldn't identify a header row in the file")
 
             row_dicts = [dict(zip(parsed_rows[header_index], x)) for x in parsed_rows[header_index+1:]]
 
@@ -206,9 +206,9 @@ class PackageInput:
                         if normalized_cell:
                             normalized_row = dict(normalized_cell.items() + normalized_row.items())
                     except Exception as e:
-                        return False, u'Error reading row {}: {} for {}'.format(
+                        raise RuntimeError(u'Error reading row {}: {} for {}'.format(
                             row_no + 1, e.message, row[column_name]
-                        )
+                        ))
 
                 if cls.ignore_row(normalized_row):
                     continue
@@ -217,10 +217,10 @@ class PackageInput:
                 expected_keys = sorted([k for k, v in cls.csv_columns().items() if v.get('required', True)])
 
                 if set(expected_keys).difference(set(row_keys)):
-                    return False, u'Missing expected columns. Expected {} but got {}.'.format(
+                    raise RuntimeError(u'Missing expected columns. Expected {} but got {}.'.format(
                         ', '.join(expected_keys),
                         ', '.join(row_keys)
-                    )
+                    ))
 
                 normalized_rows.extend(cls.translate_row(normalized_row))
 
@@ -230,7 +230,10 @@ class PackageInput:
 
     @classmethod
     def load(cls, package_id, file_name, commit=False):
-        normalized_rows = cls.normalize_rows(file_name)
+        try:
+            normalized_rows = cls.normalize_rows(file_name)
+        except RuntimeError as e:
+            return False, e.message
 
         for row in normalized_rows:
             row.update({'package_id': package_id})
