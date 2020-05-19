@@ -870,6 +870,14 @@ def new_publisher():
     new_pub.created = now
 
     db.session.add(new_pub)
+    db.session.flush()
+
+    db.session.execute('''
+        insert into jump_apc_authorships (
+            select * from jump_apc_authorships_view
+            where package_id = '{}'
+        )
+    '''.format(new_pub.package_id))
 
     safe_commit(db)
 
