@@ -355,16 +355,17 @@ def register_demo_user():
 
     assign_demo_institution(demo_user)
 
-    safe_commit(db)
+    if safe_commit(db):
+        email = create_email(email, u'Welcome to Unpaywall Journals', 'demo_user', {})
+        send(email, for_real=True)
 
-    email = create_email(email, u'Welcome to Unpaywall Journals', 'demo_user', {})
-    send(email, for_real=True)
+        identity_dict = make_identity_dict(demo_user)
+        logger.info(u"login to account {} with {}".format(demo_user.username, identity_dict))
+        access_token = create_access_token(identity=identity_dict)
 
-    identity_dict = make_identity_dict(demo_user)
-    logger.info(u"login to account {} with {}".format(demo_user.username, identity_dict))
-    access_token = create_access_token(identity=identity_dict)
-
-    return jsonify({"access_token": access_token})
+        return jsonify({"access_token": access_token})
+    else:
+        return abort_json(500)
 
 
 def assign_demo_institution(user):
