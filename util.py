@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import bisect
+import codecs
 import collections
 import datetime
 import locale
@@ -8,11 +9,14 @@ import logging
 import math
 import os
 import re
+import tempfile
 import time
 import traceback
 import unicodedata
 import urlparse
+from codecs import BOM_UTF8, BOM_UTF16_BE, BOM_UTF16_LE, BOM_UTF32_BE, BOM_UTF32_LE
 
+import cchardet as chardet
 import heroku3
 import requests
 import simplejson as json
@@ -873,3 +877,60 @@ class AfterResponseMiddleware:
 def authenticated_user_id():
     jwt_identity = get_jwt_identity()
     return jwt_identity.get('user_id', None) if jwt_identity else None
+
+
+def convert_to_utf_8(file_name):
+    with open(file_name, 'rb') as input_file:
+        sample = input_file.read(1024*1024)
+        if not sample:
+            return file_name
+
+        # first, look for a unicode BOM
+        # https://unicodebook.readthedocs.io/guess_encoding.html#check-for-bom-markers
+        BOMS = (
+            (BOM_UTF8,     'UTF-8'),
+            (BOM_UTF32_BE, 'UTF-32-BE'),
+            (BOM_UTF32_LE, 'UTF-32-LE'),
+            (BOM_UTF16_BE, 'UTF-16-BE'),
+            (BOM_UTF16_LE, 'UTF-16-LE'),
+        )
+
+        possible_encodings = [encoding for bom, encoding in BOMS if sample.startswith(bom)]
+
+        # look for UTF-32 or UTF-16 by null byte frequency
+        nulls = len([c for c in sample if c == b'\x00']) / float(len(sample))
+        leading_nulls = len([c for i, c in enumerate(sample) if c == b'\x00' and i % 4 == 0]) / float(len(sample)/4)
+
+        if nulls > .6  :
+            if leading_nulls > .9:
+                possible_encodings.append('UTF-32-BE')
+            else:
+                possible_encodings.append('UTF-32-LE')
+        elif nulls > .1:
+            if leading_nulls > .9:
+                possible_encodings.append('UTF-16-BE')
+            else:
+                possible_encodings.append('UTF-16-LE')
+
+        possible_encodings.append('UTF-8')
+        possible_encodings.append('windows-1252')
+
+        # try chardet
+        possible_encodings.append(chardet.detect(sample)['encoding'])
+
+
+        for pe in possible_encodings:
+            try:
+                new_file_name = tempfile.mkstemp('_{}_to_utf8_{}'.format(pe, os.path.split(file_name)[-1]))[1]
+                with codecs.open(file_name, 'r', pe) as input_file:
+                    with codecs.open(new_file_name, 'w', 'utf-8') as output_file:
+                        while True:
+                            contents = input_file.read(1024*1024)
+                            if not contents:
+                                break
+                            output_file.write(contents)
+                return new_file_name
+            except UnicodeDecodeError:
+                continue
+
+    raise UnicodeError(u"Can't determine a text encoding for {} (tried {})".format(file_name, possible_encodings))
