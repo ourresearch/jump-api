@@ -14,7 +14,6 @@ from flask import g
 from flask_jwt_extended import jwt_required, jwt_optional, create_access_token, get_jwt_identity
 from pyinstrument import Profiler
 from sqlalchemy import or_
-from sqlalchemy.sql import text
 from werkzeug.security import safe_str_cmp
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -1035,11 +1034,10 @@ def scenario_id_post(scenario_id):
 
     scenario_name = request.json.get('name', None)
     if scenario_name:
-        command = text(
-            u"update jump_package_scenario set scenario_name = :scenario_name where scenario_id = :scenario_id"
-        ).bindparams(scenario_name=scenario_name, scenario_id=scenario_id)
+        command = u"update jump_package_scenario set scenario_name = %s where scenario_id = %s"
 
-        db.engine.execute(command)
+        with get_db_cursor() as cursor:
+            cursor.execute(command, (scenario_name, scenario_id))
 
     my_timing = TimingMessages()
     post_subscription_guts(scenario_id, scenario_name)
