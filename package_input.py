@@ -13,8 +13,9 @@ from sqlalchemy.sql import text
 import package
 from app import db, logger
 from excel import convert_spreadsheet_to_csv
-from util import safe_commit
 from purge_cache import purge_the_cache
+from util import convert_to_utf_8
+from util import safe_commit
 
 
 class PackageInput:
@@ -169,6 +170,9 @@ class PackageInput:
             else:
                 file_name = csv_file_name
 
+        file_name = convert_to_utf_8(file_name)
+        logger.info('converted file: {}'.format(file_name))
+
         with open(file_name, 'r') as csv_file:
             dialect = csv.Sniffer().sniff(csv_file.readline())
             csv_file.seek(0)
@@ -232,7 +236,7 @@ class PackageInput:
     def load(cls, package_id, file_name, commit=False):
         try:
             normalized_rows = cls.normalize_rows(file_name)
-        except RuntimeError as e:
+        except (RuntimeError, UnicodeError) as e:
             return False, e.message
 
         for row in normalized_rows:
