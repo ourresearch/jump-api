@@ -185,7 +185,7 @@ class Package(db.Model):
         rows = self.get_base(and_where=""" and counter.issn_l in
 	            (select journal_issn_l from unpaywall u where year=2019 and journal_is_oa='false' and publisher ilike '%elsevier%' group by journal_issn_l) 
 	            and counter.issn_l in 
-            	(select issn_l from jump_journal_prices where usa_usd > 0 and package_id='658349d9' group by issn_l) """)
+                (select issn_l from jump_journal_prices where usa_usd > 0 and package_id in('658349d9', '{}') group by issn_l) """.format(self.package_id))
         return self.filter_by_core_list(rows)
 
     @cached_property
@@ -360,8 +360,11 @@ class Package(db.Model):
         pa_rows = get_perpetual_access_from_cache(self.package_id)
         pa_defaults = defaultdict(lambda: defaultdict(lambda: None), pa_rows)
 
-        prices = get_prices_from_cache([self.package_id])[self.package_id]
-        price_defaults = defaultdict(lambda: None, prices)
+        all_prices = get_prices_from_cache([self.package_id, DEMO_PACKAGE_ID])
+        package_prices = all_prices[self.package_id]
+        public_prices = all_prices[DEMO_PACKAGE_ID]
+        package_price_defaults = defaultdict(lambda: None, package_prices)
+        public_price_defaults = defaultdict(lambda: None, public_prices)
 
         open_access = set([x['issn_l'] for x in self.get_diff_open_access_journals])
         not_published_2019 = set([x['issn_l'] for x in self.get_diff_not_published_in_2019])
@@ -370,7 +373,7 @@ class Package(db.Model):
         distinct_issnls = set([x for x in
                                counter_rows.keys() +
                                pa_rows.keys() +
-                               prices.keys() +
+                               package_prices.keys() +
                                list(open_access) +
                                list(not_published_2019) +
                                list(changed_publisher)
@@ -391,18 +394,20 @@ class Package(db.Model):
             'upload_data': {
                 'counter_downloads': counter_defaults[issn_l]['num_2018_downloads'],
                 'perpetual_access_dates': [pa_defaults[issn_l]['start_date'], pa_defaults[issn_l]['end_date']],
-                'price': price_defaults[issn_l],
+                'price': package_price_defaults[issn_l],
             },
             'has_upload_data': {
                 'counter': issn_l in counter_rows,
                 'perpetual_access': issn_l in pa_rows,
-                'price': issn_l in prices,
+                'price': issn_l in package_prices,
             },
             'attributes': {
                 'is_oa': issn_l in open_access,
                 'not_published_2019': issn_l in not_published_2019,
                 'changed_publisher': issn_l in changed_publisher,
                 'is_hybrid_2019': issn_l in get_hybrid_2019(),
+                'has_public_price': issn_l in public_prices,
+                'public_price': public_price_defaults[issn_l],
             },
             'issns': journal_rows.get(issn_l, {}).get('issns', None)
         } for issn_l in distinct_issnls]
