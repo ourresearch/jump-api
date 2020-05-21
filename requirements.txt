@@ -1,6 +1,6 @@
 boto3==1.12.25
 cached-property==1.5.1
-cchardet==2.1.6
+chardet==2.1.6
 dateparser==0.7.2
 executor==18.0
 Flask==0.12.3

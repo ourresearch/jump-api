@@ -16,7 +16,7 @@ import unicodedata
 import urlparse
 from codecs import BOM_UTF8, BOM_UTF16_BE, BOM_UTF16_LE, BOM_UTF32_BE, BOM_UTF32_LE
 
-import cchardet as chardet
+import chardet
 import heroku3
 import requests
 import simplejson as json
