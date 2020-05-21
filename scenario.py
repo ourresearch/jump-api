@@ -43,6 +43,8 @@ def get_fresh_journal_list(scenario, my_jwt):
     from package import Package
     journals_to_exclude = ["0370-2693"]
     issn_ls = scenario.data["unpaywall_downloads_dict"].keys()
+
+    print "len(issn_ls)", len(issn_ls)
     issnls_to_build = [issn_l for issn_l in issn_ls if issn_l not in journals_to_exclude]
     if scenario.is_consortium:
         # print "here in is_consortium"
@@ -87,6 +89,9 @@ class Scenario(object):
 
         from package import Package
         my_package = Package.query.filter(Package.package_id == self.package_id_for_db).first()
+        self.publisher_name = my_package.publisher
+
+        print "self.publisher_name", self.publisher_name
 
         if my_package and my_package.big_deal_cost:
             self.settings.cost_bigdeal = float(my_package.big_deal_cost)
@@ -105,8 +110,12 @@ class Scenario(object):
         self.set_clean_data()  #order for this one matters, after get common, before build journals
         self.log_timing("set_clean_data")
 
+        print "HI HEATHER"
+
         self.journals = get_fresh_journal_list(self, my_jwt)
         self.log_timing("mint regular journals")
+
+        print "len self.journals", len(self.journals)
 
         if not self.is_consortium:
             [j.set_scenario_data(self.data) for j in self.journals]
@@ -132,7 +141,7 @@ class Scenario(object):
         if get_parent_consortium_package_id(self.package_id) in suny_consortium_package_ids or self.package_id in suny_consortium_package_ids:
             prices_to_consider += ["68f1af1d", "93YfzkaA"]
 
-        prices_raw = get_prices_from_cache(prices_to_consider)
+        prices_raw = get_prices_from_cache(prices_to_consider, self.publisher_name)
         for package_id_for_prices in prices_to_consider:
             # print "package_id_for_prices", package_id_for_prices
             if package_id_for_prices in prices_raw:
@@ -999,6 +1008,7 @@ def get_unpaywall_downloads_from_db():
     with get_db_cursor() as cursor:
         cursor.execute(command)
         big_view_rows = cursor.fetchall()
+    print "big_view_rows", len(big_view_rows)
     unpaywall_downloads_dict = dict((row["issn_l"], row) for row in big_view_rows)
     return unpaywall_downloads_dict
 
@@ -1014,32 +1024,37 @@ def get_num_papers_from_db():
     return lookup_dict
 
 
-def _journal_price_cache_key(package_id):
-    return u'scenario.get_journal_prices.{}'.format(package_id)
+def _journal_price_cache_key(package_id, publisher_name):
+    return u'scenario.get_journal_prices.{}.{}'.format(package_id, publisher_name)
 
 
-def refresh_cached_prices_from_db(package_id):
+def refresh_cached_prices_from_db(package_id, publisher_name):
     package_dict = {}
     command = text(
-        u'select issn_l, usa_usd from jump_journal_prices where package_id = :package_id'
-    ).bindparams(package_id=package_id)
+        u'select issn_l, usa_usd from jump_journal_prices where package_id = :package_id and publisher = :publisher_name'
+    ).bindparams(package_id=package_id, publisher_name=publisher_name)
 
     rows = db.engine.execute(command).fetchall()
 
     for row in rows:
         package_dict[row["issn_l"]] = row["usa_usd"]
 
-    my_memcached.set(_journal_price_cache_key(package_id), package_dict)
+    my_memcached.set(_journal_price_cache_key(package_id, publisher_name), package_dict)
 
     return package_dict
 
 
-def get_prices_from_cache(package_ids):
+def get_prices_from_cache(package_ids, publisher_name):
+
+
     lookup_dict = defaultdict(dict)
 
     for package_id in package_ids:
-        memcached_key = _journal_price_cache_key(package_id)
-        package_dict = my_memcached.get(memcached_key) or refresh_cached_prices_from_db(package_id)
+        # temp
+        refresh_cached_prices_from_db(package_id, publisher_name)
+
+        memcached_key = _journal_price_cache_key(package_id, publisher_name)
+        package_dict = my_memcached.get(memcached_key) or refresh_cached_prices_from_db(package_id, publisher_name)
         lookup_dict[package_id] = package_dict
 
     return lookup_dict
@@ -1116,7 +1131,8 @@ def get_oa_recent_data_from_db():
     for submitted in ["with_submitted", "no_submitted"]:
         for bronze in ["with_bronze", "no_bronze"]:
             key = "{}_{}".format(submitted, bronze)
-            command = """select * from jump_oa_recent_{}_elsevier
+            command = """select * from jump_oa_recent_{}
+                        where (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')
                             """.format(key)
             with get_db_cursor() as cursor:
                 cursor.execute(command)
@@ -1133,8 +1149,9 @@ def get_oa_data_from_db():
     for submitted in ["with_submitted", "no_submitted"]:
         for bronze in ["with_bronze", "no_bronze"]:
             key = "{}_{}".format(submitted, bronze)
-            command = """select * from jump_oa_{}_elsevier
-                        where year_int >= 2015
+            command = """select * from jump_oa_{}
+                        where (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')                        
+                        and year_int >= 2015
                             """.format(key)
             with get_db_cursor() as cursor:
                 cursor.execute(command)
@@ -1255,7 +1272,9 @@ def get_common_package_data_from_cache(package_id):
     if not my_package or my_package.is_demo or package_id == DEMO_PACKAGE_ID:
         package_id_in_cache = DEMO_PACKAGE_ID
 
-    url = "https://cdn.unpaywalljournals.org/live/data/common/{}?secret={}".format(
+    # url = "https://cdn.unpaywalljournals.org/live/data/common/{}?secret={}".format(
+    #     package_id_in_cache, os.getenv("JWT_SECRET_KEY"))
+    url = "http://localhost:5004/live/data/common/{}?secret={}".format(
         package_id_in_cache, os.getenv("JWT_SECRET_KEY"))
     headers = {"Cache-Control": "public, max-age=31536000"}
     r = requests.get(url, headers=headers)
