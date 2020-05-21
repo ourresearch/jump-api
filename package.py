@@ -191,9 +191,6 @@ class Package(db.Model):
         rows = self.get_base(and_where=""" and counter.issn_l in
 	            (select journal_issn_l from unpaywall u where year=2019 and journal_is_oa='false' 
 	            and {publisher_where} group by journal_issn_l) """.format(publisher_where=self.publisher_where))
-        print "rows[0]", rows[0]
-        print "len rows", len(rows)
-        print "self.filter_by_core_list(rows)", len(self.filter_by_core_list(rows))
         return self.filter_by_core_list(rows)
 
     @cached_property
