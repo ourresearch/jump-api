@@ -56,6 +56,7 @@ def convert_date_spaces_to_dashes(filename):
 
 def build_counter_import_file_for_one(counter_file, username, publisher):
 
+    print u"building counter for {} using filename {}".format(username, counter_file)
     response = []
 
     my_account = Account.query.filter(Account.username == username).first()
@@ -208,8 +209,20 @@ def create_accounts(filename):
 
         if not row["add_now"] == "1":
             print u"skipping {}, add_row != 1".format(row["username"])
-        elif  Account.query.filter(Account.username==row["username"]).first():
-            print u"skipping {}, already in db".format(row["username"])
+        elif Account.query.filter(Account.username==row["username"]).first():
+            if row["grid_id"] and not row["display_name"]:
+                if AccountGridId.query.filter(AccountGridId.grid_id==row["grid_id"]).first():
+                    print "grid id already there"
+                else:
+                    my_account = Account.query.filter(Account.username==row["username"]).first()
+                    print u"adding new grid id {} to {}".format(row["grid_id"], row["username"])
+                    new_account_grid_object = AccountGridId()
+                    new_account_grid_object.grid_id = row["grid_id"]
+                    my_account.grid_id_objects += [new_account_grid_object]
+                    db.session.add(new_account_grid_object)
+                    safe_commit(db)
+            else:
+                print u"skipping {}, already in db".format(row["username"])
         else:
             new_account = Account()
             new_account.username = row["username"]
