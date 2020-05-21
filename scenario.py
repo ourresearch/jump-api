@@ -44,7 +44,6 @@ def get_fresh_journal_list(scenario, my_jwt):
     journals_to_exclude = ["0370-2693"]
     issn_ls = scenario.data["unpaywall_downloads_dict"].keys()
 
-    print "len(issn_ls)", len(issn_ls)
     issnls_to_build = [issn_l for issn_l in issn_ls if issn_l not in journals_to_exclude]
     if scenario.is_consortium:
         # print "here in is_consortium"
@@ -91,8 +90,6 @@ class Scenario(object):
         my_package = Package.query.filter(Package.package_id == self.package_id_for_db).first()
         self.publisher_name = my_package.publisher
 
-        print "self.publisher_name", self.publisher_name
-
         if my_package and my_package.big_deal_cost:
             self.settings.cost_bigdeal = float(my_package.big_deal_cost)
 
@@ -110,12 +107,8 @@ class Scenario(object):
         self.set_clean_data()  #order for this one matters, after get common, before build journals
         self.log_timing("set_clean_data")
 
-        print "HI HEATHER"
-
         self.journals = get_fresh_journal_list(self, my_jwt)
         self.log_timing("mint regular journals")
-
-        print "len self.journals", len(self.journals)
 
         if not self.is_consortium:
             [j.set_scenario_data(self.data) for j in self.journals]
@@ -975,7 +968,7 @@ def refresh_perpetual_access_from_db(package_id):
     return package_dict
 
 
-def get_perpetual_access_from_cache(package_id):
+def get_perpetual_access_from_cache(package_id, unused_publisher_name=None):
     memcached_key = _perpetual_access_cache_key(package_id)
     return my_memcached.get(memcached_key) or refresh_perpetual_access_from_db(package_id)
 
@@ -1008,7 +1001,6 @@ def get_unpaywall_downloads_from_db():
     with get_db_cursor() as cursor:
         cursor.execute(command)
         big_view_rows = cursor.fetchall()
-    print "big_view_rows", len(big_view_rows)
     unpaywall_downloads_dict = dict((row["issn_l"], row) for row in big_view_rows)
     return unpaywall_downloads_dict
 
@@ -1045,7 +1037,6 @@ def refresh_cached_prices_from_db(package_id, publisher_name):
 
 
 def get_prices_from_cache(package_ids, publisher_name):
-
 
     lookup_dict = defaultdict(dict)
 
@@ -1131,8 +1122,8 @@ def get_oa_recent_data_from_db():
     for submitted in ["with_submitted", "no_submitted"]:
         for bronze in ["with_bronze", "no_bronze"]:
             key = "{}_{}".format(submitted, bronze)
-            command = """select * from jump_oa_recent_{}
-                        where (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')
+            command = """select * from jump_oa_recent_{}_elsevier
+                        -- where (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')
                             """.format(key)
             with get_db_cursor() as cursor:
                 cursor.execute(command)
@@ -1149,8 +1140,8 @@ def get_oa_data_from_db():
     for submitted in ["with_submitted", "no_submitted"]:
         for bronze in ["with_bronze", "no_bronze"]:
             key = "{}_{}".format(submitted, bronze)
-            command = """select * from jump_oa_{}
-                        where (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')                        
+            command = """select * from jump_oa_{}_elsevier
+                        -- where (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')                        
                         and year_int >= 2015
                             """.format(key)
             with get_db_cursor() as cursor:
