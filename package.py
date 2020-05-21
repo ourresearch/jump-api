@@ -84,7 +84,7 @@ class Package(db.Model):
     def has_custom_prices(self):
         package_ids = [x for x in [self.package_id, self.consortium_package_id] if x]
         if package_ids:
-            prices_rows = get_prices_from_cache(package_ids)
+            prices_rows = get_prices_from_cache(package_ids, self.publisher)
             package_ids_with_prices = prices_rows.keys()
             if self.package_id in package_ids_with_prices or self.consortium_package_id in package_ids_with_prices:
                 return True
@@ -175,17 +175,36 @@ class Package(db.Model):
         return self.filter_by_core_list(rows)
 
     @cached_property
-    def get_published_toll_access_in_2019_with_elsevier(self):
+    def publisher_where(self):
+        if self.publisher == "Elsevier":
+            return "(publisher ilike '%elsevier%')"
+        elif self.publisher == "Wiley":
+            return "(publisher ilike '%wiley%')"
+        elif self.publisher == "SpringerNature":
+            return "((publisher ilike '%springer%') or (publisher ilike '%nature%'))"
+        else:
+            return 'false'
+
+    @cached_property
+    def get_published_toll_access_in_2019_with_publisher(self):
+        print "self.publisher_where", self.publisher_where
         rows = self.get_base(and_where=""" and counter.issn_l in
-	            (select journal_issn_l from unpaywall u where year=2019 and journal_is_oa='false' and publisher ilike '%elsevier%' group by journal_issn_l) """)
+	            (select journal_issn_l from unpaywall u where year=2019 and journal_is_oa='false' 
+	            and {publisher_where} group by journal_issn_l) """.format(publisher_where=self.publisher_where))
+        print "rows[0]", rows[0]
+        print "len rows", len(rows)
+        print "self.filter_by_core_list(rows)", len(self.filter_by_core_list(rows))
         return self.filter_by_core_list(rows)
 
     @cached_property
-    def get_published_toll_access_in_2019_with_elsevier_have_price(self):
+    def get_published_toll_access_in_2019_with_publisher_have_price(self):
         rows = self.get_base(and_where=""" and counter.issn_l in
-	            (select journal_issn_l from unpaywall u where year=2019 and journal_is_oa='false' and publisher ilike '%elsevier%' group by journal_issn_l) 
+	            (select journal_issn_l from unpaywall u where year=2019 and journal_is_oa='false' 
+	            and {publisher_where} group by journal_issn_l) 
 	            and counter.issn_l in 
-                (select issn_l from jump_journal_prices where usa_usd > 0 and package_id in('658349d9', '{}') group by issn_l) """.format(self.package_id))
+                (select issn_l from jump_journal_prices 
+                    where usa_usd > 0 and package_id in('658349d9', '{package_id}') 
+                group by issn_l) """.format(package_id=self.package_id, publisher_where=self.publisher_where))
         return self.filter_by_core_list(rows)
 
     @cached_property
@@ -252,7 +271,7 @@ class Package(db.Model):
     @cached_property
     def get_diff_changed_publisher(self):
         response_dict = {}
-        remove = [row["issn_l"] for row in self.get_published_toll_access_in_2019_with_elsevier]
+        remove = [row["issn_l"] for row in self.get_published_toll_access_in_2019_with_publisher]
         for row in self.get_published_toll_access_in_2019:
             if row["issn_l"] not in remove:
                 response_dict[row["issn_l"]] = row
@@ -262,8 +281,8 @@ class Package(db.Model):
     @cached_property
     def get_diff_no_price(self):
         response_dict = {}
-        remove = [row["issn_l"] for row in self.get_published_toll_access_in_2019_with_elsevier_have_price]
-        for row in self.get_published_toll_access_in_2019_with_elsevier:
+        remove = [row["issn_l"] for row in self.get_published_toll_access_in_2019_with_publisher_have_price]
+        for row in self.get_published_toll_access_in_2019_with_publisher:
             if row["issn_l"] not in remove:
                 response_dict[row["issn_l"]] = row
         response = sorted(response_dict.values(), key=lambda x: x["num_2018_downloads"], reverse=True)
@@ -273,7 +292,7 @@ class Package(db.Model):
     def get_diff_missing_from_scenario(self):
         response_dict = {}
         remove = [row["issn_l"] for row in self.get_in_scenario]
-        for row in self.get_published_toll_access_in_2019_with_elsevier_have_price:
+        for row in self.get_published_toll_access_in_2019_with_publisher_have_price:
             if row["issn_l"] not in remove:
                 response_dict[row["issn_l"]] = row
         response = sorted(response_dict.values(), key=lambda x: x["num_2018_downloads"], reverse=True)
@@ -282,7 +301,7 @@ class Package(db.Model):
     @cached_property
     def get_diff_extra_in_scenario(self):
         response_dict = {}
-        remove = [row["issn_l"] for row in self.get_published_toll_access_in_2019_with_elsevier_have_price]
+        remove = [row["issn_l"] for row in self.get_published_toll_access_in_2019_with_publisher_have_price]
         for row in self.get_in_scenario:
             if row["issn_l"] not in remove:
                 response_dict[row["issn_l"]] = row
@@ -305,6 +324,10 @@ class Package(db.Model):
 
     def get_package_counter_breakdown(self):
         package_id = self.package_id_for_db
+        print "package_id HERE", package_id
+
+        # temp
+        self.clear_package_counter_breakdown_cache()
 
         memcached_key = self.get_package_counter_breakdown_memcached_key()
         my_memcached_results = my_memcached.get(memcached_key)
@@ -334,11 +357,12 @@ class Package(db.Model):
         response["diff_counts"]["diff_open_access_journals"] =  len(self.get_diff_open_access_journals)
         # response["papers"]["diff_open_access_journals"] =  self.get_diff_open_access_journals
 
-        response["counts"]["toll_access_published_in_2019_with_elsevier"] = len(self.get_published_toll_access_in_2019_with_elsevier)
+        response["counts"]["toll_access_published_in_2019_with_elsevier"] = len(self.get_published_toll_access_in_2019_with_publisher)
+        print "len(self.get_published_toll_access_in_2019_with_publisher)", len(self.get_published_toll_access_in_2019_with_publisher)
         response["diff_counts"]["diff_changed_publisher"] =  len(self.get_diff_changed_publisher)
         # response["papers"]["diff_changed_publisher"] =  self.get_diff_changed_publisher
 
-        response["counts"]["published_toll_access_in_2019_with_elsevier_have_price"] = len(self.get_published_toll_access_in_2019_with_elsevier_have_price)
+        response["counts"]["published_toll_access_in_2019_with_elsevier_have_price"] = len(self.get_published_toll_access_in_2019_with_publisher_have_price)
         response["diff_counts"]["diff_no_price"] =  len(self.get_diff_no_price)
         # response["papers"]["diff_no_price"] =  self.get_diff_no_price
 
@@ -360,7 +384,7 @@ class Package(db.Model):
         pa_rows = get_perpetual_access_from_cache(self.package_id)
         pa_defaults = defaultdict(lambda: defaultdict(lambda: None), pa_rows)
 
-        all_prices = get_prices_from_cache([self.package_id, DEMO_PACKAGE_ID])
+        all_prices = get_prices_from_cache([self.package_id, DEMO_PACKAGE_ID], self.publisher)
         package_prices = all_prices[self.package_id]
         public_prices = all_prices[DEMO_PACKAGE_ID]
         package_price_defaults = defaultdict(lambda: None, package_prices)
@@ -428,14 +452,14 @@ class Package(db.Model):
                 )
                 and journal_is_oa='false'
                 and year=2019
-                and publisher ilike '%%elsevier%%'
+                and {publisher_where}
                 and journal_issn_l not in (
                     select jump_counter.issn_l from jump_counter
                     join jump_journal_prices on jump_journal_prices.issn_l = jump_counter.issn_l
                     where jump_counter.package_id='{package_id}' and jump_journal_prices.package_id='658349d9')
                 )
         order by num_2018_downloads desc
-        """.format(package_id=package_id)
+        """.format(package_id=package_id, publisher_where=self.publisher_where.replace("%", "%%"))
         with get_db_cursor() as cursor:
             cursor.execute(command)
             rows = cursor.fetchall()
@@ -515,6 +539,7 @@ class Package(db.Model):
         }
 
     def to_publisher_dict(self):
+        print "HERE"
         journal_detail = dict(self.get_package_counter_breakdown())
         journal_detail['publisher_id'] = journal_detail.pop('package_id')
 
