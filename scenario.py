@@ -1051,7 +1051,7 @@ def get_prices_from_cache(package_ids, publisher_name):
 
     for package_id in package_ids:
         # temp
-        refresh_cached_prices_from_db(package_id, publisher_name)
+        # refresh_cached_prices_from_db(package_id, publisher_name)
 
         memcached_key = _journal_price_cache_key(package_id, publisher_name)
         package_dict = my_memcached.get(memcached_key) or refresh_cached_prices_from_db(package_id, publisher_name)

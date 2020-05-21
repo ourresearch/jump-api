@@ -327,7 +327,7 @@ class Package(db.Model):
         print "package_id HERE", package_id
 
         # temp
-        self.clear_package_counter_breakdown_cache()
+        # self.clear_package_counter_breakdown_cache()
 
         memcached_key = self.get_package_counter_breakdown_memcached_key()
         my_memcached_results = my_memcached.get(memcached_key)
