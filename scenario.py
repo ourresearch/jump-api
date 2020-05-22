@@ -1285,11 +1285,11 @@ def get_common_package_data_from_cache(package_id):
     if not my_package or my_package.is_demo or package_id == DEMO_PACKAGE_ID:
         package_id_in_cache = DEMO_PACKAGE_ID
 
-    # url = "https://cdn.unpaywalljournals.org/live/data/common/{}?secret={}".format(
-    #     package_id_in_cache, os.getenv("JWT_SECRET_KEY"))
-
-    url = "http://localhost:5004/live/data/common/{}?secret={}".format(
+    url = "https://cdn.unpaywalljournals.org/live/data/common/{}?secret={}".format(
         package_id_in_cache, os.getenv("JWT_SECRET_KEY"))
+
+    # url = "http://localhost:5004/live/data/common/{}?secret={}".format(
+    #     package_id_in_cache, os.getenv("JWT_SECRET_KEY"))
 
     headers = {"Cache-Control": "public, max-age=31536000"}
     r = requests.get(url, headers=headers)
