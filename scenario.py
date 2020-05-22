@@ -1122,9 +1122,19 @@ def get_oa_recent_data_from_db():
     for submitted in ["with_submitted", "no_submitted"]:
         for bronze in ["with_bronze", "no_bronze"]:
             key = "{}_{}".format(submitted, bronze)
-            command = """select * from jump_oa_recent_{}_elsevier
-                        -- where (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')
+
+            # command = """select * from jump_oa_recent_{}_elsevier
+            #             -- where (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')
+            #                 """.format(key)
+
+            # command = """select * from jump_oa_recent_{}
+            #             where (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')
+            #                 """.format(key)
+
+            command = """select * from jump_oa_recent_{}_mixed
+                        where (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')
                             """.format(key)
+
             with get_db_cursor() as cursor:
                 cursor.execute(command)
                 rows = cursor.fetchall()
@@ -1140,10 +1150,22 @@ def get_oa_data_from_db():
     for submitted in ["with_submitted", "no_submitted"]:
         for bronze in ["with_bronze", "no_bronze"]:
             key = "{}_{}".format(submitted, bronze)
-            command = """select * from jump_oa_{}_elsevier
+
+            # command = """select * from jump_oa_{}_elsevier
+            #             where year_int >= 2015
+            #             -- and  (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')
+            #                 """.format(key)
+
+            # command = """select * from jump_oa_{}
+            #             where year_int >= 2015
+            #             and  (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')
+            #                 """.format(key)
+
+            command = """select * from jump_oa_{}_mixed
                         where year_int >= 2015
-                        -- and  (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')                        
+                        and  (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')
                             """.format(key)
+
             with get_db_cursor() as cursor:
                 cursor.execute(command)
                 rows = cursor.fetchall()
@@ -1263,10 +1285,12 @@ def get_common_package_data_from_cache(package_id):
     if not my_package or my_package.is_demo or package_id == DEMO_PACKAGE_ID:
         package_id_in_cache = DEMO_PACKAGE_ID
 
-    url = "https://cdn.unpaywalljournals.org/live/data/common/{}?secret={}".format(
-        package_id_in_cache, os.getenv("JWT_SECRET_KEY"))
-    # url = "http://localhost:5004/live/data/common/{}?secret={}".format(
+    # url = "https://cdn.unpaywalljournals.org/live/data/common/{}?secret={}".format(
     #     package_id_in_cache, os.getenv("JWT_SECRET_KEY"))
+
+    url = "http://localhost:5004/live/data/common/{}?secret={}".format(
+        package_id_in_cache, os.getenv("JWT_SECRET_KEY"))
+
     headers = {"Cache-Control": "public, max-age=31536000"}
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
