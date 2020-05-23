@@ -936,13 +936,13 @@ def _json_to_temp_file(req):
 def _load_package_file(package_id, req, table_class, cache_update_fn=None):
     temp_file = _json_to_temp_file(req)
     if temp_file:
-        success, message = table_class.load(package_id, temp_file, commit=True)
-        if success:
+        load_result = table_class.load(package_id, temp_file, commit=True)
+        if load_result['success']:
             if cache_update_fn:
                 cache_update_fn(package_id)
-            return jsonify_fast_no_sort({'message': message})
+            return jsonify_fast_no_sort(load_result)
         else:
-            return abort_json(400, message)
+            return abort_json(400, load_result)
     else:
         return abort_json(
             400, u'expected a JSON object like {file: <base64-encoded file>, name: <file name>}'

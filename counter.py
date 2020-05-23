@@ -56,32 +56,35 @@ class CounterInput(db.Model, PackageInput):
     def csv_columns(cls):
         return {
             'publisher': {
-                'normalize': lambda x: x,
+                'normalize': cls.strip_text,
                 'name_snippets': [u'publisher'],
             },
             'print_issn': {
                 'normalize': cls.normalize_issn,
-                'name_snippets': [u'print issn', 'print_issn', 'issn'],
+                'name_snippets': [u'print issn', u'print_issn', u'issn'],
+                'warn_if_blank': True,
             },
             'online_issn': {
                 'normalize': cls.normalize_issn,
-                'name_snippets': [u'online issn'],
+                'name_snippets': [u'online issn', u'online_issn', u'eissn'],
+                'exact_name': True,
                 'required': False,
             },
             'total': {
                 'normalize': cls.normalize_int,
                 'name_snippets': [u'total'],
+                'warn_if_blank': True,
             },
             'journal_name': {
-                'normalize': lambda x: x,
-                'name_snippets': [u'title', 'journal', 'journal_name'],
+                'normalize': cls.strip_text,
+                'name_snippets': [u'title', u'journal', u'journal_name'],
                 'exact_name': True,
             },
         }
 
     @classmethod
     def ignore_row(cls, row):
-        journal_name = row.get('journal_name', u'').lower()
+        journal_name = (row.get('journal_name', u'') or u'').lower()
         if (not journal_name or u'all journals' in journal_name) and row.get('print_issn', None) is None:
             return True
 
@@ -90,10 +93,11 @@ class CounterInput(db.Model, PackageInput):
     @classmethod
     def translate_row(cls, row):
         rows = []
-        if row['print_issn'] or row['online_issn']:
+        issn = row.get('print_issn', u'') or row.get('online_issn', u'')
+        if issn:
             rows.append({
                     'publisher': row['publisher'],
-                    'issn': row['print_issn'] or row['online_issn'],
+                    'issn': issn,
                     'total': row['total'],
                     'journal_name': row['journal_name'],
             })
