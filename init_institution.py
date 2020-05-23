@@ -275,12 +275,12 @@ def add_publisher(institution_username, counter_filename):
     )
     logging.getLogger('').setLevel(logging.WARNING)
     from counter import CounterInput
-    success, message = CounterInput.load(my_publisher.package_id, counter_filename, commit=False)
+    load_result = CounterInput.load(my_publisher.package_id, counter_filename, commit=False)
     logging.getLogger('').setLevel(log_level)
-    if success:
-        logger.info(message)
+    if load_result['success']:
+        logger.info(load_result['message'])
     else:
-        raise RuntimeError(message)
+        raise RuntimeError(load_result['message'])
 
 
 # def add_prices():

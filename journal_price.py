@@ -47,22 +47,24 @@ class JournalPriceInput(db.Model, PackageInput):
     def csv_columns(cls):
         return {
             'publisher': {
-                'normalize': lambda x: x,
+                'normalize': cls.strip_text,
                 'name_snippets': [u'publisher'],
                 'required': False,
             },
             'issn': {
                 'normalize': cls.normalize_issn,
                 'name_snippets': [u'issn'],
+                'required': True,
             },
             'subject': {
-                'normalize': lambda x: x,
+                'normalize': cls.strip_text,
                 'name_snippets': [u'subj'],
                 'required': False,
             },
             'usa_usd': {
                 'normalize': cls.normalize_price,
                 'name_snippets': [u'price', u'usd', u'cost'],
+                'warn_if_blank': True,
             },
             'year': {
                 'normalize': cls.normalize_year,

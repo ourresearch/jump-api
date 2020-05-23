@@ -8,6 +8,7 @@ import boto3
 import dateutil.parser
 import shortuuid
 import unicodecsv as csv
+from enum import Enum
 from sqlalchemy.sql import text
 
 import package
@@ -20,38 +21,37 @@ from util import safe_commit
 
 class PackageInput:
     @staticmethod
-    def normalize_date(date_str):
+    def normalize_date(date_str, warn_if_blank=False):
         if date_str:
             try:
                 return dateutil.parser.parse(date_str).isoformat()
             except Exception:
-                raise ValueError(u"unrecognized datetime format")
+                return ParseWarning.bad_date
         else:
-            return None
+            return ParseWarning.bad_date if warn_if_blank else None
 
     @staticmethod
-    def normalize_year(year):
+    def normalize_year(year, warn_if_blank=False):
         if year:
             try:
                 return dateutil.parser.parse(year).year
             except Exception:
-                raise ValueError(u"unrecognized year format")
+                return ParseWarning.bad_year
         else:
-            return None
+            return ParseWarning.bad_year if warn_if_blank else None
 
     @staticmethod
-    def normalize_int(value):
+    def normalize_int(value, warn_if_blank=False):
         if value:
             try:
-                value = sub(ur'[^\d]', '', value)
                 return int(value)
             except Exception:
-                raise ValueError(u"unrecognized integer format")
+                return ParseWarning.bad_int
         else:
-            return None
+            return ParseWarning.bad_int if warn_if_blank else None
 
     @staticmethod
-    def normalize_price(price):
+    def normalize_price(price, warn_if_blank=False):
         if price:
             try:
                 decimal = u',' if re.search(ur'\.\d{3}', price) or re.search(ur',\d{2}$', price) else ur'\.'
@@ -60,21 +60,30 @@ class PackageInput:
                 price = sub(',', '.', price)
                 return int(round(float(price)))
             except Exception:
-                raise ValueError(u"unrecognized price format")
+                return ParseWarning.bad_usd_price
         else:
-            return None
+            return ParseWarning.bad_usd_price if warn_if_blank else None
 
     @staticmethod
-    def normalize_issn(issn):
+    def normalize_issn(issn, warn_if_blank=False):
         if issn:
-            raw_issn = issn
             issn = sub(ur'\s', '', issn).upper()
-            if re.match(ur'^(?:FS|\d\d)\d\d-\d{3}(?:X|\d)$', issn):
+            if re.match(ur'^\d{4}-\d{3}(?:X|\d)$', issn):
                 return issn
+            elif re.match(ur'^[A-Z0-9]{4}-\d{3}(?:X|\d)$', issn):
+                return ParseWarning.bundle_issn
             else:
-                raise ValueError(u'invalid ISSN format on {}'.format(raw_issn))
+                return ParseWarning.bad_issn
         else:
-            return None
+            return ParseWarning.bad_issn if warn_if_blank else None
+
+    @staticmethod
+    def strip_text(txt, warn_if_blank=False):
+        if txt is not None:
+            return txt.strip()
+        else:
+            return ParseWarning.blank_text if warn_if_blank else None
+
 
     @classmethod
     def csv_columns(cls):
@@ -108,7 +117,7 @@ class PackageInput:
                 column_name = column_name.strip().lower()
                 exact_name = spec.get('exact_name', False)
                 if (exact_name and snippet == column_name) or (not exact_name and snippet in column_name.lower()):
-                    return {canonical_name: spec['normalize'](column_value)}
+                    return {canonical_name: spec['normalize'](column_value, spec.get('warn_if_blank', False))}
 
         return None
 
@@ -201,17 +210,26 @@ class PackageInput:
             row_dicts = [dict(zip(parsed_rows[header_index], x)) for x in parsed_rows[header_index+1:]]
 
             normalized_rows = []
+            warnings = []
             for row_no, row in enumerate(row_dicts):
                 normalized_row = {}
+                row_warnings = []
 
                 for column_name in row.keys():
                     try:
                         normalized_cell = cls.normalize_cell(column_name, row[column_name])
-                        if normalized_cell:
-                            normalized_row = dict(normalized_cell.items() + normalized_row.items())
+                        if isinstance(normalized_cell, dict):
+                            normalized_name, normalized_value = normalized_cell.items()[0]
+                            if isinstance(normalized_value, ParseWarning):
+                                warning = {'row_number': row_no + 1, 'column': column_name, 'value': row[column_name]}
+                                warning.update(normalized_value.value)
+                                row_warnings.append(warning)
+                                normalized_row.setdefault(normalized_name, None)
+                            else:
+                                normalized_row.setdefault(normalized_name, normalized_value)
                     except Exception as e:
-                        raise RuntimeError(u'Error reading row {}: {} for {}'.format(
-                            row_no + 1, e.message, row[column_name]
+                        raise RuntimeError(u'Error reading row {}: {} for {}: "{}"'.format(
+                            row_no + 1, e.message, column_name, row[column_name]
                         ))
 
                 if cls.ignore_row(normalized_row):
@@ -227,17 +245,18 @@ class PackageInput:
                     ))
 
                 normalized_rows.extend(cls.translate_row(normalized_row))
+                warnings.extend(row_warnings)
 
             cls.apply_header(normalized_rows, parsed_rows[0:header_index+1])
 
-            return normalized_rows
+            return normalized_rows, warnings
 
     @classmethod
     def load(cls, package_id, file_name, commit=False):
         try:
-            normalized_rows = cls.normalize_rows(file_name)
+            normalized_rows, warnings = cls.normalize_rows(file_name)
         except (RuntimeError, UnicodeError) as e:
-            return False, e.message
+            return {'success': False, 'message': e.message, 'warnings': []}
 
         for row in normalized_rows:
             row.update({'package_id': package_id})
@@ -281,4 +300,39 @@ class PackageInput:
             my_package.clear_package_counter_breakdown_cache()
             purge_the_cache(my_package.package_id)
 
-        return True, u'Inserted {} {} rows for package {}.'.format(len(normalized_rows), cls.__name__, package_id)
+        return {
+            'success': True,
+            'message': u'Inserted {} {} rows for package {}.'.format(len(normalized_rows), cls.__name__, package_id),
+            'warnings': warnings
+        }
+
+
+class ParseWarning(Enum):
+    bad_issn = {
+        'label': 'bad_issn',
+        'text': 'Invalid ISSN format.'
+    }
+    bundle_issn = {
+        'label': 'bundle_issn',
+        'text': 'ISSN represents a bundle of journals, not a single journal.'
+    }
+    bad_date = {
+        'label': 'bad_date',
+        'text': 'Unrecognized date format.'
+    }
+    bad_year = {
+        'label': 'bad_year',
+        'text': 'Unrecognized date or year.'
+    }
+    bad_int = {
+        'label': 'bad_int',
+        'text': 'Unrecognized integer format.'
+    }
+    bad_usd_price = {
+        'label': 'bad_usd_price',
+        'text': 'Unrecognized USD format.'
+    }
+    blank_text = {
+        'label': 'blank_text',
+        'text': 'Expected text here.'
+    }

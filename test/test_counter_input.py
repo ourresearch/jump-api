@@ -25,45 +25,46 @@ file_rows = {
 
 
 class TestCounterInput(unittest.TestCase):
-    def test_imports_counter_4_samples(self):
+    def setUp(self):
         self.maxDiff = 5000
 
+    def test_imports_counter_4_samples(self):
         for file_name, expected_rows in file_rows.items():
-            rows = CounterInput.normalize_rows('test/test_files/counter/{}'.format(file_name))
+            rows, warnings = CounterInput.normalize_rows('test/test_files/counter/{}'.format(file_name))
             self.assertItemsEqual(expected_rows, rows)
 
     def test_imports_utf_16le(self):
-        rows = CounterInput.normalize_rows('test/test_files/counter/counter4_jr1_2018_00_utf_16le.csv')
+        rows, warnings = CounterInput.normalize_rows('test/test_files/counter/counter4_jr1_2018_00_utf_16le.csv')
         self.assertItemsEqual(file_rows['counter4_jr1_2018_00.csv'], rows)
 
     def test_imports_utf_16be(self):
-        rows = CounterInput.normalize_rows('test/test_files/counter/counter4_jr1_2018_00_utf_16be.csv')
+        rows, warnings = CounterInput.normalize_rows('test/test_files/counter/counter4_jr1_2018_00_utf_16be.csv')
         self.assertItemsEqual(file_rows['counter4_jr1_2018_00.csv'], rows)
 
     def test_imports_utf_16le_bom(self):
-        rows = CounterInput.normalize_rows('test/test_files/counter/counter4_jr1_2018_00_utf_16le_bom.csv')
+        rows, warnings = CounterInput.normalize_rows('test/test_files/counter/counter4_jr1_2018_00_utf_16le_bom.csv')
         self.assertItemsEqual(file_rows['counter4_jr1_2018_00.csv'], rows)
 
     def test_imports_utf_16be_bom(self):
-        rows = CounterInput.normalize_rows('test/test_files/counter/counter4_jr1_2018_00_utf_16be_bom.csv')
+        rows, warnings = CounterInput.normalize_rows('test/test_files/counter/counter4_jr1_2018_00_utf_16be_bom.csv')
         self.assertItemsEqual(file_rows['counter4_jr1_2018_00.csv'], rows)
 
     def test_imports_utf_32le(self):
-        rows = CounterInput.normalize_rows('test/test_files/counter/counter4_jr1_2018_00_utf_32le.csv')
+        rows, warnings = CounterInput.normalize_rows('test/test_files/counter/counter4_jr1_2018_00_utf_32le.csv')
         self.assertItemsEqual(file_rows['counter4_jr1_2018_00.csv'], rows)
 
     def test_imports_utf_32be(self):
-        rows = CounterInput.normalize_rows('test/test_files/counter/counter4_jr1_2018_00_utf_32be.csv')
+        rows, warnings = CounterInput.normalize_rows('test/test_files/counter/counter4_jr1_2018_00_utf_32be.csv')
         self.assertItemsEqual(file_rows['counter4_jr1_2018_00.csv'], rows)
 
     def test_imports_utf_32le_bom(self):
-        rows = CounterInput.normalize_rows('test/test_files/counter/counter4_jr1_2018_00_utf_32le_bom.csv')
+        rows, warnings = CounterInput.normalize_rows('test/test_files/counter/counter4_jr1_2018_00_utf_32le_bom.csv')
         self.assertItemsEqual(file_rows['counter4_jr1_2018_00.csv'], rows)
 
     def test_imports_utf_132be_bom(self):
-        rows = CounterInput.normalize_rows('test/test_files/counter/counter4_jr1_2018_00_utf_32be_bom.csv')
+        rows, warnings = CounterInput.normalize_rows('test/test_files/counter/counter4_jr1_2018_00_utf_32be_bom.csv')
         self.assertItemsEqual(file_rows['counter4_jr1_2018_00.csv'], rows)
 
     def test_imports_windows_1252(self):
-        rows = CounterInput.normalize_rows('test/test_files/counter/counter4_jr1_2018_00_windows_1252.csv')
+        rows, warnings = CounterInput.normalize_rows('test/test_files/counter/counter4_jr1_2018_00_windows_1252.csv')
         self.assertItemsEqual(file_rows['counter4_jr1_2018_00.csv'], rows)
