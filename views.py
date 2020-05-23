@@ -160,6 +160,8 @@ def authenticate_for_publisher(publisher_id, required_permission):
                     consortium_package.institution.id)
                 )
 
+    return package
+
 
 def authenticated_user():
     jwt_identity = get_jwt_identity()
@@ -995,7 +997,7 @@ def jump_perpetual_access(package_id):
 # @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 @jwt_optional
 def jump_journal_prices(package_id):
-    authenticate_for_publisher(package_id, Permission.view() if request.method == 'GET' else Permission.modify())
+    package = authenticate_for_publisher(package_id, Permission.view() if request.method == 'GET' else Permission.modify())
 
     if request.method == 'GET':
         rows = JournalPrice.query.filter(JournalPrice.package_id == package_id).all()
@@ -1009,7 +1011,13 @@ def jump_journal_prices(package_id):
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
-            return _load_package_file(package_id, request, JournalPriceInput, refresh_cached_prices_from_db)
+
+            return _load_package_file(
+                package_id,
+                request,
+                JournalPriceInput,
+                lambda x: refresh_cached_prices_from_db(x, package.publisher)
+            )
 
 
 def post_subscription_guts(scenario_id, scenario_name=None):
