@@ -44,6 +44,10 @@ class JournalPriceInput(db.Model, PackageInput):
         return JournalPrice.__tablename__
 
     @classmethod
+    def translate_row(cls, row):
+        return [row] if row['issn'] else []
+
+    @classmethod
     def csv_columns(cls):
         return {
             'publisher': {

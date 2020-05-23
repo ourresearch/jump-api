@@ -34,6 +34,10 @@ class PerpetualAccessInput(db.Model, PackageInput):
         return PerpetualAccess.__tablename__
 
     @classmethod
+    def translate_row(cls, row):
+        return [row] if row['issn'] else []
+
+    @classmethod
     def csv_columns(cls):
         return {
             'start_date': {
