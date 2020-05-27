@@ -203,7 +203,7 @@ def after_request_stuff(resp):
 
     if app.config['PROFILE_REQUESTS']:
         g.profiler.stop()
-        print(g.profiler.output_text(unicode=True, color=True))
+        print(g.profiler.output_text(unicode=True, color=True, show_all=True))
 
     return resp
 
