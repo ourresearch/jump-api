@@ -1,5 +1,6 @@
 from app import db
 from package_input import PackageInput
+from scenario import refresh_cached_prices_from_db
 
 
 class JournalPrice(db.Model):
@@ -76,3 +77,8 @@ class JournalPriceInput(db.Model, PackageInput):
                 'required': False,
             }
         }
+
+    @classmethod
+    def clear_caches(cls, my_package):
+        super(JournalPriceInput, cls).clear_caches(my_package)
+        refresh_cached_prices_from_db(my_package.package_id, my_package.publisher)
