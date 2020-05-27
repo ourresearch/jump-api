@@ -136,11 +136,16 @@ class PackageInput:
 
         my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
         if my_package:
-            my_package.clear_package_counter_breakdown_cache()
+            cls.clear_caches(my_package)
 
         safe_commit(db)
 
         return u'Deleted {} {} rows for package {}.'.format(num_deleted, cls.__name__, package_id)
+
+    @classmethod
+    def clear_caches(cls, my_package):
+        my_package.clear_package_counter_breakdown_cache()
+        purge_the_cache(my_package.package_id)
 
     @classmethod
     def update_dest_table(cls, package_id):
@@ -292,13 +297,12 @@ class PackageInput:
             db.session.execute(copy_cmd.bindparams(creds=aws_creds))
             cls.update_dest_table(package_id)
 
+            my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
+
             if commit:
                 safe_commit(db)
-
-        my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
-        if my_package:
-            my_package.clear_package_counter_breakdown_cache()
-            purge_the_cache(my_package.package_id)
+                if my_package:
+                    cls.clear_caches(my_package)
 
         return {
             'success': True,

@@ -1,6 +1,6 @@
 from app import db
 from package_input import PackageInput
-
+from scenario import refresh_perpetual_access_from_db
 
 class PerpetualAccess(db.Model):
     __tablename__ = 'jump_perpetual_access'
@@ -56,3 +56,8 @@ class PerpetualAccessInput(db.Model, PackageInput):
                 'required': True
             }
         }
+
+    @classmethod
+    def clear_caches(cls, my_package):
+        super(PerpetualAccessInput, cls).clear_caches(my_package)
+        refresh_perpetual_access_from_db(my_package.package_id)

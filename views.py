@@ -935,13 +935,11 @@ def _json_to_temp_file(req):
         return None
 
 
-def _load_package_file(package_id, req, table_class, cache_update_fn=None):
+def _load_package_file(package_id, req, table_class):
     temp_file = _json_to_temp_file(req)
     if temp_file:
         load_result = table_class.load(package_id, temp_file, commit=True)
         if load_result['success']:
-            if cache_update_fn:
-                cache_update_fn(package_id)
             return jsonify_fast_no_sort(load_result)
         else:
             return abort_json(400, load_result)
@@ -990,7 +988,7 @@ def jump_perpetual_access(package_id):
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
-            return _load_package_file(package_id, request, PerpetualAccessInput, refresh_perpetual_access_from_db)
+            return _load_package_file(package_id, request, PerpetualAccessInput)
 
 
 @app.route('/publisher/<package_id>/prices', methods=['GET', 'POST', 'DELETE'])
@@ -1012,12 +1010,7 @@ def jump_journal_prices(package_id):
             return abort_json(400, _long_error_message())
         else:
 
-            return _load_package_file(
-                package_id,
-                request,
-                JournalPriceInput,
-                lambda x: refresh_cached_prices_from_db(x, package.publisher)
-            )
+            return _load_package_file(package_id, request, JournalPriceInput)
 
 
 def post_subscription_guts(scenario_id, scenario_name=None):
