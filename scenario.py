@@ -1110,12 +1110,6 @@ def get_journal_era_subjects():
     return _journal_era_subjects
 
 
-if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
-    _load_ricks_journal_rows()
-    _load_hybrid_2019_from_db()
-    _load_journal_era_subjects_from_db()
-
-
 @cache
 def get_oa_recent_data_from_db():
     oa_dict = {}
@@ -1143,6 +1137,7 @@ def get_oa_recent_data_from_db():
                 lookup_dict[row["issn_l"]] += [row]
             oa_dict[key] = lookup_dict
     return oa_dict
+
 
 @cache
 def get_oa_data_from_db():
@@ -1175,6 +1170,7 @@ def get_oa_data_from_db():
             oa_dict[key] = lookup_dict
     return oa_dict
 
+
 @cache
 def get_society_data_from_db():
     command = "select issn_l, is_society_journal from jump_society_journals_input where is_society_journal is not null"
@@ -1185,7 +1181,6 @@ def get_society_data_from_db():
     for row in rows:
         lookup_dict[row["issn_l"]] = row["is_society_journal"]
     return lookup_dict
-
 
 
 @cache
@@ -1199,6 +1194,7 @@ def get_social_networks_data_from_db():
     for row in rows:
         lookup_dict[row["issn_l"]] = row["asn_only_rate"]
     return lookup_dict
+
 
 @cache
 def get_oa_adjustment_data_from_db():
@@ -1220,6 +1216,17 @@ def get_oa_adjustment_data_from_db():
     for row in rows:
         lookup_dict[row["issn_l"]] = row
     return lookup_dict
+
+
+if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
+    _load_ricks_journal_rows()
+    _load_hybrid_2019_from_db()
+    _load_journal_era_subjects_from_db()
+    get_oa_data_from_db()
+    get_society_data_from_db()
+    get_social_networks_data_from_db()
+    get_num_papers_from_db()
+    get_oa_recent_data_from_db()
 
 
 @cache
