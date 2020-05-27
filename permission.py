@@ -1,3 +1,4 @@
+from kids.cache import cache
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
 
@@ -14,14 +15,17 @@ class Permission(db.Model):
         return Permission.query.filter(Permission.name == name).first()
 
     @staticmethod
+    @cache
     def view():
         return Permission.get('view')
 
     @staticmethod
+    @cache
     def admin():
         return Permission.get('admin')
 
     @staticmethod
+    @cache
     def modify():
         return Permission.get('modify')
 
