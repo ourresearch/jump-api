@@ -1,6 +1,9 @@
+from datetime import datetime
+
 from app import db
 from package_input import PackageInput
 from scenario import refresh_perpetual_access_from_db
+
 
 class PerpetualAccess(db.Model):
     __tablename__ = 'jump_perpetual_access'
@@ -41,12 +44,12 @@ class PerpetualAccessInput(db.Model, PackageInput):
     def csv_columns(cls):
         return {
             'start_date': {
-                'normalize': cls.normalize_date,
+                'normalize': lambda x: cls.normalize_date(x, default=datetime(1970, 1, 1)),
                 'name_snippets': [u'start', u'begin'],
                 'required': True
             },
             'end_date': {
-                'normalize': cls.normalize_date,
+                'normalize': lambda x: cls.normalize_date(x, default=datetime(1970, 12, 31)),
                 'name_snippets': [u'end'],
                 'required': True
             },
