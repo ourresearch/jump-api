@@ -19,6 +19,7 @@ class TestPerpetualAccess(unittest.TestCase):
         assert_equals(normalize('October 21st 2015'), datetime.datetime(2015, 10, 21).isoformat())
 
         assert_equals(normalize('2015'), datetime.datetime(2015, 1, 1).isoformat())
+        assert_equals(normalize('1993-01'), datetime.datetime(1993, 1, 1).isoformat())
 
         assert_equals(normalize('a few days ago'), ParseWarning.bad_date)
         assert_equals(normalize(None), None)
@@ -29,6 +30,7 @@ class TestPerpetualAccess(unittest.TestCase):
         assert_equals(normalize('October 21st 2015'), datetime.datetime(2015, 10, 21).isoformat())
 
         assert_equals(normalize('2015'), datetime.datetime(2015, 12, 31).isoformat())
+        assert_equals(normalize('1993-02'), datetime.datetime(1993, 2, 28).isoformat())
 
         assert_equals(normalize('a few days ago'), ParseWarning.bad_date)
         assert_equals(normalize(None), None)
