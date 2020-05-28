@@ -21,10 +21,10 @@ from util import safe_commit
 
 class PackageInput:
     @staticmethod
-    def normalize_date(date_str, warn_if_blank=False):
+    def normalize_date(date_str, warn_if_blank=False, default=None):
         if date_str:
             try:
-                return dateutil.parser.parse(date_str).isoformat()
+                return dateutil.parser.parse(date_str, default=default).isoformat()
             except Exception:
                 return ParseWarning.bad_date
         else:
