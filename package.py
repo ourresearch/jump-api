@@ -21,7 +21,7 @@ from saved_scenario import SavedScenario
 from scenario import get_hybrid_2019
 from scenario import get_ricks_journal_rows
 from scenario import get_prices_from_cache
-from scenario import get_core_list_from_db
+from scenario import get_core_list_from_cache
 from scenario import get_perpetual_access_from_cache
 from util import get_sql_answer
 from util import get_sql_rows
@@ -95,7 +95,7 @@ class Package(db.Model):
 
     @property
     def has_core_journal_list(self):
-        rows = get_core_list_from_db(self.package_id)
+        rows = get_core_list_from_cache(self.package_id)
         if rows:
             return True
         return False
@@ -103,7 +103,7 @@ class Package(db.Model):
     def filter_by_core_list(self, my_list):
         if not self.has_core_journal_list:
             return my_list
-        core_rows = get_core_list_from_db(self.package_id)
+        core_rows = get_core_list_from_cache(self.package_id)
         core_issnls = core_rows.keys()
         return [row for row in my_list if row["issn_l"] in core_issnls]
 
