@@ -36,7 +36,10 @@ class User(db.Model):
             'username': self.username,
             'is_demo': self.is_demo_user,
             'is_password_set': not check_password_hash(self.password_hash, u''),
-            'user_permissions': self.permissions_list(),
+            'user_permissions': sorted(
+                self.permissions_list(),
+                key=lambda x: (x['is_demo_institution'], x['institution_id'])
+            ),
         }
 
     def permissions_list(self):
@@ -56,6 +59,7 @@ class User(db.Model):
                     'institution_name': permission.institution.display_name,
                     'user_name': self.display_name,
                     'is_authenticated_user': authenticated_user_id() == self.id,
+                    'is_demo_institution': permission.institution.is_demo_institution,
                 }
             else:
                 dicts[permission.institution_id]['permissions'].append(permission.permission.name)

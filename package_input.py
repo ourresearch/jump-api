@@ -14,17 +14,17 @@ from sqlalchemy.sql import text
 import package
 from app import db, logger
 from excel import convert_spreadsheet_to_csv
-from purge_cache import purge_the_cache
+import purge_cache
 from util import convert_to_utf_8
 from util import safe_commit
 
 
 class PackageInput:
     @staticmethod
-    def normalize_date(date_str, warn_if_blank=False):
+    def normalize_date(date_str, warn_if_blank=False, default=None):
         if date_str:
             try:
-                return dateutil.parser.parse(date_str).isoformat()
+                return dateutil.parser.parse(date_str, default=default).isoformat()
             except Exception:
                 return ParseWarning.bad_date
         else:
@@ -145,7 +145,7 @@ class PackageInput:
     @classmethod
     def clear_caches(cls, my_package):
         my_package.clear_package_counter_breakdown_cache()
-        purge_the_cache(my_package.package_id)
+        purge_cache.purge_common_package_data_cache(my_package.package_id)
 
     @classmethod
     def update_dest_table(cls, package_id):
