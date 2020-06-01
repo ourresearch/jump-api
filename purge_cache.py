@@ -1,5 +1,5 @@
 import os
-
+import argparse
 import requests
 
 import package
@@ -37,3 +37,10 @@ def purge_all_caches(package_id):
     refresh_package_specific_scenario_data_from_db(my_package.package_id)
     refresh_apc_data_from_db(my_package.package_id)
     refresh_core_list_from_db(my_package.package_id)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('package_id', help='package_id', type=str)
+
+    purge_all_caches(parser.parse_args().package_id)
+    print "done"
