@@ -453,7 +453,6 @@ class Journal(object):
     @cached_property
     def backfile_raw_obs_pub(self):
         response = {}
-
         for obs_year in range(2020, 2025):
             obs_key = "obs{}".format(obs_year)
             response[obs_key] = {}
