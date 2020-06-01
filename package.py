@@ -430,6 +430,23 @@ class Package(db.Model):
                 'has_public_price': issn_l in public_prices,
                 'public_price': public_price_defaults[issn_l],
             },
+            'data_sources': [
+                {
+                    'id': 'counter',
+                    'source': 'custom' if issn_l in counter_rows else None,
+                    'value': counter_defaults[issn_l]['num_2018_downloads'],
+                },
+                {
+                    'id': 'perpetual_access',
+                    'source': 'custom' if issn_l in pa_rows else None,
+                    'value': [pa_defaults[issn_l]['start_date'], pa_defaults[issn_l]['end_date']],
+                },
+                {
+                    'id': 'price',
+                    'source': 'custom' if issn_l in package_prices else 'default' if issn_l in public_prices else None,
+                    'value': package_price_defaults[issn_l] or public_price_defaults[issn_l],
+                },
+            ],
             'issns': journal_rows.get(issn_l, {}).get('issns', None)
         } for issn_l in distinct_issnls]
 
