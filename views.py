@@ -887,6 +887,17 @@ def new_publisher():
 
     safe_commit(db)
 
+    # command = '''
+    #     insert into jump_apc_authorships (
+    #         select * from jump_apc_authorships_view_new
+    #         where package_id = '{}' and publisher='Wiley'
+    #     )
+    # '''.format(new_pub.package_id)
+    # print "commmand", command
+    # db.session.execute(command)
+    #
+    # safe_commit(db)
+
     publisher_dict = new_pub.to_publisher_dict()
     return jsonify_fast_no_sort(publisher_dict)
 
