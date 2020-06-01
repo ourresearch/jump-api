@@ -15,6 +15,7 @@ import traceback
 import unicodedata
 import urlparse
 from codecs import BOM_UTF8, BOM_UTF16_BE, BOM_UTF16_LE, BOM_UTF32_BE, BOM_UTF32_LE
+import chardet
 
 import heroku3
 import requests
@@ -914,8 +915,6 @@ def convert_to_utf_8(file_name):
         possible_encodings.append('UTF-8')
         possible_encodings.append('windows-1252')
 
-        # try chardet
-        import cchardet as chardet
         possible_encodings.append(chardet.detect(sample)['encoding'])
 
 
