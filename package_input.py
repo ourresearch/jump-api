@@ -188,7 +188,14 @@ class PackageInput:
         logger.info('converted file: {}'.format(file_name))
 
         with open(file_name, 'r') as csv_file:
-            dialect = csv.Sniffer().sniff(csv_file.readline())
+            dialect_sample = ''
+            for i in range(0, 20):
+                next_line = csv_file.readline()
+                dialect_sample = dialect_sample + next_line
+                if not next_line:
+                    break
+
+            dialect = csv.Sniffer().sniff(dialect_sample)
             csv_file.seek(0)
 
             # find the index of the first complete header row
@@ -236,7 +243,6 @@ class PackageInput:
                         raise RuntimeError(u'Error reading row {}: {} for {}: "{}"'.format(
                             row_no + 1, e.message, column_name, row[column_name]
                         ))
-
                 if cls.ignore_row(normalized_row):
                     continue
 
