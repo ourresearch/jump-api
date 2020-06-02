@@ -438,8 +438,8 @@ class Package(db.Model):
                 },
                 {
                     'id': 'perpetual_access',
-                    'source': 'custom' if issn_l in pa_rows else None,
-                    'value': [pa_defaults[issn_l]['start_date'], pa_defaults[issn_l]['end_date']],
+                    'source': 'custom' if issn_l in pa_rows else 'default',
+                    'value': [pa_rows[issn_l]['start_date'], pa_rows[issn_l]['end_date']] if issn_l in pa_rows else [datetime.datetime(2010, 1, 1), None],
                 },
                 {
                     'id': 'price',
