@@ -367,7 +367,7 @@ def register_demo_user():
 
         return jsonify({"access_token": access_token})
     else:
-        return abort_json(500)
+        return abort_json(500, u'Database error.')
 
 
 def assign_demo_institution(user):
