@@ -21,7 +21,7 @@ from saved_scenario import SavedScenario
 from scenario import get_hybrid_2019
 from scenario import get_ricks_journal_rows
 from scenario import get_prices_from_cache
-from scenario import get_core_list_from_cache
+from scenario import get_core_list_from_db
 from scenario import get_perpetual_access_from_cache
 from util import get_sql_answer
 from util import get_sql_rows
@@ -95,7 +95,7 @@ class Package(db.Model):
 
     @property
     def has_core_journal_list(self):
-        rows = get_core_list_from_cache(self.package_id)
+        rows = get_core_list_from_db(self.package_id)
         if rows:
             return True
         return False
@@ -103,7 +103,7 @@ class Package(db.Model):
     def filter_by_core_list(self, my_list):
         if not self.has_core_journal_list:
             return my_list
-        core_rows = get_core_list_from_cache(self.package_id)
+        core_rows = get_core_list_from_db(self.package_id)
         core_issnls = core_rows.keys()
         return [row for row in my_list if row["issn_l"] in core_issnls]
 
@@ -438,8 +438,8 @@ class Package(db.Model):
                 },
                 {
                     'id': 'perpetual_access',
-                    'source': 'custom' if issn_l in pa_rows else None,
-                    'value': [pa_defaults[issn_l]['start_date'], pa_defaults[issn_l]['end_date']],
+                    'source': 'custom' if issn_l in pa_rows else 'default',
+                    'value': [pa_rows[issn_l]['start_date'], pa_rows[issn_l]['end_date']] if issn_l in pa_rows else [datetime.datetime(2010, 1, 1), None],
                 },
                 {
                     'id': 'price',
@@ -575,6 +575,13 @@ class Package(db.Model):
                         PerpetualAccessInput.package_id == self.package_id
                     ).count() > 0
                 },
+                {
+                    'name': 'price',
+                    'uploaded': False if self.is_demo else JournalPriceInput.query.filter(
+                        JournalPriceInput.package_id == self.package_id
+                    ).count() > 0
+                },
+                # TODO: remove prices when not used by frontend
                 {
                     'name': 'prices',
                     'uploaded': False if self.is_demo else JournalPriceInput.query.filter(

@@ -134,11 +134,12 @@ class PackageInput:
         num_deleted = db.session.query(cls).filter(cls.package_id == package_id).delete()
         db.session.execute("delete from {} where package_id = '{}'".format(cls.destination_table(), package_id))
 
+        safe_commit(db)
+
         my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
         if my_package:
             cls.clear_caches(my_package)
 
-        safe_commit(db)
 
         return u'Deleted {} {} rows for package {}.'.format(num_deleted, cls.__name__, package_id)
 
@@ -188,7 +189,14 @@ class PackageInput:
         logger.info('converted file: {}'.format(file_name))
 
         with open(file_name, 'r') as csv_file:
-            dialect = csv.Sniffer().sniff(csv_file.readline())
+            dialect_sample = ''
+            for i in range(0, 20):
+                next_line = csv_file.readline()
+                dialect_sample = dialect_sample + next_line
+                if not next_line:
+                    break
+
+            dialect = csv.Sniffer().sniff(dialect_sample)
             csv_file.seek(0)
 
             # find the index of the first complete header row
@@ -236,7 +244,6 @@ class PackageInput:
                         raise RuntimeError(u'Error reading row {}: {} for {}: "{}"'.format(
                             row_no + 1, e.message, column_name, row[column_name]
                         ))
-
                 if cls.ignore_row(normalized_row):
                     continue
 

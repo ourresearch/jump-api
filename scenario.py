@@ -862,12 +862,8 @@ def get_consortium_package_ids(package_id):
     package_ids = [row["package_id"] for row in rows]
     return package_ids
 
-
-def _package_specific_scenario_data_cache_key(input_package_id):
-    return u'scenario.get_package_specific_scenario_data.{}'.format(input_package_id)
-
-
-def refresh_package_specific_scenario_data_from_db(input_package_id):
+@cache
+def get_package_specific_scenario_data_from_db(input_package_id):
     timing = []
     section_time = time()
 
@@ -894,7 +890,7 @@ def refresh_package_specific_scenario_data_from_db(input_package_id):
         from jump_citing citing
         join jump_grid_id institution_grid on citing.grid_id = institution_grid.grid_id
         join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id
-        where citing.year < 2019
+        where citing.year < 2019 
         and package_id in ({})
         group by issn_l, year""".format(consortium_package_ids_string)
     citation_rows = None
@@ -913,7 +909,7 @@ def refresh_package_specific_scenario_data_from_db(input_package_id):
         from jump_authorship authorship
         join jump_grid_id institution_grid on authorship.grid_id = institution_grid.grid_id
         join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id
-        where authorship.year < 2019
+        where authorship.year < 2019 
         and package_id in ({})
         group by issn_l, year""".format(consortium_package_ids_string)
     authorship_rows = None
@@ -934,21 +930,11 @@ def refresh_package_specific_scenario_data_from_db(input_package_id):
         "authorship_dict": authorship_dict
     }
 
-    my_memcached.set(_package_specific_scenario_data_cache_key(input_package_id), data)
-
     return data
 
 
-def get_package_specific_scenario_data_from_cache(input_package_id):
-    memcached_key = _package_specific_scenario_data_cache_key(input_package_id)
-    return my_memcached.get(memcached_key) or refresh_package_specific_scenario_data_from_db(input_package_id)
-
-
-def _apc_data_cache_key(input_package_id):
-    return u'scenario.get_apc_data.{}'.format(input_package_id)
-
-
-def refresh_apc_data_from_db(input_package_id):
+@cache
+def get_apc_data_from_db(input_package_id):
     if input_package_id == DEMO_PACKAGE_ID or input_package_id.startswith("demo"):
         input_package_id = DEMO_PACKAGE_ID
     consortium_package_ids = get_consortium_package_ids(input_package_id)
@@ -962,14 +948,7 @@ def refresh_apc_data_from_db(input_package_id):
         cursor.execute(command)
         rows = cursor.fetchall()
 
-    my_memcached.set(_apc_data_cache_key(input_package_id), rows)
-
     return rows
-
-
-def get_apc_data_from_cache(input_package_id):
-    memcached_key = _apc_data_cache_key(input_package_id)
-    return my_memcached.get(memcached_key) or refresh_apc_data_from_db(input_package_id)
 
 
 def _perpetual_access_cache_key(package_id):
@@ -994,25 +973,14 @@ def get_perpetual_access_from_cache(package_id, unused_publisher_name=None):
     return my_memcached.get(memcached_key) or refresh_perpetual_access_from_db(package_id)
 
 
-def _core_list_cache_key(input_package_id):
-    return u'scenario.get_core_list.{}'.format(input_package_id)
-
-
-def refresh_core_list_from_db(input_package_id):
+@cache
+def get_core_list_from_db(input_package_id):
     command = "select issn_l, baseline_access from jump_core_journals where package_id='{}'".format(input_package_id)
     with get_db_cursor() as cursor:
         cursor.execute(command)
         rows = cursor.fetchall()
     my_dict = dict([(a["issn_l"], a) for a in rows])
-
-    my_memcached.set(_core_list_cache_key(input_package_id), my_dict)
-
     return my_dict
-
-
-def get_core_list_from_cache(input_package_id):
-    memcached_key = _core_list_cache_key(input_package_id)
-    return my_memcached.get(memcached_key) or refresh_core_list_from_db(input_package_id)
 
 
 @cache
@@ -1275,14 +1243,14 @@ def get_common_package_data(package_id):
     my_timing.log_timing("get_consortium_package_ids")
 
     for org_package_id in my_data["org_package_ids"]:
-        my_data[org_package_id] = get_package_specific_scenario_data_from_cache(org_package_id)
-        my_timing.log_timing("get_package_specific_scenario_data_from_cache")
+        my_data[org_package_id] = get_package_specific_scenario_data_from_db(org_package_id)
+        my_timing.log_timing("get_package_specific_scenario_data_from_db")
 
-    my_data["apc"] = get_apc_data_from_cache(package_id)  # gets everything from consortium itself
-    my_timing.log_timing("get_apc_data_from_cache")
+    my_data["apc"] = get_apc_data_from_db(package_id)  # gets everything from consortium itself
+    my_timing.log_timing("get_apc_data_from_db")
 
-    my_data["core_list"] = get_core_list_from_cache(package_id)
-    my_timing.log_timing("get_core_list_from_cache")
+    my_data["core_list"] = get_core_list_from_db(package_id)
+    my_timing.log_timing("get_core_list_from_db")
 
     # not package_id specific
 

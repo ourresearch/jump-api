@@ -4,6 +4,7 @@ import string
 import secrets
 import shortuuid
 from sqlalchemy.orm import relationship
+from unidecode import unidecode
 from werkzeug.security import check_password_hash
 
 from app import db
@@ -38,7 +39,7 @@ class User(db.Model):
             'is_password_set': not check_password_hash(self.password_hash, u''),
             'user_permissions': sorted(
                 self.permissions_list(),
-                key=lambda x: (x['is_demo_institution'], x['institution_id'])
+                key=lambda x: (x['is_demo_institution'], unidecode(unicode(x['institution_name'] or '')))
             ),
         }
 
