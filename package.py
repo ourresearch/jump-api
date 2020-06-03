@@ -187,7 +187,6 @@ class Package(db.Model):
 
     @cached_property
     def get_published_toll_access_in_2019_with_publisher(self):
-        print "self.publisher_where", self.publisher_where
         rows = self.get_base(and_where=""" and counter.issn_l in
 	            (select journal_issn_l from unpaywall u where year=2019 and journal_is_oa='false' 
 	            and {publisher_where} group by journal_issn_l) """.format(publisher_where=self.publisher_where))
@@ -321,9 +320,11 @@ class Package(db.Model):
 
     def get_package_counter_breakdown(self):
         package_id = self.package_id_for_db
-        print "package_id HERE", package_id
 
         # temp
+        # @todo next:
+        # see if i can comment this back out
+        # see why wiley has more in scenario than it does still publishing with prices
         # self.clear_package_counter_breakdown_cache()
 
         memcached_key = self.get_package_counter_breakdown_memcached_key()
@@ -617,7 +618,7 @@ def clone_demo_package(institution):
 
     # jump_account_package
     new_package = Package(
-        package_id='publisher-{}'.format(shortuuid.uuid()[0:12]),
+        package_id='package-{}'.format(shortuuid.uuid()[0:12]),
         publisher=demo_package.publisher,
         package_name=demo_package.publisher,
         created=now,
@@ -695,9 +696,9 @@ def clone_demo_package(institution):
     db.session.execute(
         """
             insert into jump_apc_authorships (
-                package_id, doi, num_authors_total, num_authors_from_uni, journal_name, issn_l, year, oa_status, apc
+                package_id, doi, publisher, num_authors_total, num_authors_from_uni, journal_name, issn_l, year, oa_status, apc
             ) (
-                select '{}', doi, num_authors_total, num_authors_from_uni, journal_name, issn_l, year, oa_status, apc 
+                select '{}', doi, publisher, num_authors_total, num_authors_from_uni, journal_name, issn_l, year, oa_status, apc 
                 from jump_apc_authorships
                 where package_id = '{}'
             )
