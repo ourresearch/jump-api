@@ -576,6 +576,13 @@ class Package(db.Model):
                     ).count() > 0
                 },
                 {
+                    'name': 'price',
+                    'uploaded': False if self.is_demo else JournalPriceInput.query.filter(
+                        JournalPriceInput.package_id == self.package_id
+                    ).count() > 0
+                },
+                # TODO: remove prices when not used by frontend
+                {
                     'name': 'prices',
                     'uploaded': False if self.is_demo else JournalPriceInput.query.filter(
                         JournalPriceInput.package_id == self.package_id
