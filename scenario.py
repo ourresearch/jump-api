@@ -355,7 +355,10 @@ class Scenario(object):
 
     @cached_property
     def cost_bigdeal_projected(self):
-        return round(np.mean(self.cost_bigdeal_projected_by_year), 4)
+        response = round(np.mean(self.cost_bigdeal_projected_by_year), 4)
+        if response < 1:
+            response = 1.0  # avoid div 0 errors
+        return response
 
     @cached_property
     def cost_saved_percent(self):
