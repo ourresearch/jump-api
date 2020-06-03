@@ -359,7 +359,7 @@ def register_demo_user():
     assign_demo_institution(demo_user)
 
     if safe_commit(db):
-        email = create_email(email, u'Welcome to Unpaywall Journals', 'demo_user', {})
+        email = create_email(email, u'Welcome to Unsub', 'demo_user', {})
         send(email, for_real=True)
 
         identity_dict = make_identity_dict(demo_user)
@@ -406,7 +406,7 @@ def notify_changed_permissions(user, admin, old_permissions, new_permissions):
                 diff_lines.append(u'new: {}'.format(u','.join(new_names) if new_names else '[None]'))
                 diff_lines.append(u'')
 
-        email = create_email(user.email, u'Your Unpaywall Journals permissions were changed.', 'changed_permissions',
+        email = create_email(user.email, u'Your Unsub permissions were changed.', 'changed_permissions',
                              {'data': {
                                  'display_name': user.display_name,
                                  'admin_name': admin.display_name,
@@ -491,7 +491,7 @@ def register_new_user():
             permissions_by_institution.keys()[0]
         ) if permissions_by_institution else None
 
-        email = create_email(req_user.email, u'Welcome to Unpaywall Journals', 'new_user', {'data': {
+        email = create_email(req_user.email, u'Welcome to Unsub', 'new_user', {'data': {
             'email': new_email,
             'password': password,
             'institution_name': email_institution and email_institution.display_name
@@ -868,15 +868,15 @@ def new_publisher():
 
     now = datetime.datetime.utcnow().isoformat()
 
-    new_pub = Package()
-    new_pub.package_id = 'publisher-{}'.format(shortuuid.uuid()[0:12])
-    new_pub.institution_id = pub_institution.id
-    new_pub.package_name = request.json['name']
-    new_pub.publisher = request.json['publisher']
-    new_pub.is_demo = pub_institution.is_demo_institution
-    new_pub.created = now
+    new_package = Package()
+    new_package.package_id = 'package-{}'.format(shortuuid.uuid()[0:12])
+    new_package.institution_id = pub_institution.id
+    new_package.package_name = request.json['name']
+    new_package.publisher = request.json['publisher']
+    new_package.is_demo = pub_institution.is_demo_institution
+    new_package.created = now
 
-    db.session.add(new_pub)
+    db.session.add(new_package)
     db.session.flush()
 
     db.session.execute('''
@@ -884,22 +884,20 @@ def new_publisher():
             select * from jump_apc_authorships_view
             where package_id = '{}'
         )
-    '''.format(new_pub.package_id))
+    '''.format(new_package.package_id))
+
+
+    # replace with this soon
+    # db.session.execute('''
+    #     insert into jump_apc_authorships (
+    #         select * from jump_apc_authorships_view_new
+    #         where package_id = '{}' and publisher='{}'
+    #     )
+    # '''.format(new_package.package_id, new_package.publisher))
 
     safe_commit(db)
 
-    # command = '''
-    #     insert into jump_apc_authorships (
-    #         select * from jump_apc_authorships_view_new
-    #         where package_id = '{}' and publisher='Wiley'
-    #     )
-    # '''.format(new_pub.package_id)
-    # print "commmand", command
-    # db.session.execute(command)
-    #
-    # safe_commit(db)
-
-    publisher_dict = new_pub.to_publisher_dict()
+    publisher_dict = new_package.to_publisher_dict()
     return jsonify_fast_no_sort(publisher_dict)
 
 
@@ -908,7 +906,10 @@ def new_publisher():
 def live_package_id_get(package_id):
     return get_publisher(package_id)
 
-
+## examples
+# /counter/diff_no_price
+# /counter/diff_changed_publisher
+# /counter/
 @app.route('/package/<package_id>/counter/<diff_type>', methods=['GET'])
 @jwt_optional
 def jump_debug_counter_diff_type_package_id(package_id, diff_type):
@@ -1412,7 +1413,7 @@ def request_password_reset():
     db.session.add(reset_request)
     safe_commit(db)
 
-    email = create_email(reset_user.email, u'Change your Unpaywall Journals password.', 'password_reset', {'data': {
+    email = create_email(reset_user.email, u'Change your Unsub password.', 'password_reset', {'data': {
         'display_name': reset_user.display_name,
         'email': reset_user.email,
         'jump_url': os.environ.get('JUMP_URL'),
