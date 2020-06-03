@@ -1,6 +1,6 @@
 # Release Notes
 
-Unpaywall Journals uses Continual Integration for releases: we are continually refining the production product, 
+Unsub uses Continual Integration for releases: we are continually refining the production product, 
 both its appearance and its underlying data.  
 This means you will often see changes in the UI/UX, and sometimes in the presented data.  
 Most of these changes are too small to note, but we'll keep a record of the larger ones here:

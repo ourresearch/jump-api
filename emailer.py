@@ -18,7 +18,7 @@ def create_email(address, subject, template_name, context):
     html_to_send = html_template.render(context)
     content = Content("text/html", html_to_send)
 
-    from_email = Email("team@ourresearch.org", "Unpaywall Journals Team")
+    from_email = Email("team@ourresearch.org", "Unsub Team")
     to_email = Email(address)
 
     email = Mail(from_email, subject, to_email, content)
