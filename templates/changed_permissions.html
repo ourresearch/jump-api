@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Your Unpaywall Journals permissions were changed.</title>
+    <title>Your Unsub permissions were changed.</title>
 </head>
 <body>
 
@@ -9,12 +9,12 @@
     Hi{% if 'Anon' not in data.display_name %} {{ data.display_name }}{% endif %},
 </p>
 <p>
-    Your Unpaywall Journals permissions were changed by {{ data.admin_name }} ({{ data.admin_email }}). The changes were:
+    Your Unsub permissions were changed by {{ data.admin_name }} ({{ data.admin_email }}). The changes were:
 </p>
 <pre>{{ data.diff }}</pre>
 <p>
     Best,<br/>
-    Heather and Jason
+    Jason, Heather, and Richard
 </p>
 
 </body>
