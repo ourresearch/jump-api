@@ -22,25 +22,31 @@ from util import read_csv_file
 
 # heroku local:run python init_institution.py
 
+#  python init_institution.py --institutions  (with --commit to commit it)
+#  python init_institution.py --users  (with --commit to commit it)
+#  python init_institution.py --counter --username nickname --file /filename.txt
+
 # configuration here
 
-users = [
+institution_name = u'Temp University'
+
+user_rows = [
     {
-        'email': u'jane@example.edu',  # required
+        'email': u'me@example.edu',  # required
         'password': u'',  # required
-        'name': u'Jane',  # default is None
+        'name': u'My Name',  # default is None
+        'institution_name': institution_name,
         'permissions': [u'view', u'modify', u'admin', ]  # default is view, modify, admin
-    },
-    {
-        'email': u'mike2@example.edu',
-        'password': u'',
-        'name': u'Mike',
     }
 ]
 
-institution_name = u'West Example State'
+institution_rows = [{
+    "institution_name": institution_name,
+    "username": "nickname",
+    "ror_id": "xxx"
+}]
 
-ror_ids = [u'049pfb863', ]
+
 
 # files can be xls, xlsx, or csv
 files = {
