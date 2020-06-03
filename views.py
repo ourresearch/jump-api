@@ -1002,7 +1002,7 @@ def jump_perpetual_access(package_id):
             return _load_package_file(package_id, request, PerpetualAccessInput)
 
 
-@app.route('/publisher/<package_id>/prices', methods=['GET', 'POST', 'DELETE'])
+@app.route('/publisher/<package_id>/price', methods=['GET', 'POST', 'DELETE'])
 # @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 @jwt_optional
 def jump_journal_prices(package_id):
