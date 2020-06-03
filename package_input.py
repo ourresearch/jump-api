@@ -134,11 +134,12 @@ class PackageInput:
         num_deleted = db.session.query(cls).filter(cls.package_id == package_id).delete()
         db.session.execute("delete from {} where package_id = '{}'".format(cls.destination_table(), package_id))
 
+        safe_commit(db)
+
         my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
         if my_package:
             cls.clear_caches(my_package)
 
-        safe_commit(db)
 
         return u'Deleted {} {} rows for package {}.'.format(num_deleted, cls.__name__, package_id)
 
