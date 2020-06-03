@@ -1116,16 +1116,7 @@ def get_oa_recent_data_from_db():
     for submitted in ["with_submitted", "no_submitted"]:
         for bronze in ["with_bronze", "no_bronze"]:
             key = "{}_{}".format(submitted, bronze)
-
-            # command = """select * from jump_oa_recent_{}_elsevier
-            #             -- where (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')
-            #                 """.format(key)
-
-            # command = """select * from jump_oa_recent_{}
-            #             where (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')
-            #                 """.format(key)
-
-            command = """select * from jump_oa_recent_{}_mixed
+            command = """select * from jump_oa_recent_{}_precovid
                         where (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')
                             """.format(key)
 
@@ -1146,17 +1137,7 @@ def get_oa_data_from_db():
         for bronze in ["with_bronze", "no_bronze"]:
             key = "{}_{}".format(submitted, bronze)
 
-            # command = """select * from jump_oa_{}_elsevier
-            #             where year_int >= 2015
-            #             -- and  (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')
-            #                 """.format(key)
-
-            # command = """select * from jump_oa_{}
-            #             where year_int >= 2015
-            #             and  (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')
-            #                 """.format(key)
-
-            command = """select * from jump_oa_{}_mixed
+            command = """select * from jump_oa_{}_precovid
                         where year_int >= 2015
                         and  (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')
                             """.format(key)
