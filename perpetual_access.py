@@ -44,12 +44,12 @@ class PerpetualAccessInput(db.Model, PackageInput):
     def csv_columns(cls):
         return {
             'start_date': {
-                'normalize': lambda x: cls.normalize_date(x, default=datetime(1970, 1, 1)),
+                'normalize': lambda date, warn_if_blank=False: cls.normalize_date(date, default=datetime(1970, 1, 1), warn_if_blank=warn_if_blank),
                 'name_snippets': [u'start', u'begin'],
                 'required': True
             },
             'end_date': {
-                'normalize': lambda x: cls.normalize_date(x, default=datetime(1970, 12, 31)),
+                'normalize': lambda date, warn_if_blank=False: cls.normalize_date(date, default=datetime(1970, 12, 31), warn_if_blank=warn_if_blank),
                 'name_snippets': [u'end'],
                 'required': True
             },
