@@ -14,6 +14,7 @@ from flask import g
 from flask_jwt_extended import jwt_required, jwt_optional, create_access_token, get_jwt_identity
 from pyinstrument import Profiler
 from sqlalchemy import or_
+from sqlalchemy import func as sql_func
 from werkzeug.security import safe_str_cmp
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -170,15 +171,15 @@ def authenticated_user():
 
 
 def lookup_user(user_id=None, email=None, username=None):
-        id_user = User.query.filter(User.id == user_id).scalar() if user_id is not None else None
-        email_user = User.query.filter(User.email == email).scalar() if email is not None else None
-        username_user = User.query.filter(User.username == username).scalar() if username is not None else None
+    id_user = User.query.filter(User.id == user_id).scalar() if user_id is not None else None
+    email_user = User.query.filter(sql_func.lower(User.email) == email.lower()).scalar() if email is not None else None
+    username_user = User.query.filter(User.username == username).scalar() if username is not None else None
 
-        user_ids = set([user.id for user in [id_user, email_user, username_user] if user])
-        if len(user_ids) > 1:
-            return abort_json(400, u'Email, username, and user id are in use by different users.')
+    user_ids = set([user.id for user in [id_user, email_user, username_user] if user])
+    if len(user_ids) > 1:
+        return abort_json(400, u'Email, username, and user id are in use by different users.')
 
-        return id_user or email_user or username_user
+    return id_user or email_user or username_user
 
 
 @app.before_request
@@ -341,7 +342,7 @@ def register_demo_user():
         if check_password_hash(existing_user.password_hash, password):
             return user_login()
         else:
-            if existing_user.email == email:
+            if lookup_user(email=email):
                 return abort_json(409, u'A user with email {} already exists.'.format(email))
             else:
                 return abort_json(409, u'A user with username {} already exists.'.format(username))
