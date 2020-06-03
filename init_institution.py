@@ -212,7 +212,7 @@ def add_publisher(institution_username, counter_filename):
             logger.info(u'  found an existing Publisher {}'.format(my_publisher))
         else:
             my_publisher = Package(
-                package_id=u'publisher-{}'.format(shortuuid.uuid()[0:12]),
+                package_id=u'package-{}'.format(shortuuid.uuid()[0:12]),
                 publisher=u'Elsevier',
                 package_name=u'Elsevier',
                 created=now,
@@ -247,7 +247,7 @@ def add_publisher(institution_username, counter_filename):
     logger.info(u'populating jump_apc_authorships for Publisher {}'.format(my_publisher))
 
     num_apc_authorship_rows = db.session.execute(
-        "select count(*) from jump_apc_authorships where package_id = '{}'".format(my_publisher.package_id)
+        "select count(*) from jump_apc_authorships where package_id = '{}' and publisher='{}'".format(my_publisher.package_id, "Elsevier")
     ).scalar()
 
     if num_apc_authorship_rows:
@@ -259,9 +259,9 @@ def add_publisher(institution_username, counter_filename):
             '''
                 insert into jump_apc_authorships (
                     select * from jump_apc_authorships_view
-                    where package_id = '{}'
+                    where package_id = '{}' and publisher='{}'
                 )
-            '''.format(my_publisher.package_id)
+            '''.format(my_publisher.package_id, "Elsevier")
         ).rowcount
 
         logger.info(u'  created {} jump_apc_authorships rows for Publisher {}'.format(
@@ -350,6 +350,14 @@ if __name__ == "__main__":
 
     elif parser.parse_args().counter:
         add_publisher(parser.parse_args().username, parser.parse_args().file)
+
+        # logging.getLogger('').setLevel(logging.WARNING)
+        # from counter import CounterInput
+        # load_result = CounterInput.load("publisher-hdWY3dkWbJqQ", filename)
+        # if load_result['success']:
+        #     logger.info(load_result['message'])
+        # else:
+        #     raise RuntimeError(load_result['message'])
 
     #
     # usernames = """
