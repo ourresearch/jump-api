@@ -14,10 +14,10 @@ from app import get_db_cursor
 from app import DEMO_PACKAGE_ID
 from app import my_memcached
 from assumptions import Assumptions
-from counter import CounterInput
-from journal_price import JournalPriceInput
+from counter import Counter, CounterInput
+from journal_price import JournalPrice, JournalPriceInput
 from package_file_warning import PackageFileWarning
-from perpetual_access import PerpetualAccessInput
+from perpetual_access import PerpetualAccess, PerpetualAccessInput
 from saved_scenario import SavedScenario
 from scenario import get_hybrid_2019
 from scenario import get_ricks_journal_rows
@@ -44,6 +44,7 @@ class Package(db.Model):
     is_demo = db.Column(db.Boolean)
     big_deal_cost = db.Column(db.Numeric)
     is_deleted = db.Column(db.Boolean)
+    default_to_full_perpetual_access = db.Column(db.Boolean)
 
     saved_scenarios = db.relationship('SavedScenario', lazy='subquery', backref=db.backref("package", lazy="subquery"))
     institution = db.relationship('Institution', uselist=False)
@@ -441,8 +442,17 @@ class Package(db.Model):
                 },
                 {
                     'id': 'perpetual_access',
-                    'source': 'custom' if issn_l in pa_rows else 'default',
-                    'value': [pa_rows[issn_l]['start_date'], pa_rows[issn_l]['end_date']] if issn_l in pa_rows else [datetime.datetime(2010, 1, 1), None],
+                    'source': (
+                        'custom' if issn_l in pa_rows
+                        else 'default' if self.default_to_full_perpetual_access
+                        else None
+                    ),
+                    'value': (
+                        [pa_rows[issn_l]['start_date'], pa_rows[issn_l]['end_date']] if issn_l in pa_rows
+                        else [datetime.datetime(2010, 1, 1), None] if self.default_to_full_perpetual_access
+                        else [None, None]
+                    ),
+                    'default_to_full': self.default_to_full_perpetual_access,
                 },
                 {
                     'id': 'price',
@@ -560,6 +570,13 @@ class Package(db.Model):
         journal_detail = dict(self.get_package_counter_breakdown())
         journal_detail['publisher_id'] = journal_detail.pop('package_id')
 
+        counter_rows = Counter.query.filter(Counter.package_id == self.package_id).count()
+        price_rows = JournalPrice.query.filter(JournalPrice.package_id == self.package_id).count()
+        pa_rows = PerpetualAccess.query.filter(PerpetualAccess.package_id == self.package_id).count()
+        core_rows = db.session.execute(
+            "select count(*) from jump_core_journals where package_id = '{}'".format(self.package_id)
+        ).scalar()
+
         return {
             'id': self.package_id,
             'name': self.package_name,
@@ -570,28 +587,28 @@ class Package(db.Model):
             'data_files': [
                 {
                     'name': 'counter',
-                    'uploaded': CounterInput.query.filter(CounterInput.package_id == self.package_id).count() > 0,
-                    'warnings': [w.to_dict() for w in PackageFileWarning.query.filter(
+                    'uploaded': counter_rows > 0,
+                    'rows_count': counter_rows,
+                    'error_rows': [w.to_dict() for w in PackageFileWarning.query.filter(
                         PackageFileWarning.package_id == self.package_id,
                         PackageFileWarning.file == CounterInput.file_type_label()
                     ).all()],
                 },
                 {
                     'name': 'perpetual-access',
-                    'uploaded': False if self.is_demo else PerpetualAccessInput.query.filter(
-                        PerpetualAccessInput.package_id == self.package_id
-                    ).count() > 0,
-                    'warnings': [w.to_dict() for w in PackageFileWarning.query.filter(
+                    'uploaded': False if self.is_demo else pa_rows > 0,
+                    'rows_count': pa_rows,
+                    'error_rows': [w.to_dict() for w in PackageFileWarning.query.filter(
                         PackageFileWarning.package_id == self.package_id,
                         PackageFileWarning.file == PerpetualAccessInput.file_type_label()
                     ).all()],
+                    'default_to_full': self.default_to_full_perpetual_access,
                 },
                 {
                     'name': 'price',
-                    'uploaded': False if self.is_demo else JournalPriceInput.query.filter(
-                        JournalPriceInput.package_id == self.package_id
-                    ).count() > 0,
-                    'warnings': [w.to_dict() for w in PackageFileWarning.query.filter(
+                    'uploaded': False if self.is_demo else price_rows > 0,
+                    'rows_count': price_rows,
+                    'error_rows': [w.to_dict() for w in PackageFileWarning.query.filter(
                         PackageFileWarning.package_id == self.package_id,
                         PackageFileWarning.file == JournalPriceInput.file_type_label()
                     ).all()],
@@ -599,19 +616,18 @@ class Package(db.Model):
                 # TODO: remove prices when not used by frontend
                 {
                     'name': 'prices',
-                    'uploaded': False if self.is_demo else JournalPriceInput.query.filter(
-                        JournalPriceInput.package_id == self.package_id
-                    ).count() > 0,
-                    'warnings': [w.to_dict() for w in PackageFileWarning.query.filter(
+                    'uploaded': False if self.is_demo else price_rows > 0,
+                    'rows_count': price_rows,
+                    'error_rows': [w.to_dict() for w in PackageFileWarning.query.filter(
                         PackageFileWarning.package_id == self.package_id,
                         PackageFileWarning.file == JournalPriceInput.file_type_label()
                     ).all()],
                 },
                 {
                     'name': 'core-journals',
-                    'uploaded': False if self.is_demo else db.session.execute(
-                        "select count(*) from jump_core_journals where package_id = '{}'".format(self.package_id)
-                    ).scalar() > 0
+                    'uploaded': False if self.is_demo else core_rows > 0,
+                    'rows_count': core_rows,
+                    'error_rows': [],
                 },
             ],
             'journals': self.get_journal_attributes(),
