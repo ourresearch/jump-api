@@ -1471,6 +1471,7 @@ class Journal(object):
         table_row["use_ill_percent"] = round(float(100)*self.use_actual["ill"]/self.use_total)
         table_row["use_other_delayed_percent"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
         table_row["perpetual_access_years_text"] = self.display_perpetual_access_years
+        table_row["baseline_access_text"] = self.baseline_access
 
         # oa
         table_row["use_oa_percent"] = round(float(100)*self.use_actual["oa_plus_social_networks"]/self.use_total)
