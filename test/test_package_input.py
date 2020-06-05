@@ -101,14 +101,14 @@ class TestPackageInput(unittest.TestCase):
 
     def test_required_field(self):
         test_file = write_to_tempfile("""
-            int,price
+            INT,Price!
             5,50
             6,100.00
         """.strip())
 
         assert_raises_regexp(
             RuntimeError,
-            'Missing expected columns. Expected int, issn but got int, price.',
+            ur'Missing required columns\. Expected \[int, issn\] but found int \(from input column INT\), price \(from input column Price!\)\.',
             lambda: TestInputFormat.normalize_rows(test_file)
         )
 
@@ -148,9 +148,9 @@ class TestPackageInput(unittest.TestCase):
         ], rows)
 
         self.assertItemsEqual([
-            {'text': 'Unrecognized USD format.', 'value': u'a few bucks', 'row_number': 2, 'column': 'price','label': 'bad_usd_price'},
-            {'text': 'Invalid ISSN format.', 'value': u'', 'row_number': 3, 'column': 'issn', 'label': 'bad_issn'},
-            {'text': 'ISSN represents a bundle of journals, not a single journal.', 'value': u'FS66-6666', 'row_number': 4, 'column': 'issn', 'label': 'bundle_issn'},
+            {'message': 'Unrecognized USD format.', 'raw_value': u'a few bucks', 'row_no': 2, 'column_name': 'price','label': 'bad_usd_price', 'file': 'test_input'},
+            {'message': 'Invalid ISSN format.', 'raw_value': u'', 'row_no': 3, 'column_name': 'issn', 'label': 'bad_issn', 'file': 'test_input'},
+            {'message': 'ISSN represents a bundle of journals, not a single journal.', 'raw_value': u'FS66-6666', 'row_no': 4, 'column_name': 'issn', 'label': 'bundle_issn', 'file': 'test_input'},
         ], warnings)
 
 
@@ -162,6 +162,10 @@ class TestInputFormat(PackageInput):
     @classmethod
     def destination_table(cls):
         raise NotImplementedError()
+
+    @classmethod
+    def file_type_label(cls):
+        return 'test_input'
 
     @classmethod
     def csv_columns(cls):

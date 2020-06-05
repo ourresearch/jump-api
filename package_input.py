@@ -104,7 +104,7 @@ class PackageInput:
 
     @classmethod
     def translate_row(cls, row):
-        return {'rows': [row], 'warnings': []}
+        return [row]
 
     @classmethod
     def ignore_row(cls, row):
@@ -263,13 +263,16 @@ class PackageInput:
             # make sure we have all the required columns
             raw_column_names = parsed_rows[header_index]
             normalized_column_names = [cls.normalize_column_name(cn) for cn in raw_column_names]
+            raw_to_normalized_map = dict(zip(raw_column_names, normalized_column_names))
             required_keys = [k for k, v in cls.csv_columns().items() if v.get('required', True)]
 
             if set(required_keys).difference(set(normalized_column_names)):
-                raw_to_normalized_map = dict(zip(raw_column_names, normalized_column_names))
                 explanation = u'Missing required columns. Expected [{}] but found {}.'.format(
-                    ', '.join(required_keys),
-                    ', '.join([u'{} (from input column {})'.format(norm, raw) for raw, norm in raw_to_normalized_map.items() if norm])
+                    ', '.join(sorted(required_keys)),
+                    ', '.join([
+                        u'{} (from input column {})'.format(raw_to_normalized_map[raw], raw)
+                        for raw in sorted(raw_to_normalized_map.keys()) if raw_to_normalized_map[raw]
+                    ])
                 )
                 raise RuntimeError(explanation)
 
