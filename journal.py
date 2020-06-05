@@ -21,6 +21,10 @@ from util import format_with_commas
 
 scipy_lock = Lock()
 
+# from future of OA paper, modified to be just elsevier, all colours
+default_download_by_age = [0.371269, 0.137739, 0.095896, 0.072885, 0.058849]
+default_download_older_than_five_years = 1.0 - sum(default_download_by_age)
+
 def display_usage(value):
     if value:
         return value
@@ -674,8 +678,6 @@ class Journal(object):
             self.use_default_download_curve = True
 
         if self.use_default_download_curve:
-            # from future of OA paper, modified to be just elsevier, all colours
-            default_download_by_age = [0.371269, 0.137739, 0.095896, 0.072885, 0.058849]
             sum_total_downloads_by_age_before_counter_correction = np.sum(self.downloads_by_age_before_counter_correction)
             downloads_by_age_before_counter_correction_curve_to_use = [num*sum_total_downloads_by_age_before_counter_correction for num in default_download_by_age]
 
@@ -685,6 +687,8 @@ class Journal(object):
 
     @cached_property
     def downloads_total_older_than_five_years(self):
+        if self.use_default_download_curve:
+            return default_download_older_than_five_years * (self.downloads_total)
         return self.downloads_total - np.sum(self.downloads_by_age)
 
     @cached_property
@@ -1298,7 +1302,7 @@ class Journal(object):
 
     @cached_property
     def is_society_journal(self):
-        is_society_journal = self._scenario_data["society"].get(self.issn_l, "YES")
+        is_society_journal = self._scenario_data["society"].get(self.issn_l, None)
         return is_society_journal == "YES"
 
     @cached_property
