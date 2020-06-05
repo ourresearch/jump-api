@@ -16,6 +16,7 @@ from app import my_memcached
 from assumptions import Assumptions
 from counter import CounterInput
 from journal_price import JournalPriceInput
+from package_file_warning import PackageFileWarning
 from perpetual_access import PerpetualAccessInput
 from saved_scenario import SavedScenario
 from scenario import get_hybrid_2019
@@ -26,6 +27,7 @@ from scenario import get_perpetual_access_from_cache
 from util import get_sql_answer
 from util import get_sql_rows
 from util import get_sql_dict_rows, safe_commit
+
 
 def get_ids():
     rows = get_sql_dict_rows("""select * from jump_account_package_scenario_view order by username""")
@@ -568,26 +570,42 @@ class Package(db.Model):
             'data_files': [
                 {
                     'name': 'counter',
-                    'uploaded': CounterInput.query.filter(CounterInput.package_id == self.package_id).count() > 0
+                    'uploaded': CounterInput.query.filter(CounterInput.package_id == self.package_id).count() > 0,
+                    'warnings': [w.to_dict() for w in PackageFileWarning.query.filter(
+                        PackageFileWarning.package_id == self.package_id,
+                        PackageFileWarning.file == CounterInput.file_type_label()
+                    ).all()],
                 },
                 {
                     'name': 'perpetual-access',
                     'uploaded': False if self.is_demo else PerpetualAccessInput.query.filter(
                         PerpetualAccessInput.package_id == self.package_id
-                    ).count() > 0
+                    ).count() > 0,
+                    'warnings': [w.to_dict() for w in PackageFileWarning.query.filter(
+                        PackageFileWarning.package_id == self.package_id,
+                        PackageFileWarning.file == PerpetualAccessInput.file_type_label()
+                    ).all()],
                 },
                 {
                     'name': 'price',
                     'uploaded': False if self.is_demo else JournalPriceInput.query.filter(
                         JournalPriceInput.package_id == self.package_id
-                    ).count() > 0
+                    ).count() > 0,
+                    'warnings': [w.to_dict() for w in PackageFileWarning.query.filter(
+                        PackageFileWarning.package_id == self.package_id,
+                        PackageFileWarning.file == JournalPriceInput.file_type_label()
+                    ).all()],
                 },
                 # TODO: remove prices when not used by frontend
                 {
                     'name': 'prices',
                     'uploaded': False if self.is_demo else JournalPriceInput.query.filter(
                         JournalPriceInput.package_id == self.package_id
-                    ).count() > 0
+                    ).count() > 0,
+                    'warnings': [w.to_dict() for w in PackageFileWarning.query.filter(
+                        PackageFileWarning.package_id == self.package_id,
+                        PackageFileWarning.file == JournalPriceInput.file_type_label()
+                    ).all()],
                 },
                 {
                     'name': 'core-journals',

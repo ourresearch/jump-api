@@ -91,6 +91,10 @@ class CounterInput(db.Model, PackageInput):
         return False
 
     @classmethod
+    def file_type_label(cls):
+        return u'counter'
+
+    @classmethod
     def translate_row(cls, row):
         rows = []
         issn = row.get('print_issn', u'') or row.get('online_issn', u'')
@@ -98,7 +102,7 @@ class CounterInput(db.Model, PackageInput):
             rows.append({
                     'publisher': row['publisher'],
                     'issn': issn,
-                    'total': row['total'],
+                    'total': row['total'] or 0,
                     'journal_name': row['journal_name'],
             })
         else:
@@ -116,6 +120,16 @@ class CounterInput(db.Model, PackageInput):
         #     })
 
         return rows
+
+    @classmethod
+    def row_level_warnings(cls, normalized_row):
+        issn = normalized_row.get('print_issn', u'') or normalized_row.get('online_issn', u'')
+
+        if not issn and normalized_row["journal_name"] != u"Total":
+            return [u'no print_issn in this row']
+        else:
+            return []
+
 
     @classmethod
     def apply_header(cls, normalized_rows, header_rows):
