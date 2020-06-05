@@ -1022,7 +1022,6 @@ def jump_journal_prices(package_id):
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
-
             return _load_package_file(package_id, request, JournalPriceInput)
 
 
