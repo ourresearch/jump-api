@@ -41,6 +41,17 @@ class PerpetualAccessInput(db.Model, PackageInput):
         return [row] if row['issn'] else []
 
     @classmethod
+    def row_level_warnings(cls, normalized_row):
+        if not normalized_row['issn']:
+            return [u'no issn in this row']
+        else:
+            return []
+
+    @classmethod
+    def file_type_label(cls):
+        return u'perpetual-access'
+
+    @classmethod
     def csv_columns(cls):
         return {
             'start_date': {

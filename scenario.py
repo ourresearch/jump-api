@@ -103,6 +103,9 @@ class Scenario(object):
             self.log_timing("get_common_package_data_from_cache")
             # logger.debug("get_common_package_data_from_cache")
 
+        self.data["default_to_full_perpetual_access"] = True
+        if my_package:
+            self.data["default_to_full_perpetual_access"] = my_package.default_to_full_perpetual_access
 
         self.set_clean_data()  #order for this one matters, after get common, before build journals
         self.log_timing("set_clean_data")
