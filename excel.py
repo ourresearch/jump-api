@@ -64,17 +64,20 @@ def _convert_parsed(workbook):
         for row in rows:
             writer.writerow(row)
 
-    return csv_file_name
+    return [csv_file_name]
 
 
 def _convert_blind(workbook):
-    csv_file_name = tempfile.mkstemp()[1]
+    csv_file_names = []
 
-    with open(csv_file_name, 'w') as csv_file:
-        writer = csv.writer(csv_file, delimiter=',', encoding='utf-8')
-        for sheet_name in list(workbook.sheetnames):
-            sheet = workbook[sheet_name]
+    for sheet_name in list(workbook.sheetnames):
+        sheet = workbook[sheet_name]
+        csv_file_name = tempfile.mkstemp()[1]
+        with open(csv_file_name, 'w') as csv_file:
+            writer = csv.writer(csv_file, delimiter=',', encoding='utf-8')
             for row in sheet.iter_rows(min_row=1):
                 writer.writerow([cell.value for cell in row])
 
-    return csv_file_name
+        csv_file_names.append(csv_file_name)
+
+    return csv_file_names

@@ -12,9 +12,10 @@ from enum import Enum
 from sqlalchemy.sql import text
 
 import package
+import purge_cache
 from app import db, logger
 from excel import convert_spreadsheet_to_csv
-import purge_cache
+from package_file_warning import PackageFileWarning
 from util import convert_to_utf_8
 from util import safe_commit
 
@@ -98,6 +99,10 @@ class PackageInput:
         raise NotImplementedError()
 
     @classmethod
+    def file_type_label(cls):
+        raise NotImplementedError()
+
+    @classmethod
     def translate_row(cls, row):
         return [row]
 
@@ -110,16 +115,22 @@ class PackageInput:
         return normalized_rows
 
     @classmethod
-    def normalize_cell(cls, column_name, column_value):
+    def normalize_column_name(cls, raw_column_name):
         for canonical_name, spec in cls.csv_columns().items():
             for snippet in spec['name_snippets']:
                 snippet = snippet.lower()
-                column_name = column_name.strip().lower()
+                column_name = raw_column_name.strip().lower()
                 exact_name = spec.get('exact_name', False)
                 if (exact_name and snippet == column_name) or (not exact_name and snippet in column_name.lower()):
-                    return {canonical_name: spec['normalize'](column_value, spec.get('warn_if_blank', False))}
+                    return canonical_name
 
         return None
+
+    @classmethod
+    def normalize_cell(cls, normalized_column_name, raw_column_value):
+        spec = cls.csv_columns()[normalized_column_name]
+        return spec['normalize'](raw_column_value, spec.get('warn_if_blank', False))
+
 
     @classmethod
     def _copy_to_s3(cls, package_id, filename):
@@ -147,6 +158,10 @@ class PackageInput:
     def clear_caches(cls, my_package):
         my_package.clear_package_counter_breakdown_cache()
         purge_cache.purge_common_package_data_cache(my_package.package_id)
+
+    @classmethod
+    def row_level_warnings(cls, normalized_row):
+        return []
 
     @classmethod
     def update_dest_table(cls, package_id):
@@ -177,18 +192,38 @@ class PackageInput:
         )
 
     @classmethod
-    def normalize_rows(cls, file_name):
-        if file_name.endswith(u'.xls') or file_name.endswith(u'.xlsx'):
-            csv_file_name = convert_spreadsheet_to_csv(file_name, parsed=False)
-            if csv_file_name is None:
-                raise RuntimeError(u'{} could not be opened as a spreadsheet'.format(file_name))
-            else:
-                file_name = csv_file_name
+    def make_package_file_warning(cls, parse_warning, row_no=None, raw_column_name=None, raw_value=None, additional_msg=None):
+        return {
+            'file': cls.file_type_label(),
+            'row_no': row_no,
+            'column_name': raw_column_name,
+            'raw_value': raw_value,
+            'label': parse_warning.value['label'],
+            'message': u'{}{}'.format(
+                parse_warning.value['text'],
+                u' message: {}'.format(additional_msg) if additional_msg else u''
+            )
+        }
 
+    @classmethod
+    def normalize_rows(cls, file_name):
+        # convert to csv if needed
+        if file_name.endswith(u'.xls') or file_name.endswith(u'.xlsx'):
+            sheet_csv_file_names = convert_spreadsheet_to_csv(file_name, parsed=False)
+            if not sheet_csv_file_names:
+                raise RuntimeError(u'{} could not be opened as a spreadsheet'.format(file_name))
+
+            if len(sheet_csv_file_names) > 1:
+                raise RuntimeError(u'Workbook contains multiple sheets.')
+
+            file_name = sheet_csv_file_names[0]
+
+        # convert to utf-8
         file_name = convert_to_utf_8(file_name)
         logger.info('converted file: {}'.format(file_name))
 
         with open(file_name, 'r') as csv_file:
+            # determine the csv format
             dialect_sample = ''
             for i in range(0, 20):
                 next_line = csv_file.readline()
@@ -199,7 +234,8 @@ class PackageInput:
             dialect = csv.Sniffer().sniff(dialect_sample)
             csv_file.seek(0)
 
-            # find the index of the first complete header row
+            # turn rows into arrays
+            # remember the first row that looks like a header
             max_columns = 0
             header_index = None
             parsed_rows = []
@@ -218,46 +254,74 @@ class PackageInput:
                 line_no += 1
 
             if header_index is None:
-                raise RuntimeError(u"Couldn't identify a header row in the file")
+                # give up. can't turn rows into dicts if we don't have a header
+                raise RuntimeError(u"Couldn't identify a header row in the file.")
 
+            warnings = []
+            normalized_rows = []
+
+            # make sure we have all the required columns
+            raw_column_names = parsed_rows[header_index]
+            normalized_column_names = [cls.normalize_column_name(cn) for cn in raw_column_names]
+            raw_to_normalized_map = dict(zip(raw_column_names, normalized_column_names))
+            required_keys = [k for k, v in cls.csv_columns().items() if v.get('required', True)]
+
+            if set(required_keys).difference(set(normalized_column_names)):
+                explanation = u'Missing required columns. Expected [{}] but found {}.'.format(
+                    ', '.join(sorted(required_keys)),
+                    ', '.join([
+                        u'{} (from input column {})'.format(raw_to_normalized_map[raw], raw)
+                        for raw in sorted(raw_to_normalized_map.keys()) if raw_to_normalized_map[raw]
+                    ])
+                )
+                raise RuntimeError(explanation)
+
+            # combine the header and data rows into dicts
             row_dicts = [dict(zip(parsed_rows[header_index], x)) for x in parsed_rows[header_index+1:]]
 
-            normalized_rows = []
-            warnings = []
             for row_no, row in enumerate(row_dicts):
                 normalized_row = {}
-                row_warnings = []
+                cell_warnings = []
 
-                for column_name in row.keys():
+                for raw_column_name in row.keys():
                     try:
-                        normalized_cell = cls.normalize_cell(column_name, row[column_name])
-                        if isinstance(normalized_cell, dict):
-                            normalized_name, normalized_value = normalized_cell.items()[0]
+                        raw_value = row[raw_column_name]
+                        normalized_name = cls.normalize_column_name(raw_column_name)
+                        if normalized_name:
+                            normalized_value = cls.normalize_cell(normalized_name, raw_value)
                             if isinstance(normalized_value, ParseWarning):
-                                warning = {'row_number': row_no + 1, 'column': column_name, 'value': row[column_name]}
-                                warning.update(normalized_value.value)
-                                row_warnings.append(warning)
+                                parse_warning = normalized_value
+                                logger.info('parse warning: {}'.format(parse_warning))
+                                cell_warnings.append(cls.make_package_file_warning(
+                                    parse_warning,
+                                    row_no=row_no + 1,
+                                    raw_column_name=raw_column_name,
+                                    raw_value=raw_value,
+                                ))
                                 normalized_row.setdefault(normalized_name, None)
                             else:
                                 normalized_row.setdefault(normalized_name, normalized_value)
                     except Exception as e:
-                        raise RuntimeError(u'Error reading row {}: {} for {}: "{}"'.format(
-                            row_no + 1, e.message, column_name, row[column_name]
+                        cell_warnings.append(cls.make_package_file_warning(
+                            ParseWarning.unknown,
+                            row_no=row_no + 1,
+                            raw_column_name=raw_column_name,
+                            raw_value=raw_value,
+                            additional_msg=e.message
                         ))
+
                 if cls.ignore_row(normalized_row):
                     continue
 
-                row_keys = sorted(normalized_row.keys())
-                expected_keys = sorted([k for k, v in cls.csv_columns().items() if v.get('required', True)])
-
-                if set(expected_keys).difference(set(row_keys)):
-                    raise RuntimeError(u'Missing expected columns. Expected {} but got {}.'.format(
-                        ', '.join(expected_keys),
-                        ', '.join(row_keys)
-                    ))
-
                 normalized_rows.extend(cls.translate_row(normalized_row))
-                warnings.extend(row_warnings)
+
+                warnings.extend(cell_warnings)
+                for row_warning in cls.row_level_warnings(normalized_row):
+                    warnings.append(cls.make_package_file_warning(
+                        ParseWarning.row_error,
+                        row_no=row_no + 1,
+                        additional_msg=row_warning
+                    ))
 
             cls.apply_header(normalized_rows, parsed_rows[0:header_index+1])
 
@@ -270,46 +334,61 @@ class PackageInput:
         except (RuntimeError, UnicodeError) as e:
             return {'success': False, 'message': e.message, 'warnings': []}
 
+        if not normalized_rows:
+            return {
+                'success': False,
+                'message': u'No usable rows found in {}'.format(file_name),
+                'warnings': []
+            }
+
         for row in normalized_rows:
             row.update({'package_id': package_id})
             logger.info(u'normalized row: {}'.format(json.dumps(row)))
 
+        db.session.query(PackageFileWarning).filter(
+            PackageFileWarning.package_id == package_id, PackageFileWarning.file == cls.file_type_label()
+        ).delete()
+
+        for warning in warnings:
+            warning.update({'package_id': package_id})
+            logger.info(u'warning: {}'.format(json.dumps(warning)))
+            db.session.add(PackageFileWarning(**warning))
+
         db.session.query(cls).filter(cls.package_id == package_id).delete()
 
-        if normalized_rows:
-            sorted_fields = sorted(normalized_rows[0].keys())
-            normalized_csv_filename = tempfile.mkstemp()[1]
-            with open(normalized_csv_filename, 'w') as normalized_csv_file:
-                writer = csv.DictWriter(normalized_csv_file, delimiter=',', encoding='utf-8', fieldnames=sorted_fields)
-                for row in normalized_rows:
-                    writer.writerow(row)
+        sorted_fields = sorted(normalized_rows[0].keys())
+        normalized_csv_filename = tempfile.mkstemp()[1]
+        with open(normalized_csv_filename, 'w') as normalized_csv_file:
+            writer = csv.DictWriter(normalized_csv_file, delimiter=',', encoding='utf-8', fieldnames=sorted_fields)
+            for row in normalized_rows:
+                writer.writerow(row)
 
-            s3_object = cls._copy_to_s3(package_id, normalized_csv_filename)
+        s3_object = cls._copy_to_s3(package_id, normalized_csv_filename)
 
-            copy_cmd = text('''
-                copy {table}({fields}) from '{s3_object}'
-                credentials :creds format as csv
-                timeformat 'auto';
-            '''.format(
-                table=cls.__tablename__,
-                fields=', '.join(sorted_fields),
-                s3_object=s3_object,
-            ))
+        copy_cmd = text('''
+            copy {table}({fields}) from '{s3_object}'
+            credentials :creds format as csv
+            timeformat 'auto';
+        '''.format(
+            table=cls.__tablename__,
+            fields=', '.join(sorted_fields),
+            s3_object=s3_object,
+        ))
 
-            aws_creds = 'aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}'.format(
-                aws_key=os.getenv('AWS_ACCESS_KEY_ID'),
-                aws_secret=os.getenv('AWS_SECRET_ACCESS_KEY')
-            )
+        aws_creds = 'aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}'.format(
+            aws_key=os.getenv('AWS_ACCESS_KEY_ID'),
+            aws_secret=os.getenv('AWS_SECRET_ACCESS_KEY')
+        )
 
-            db.session.execute(copy_cmd.bindparams(creds=aws_creds))
-            cls.update_dest_table(package_id)
+        db.session.execute(copy_cmd.bindparams(creds=aws_creds))
+        cls.update_dest_table(package_id)
 
-            my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
+        my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
 
-            if commit:
-                safe_commit(db)
-                if my_package:
-                    cls.clear_caches(my_package)
+        if commit:
+            safe_commit(db)
+            if my_package:
+                cls.clear_caches(my_package)
 
         return {
             'success': True,
@@ -346,4 +425,16 @@ class ParseWarning(Enum):
     blank_text = {
         'label': 'blank_text',
         'text': 'Expected text here.'
+    }
+    unknown = {
+        'label': 'unknown_error',
+        'text': 'There was an unexpected error parsing this cell. Try to correct the cell value or contact support.'
+    }
+    row_error = {
+        'label': 'row_error',
+        'text': 'Error for this row. See cell warnings for details.'
+    }
+    no_rows = {
+        'label': 'no_rows',
+        'text': "No usable rows could be extracted."
     }

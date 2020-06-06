@@ -1001,6 +1001,8 @@ def jump_perpetual_access(package_id):
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
+            if 'default_to_full' in request.json:
+                Package.query.get(package_id).default_to_full_perpetual_access = request.json['default_to_full']
             return _load_package_file(package_id, request, PerpetualAccessInput)
 
 
