@@ -1,3 +1,5 @@
+# coding: utf-8
+
 import argparse
 import logging
 from datetime import datetime
@@ -28,13 +30,13 @@ from util import read_csv_file
 
 # configuration here
 
-institution_name = u'Temp University'
+institution_name = u"Test Windsor"
 
 user_rows = [
     {
-        'email': u'me@example.edu',  # required
+        'email': u'testwindsor@example.edu',  # required
         'password': u'',  # required
-        'name': u'My Name',  # default is None
+        'name': u'Windsoretta James',  # default is None
         'institution_name': institution_name,
         'permissions': [u'view', u'modify', u'admin', ]  # default is view, modify, admin
     }
@@ -42,8 +44,8 @@ user_rows = [
 
 institution_rows = [{
     "institution_name": institution_name,
-    "username": "nickname",
-    "ror_id": "xxx"
+    "username": "testwindsor",
+    "ror_id": "01gw3d370"
 }]
 
 
@@ -204,41 +206,43 @@ def add_user(user_info):
 
 def add_publisher(institution_username, counter_filename):
 
+    if "elsevier" in counter_filename:
+        publisher_name = "Elsevier"
+    elif "wiley" in counter_filename:
+        publisher_name = "Wiley"
+    else:
+        raise NotImplementedError("not a known publisher")
+    package_display_name = u"{}".format(publisher_name)
+
     # add a Publisher
     logger.info(u'adding a Publisher')
 
     now = datetime.utcnow().isoformat()
 
-    try:
-        my_institution = db.session.query(Institution).filter(Institution.old_username == institution_username).first()
-        print u"my_institution: {}".format(my_institution)
+    my_institution = db.session.query(Institution).filter(Institution.old_username == institution_username).first()
+    print u"my_institution: {}".format(my_institution)
 
-        my_publisher = db.session.query(Package).filter(Package.institution_id == my_institution.id).scalar()
-        if my_publisher:
-            logger.info(u'  found an existing Publisher {}'.format(my_publisher))
-        else:
-            my_publisher = Package(
-                package_id=u'package-{}'.format(shortuuid.uuid()[0:12]),
-                publisher=u'Elsevier',
-                package_name=u'Elsevier',
-                created=now,
-                institution_id=my_institution.id,
-                is_demo=False
-            )
-            db.session.add(my_publisher)
-            db.session.flush()
-            logger.info(u'  adding {}'.format(my_publisher))
-    except MultipleResultsFound as e:
-        raise MultipleResultsFound(u'more than one publisher already exists for {}')
+
+    my_package = Package(
+        package_id=u'package-{}'.format(shortuuid.uuid()[0:12]),
+        publisher=publisher_name,
+        package_name=package_display_name,
+        created=now,
+        institution_id=my_institution.id,
+        is_demo=False
+    )
+    db.session.add(my_package)
+    db.session.flush()
+    logger.info(u'  adding {}'.format(my_package))
 
     # add Scenario
 
-    logger.info(u'adding a Scenario for Publisher {}'.format(my_publisher))
-    my_scenarios = db.session.query(SavedScenario).filter(SavedScenario.package_id == my_publisher.package_id).all()
+    logger.info(u'adding a Scenario for Publisher {}'.format(my_package))
+    my_scenarios = db.session.query(SavedScenario).filter(SavedScenario.package_id == my_package.package_id).all()
 
     if not my_scenarios:
         my_scenario = SavedScenario(False, u'scenario-{}'.format(shortuuid.uuid()[0:12]), None)
-        my_scenario.package_id = my_publisher.package_id
+        my_scenario.package_id = my_package.package_id
         my_scenario.scenario_name = u'First Scenario'
         my_scenario.created = now
         my_scenario.is_base_scenario = True
@@ -250,15 +254,15 @@ def add_publisher(institution_username, counter_filename):
             logger.info(u'  found an existing Scenario {}'.format(scenario))
 
     # jump_apc_authorships
-    logger.info(u'populating jump_apc_authorships for Publisher {}'.format(my_publisher))
+    logger.info(u'populating jump_apc_authorships for Publisher {}'.format(my_package))
 
     num_apc_authorship_rows = db.session.execute(
-        "select count(*) from jump_apc_authorships where package_id = '{}' and publisher='{}'".format(my_publisher.package_id, "Elsevier")
+        "select count(*) from jump_apc_authorships where package_id = '{}' and publisher='{}'".format(my_package.package_id, "Elsevier")
     ).scalar()
 
     if num_apc_authorship_rows:
         logger.info(u'  {} jump_apc_authorships rows already exist for Publisher {}'.format(
-            num_apc_authorship_rows, my_publisher
+            num_apc_authorship_rows, my_package
         ))
     else:
         num_apc_authorship_rows = db.session.execute(
@@ -267,21 +271,21 @@ def add_publisher(institution_username, counter_filename):
                     select * from jump_apc_authorships_view
                     where package_id = '{}' and publisher='{}'
                 )
-            '''.format(my_publisher.package_id, "Elsevier")
+            '''.format(my_package.package_id, publisher_name)
         ).rowcount
 
         logger.info(u'  created {} jump_apc_authorships rows for Publisher {}'.format(
-            num_apc_authorship_rows, my_publisher
+            num_apc_authorship_rows, my_package
         ))
 
     log_level = logging.getLogger('').level
 
     logger.info(u'loading counter {} for publisher {}'.format(
-        counter_filename, my_publisher.package_id)
+        counter_filename, my_package.package_id)
     )
     logging.getLogger('').setLevel(logging.WARNING)
     from counter import CounterInput
-    load_result = CounterInput.load(my_publisher.package_id, counter_filename, commit=False)
+    load_result = CounterInput.load(my_package.package_id, counter_filename, commit=False)
     logging.getLogger('').setLevel(log_level)
     if load_result['success']:
         logger.info(load_result['message'])
@@ -290,10 +294,10 @@ def add_publisher(institution_username, counter_filename):
 
 
 # def add_prices():
-#     logger.info(u'loading journal price list {} for publisher {}'.format(files['prices'], my_publisher.package_id))
+#     logger.info(u'loading journal price list {} for publisher {}'.format(files['prices'], my_package.package_id))
 #     logging.getLogger('').setLevel(logging.WARNING)
 #     from journal_price import JournalPriceInput
-#     success, message = JournalPriceInput.load(my_publisher.package_id, files['prices'], commit=False)
+#     success, message = JournalPriceInput.load(my_package.package_id, files['prices'], commit=False)
 #     logging.getLogger('').setLevel(log_level)
 #     if success:
 #         logger.info(message)
@@ -302,10 +306,10 @@ def add_publisher(institution_username, counter_filename):
 #
 # def add_backfile():
 #     logger.info(u'loading perpetual access list {} for publisher {}'.format(
-#         files['perpetual_access'], my_publisher.package_id)
+#         files['perpetual_access'], my_package.package_id)
 #     )
 #     logging.getLogger('').setLevel(logging.WARNING)
-#     success, message = PerpetualAccessInput.load(my_publisher.package_id, files['perpetual_access'], commit=False)
+#     success, message = PerpetualAccessInput.load(my_package.package_id, files['perpetual_access'], commit=False)
 #     logging.getLogger('').setLevel(log_level)
 #     if success:
 #         logger.info(message)
