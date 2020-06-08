@@ -133,10 +133,10 @@ class PackageInput:
 
 
     @classmethod
-    def _copy_to_s3(cls, package_id, filename):
+    def _copy_to_s3(cls, prefix, filename):
         s3 = boto3.client('s3')
         bucket_name = 'jump-redshift-staging'
-        object_name = '{}_{}_{}'.format(package_id, cls.__name__, shortuuid.uuid())
+        object_name = '{}_{}_{}'.format(prefix, cls.__name__, shortuuid.uuid())
         s3.upload_file(filename, bucket_name, object_name)
         return 's3://{}/{}'.format(bucket_name, object_name)
 
@@ -345,15 +345,7 @@ class PackageInput:
             row.update({'package_id': package_id})
             logger.info(u'normalized row: {}'.format(json.dumps(row)))
 
-        db.session.query(PackageFileWarning).filter(
-            PackageFileWarning.package_id == package_id, PackageFileWarning.file == cls.file_type_label()
-        ).delete()
-
-        for warning in warnings:
-            warning.update({'package_id': package_id})
-            logger.info(u'warning: {}'.format(json.dumps(warning)))
-            db.session.add(PackageFileWarning(**warning))
-
+        # save normalized rows
         db.session.query(cls).filter(cls.package_id == package_id).delete()
 
         sorted_fields = sorted(normalized_rows[0].keys())
@@ -366,7 +358,7 @@ class PackageInput:
         s3_object = cls._copy_to_s3(package_id, normalized_csv_filename)
 
         copy_cmd = text('''
-            copy {table}({fields}) from '{s3_object}'
+            copy {table} ({fields}) from '{s3_object}'
             credentials :creds format as csv
             timeformat 'auto';
         '''.format(
@@ -382,6 +374,40 @@ class PackageInput:
 
         db.session.execute(copy_cmd.bindparams(creds=aws_creds))
         cls.update_dest_table(package_id)
+
+        # save warnings
+
+        db.session.query(PackageFileWarning).filter(
+            PackageFileWarning.package_id == package_id, PackageFileWarning.file == cls.file_type_label()
+        ).delete()
+
+        if warnings:
+            warning_rows = [PackageFileWarning(**w).__dict__ for w in warnings]
+            for wr in warning_rows:
+                wr.update({'package_id': package_id})
+                wr.pop('_sa_instance_state', None)
+
+            warning_columns = sorted(warning_rows[0].keys())
+            warning_csv_filename = tempfile.mkstemp()[1]
+            with open(warning_csv_filename, 'w') as warning_csv_file:
+                writer = csv.DictWriter(warning_csv_file, delimiter=',', encoding='utf-8', fieldnames=warning_columns)
+                for wr in warning_rows:
+                    writer.writerow(wr)
+
+            s3_object = cls._copy_to_s3(u'{}_warnings'.format(package_id), warning_csv_filename)
+
+            copy_cmd = text('''
+                copy jump_package_file_import_warning ({fields}) from '{s3_object}'
+                credentials :creds format as csv
+                timeformat 'auto';
+            '''.format(
+                fields=', '.join(warning_columns),
+                s3_object=s3_object,
+            ))
+
+            logger.info(copy_cmd)
+
+            db.session.execute(copy_cmd.bindparams(creds=aws_creds))
 
         my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
 
