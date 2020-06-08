@@ -14,10 +14,10 @@ from app import get_db_cursor
 from app import DEMO_PACKAGE_ID
 from app import my_memcached
 from assumptions import Assumptions
-from counter import Counter, CounterInput
-from journal_price import JournalPrice, JournalPriceInput
+from counter import CounterInput
+from journal_price import JournalPriceInput
 from package_file_warning import PackageFileWarning
-from perpetual_access import PerpetualAccess, PerpetualAccessInput
+from perpetual_access import PerpetualAccessInput
 from saved_scenario import SavedScenario
 from scenario import get_hybrid_2019
 from scenario import get_ricks_journal_rows
@@ -570,11 +570,11 @@ class Package(db.Model):
         journal_detail = dict(self.get_package_counter_breakdown())
         journal_detail['publisher_id'] = journal_detail.pop('package_id')
 
-        counter_rows = Counter.query.filter(Counter.package_id == self.package_id).count()
-        price_rows = JournalPrice.query.filter(JournalPrice.package_id == self.package_id).count()
-        pa_rows = PerpetualAccess.query.filter(PerpetualAccess.package_id == self.package_id).count()
+        counter_rows = CounterInput.query.filter(CounterInput.package_id == self.package_id).count()
+        price_rows = JournalPriceInput.query.filter(JournalPriceInput.package_id == self.package_id).count()
+        pa_rows = PerpetualAccessInput.query.filter(PerpetualAccessInput.package_id == self.package_id).count()
         core_rows = db.session.execute(
-            "select count(*) from jump_core_journals where package_id = '{}'".format(self.package_id)
+            "select count(*) from jump_core_journals_input where package_id = '{}'".format(self.package_id)
         ).scalar()
 
         return {
