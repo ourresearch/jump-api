@@ -145,6 +145,10 @@ class PackageInput:
         num_deleted = db.session.query(cls).filter(cls.package_id == package_id).delete()
         db.session.execute("delete from {} where package_id = '{}'".format(cls.destination_table(), package_id))
 
+        db.session.query(PackageFileWarning).filter(
+            PackageFileWarning.package_id == package_id, PackageFileWarning.file == cls.file_type_label()
+        ).delete()
+
         safe_commit(db)
 
         my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
