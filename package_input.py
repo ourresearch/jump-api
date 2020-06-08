@@ -117,12 +117,23 @@ class PackageInput:
     @classmethod
     def normalize_column_name(cls, raw_column_name):
         for canonical_name, spec in cls.csv_columns().items():
-            for snippet in spec['name_snippets']:
+            name_snippets = spec['name_snippets']
+            excluded_name_snippets = spec.get('excluded_name_snippets', [])
+
+            for snippet in name_snippets:
                 snippet = snippet.lower()
                 column_name = raw_column_name.strip().lower()
                 exact_name = spec.get('exact_name', False)
-                if (exact_name and snippet == column_name) or (not exact_name and snippet in column_name.lower()):
-                    return canonical_name
+                contains_excluded_snippet = False
+
+                for ens in excluded_name_snippets:
+                    if ens in column_name:
+                        contains_excluded_snippet = True
+                        break
+
+                if not contains_excluded_snippet:
+                    if (exact_name and snippet == column_name) or (not exact_name and snippet in column_name.lower()):
+                        return canonical_name
 
         return None
 

@@ -153,6 +153,23 @@ class TestPackageInput(unittest.TestCase):
             {'message': 'ISSN represents a bundle of journals, not a single journal.', 'raw_value': u'FS66-6666', 'row_no': 4, 'column_name': 'issn', 'label': 'bundle_issn', 'file': 'test_input'},
         ], warnings)
 
+    def test_excluded_name_snippet(self):
+        class PickyInputFormat(TestInputFormat):
+            @classmethod
+            def csv_columns(cls):
+                return {
+                    'picky_column': {
+                        'normalize': cls.normalize_issn,
+                        'name_snippets': [u'column'],
+                        'excluded_name_snippets': [u'excluded'],
+                        'required': True,
+                        'warn_if_blank': True,
+                    },
+                }
+
+        self.assertIsNone(PickyInputFormat.normalize_column_name('excluded column'))
+        self.assertEqual(PickyInputFormat.normalize_column_name('column'), 'picky_column')
+
 
 class TestInputFormat(PackageInput):
     @classmethod
@@ -185,5 +202,5 @@ class TestInputFormat(PackageInput):
                 'normalize': cls.normalize_price,
                 'name_snippets': [u'price'],
                 'required': False
-            }
+            },
         }
