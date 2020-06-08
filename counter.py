@@ -62,6 +62,7 @@ class CounterInput(db.Model, PackageInput):
             'print_issn': {
                 'normalize': cls.normalize_issn,
                 'name_snippets': [u'print issn', u'print_issn', u'issn'],
+                'excluded_name_snippets': [u'online', u'e-', u'eissn'],
                 'warn_if_blank': True,
             },
             'online_issn': {
