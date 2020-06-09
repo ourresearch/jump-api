@@ -953,7 +953,7 @@ def _load_package_file(package_id, req, table_class):
     if temp_file:
         load_result = table_class.load(package_id, temp_file, commit=True)
         if load_result['success']:
-            return jsonify_fast_no_sort(load_result)
+            return load_result
         else:
             return abort_json(400, load_result)
     else:
@@ -980,7 +980,7 @@ def jump_counter(package_id):
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
-            return _load_package_file(package_id, request, CounterInput)
+            return jsonify_fast_no_sort(_load_package_file(package_id, request, CounterInput))
 
 
 @app.route('/publisher/<package_id>/perpetual-access', methods=['GET', 'POST', 'DELETE'])
@@ -1001,10 +1001,17 @@ def jump_perpetual_access(package_id):
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
+            response = {}
             if 'default_to_full' in request.json:
                 Package.query.get(package_id).default_to_full_perpetual_access = request.json['default_to_full']
-            return _load_package_file(package_id, request, PerpetualAccessInput)
+                response.update({'default_to_full': request.json['default_to_full']})
+            if 'file' in request.json and 'name' in request.json:
+                response.update(_load_package_file(package_id, request, PerpetualAccessInput))
 
+            if not response:
+                return abort_json(400, u'expected a JSON object containing {default_to_full: <boolean>} and/or {file: <base64-encoded file>, name: <file name>}')
+
+            return jsonify_fast_no_sort(response)
 
 @app.route('/publisher/<package_id>/price', methods=['GET', 'POST', 'DELETE'])
 # @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
@@ -1024,7 +1031,7 @@ def jump_journal_prices(package_id):
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
-            return _load_package_file(package_id, request, JournalPriceInput)
+            return jsonify_fast_no_sort(_load_package_file(package_id, request, JournalPriceInput))
 
 
 def post_subscription_guts(scenario_id, scenario_name=None):
