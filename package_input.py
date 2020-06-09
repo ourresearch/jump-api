@@ -340,48 +340,12 @@ class PackageInput:
         except (RuntimeError, UnicodeError) as e:
             return {'success': False, 'message': e.message, 'warnings': []}
 
-        if not normalized_rows:
-            return {
-                'success': False,
-                'message': u'No usable rows found in {}'.format(file_name),
-                'warnings': []
-            }
-
-        for row in normalized_rows:
-            row.update({'package_id': package_id})
-            logger.info(u'normalized row: {}'.format(json.dumps(row)))
-
-        # save normalized rows
-        db.session.query(cls).filter(cls.package_id == package_id).delete()
-
-        sorted_fields = sorted(normalized_rows[0].keys())
-        normalized_csv_filename = tempfile.mkstemp()[1]
-        with open(normalized_csv_filename, 'w') as normalized_csv_file:
-            writer = csv.DictWriter(normalized_csv_file, delimiter=',', encoding='utf-8', fieldnames=sorted_fields)
-            for row in normalized_rows:
-                writer.writerow(row)
-
-        s3_object = cls._copy_to_s3(package_id, normalized_csv_filename)
-
-        copy_cmd = text('''
-            copy {table} ({fields}) from '{s3_object}'
-            credentials :creds format as csv
-            timeformat 'auto';
-        '''.format(
-            table=cls.__tablename__,
-            fields=', '.join(sorted_fields),
-            s3_object=s3_object,
-        ))
+        # save warnings
 
         aws_creds = 'aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}'.format(
             aws_key=os.getenv('AWS_ACCESS_KEY_ID'),
             aws_secret=os.getenv('AWS_SECRET_ACCESS_KEY')
         )
-
-        db.session.execute(copy_cmd.bindparams(creds=aws_creds))
-        cls.update_dest_table(package_id)
-
-        # save warnings
 
         db.session.query(PackageFileWarning).filter(
             PackageFileWarning.package_id == package_id, PackageFileWarning.file == cls.file_type_label()
@@ -403,10 +367,10 @@ class PackageInput:
             s3_object = cls._copy_to_s3(u'{}_warnings'.format(package_id), warning_csv_filename)
 
             copy_cmd = text('''
-                copy jump_package_file_import_warning ({fields}) from '{s3_object}'
-                credentials :creds format as csv
-                timeformat 'auto';
-            '''.format(
+                    copy jump_package_file_import_warning ({fields}) from '{s3_object}'
+                    credentials :creds format as csv
+                    timeformat 'auto';
+                '''.format(
                 fields=', '.join(warning_columns),
                 s3_object=s3_object,
             ))
@@ -415,6 +379,37 @@ class PackageInput:
 
             db.session.execute(copy_cmd.bindparams(creds=aws_creds))
 
+        # save normalized rows
+
+        if normalized_rows:
+            for row in normalized_rows:
+                row.update({'package_id': package_id})
+                logger.info(u'normalized row: {}'.format(json.dumps(row)))
+
+            db.session.query(cls).filter(cls.package_id == package_id).delete()
+
+            sorted_fields = sorted(normalized_rows[0].keys())
+            normalized_csv_filename = tempfile.mkstemp()[1]
+            with open(normalized_csv_filename, 'w') as normalized_csv_file:
+                writer = csv.DictWriter(normalized_csv_file, delimiter=',', encoding='utf-8', fieldnames=sorted_fields)
+                for row in normalized_rows:
+                    writer.writerow(row)
+
+            s3_object = cls._copy_to_s3(package_id, normalized_csv_filename)
+
+            copy_cmd = text('''
+                copy {table} ({fields}) from '{s3_object}'
+                credentials :creds format as csv
+                timeformat 'auto';
+            '''.format(
+                table=cls.__tablename__,
+                fields=', '.join(sorted_fields),
+                s3_object=s3_object,
+            ))
+
+            db.session.execute(copy_cmd.bindparams(creds=aws_creds))
+            cls.update_dest_table(package_id)
+
         my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
 
         if commit:
@@ -422,11 +417,18 @@ class PackageInput:
             if my_package:
                 cls.clear_caches(my_package)
 
-        return {
-            'success': True,
-            'message': u'Inserted {} {} rows for package {}.'.format(len(normalized_rows), cls.__name__, package_id),
-            'warnings': warnings
-        }
+        if normalized_rows:
+            return {
+                'success': True,
+                'message': u'Inserted {} {} rows for package {}.'.format(len(normalized_rows), cls.__name__, package_id),
+                'warnings': warnings
+            }
+        else:
+            return {
+                'success': False,
+                'message': u'No usable rows found.',
+                'warnings': warnings
+            }
 
 
 class ParseWarning(Enum):
