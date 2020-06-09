@@ -123,16 +123,6 @@ class CounterInput(db.Model, PackageInput):
         return rows
 
     @classmethod
-    def row_level_warnings(cls, normalized_row):
-        issn = normalized_row.get('print_issn', u'') or normalized_row.get('online_issn', u'')
-
-        if not issn and normalized_row["journal_name"] != u"Total":
-            return [u'no print_issn in this row']
-        else:
-            return []
-
-
-    @classmethod
     def apply_header(cls, normalized_rows, header_rows):
         # get the counter version and file format
         version_labels = {

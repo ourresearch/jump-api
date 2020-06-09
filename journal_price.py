@@ -49,13 +49,6 @@ class JournalPriceInput(db.Model, PackageInput):
         return [row] if row['issn'] else []
 
     @classmethod
-    def row_level_warnings(cls, normalized_row):
-        if not normalized_row['issn']:
-            return [u'no issn in this row']
-        else:
-            return []
-
-    @classmethod
     def csv_columns(cls):
         return {
             'publisher': {
@@ -67,6 +60,7 @@ class JournalPriceInput(db.Model, PackageInput):
                 'normalize': cls.normalize_issn,
                 'name_snippets': [u'issn'],
                 'required': True,
+                'warn_if_blank': True,
             },
             'subject': {
                 'normalize': cls.strip_text,

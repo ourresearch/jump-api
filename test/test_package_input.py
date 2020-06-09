@@ -141,9 +141,6 @@ class TestPackageInput(unittest.TestCase):
 
         self.assertItemsEqual([
             {'int': 5, 'price': 100, 'issn': u'1234-5678'},
-            {'int': 6, 'price': None, 'issn': u'4444-444X'},
-            {'int': 7, 'price': 555, 'issn': None},
-            {'int': 8, 'price': 500, 'issn': None},
             {'int': 9, 'price': None, 'issn': '3333-3333'},
         ], rows)
 
