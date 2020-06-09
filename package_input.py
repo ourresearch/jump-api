@@ -175,10 +175,6 @@ class PackageInput:
         purge_cache.purge_common_package_data_cache(my_package.package_id)
 
     @classmethod
-    def row_level_warnings(cls, normalized_row):
-        return []
-
-    @classmethod
     def update_dest_table(cls, package_id):
         # unload_cmd = text('''
         #     unload
@@ -328,15 +324,10 @@ class PackageInput:
                 if cls.ignore_row(normalized_row):
                     continue
 
-                normalized_rows.extend(cls.translate_row(normalized_row))
-
                 warnings.extend(cell_warnings)
-                for row_warning in cls.row_level_warnings(normalized_row):
-                    warnings.append(cls.make_package_file_warning(
-                        ParseWarning.row_error,
-                        row_no=row_no + 1,
-                        additional_msg=row_warning
-                    ))
+
+                if not cell_warnings:
+                    normalized_rows.extend(cls.translate_row(normalized_row))
 
             cls.apply_header(normalized_rows, parsed_rows[0:header_index+1])
 
