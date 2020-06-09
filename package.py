@@ -570,10 +570,43 @@ class Package(db.Model):
         journal_detail = dict(self.get_package_counter_breakdown())
         journal_detail['publisher_id'] = journal_detail.pop('package_id')
 
-        counter_rows = CounterInput.query.filter(CounterInput.package_id == self.package_id).count()
-        price_rows = JournalPriceInput.query.filter(JournalPriceInput.package_id == self.package_id).count()
-        pa_rows = PerpetualAccessInput.query.filter(PerpetualAccessInput.package_id == self.package_id).count()
-        core_rows = db.session.execute(
+        counter_errors = [
+            w.to_dict() for w in PackageFileWarning.query.filter(
+                PackageFileWarning.package_id == self.package_id,
+                PackageFileWarning.file == CounterInput.file_type_label()
+            ).all()
+        ]
+
+        num_counter_rows = (
+            CounterInput.query.filter(CounterInput.package_id == self.package_id).count()
+            + len({e['row_no'] for e in counter_errors})
+        )
+
+        pa_errors = [
+            w.to_dict() for w in PackageFileWarning.query.filter(
+                PackageFileWarning.package_id == self.package_id,
+                PackageFileWarning.file == PerpetualAccessInput.file_type_label()
+            ).all()
+        ]
+
+        num_pa_rows = (
+            PerpetualAccessInput.query.filter(PerpetualAccessInput.package_id == self.package_id).count()
+            + len({e['row_no'] for e in pa_errors})
+        )
+
+        price_errors = [
+            w.to_dict() for w in PackageFileWarning.query.filter(
+                PackageFileWarning.package_id == self.package_id,
+                PackageFileWarning.file == JournalPriceInput.file_type_label()
+            ).all()
+        ]
+
+        num_price_rows = (
+            JournalPriceInput.query.filter(JournalPriceInput.package_id == self.package_id).count()
+            + len({e['row_no'] for e in price_errors})
+        )
+
+        num_core_rows = db.session.execute(
             "select count(*) from jump_core_journals_input where package_id = '{}'".format(self.package_id)
         ).scalar()
 
@@ -587,46 +620,34 @@ class Package(db.Model):
             'data_files': [
                 {
                     'name': 'counter',
-                    'uploaded': counter_rows > 0,
-                    'rows_count': counter_rows,
-                    'error_rows': [w.to_dict() for w in PackageFileWarning.query.filter(
-                        PackageFileWarning.package_id == self.package_id,
-                        PackageFileWarning.file == CounterInput.file_type_label()
-                    ).all()],
+                    'uploaded': num_counter_rows > 0,
+                    'rows_count': num_counter_rows,
+                    'error_rows': counter_errors,
                 },
                 {
                     'name': 'perpetual-access',
-                    'uploaded': False if self.is_demo else pa_rows > 0,
-                    'rows_count': pa_rows,
-                    'error_rows': [w.to_dict() for w in PackageFileWarning.query.filter(
-                        PackageFileWarning.package_id == self.package_id,
-                        PackageFileWarning.file == PerpetualAccessInput.file_type_label()
-                    ).all()],
+                    'uploaded': False if self.is_demo else num_pa_rows > 0,
+                    'rows_count': num_pa_rows,
+                    'error_rows': pa_errors,
                     'default_to_full': self.default_to_full_perpetual_access,
                 },
                 {
                     'name': 'price',
-                    'uploaded': False if self.is_demo else price_rows > 0,
-                    'rows_count': price_rows,
-                    'error_rows': [w.to_dict() for w in PackageFileWarning.query.filter(
-                        PackageFileWarning.package_id == self.package_id,
-                        PackageFileWarning.file == JournalPriceInput.file_type_label()
-                    ).all()],
+                    'uploaded': False if self.is_demo else num_price_rows > 0,
+                    'rows_count': num_price_rows,
+                    'error_rows': price_errors,
                 },
                 # TODO: remove prices when not used by frontend
                 {
                     'name': 'prices',
-                    'uploaded': False if self.is_demo else price_rows > 0,
-                    'rows_count': price_rows,
-                    'error_rows': [w.to_dict() for w in PackageFileWarning.query.filter(
-                        PackageFileWarning.package_id == self.package_id,
-                        PackageFileWarning.file == JournalPriceInput.file_type_label()
-                    ).all()],
+                    'uploaded': False if self.is_demo else num_price_rows > 0,
+                    'rows_count': num_price_rows,
+                    'error_rows': price_errors,
                 },
                 {
                     'name': 'core-journals',
-                    'uploaded': False if self.is_demo else core_rows > 0,
-                    'rows_count': core_rows,
+                    'uploaded': False if self.is_demo else num_core_rows > 0,
+                    'rows_count': num_core_rows,
                     'error_rows': [],
                 },
             ],
