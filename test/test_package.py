@@ -92,12 +92,14 @@ class TestPackage(ResponseTest):
                         'year_int',
                         'fresh_oa_status',
                         'count',
+                        'publisher',
                     ],
                     'properties': {
                         'issn_l': {'type': ['string', 'null'],},
                         'year_int': {'type': 'number'},
                         'fresh_oa_status': {'type': 'string'},
                         'count': {'type': 'number'},
+                        'publisher': {'type': 'string'}
                     },
                     'additionalProperties': False,
                 },
@@ -125,11 +127,13 @@ class TestPackage(ResponseTest):
                         'issn_l',
                         'fresh_oa_status',
                         'count',
+                        'publisher',
                     ],
                     'properties': {
                         'issn_l': {'type': ['string', 'null'], },
                         'fresh_oa_status': {'type': 'string'},
                         'count': {'type': 'number'},
+                        'publisher': {'type': 'string'}
                     },
                     'additionalProperties': False,
                 },
@@ -408,3 +412,8 @@ class TestPackage(ResponseTest):
 
     def test_package_counter_no_price(self):
         pass
+
+    def test_package_default_params(self):
+        p = Package()
+        self.assertTrue(p.default_to_full_perpetual_access)
+        self.assertFalse(p.is_deleted)

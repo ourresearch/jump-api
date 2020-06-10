@@ -388,7 +388,10 @@ class Journal(object):
         # if no perpetual access data for any journals in this scenario, then we are acting like it has perpetual access to everything
         data_dict = self._scenario_data["perpetual_access"]
         if not data_dict:
-            return self.year_by_perpetual_access_years if self._scenario_data['default_to_full_perpetual_access'] else []
+            if self._scenario_data['default_to_full_perpetual_access']:
+                return self.year_by_perpetual_access_years
+            else:
+                return []
 
         #   if journal not there, then no perpetual access
         if not self.issn_l in data_dict:
