@@ -16,7 +16,7 @@ from app import my_memcached
 from assumptions import Assumptions
 from counter import CounterInput
 from journal_price import JournalPriceInput
-from package_file_warning import PackageFileWarning
+from package_file_error_rows import PackageFileErrorRow
 from perpetual_access import PerpetualAccessInput
 from saved_scenario import SavedScenario
 from scenario import get_hybrid_2019
@@ -572,40 +572,70 @@ class Package(db.Model):
         journal_detail = dict(self.get_package_counter_breakdown())
         journal_detail['publisher_id'] = journal_detail.pop('package_id')
 
-        counter_errors = [
-            w.to_dict() for w in PackageFileWarning.query.filter(
-                PackageFileWarning.package_id == self.package_id,
-                PackageFileWarning.file == CounterInput.file_type_label()
-            ).all()
-        ]
+        # counter stats
+
+        json_counter_errors = PackageFileErrorRow.query.filter(
+            PackageFileErrorRow.package_id == self.package_id,
+            PackageFileErrorRow.file == CounterInput.file_type_label()
+        ).scalar()
+
+        if json_counter_errors:
+            counter_errors = json.loads(json_counter_errors.errors)
+        else:
+            counter_errors = None
+
+        if counter_errors:
+            num_counter_error_rows = len(counter_errors['rows'])
+        else:
+            num_counter_error_rows = 0
 
         num_counter_rows = (
             CounterInput.query.filter(CounterInput.package_id == self.package_id).count()
-            + len({e['row_no'] for e in counter_errors})
+            + num_counter_error_rows
         )
 
-        pa_errors = [
-            w.to_dict() for w in PackageFileWarning.query.filter(
-                PackageFileWarning.package_id == self.package_id,
-                PackageFileWarning.file == PerpetualAccessInput.file_type_label()
-            ).all()
-        ]
+        # perpetual access stats
+
+        json_pa_errors = PackageFileErrorRow.query.filter(
+            PackageFileErrorRow.package_id == self.package_id,
+            PackageFileErrorRow.file == PerpetualAccessInput.file_type_label()
+        ).scalar()
+
+        if json_pa_errors:
+            pa_errors = json.loads(json_pa_errors.errors)
+        else:
+            pa_errors = None
+
+        if pa_errors:
+            num_pa_error_rows = len(pa_errors['rows'])
+        else:
+            num_pa_error_rows = 0
 
         num_pa_rows = (
             PerpetualAccessInput.query.filter(PerpetualAccessInput.package_id == self.package_id).count()
-            + len({e['row_no'] for e in pa_errors})
+            + num_pa_error_rows
         )
 
-        price_errors = [
-            w.to_dict() for w in PackageFileWarning.query.filter(
-                PackageFileWarning.package_id == self.package_id,
-                PackageFileWarning.file == JournalPriceInput.file_type_label()
-            ).all()
-        ]
+        # price stats
+
+        json_price_errors = PackageFileErrorRow.query.filter(
+            PackageFileErrorRow.package_id == self.package_id,
+            PackageFileErrorRow.file == JournalPriceInput.file_type_label()
+        ).scalar()
+
+        if json_price_errors:
+            price_errors = json.loads(json_price_errors.errors)
+        else:
+            price_errors = None
+
+        if price_errors:
+            num_price_error_rows = len(price_errors['rows'])
+        else:
+            num_price_error_rows = 0
 
         num_price_rows = (
             JournalPriceInput.query.filter(JournalPriceInput.package_id == self.package_id).count()
-            + len({e['row_no'] for e in price_errors})
+            + num_price_error_rows
         )
 
         num_core_rows = db.session.execute(
@@ -650,7 +680,7 @@ class Package(db.Model):
                     'name': 'core-journals',
                     'uploaded': False if self.is_demo else num_core_rows > 0,
                     'rows_count': num_core_rows,
-                    'error_rows': [],
+                    'error_rows': None,
                 },
             ],
             'journals': self.get_journal_attributes(),
