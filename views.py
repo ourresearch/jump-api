@@ -882,18 +882,9 @@ def new_publisher():
     db.session.execute('''
         insert into jump_apc_authorships (
             select * from jump_apc_authorships_view
-            where package_id = '{}'
+            where package_id = '{}' and publisher = '{}'
         )
-    '''.format(new_package.package_id))
-
-
-    # replace with this soon
-    # db.session.execute('''
-    #     insert into jump_apc_authorships (
-    #         select * from jump_apc_authorships_view_new
-    #         where package_id = '{}' and publisher='{}'
-    #     )
-    # '''.format(new_package.package_id, new_package.publisher))
+    '''.format(new_package.package_id, new_package.publisher))
 
     safe_commit(db)
 
