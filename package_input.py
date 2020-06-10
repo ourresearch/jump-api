@@ -15,7 +15,7 @@ import package
 import purge_cache
 from app import db, logger
 from excel import convert_spreadsheet_to_csv
-from package_file_warning import PackageFileWarning
+from package_file_error_rows import PackageFileErrorRow
 from util import convert_to_utf_8
 from util import safe_commit
 
@@ -156,8 +156,8 @@ class PackageInput:
         num_deleted = db.session.query(cls).filter(cls.package_id == package_id).delete()
         db.session.execute("delete from {} where package_id = '{}'".format(cls.destination_table(), package_id))
 
-        db.session.query(PackageFileWarning).filter(
-            PackageFileWarning.package_id == package_id, PackageFileWarning.file == cls.file_type_label()
+        db.session.query(PackageFileErrorRow).filter(
+            PackageFileErrorRow.package_id == package_id, PackageFileErrorRow.file == cls.file_type_label()
         ).delete()
 
         safe_commit(db)
@@ -203,12 +203,9 @@ class PackageInput:
         )
 
     @classmethod
-    def make_package_file_warning(cls, parse_warning, row_no=None, raw_column_name=None, raw_value=None, additional_msg=None):
+    def make_package_file_warning(cls, parse_warning, raw_column_name=None, additional_msg=None):
         return {
-            'file': cls.file_type_label(),
-            'row_no': row_no,
             'column_name': raw_column_name,
-            'raw_value': raw_value,
             'label': parse_warning.value['label'],
             'message': u'{}{}'.format(
                 parse_warning.value['text'],
@@ -250,12 +247,17 @@ class PackageInput:
             max_columns = 0
             header_index = None
             parsed_rows = []
-            line_no = 0
+            line_no = 0  # the index in parsed_rows where this row will land
+            absolute_line_no = 0  # the actual file row we're parsing
+            parsed_to_absolute_line_no = {}
+
             for line in csv.reader(csv_file, dialect=dialect):
+                absolute_line_no += 1
                 if not any([cell.strip() for cell in line]):
                     continue
 
                 parsed_rows.append(line)
+                parsed_to_absolute_line_no[line_no] = absolute_line_no
 
                 if len(line) > max_columns and all(line):
                     max_columns = len(line)
@@ -268,7 +270,11 @@ class PackageInput:
                 # give up. can't turn rows into dicts if we don't have a header
                 raise RuntimeError(u"Couldn't identify a header row in the file.")
 
-            warnings = []
+            error_rows = {
+                'rows': [],
+                'headers': []
+            }
+
             normalized_rows = []
 
             # make sure we have all the required columns
@@ -291,6 +297,7 @@ class PackageInput:
             row_dicts = [dict(zip(parsed_rows[header_index], x)) for x in parsed_rows[header_index+1:]]
 
             for row_no, row in enumerate(row_dicts):
+                absolute_row_no = parsed_to_absolute_line_no[row_no] + header_index + 1
                 normalized_row = {}
                 cell_warnings = []
 
@@ -305,9 +312,7 @@ class PackageInput:
                                 logger.info('parse warning: {}'.format(parse_warning))
                                 cell_warnings.append(cls.make_package_file_warning(
                                     parse_warning,
-                                    row_no=row_no + 1,
                                     raw_column_name=raw_column_name,
-                                    raw_value=raw_value,
                                 ))
                                 normalized_row.setdefault(normalized_name, None)
                             else:
@@ -315,71 +320,75 @@ class PackageInput:
                     except Exception as e:
                         cell_warnings.append(cls.make_package_file_warning(
                             ParseWarning.unknown,
-                            row_no=row_no + 1,
                             raw_column_name=raw_column_name,
-                            raw_value=raw_value,
                             additional_msg=e.message
                         ))
 
                 if cls.ignore_row(normalized_row):
                     continue
 
-                warnings.extend(cell_warnings)
-
                 if not cell_warnings:
                     normalized_rows.extend(cls.translate_row(normalized_row))
+                else:
+                    error_row = {
+                        'row_no': absolute_row_no,
+                        'cells': {}
+                    }
+
+                    for raw_column_name in row.keys():
+                        if raw_column_name in raw_to_normalized_map:
+                            normalized_name = raw_to_normalized_map[raw_column_name]
+
+                            error_cell = {
+                                'value': row[raw_column_name],
+                                'error': None
+                            }
+
+                            for cell_warning in cell_warnings:
+                                if cell_warning['column_name'] == raw_column_name:
+                                    error_cell['error'] = {
+                                        'label': cell_warning['label'],
+                                        'message': cell_warning['message']
+                                    }
+
+                            error_row['cells'][normalized_name] = error_cell
+
+                    error_rows['rows'].append(error_row)
+
+            for raw, normalized in raw_to_normalized_map.items():
+                if normalized:
+                    error_rows['headers'].append({'id': normalized, 'name': raw})
 
             cls.apply_header(normalized_rows, parsed_rows[0:header_index+1])
 
-            return normalized_rows, warnings
+            return normalized_rows, error_rows
 
     @classmethod
     def load(cls, package_id, file_name, commit=False):
         try:
-            normalized_rows, warnings = cls.normalize_rows(file_name)
+            normalized_rows, error_rows = cls.normalize_rows(file_name)
         except (RuntimeError, UnicodeError) as e:
             return {'success': False, 'message': e.message, 'warnings': []}
 
-        # save warnings
+        # save errors
+
+        db.session.query(PackageFileErrorRow).filter(
+            PackageFileErrorRow.package_id == package_id, PackageFileErrorRow.file == cls.file_type_label()
+        ).delete()
+
+        saved_errors = PackageFileErrorRow()
+        saved_errors.package_id = package_id
+        saved_errors.file = cls.file_type_label()
+        saved_errors.errors = json.dumps(error_rows)
+
+        db.session.add(saved_errors)
+
+        # save normalized rows
 
         aws_creds = 'aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}'.format(
             aws_key=os.getenv('AWS_ACCESS_KEY_ID'),
             aws_secret=os.getenv('AWS_SECRET_ACCESS_KEY')
         )
-
-        db.session.query(PackageFileWarning).filter(
-            PackageFileWarning.package_id == package_id, PackageFileWarning.file == cls.file_type_label()
-        ).delete()
-
-        if warnings:
-            warning_rows = [PackageFileWarning(**w).__dict__ for w in warnings]
-            for wr in warning_rows:
-                wr.update({'package_id': package_id})
-                wr.pop('_sa_instance_state', None)
-
-            warning_columns = sorted(warning_rows[0].keys())
-            warning_csv_filename = tempfile.mkstemp()[1]
-            with open(warning_csv_filename, 'w') as warning_csv_file:
-                writer = csv.DictWriter(warning_csv_file, delimiter=',', encoding='utf-8', fieldnames=warning_columns)
-                for wr in warning_rows:
-                    writer.writerow(wr)
-
-            s3_object = cls._copy_to_s3(u'{}_warnings'.format(package_id), warning_csv_filename)
-
-            copy_cmd = text('''
-                    copy jump_package_file_import_warning ({fields}) from '{s3_object}'
-                    credentials :creds format as csv
-                    timeformat 'auto';
-                '''.format(
-                fields=', '.join(warning_columns),
-                s3_object=s3_object,
-            ))
-
-            logger.info(copy_cmd)
-
-            db.session.execute(copy_cmd.bindparams(creds=aws_creds))
-
-        # save normalized rows
 
         if normalized_rows:
             for row in normalized_rows:
@@ -421,13 +430,13 @@ class PackageInput:
             return {
                 'success': True,
                 'message': u'Inserted {} {} rows for package {}.'.format(len(normalized_rows), cls.__name__, package_id),
-                'warnings': warnings
+                'warnings': error_rows
             }
         else:
             return {
                 'success': False,
                 'message': u'No usable rows found.',
-                'warnings': warnings
+                'warnings': error_rows
             }
 
 
