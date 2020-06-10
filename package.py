@@ -51,6 +51,8 @@ class Package(db.Model):
 
     def __init__(self, **kwargs):
         self.created = datetime.datetime.utcnow().isoformat()
+        self.default_to_full_perpetual_access = True
+        self.is_deleted = False
         super(Package, self).__init__(**kwargs)
 
     @property
@@ -652,14 +654,14 @@ class Package(db.Model):
                 },
             ],
             'journals': self.get_journal_attributes(),
-            'is_deleted': self.is_deleted
+            'is_deleted': self.is_deleted is not None and self.is_deleted
         }
 
     def to_dict_micro(self):
         response = {
             "id": self.package_id,
             "name": self.package_name,
-            "is_deleted": self.is_deleted,
+            "is_deleted": self.is_deleted is not None and self.is_deleted,
         }
         return response
 

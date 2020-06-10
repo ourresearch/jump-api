@@ -105,7 +105,9 @@ class Scenario(object):
 
         self.data["default_to_full_perpetual_access"] = True
         if my_package:
-            self.data["default_to_full_perpetual_access"] = my_package.default_to_full_perpetual_access
+            default_pa = my_package.default_to_full_perpetual_access
+            if not default_pa and default_pa is not None:
+                self.data["default_to_full_perpetual_access"] = False
 
         self.set_clean_data()  #order for this one matters, after get common, before build journals
         self.log_timing("set_clean_data")
