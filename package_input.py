@@ -76,7 +76,7 @@ class PackageInput:
             else:
                 return ParseWarning.bad_issn
         else:
-            return ParseWarning.bad_issn if warn_if_blank else None
+            return ParseWarning.no_issn if warn_if_blank else None
 
     @staticmethod
     def strip_text(txt, warn_if_blank=False):
@@ -439,6 +439,10 @@ class ParseWarning(Enum):
     bundle_issn = {
         'label': 'bundle_issn',
         'text': 'ISSN represents a bundle of journals, not a single journal.'
+    }
+    no_issn = {
+        'label': 'no_issn',
+        'text': 'An ISSN is required here.'
     }
     bad_date = {
         'label': 'bad_date',
