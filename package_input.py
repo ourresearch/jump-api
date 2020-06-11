@@ -63,7 +63,7 @@ class PackageInput:
             except Exception:
                 return ParseWarning.bad_usd_price
         else:
-            return ParseWarning.bad_usd_price if warn_if_blank else None
+            return ParseWarning.no_usd_price if warn_if_blank else None
 
     @staticmethod
     def normalize_issn(issn, warn_if_blank=False):
@@ -468,6 +468,10 @@ class ParseWarning(Enum):
     bad_usd_price = {
         'label': 'bad_usd_price',
         'text': 'Unrecognized USD format.'
+    }
+    no_usd_price = {
+        'label': 'no_usd_price',
+        'text': 'A price in USD is required here.'
     }
     blank_text = {
         'label': 'blank_text',
