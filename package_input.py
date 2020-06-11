@@ -331,12 +331,11 @@ class PackageInput:
                     normalized_rows.extend(cls.translate_row(normalized_row))
                 else:
                     error_row = {
-                        'row_no': absolute_row_no,
                         'cells': {'row_id': {'value': absolute_row_no, 'error': None}}
                     }
 
                     for raw_column_name in row.keys():
-                        if raw_column_name in raw_to_normalized_map:
+                        if raw_to_normalized_map.get(raw_column_name, None):
                             normalized_name = raw_to_normalized_map[raw_column_name]
 
                             error_cell = {
