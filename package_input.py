@@ -272,7 +272,7 @@ class PackageInput:
 
             error_rows = {
                 'rows': [],
-                'headers': [{'id': 'row_id', 'name': 'row_id'}]
+                'headers': [{'id': 'row_id', 'name': 'Row Number'}]
             }
 
             normalized_rows = []
@@ -331,7 +331,10 @@ class PackageInput:
                     normalized_rows.extend(cls.translate_row(normalized_row))
                 else:
                     error_row = {
-                        'cells': {'row_id': {'value': absolute_row_no, 'error': None}}
+                        'row_id': {
+                            'value': absolute_row_no,
+                            'error': None
+                        }
                     }
 
                     for raw_column_name in row.keys():
@@ -350,7 +353,7 @@ class PackageInput:
                                         'message': cell_warning['message']
                                     }
 
-                            error_row['cells'][normalized_name] = error_cell
+                            error_row[normalized_name] = error_cell
 
                     error_rows['rows'].append(error_row)
 
