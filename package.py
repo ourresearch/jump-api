@@ -446,8 +446,8 @@ class Package(db.Model):
                     'id': 'perpetual_access',
                     'source': (
                         'custom' if issn_l in pa_rows
-                        else 'default' if self.default_to_full_perpetual_access
-                        else None
+                        else 'default_full' if self.default_to_full_perpetual_access
+                        else 'default_none'
                     ),
                     'value': (
                         [pa_rows[issn_l]['start_date'], pa_rows[issn_l]['end_date']] if issn_l in pa_rows
@@ -458,7 +458,11 @@ class Package(db.Model):
                 },
                 {
                     'id': 'price',
-                    'source': 'custom' if issn_l in package_prices else 'default' if issn_l in public_prices else None,
+                    'source': (
+                        'custom' if package_prices.get('issn_l', None) is not None
+                        else 'default' if public_prices.get('issn_l', None) is not None
+                        else None
+                    ),
                     'value': package_price_defaults[issn_l] or public_price_defaults[issn_l],
                 },
             ],
