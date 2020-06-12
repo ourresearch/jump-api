@@ -19,6 +19,8 @@ from package_file_error_rows import PackageFileErrorRow
 from util import convert_to_utf_8
 from util import safe_commit
 
+from raw_file_upload_object import RawFileUploadObject
+
 
 class PackageInput:
     @staticmethod
@@ -144,12 +146,70 @@ class PackageInput:
 
 
     @classmethod
-    def _copy_to_s3(cls, prefix, filename):
+    def _copy_staging_csv_to_s3(cls, filename, package_id):
         s3 = boto3.client('s3')
         bucket_name = 'jump-redshift-staging'
-        object_name = '{}_{}_{}'.format(prefix, cls.__name__, shortuuid.uuid())
+        object_name = '{}_{}_{}'.format(package_id, cls.__name__, shortuuid.uuid())
         s3.upload_file(filename, bucket_name, object_name)
         return 's3://{}/{}'.format(bucket_name, object_name)
+
+    @classmethod
+    def _raw_s3_bucket(cls):
+        return u'unsub-file-uploads'
+
+    @classmethod
+    def _copy_raw_to_s3(cls, filename, package_id):
+        s3 = boto3.client('s3')
+
+        if u'.' in filename:
+            suffix = u'.{}'.format(filename.split(u'.')[-1])
+        else:
+            suffix = u''
+
+        object_name = '{}_{}{}'.format(package_id, cls.file_type_label(), suffix)
+        bucket_name = cls._raw_s3_bucket()
+
+        s3.upload_file(filename, bucket_name, object_name)
+
+        RawFileUploadObject.query.filter(
+            RawFileUploadObject.package_id == package_id, RawFileUploadObject.file == cls.file_type_label()
+        ).delete()
+
+        db.session.add(RawFileUploadObject(
+            package_id=package_id,
+            file=cls.file_type_label(),
+            bucket_name=bucket_name,
+            object_name=object_name
+        ))
+
+        return 's3://{}/{}'.format(bucket_name, object_name)
+
+    @classmethod
+    def get_raw_upload_object(cls, package_id):
+        object_details = RawFileUploadObject.query.filter(
+            RawFileUploadObject.package_id == package_id, RawFileUploadObject.file == cls.file_type_label()
+        ).scalar()
+
+        if not object_details:
+            return None
+
+        s3 = boto3.client('s3')
+
+        try:
+            raw_object = s3.get_object(Bucket=object_details.bucket_name, Key=object_details.object_name)
+
+            headers = {
+                'Content-Length': raw_object['ContentLength'],
+                'Content-Disposition': 'attachment; filename="{}"'.format(object_details.object_name)
+            }
+
+            return {
+                'body': raw_object['Body'],
+                'content_type': raw_object['ContentType'],
+                'headers': headers
+            }
+        except s3.exceptions.NoSuchKey:
+            return None
 
     @classmethod
     def delete(cls, package_id):
@@ -158,6 +218,10 @@ class PackageInput:
 
         db.session.query(PackageFileErrorRow).filter(
             PackageFileErrorRow.package_id == package_id, PackageFileErrorRow.file == cls.file_type_label()
+        ).delete()
+
+        RawFileUploadObject.query.filter(
+            RawFileUploadObject.package_id == package_id, RawFileUploadObject.file == cls.file_type_label()
         ).delete()
 
         safe_commit(db)
@@ -406,7 +470,7 @@ class PackageInput:
                 for row in normalized_rows:
                     writer.writerow(row)
 
-            s3_object = cls._copy_to_s3(package_id, normalized_csv_filename)
+            s3_object = cls._copy_staging_csv_to_s3(normalized_csv_filename, package_id)
 
             copy_cmd = text('''
                 copy {table} ({fields}) from '{s3_object}'
@@ -420,6 +484,7 @@ class PackageInput:
 
             db.session.execute(copy_cmd.bindparams(creds=aws_creds))
             cls.update_dest_table(package_id)
+            cls._copy_raw_to_s3(file_name, package_id)
 
         my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
 
