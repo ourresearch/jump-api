@@ -974,6 +974,19 @@ def jump_counter(package_id):
             return jsonify_fast_no_sort(_load_package_file(package_id, request, CounterInput))
 
 
+@app.route('/publisher/<package_id>/counter/raw', methods=['GET'])
+@jwt_optional
+def jump_get_raw_counter(package_id):
+    authenticate_for_publisher(package_id, Permission.view() if request.method == 'GET' else Permission.modify())
+
+    raw = CounterInput.get_raw_upload_object(package_id)
+
+    if not raw:
+        return abort_json(404, u'no raw counter file for package {}'.format(package_id))
+
+    return Response(raw['body'], content_type=raw['content_type'], headers=raw['headers'])
+
+
 @app.route('/publisher/<package_id>/perpetual-access', methods=['GET', 'POST', 'DELETE'])
 @jwt_optional
 # @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
@@ -1004,6 +1017,20 @@ def jump_perpetual_access(package_id):
 
             return jsonify_fast_no_sort(response)
 
+
+@app.route('/publisher/<package_id>/perpetual-access/raw', methods=['GET'])
+@jwt_optional
+def jump_get_raw_perpetual_access(package_id):
+    authenticate_for_publisher(package_id, Permission.view() if request.method == 'GET' else Permission.modify())
+
+    raw = PerpetualAccessInput.get_raw_upload_object(package_id)
+
+    if not raw:
+        return abort_json(404, u'no raw perpetual access file for package {}'.format(package_id))
+
+    return Response(raw['body'], content_type=raw['content_type'], headers=raw['headers'])
+
+
 @app.route('/publisher/<package_id>/price', methods=['GET', 'POST', 'DELETE'])
 # @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 @jwt_optional
@@ -1023,6 +1050,19 @@ def jump_journal_prices(package_id):
             return abort_json(400, _long_error_message())
         else:
             return jsonify_fast_no_sort(_load_package_file(package_id, request, JournalPriceInput))
+
+
+@app.route('/publisher/<package_id>/price/raw', methods=['GET'])
+@jwt_optional
+def jump_get_raw_journal_prices(package_id):
+    authenticate_for_publisher(package_id, Permission.view() if request.method == 'GET' else Permission.modify())
+
+    raw = JournalPriceInput.get_raw_upload_object(package_id)
+
+    if not raw:
+        return abort_json(404, u'no raw journal price file for package {}'.format(package_id))
+
+    return Response(raw['body'], content_type=raw['content_type'], headers=raw['headers'])
 
 
 def post_subscription_guts(scenario_id, scenario_name=None):
