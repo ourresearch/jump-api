@@ -415,5 +415,5 @@ class TestPackage(ResponseTest):
 
     def test_package_default_params(self):
         p = Package()
-        self.assertTrue(p.default_to_full_perpetual_access)
+        self.assertFalse(p.default_to_no_perpetual_access)
         self.assertFalse(p.is_deleted)
