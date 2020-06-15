@@ -356,11 +356,16 @@ def register_demo_user():
 
     db.session.add(demo_user)
 
-    assign_demo_institution(demo_user)
+    if u'@' in email and email.split(u'@')[-2].lower().endswith(u'+nocache'):
+        use_prepared_publisher = False
+    else:
+        use_prepared_publisher = True
+
+    assign_demo_institution(demo_user, use_prepared_publisher=use_prepared_publisher)
 
     if safe_commit(db):
-        email = create_email(email, u'Welcome to Unsub', 'demo_user', {})
-        send(email, for_real=True)
+        welcome_email = create_email(email, u'Welcome to Unsub', 'demo_user', {})
+        send(welcome_email, for_real=True)
 
         identity_dict = make_identity_dict(demo_user)
         logger.info(u"login to account {} with {}".format(demo_user.username, identity_dict))
@@ -371,7 +376,7 @@ def register_demo_user():
         return abort_json(500, u'Database error.')
 
 
-def assign_demo_institution(user):
+def assign_demo_institution(user, use_prepared_publisher=True):
     demo_institution = Institution()
     demo_institution.display_name = 'Demo University'
     demo_institution.is_demo_institution = True
@@ -387,7 +392,7 @@ def assign_demo_institution(user):
         user_perm.institution_id = demo_institution.id
         db.session.add(user_perm)
 
-    demo_publisher = prepared_demo_publisher.get_demo_publisher(demo_institution)
+    demo_publisher = prepared_demo_publisher.get_demo_publisher(demo_institution, use_prepared=use_prepared_publisher)
     db.session.add(demo_publisher)
 
 
