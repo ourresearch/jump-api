@@ -33,18 +33,19 @@ def prepare_publishers():
             logger.info(u'Created demo publisher {} ({}).'.format(new_publisher.package_id, institution.id))
 
 
-def get_demo_publisher(institution):
-    placeholder_institution = get_or_create_placeholder_institution()
+def get_demo_publisher(institution, use_prepared=True):
+    if use_prepared:
+        placeholder_institution = get_or_create_placeholder_institution()
+        prepared_publisher = Package.query.filter(Package.institution_id == placeholder_institution.id).first()
 
-    prepared_publisher = Package.query.filter(Package.institution_id == placeholder_institution.id).first()
-    if not prepared_publisher:
-        new_publisher = clone_demo_package(institution)
-        logger.info(u'Created demo publisher {} ({}).'.format(new_publisher.package_id, institution.id))
-        return new_publisher
-    else:
-        prepared_publisher.institution_id = institution.id
-        logger.info(u'Got prepared demo publisher {} ({}).'.format(prepared_publisher.package_id, institution.id))
-        return prepared_publisher
+        if prepared_publisher:
+            prepared_publisher.institution_id = institution.id
+            logger.info(u'Got prepared demo publisher {} ({}).'.format(prepared_publisher.package_id, institution.id))
+            return prepared_publisher
+
+    new_publisher = clone_demo_package(institution)
+    logger.info(u'Created demo publisher {} ({}).'.format(new_publisher.package_id, institution.id))
+    return new_publisher
 
 
 if __name__ == "__main__":
