@@ -460,8 +460,8 @@ class Package(db.Model):
                 {
                     'id': 'price',
                     'source': (
-                        'custom' if package_prices.get('issn_l', None) is not None
-                        else 'default' if public_prices.get('issn_l', None) is not None
+                        'custom' if package_prices.get(issn_l, None) is not None
+                        else 'default' if public_prices.get(issn_l, None) is not None
                         else None
                     ),
                     'value': package_price_defaults[issn_l] or public_price_defaults[issn_l],
