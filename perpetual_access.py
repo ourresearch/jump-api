@@ -60,6 +60,7 @@ class PerpetualAccessInput(db.Model, PackageInput):
             'issn': {
                 'normalize': cls.normalize_issn,
                 'name_snippets': [u'issn'],
+                'excluded_name_snippets': [u'online', u'e-', u'eissn'],
                 'required': True,
                 'warn_if_blank': True,
             }
