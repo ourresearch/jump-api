@@ -51,7 +51,7 @@ class PackageInput:
             except Exception:
                 return ParseWarning.bad_int
         else:
-            return ParseWarning.bad_int if warn_if_blank else None
+            return ParseWarning.no_int if warn_if_blank else None
 
     @staticmethod
     def normalize_price(price, warn_if_blank=False):
@@ -531,6 +531,10 @@ class ParseWarning(Enum):
     bad_int = {
         'label': 'bad_int',
         'text': 'Unrecognized integer format.'
+    }
+    no_int = {
+        'label': 'no_int',
+        'text': 'Expected an integer here.'
     }
     bad_usd_price = {
         'label': 'bad_usd_price',
