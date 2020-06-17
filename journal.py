@@ -358,7 +358,7 @@ class Journal(object):
     def display_perpetual_access_years(self):
         if not self.perpetual_access_years:
             return ""
-        if min(self.perpetual_access_years) == min(self.year_by_perpetual_access_years):
+        if min(self.perpetual_access_years) < min(self.year_by_perpetual_access_years):
             return "<{}-{}".format(min(self.perpetual_access_years), max(self.perpetual_access_years))
         return "{}-{}".format(min(self.perpetual_access_years), max(self.perpetual_access_years))
 
