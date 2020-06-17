@@ -489,7 +489,7 @@ class PackageInput:
         my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
 
         if commit:
-            safe_commit(db)
+            db.session.commit()
             if my_package:
                 cls.clear_caches(my_package)
 
