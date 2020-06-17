@@ -395,13 +395,17 @@ class Journal(object):
             else:
                 return self.year_by_perpetual_access_years
 
+        start_date = data_dict[self.issn_l]["start_date"]
+        end_date = data_dict[self.issn_l]["end_date"]
+
         #   if no dates, then no perpetual access
-        if not data_dict[self.issn_l]["start_date"]:
+        if not start_date:
             return []
 
+
         #   if a start date and no end date, then has perpetual access till the model says it doesn't
-        if data_dict[self.issn_l]["start_date"] and not data_dict[self.issn_l]["end_date"]:
-            return self.year_by_perpetual_access_years
+        if not end_date:
+            end_date = datetime.datetime(2042, 1, 2)  # far in the future, let's really hope we have universal OA by then
 
         #   if two dates, that is the perpetual access range
         response = []
@@ -410,9 +414,9 @@ class Journal(object):
 
             # ugly.  working around whether cached or not cached
             try:
-                in_range = working_date > data_dict[self.issn_l]["start_date"] and working_date < data_dict[self.issn_l]["end_date"]
+                in_range = working_date > start_date and working_date < end_date
             except:
-                in_range = working_date > data_dict[self.issn_l]["start_date"].isoformat() and working_date < data_dict[self.issn_l]["end_date"].isoformat()
+                in_range = working_date > start_date.isoformat() and working_date < end_date.isoformat()
 
             if in_range:
                 # print year, "yes", data_dict[self.issn_l]
