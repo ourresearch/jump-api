@@ -9,6 +9,7 @@ class PackageFileErrorRow(db.Model):
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"))
     file = db.Column(db.Text)
     errors = db.Column(db.Text)
+    sequence = db.Column(db.Integer)
 
     def to_dict(self):
         return {

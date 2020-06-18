@@ -278,6 +278,33 @@ class PackageInput:
         }
 
     @classmethod
+    def save_errors(cls, package_id, errors):
+        error_str = json.dumps(errors)
+        chunk_size = 64 * 1024 - 1
+        error_chunks = [error_str[i:i + chunk_size] for i in range(0, len(error_str), chunk_size)]
+
+        rows = []
+        for i, chunk in enumerate(error_chunks):
+            rows.append(
+                PackageFileErrorRow(package_id=package_id, file=cls.file_type_label(), sequence=i, errors=chunk)
+            )
+
+        for row in rows:
+            db.session.add(row)
+
+    @classmethod
+    def load_errors(cls, package_id):
+        rows = PackageFileErrorRow.query.filter(
+            PackageFileErrorRow.package_id == package_id,
+            PackageFileErrorRow.file == cls.file_type_label()
+        ).order_by(PackageFileErrorRow.sequence).all()
+
+        if not rows:
+            return None
+        else:
+            return json.loads(u''.join([row.errors for row in rows]))
+
+    @classmethod
     def normalize_rows(cls, file_name):
         # convert to csv if needed
         if file_name.endswith(u'.xls') or file_name.endswith(u'.xlsx'):
@@ -442,12 +469,7 @@ class PackageInput:
             PackageFileErrorRow.package_id == package_id, PackageFileErrorRow.file == cls.file_type_label()
         ).delete()
 
-        saved_errors = PackageFileErrorRow()
-        saved_errors.package_id = package_id
-        saved_errors.file = cls.file_type_label()
-        saved_errors.errors = json.dumps(error_rows)
-
-        db.session.add(saved_errors)
+        cls.save_errors(package_id, error_rows)
 
         # save normalized rows
 
