@@ -279,6 +279,9 @@ class PackageInput:
 
     @classmethod
     def save_errors(cls, package_id, errors):
+        if errors is None:
+            return
+
         error_str = json.dumps(errors)
         chunk_size = 64 * 1024 - 1
         error_chunks = [error_str[i:i + chunk_size] for i in range(0, len(error_str), chunk_size)]
@@ -458,6 +461,9 @@ class PackageInput:
                     error_rows['headers'].append({'id': normalized, 'name': raw})
 
             cls.apply_header(normalized_rows, parsed_rows[0:header_index+1])
+
+            if not error_rows['rows']:
+                error_rows = None
 
             return normalized_rows, error_rows
 
