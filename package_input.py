@@ -330,7 +330,11 @@ class PackageInput:
                 if not next_line:
                     break
 
-            dialect = csv.Sniffer().sniff(dialect_sample)
+            try:
+                dialect = csv.Sniffer().sniff(dialect_sample)
+            except csv.Error:
+                dialect = None
+
             csv_file.seek(0)
 
             # turn rows into arrays
