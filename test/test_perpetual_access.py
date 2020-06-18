@@ -47,4 +47,11 @@ class TestPerpetualAccess(unittest.TestCase):
             rows
         )
 
-        self.assertItemsEqual([], warnings)
+        self.assertItemsEqual({
+            'headers': [
+                {'id': 'row_id', 'name': 'Row Number'},
+                {'id': 'issn', 'name': u'issn'},
+                {'id': 'start_date', 'name': u'start_date'},
+                {'id': 'end_date', 'name': u'end_date'}],
+            'rows': []
+        }, warnings)
