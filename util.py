@@ -914,6 +914,7 @@ def convert_to_utf_8(file_name):
 
         possible_encodings.append('UTF-8')
         possible_encodings.append('windows-1252')
+        possible_encodings.append('cp437')
 
         possible_encodings.append(chardet.detect(sample)['encoding'])
 
