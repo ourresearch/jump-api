@@ -16,7 +16,6 @@ from app import my_memcached
 from assumptions import Assumptions
 from counter import CounterInput
 from journal_price import JournalPriceInput
-from package_file_error_rows import PackageFileErrorRow
 from perpetual_access import PerpetualAccessInput
 from saved_scenario import SavedScenario
 from scenario import get_hybrid_2019
@@ -579,15 +578,7 @@ class Package(db.Model):
 
         # counter stats
 
-        json_counter_errors = PackageFileErrorRow.query.filter(
-            PackageFileErrorRow.package_id == self.package_id,
-            PackageFileErrorRow.file == CounterInput.file_type_label()
-        ).scalar()
-
-        if json_counter_errors:
-            counter_errors = json.loads(json_counter_errors.errors)
-        else:
-            counter_errors = None
+        counter_errors = CounterInput.load_errors(self.package_id)
 
         if counter_errors:
             num_counter_error_rows = len(counter_errors['rows'])
@@ -601,15 +592,7 @@ class Package(db.Model):
 
         # perpetual access stats
 
-        json_pa_errors = PackageFileErrorRow.query.filter(
-            PackageFileErrorRow.package_id == self.package_id,
-            PackageFileErrorRow.file == PerpetualAccessInput.file_type_label()
-        ).scalar()
-
-        if json_pa_errors:
-            pa_errors = json.loads(json_pa_errors.errors)
-        else:
-            pa_errors = None
+        pa_errors = PerpetualAccessInput.load_errors(self.package_id)
 
         if pa_errors:
             num_pa_error_rows = len(pa_errors['rows'])
@@ -623,15 +606,7 @@ class Package(db.Model):
 
         # price stats
 
-        json_price_errors = PackageFileErrorRow.query.filter(
-            PackageFileErrorRow.package_id == self.package_id,
-            PackageFileErrorRow.file == JournalPriceInput.file_type_label()
-        ).scalar()
-
-        if json_price_errors:
-            price_errors = json.loads(json_price_errors.errors)
-        else:
-            price_errors = None
+        price_errors = JournalPriceInput.load_errors(self.package_id)
 
         if price_errors:
             num_price_error_rows = len(price_errors['rows'])
