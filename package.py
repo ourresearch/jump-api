@@ -625,6 +625,7 @@ class Package(db.Model):
         return {
             'id': self.package_id,
             'name': self.package_name,
+            'publisher': self.publisher,
             'is_demo': self.is_demo,
             'journal_detail': journal_detail,
             'scenarios': [{'name': s.scenario_name, 'id': s.scenario_id} for s in self.saved_scenarios],
@@ -672,6 +673,7 @@ class Package(db.Model):
         response = {
             "id": self.package_id,
             "name": self.package_name,
+            "publisher": self.publisher,
             "is_deleted": self.is_deleted is not None and self.is_deleted,
         }
         return response
