@@ -353,10 +353,13 @@ class PackageInput:
                 if not next_line:
                     break
 
+            reader_params = {}
             try:
                 dialect = csv.Sniffer().sniff(dialect_sample)
             except csv.Error:
                 dialect = None
+                if file_name.endswith(u'.tsv'):
+                    reader_params['delimiter'] = '\t'
 
             csv_file.seek(0)
 
@@ -369,7 +372,7 @@ class PackageInput:
             absolute_line_no = 0  # the actual file row we're parsing
             parsed_to_absolute_line_no = {}
 
-            for line in csv.reader(csv_file, dialect=dialect):
+            for line in csv.reader(csv_file, dialect=dialect, **reader_params):
                 absolute_line_no += 1
                 if not any([cell.strip() for cell in line]):
                     continue
