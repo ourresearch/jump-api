@@ -305,7 +305,11 @@ class PackageInput:
         if not rows:
             return None
         else:
-            return json.loads(u''.join([row.errors for row in rows]))
+            errors = json.loads(u''.join([row.errors for row in rows]))
+            if errors['rows']:
+                return errors
+            else:
+                return None
 
     @classmethod
     def normalize_rows(cls, file_name):
