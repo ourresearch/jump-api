@@ -71,8 +71,24 @@ class PackageInput:
     def normalize_issn(issn, warn_if_blank=False):
         if issn:
             issn = sub(ur'\s', '', issn).upper()
-            if re.match(ur'^\d{4}-\d{3}(?:X|\d)$', issn):
-                return issn
+            if re.match(ur'^\d{4}-?\d{3}(?:X|\d)$', issn):
+                issn = issn.replace(u'-', '')
+                digits = [int(c) for c in issn[0:7]]
+                weights = [8, 7, 6, 5, 4, 3, 2]
+                weighted_sum = sum([digits[i] * weights[i] for i in range(0, 7)])
+                check = 11 - weighted_sum % 11
+                if check == 10:
+                    check = u'X'
+                elif check == 11:
+                    check = u'0'
+                else:
+                    check = unicode(check)
+
+                if issn[7] == check:
+                    return issn[0:4] + u'-' + issn[4:8]
+                else:
+                    return ParseWarning.bad_issn
+
             elif re.match(ur'^[A-Z0-9]{4}-\d{3}(?:X|\d)$', issn):
                 return ParseWarning.bundle_issn
             else:

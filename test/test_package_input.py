@@ -14,12 +14,14 @@ class TestPackageInput(unittest.TestCase):
         self.maxDiff = 5000
 
     def test_normalize_issn(self):
-        assert_equals(PackageInput.normalize_issn('1234-5678'), '1234-5678')
-        assert_equals(PackageInput.normalize_issn('1234-567X'), '1234-567X')
-        assert_equals(PackageInput.normalize_issn('1234-567x'), '1234-567X')
-        assert_equals(PackageInput.normalize_issn('\n1234-567X\t'), '1234-567X')
-        assert_equals(PackageInput.normalize_issn('\n1234- 567X\t'), '1234-567X')
-        assert_equals(PackageInput.normalize_issn('\n1234-\n567x\t'), '1234-567X')
+        assert_equals(PackageInput.normalize_issn('0266-6731'), '0266-6731')
+        assert_equals(PackageInput.normalize_issn('0990-7440'), '0990-7440')
+        assert_equals(PackageInput.normalize_issn('  02666731'), '0266-6731')
+        assert_equals(PackageInput.normalize_issn('1026-597X'), '1026-597X')
+        assert_equals(PackageInput.normalize_issn('1026-597x'), '1026-597X')
+        assert_equals(PackageInput.normalize_issn('\n1026-597X\t'), '1026-597X')
+        assert_equals(PackageInput.normalize_issn('\n1026- 597X\t'), '1026-597X')
+        assert_equals(PackageInput.normalize_issn('\n1026-\n597x\t'), '1026-597X')
 
         invalid_issns = [
             {'issn': '1234-56789',              'warning': ParseWarning.bad_issn},
@@ -34,7 +36,7 @@ class TestPackageInput(unittest.TestCase):
             assert_equals(PackageInput.normalize_issn(i['issn']), i['warning'])
 
         assert_equals(PackageInput.normalize_issn(''), None)
-        assert_equals(PackageInput.normalize_issn('', warn_if_blank=True), ParseWarning.bad_issn)
+        assert_equals(PackageInput.normalize_issn('', warn_if_blank=True), ParseWarning.no_issn)
 
     def test_normalize_date(self):
         assert_equals(PackageInput.normalize_date('1955-11-05'), datetime.datetime(1955, 11, 5).isoformat())
