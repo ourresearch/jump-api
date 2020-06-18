@@ -354,8 +354,9 @@ class PackageInput:
                 parsed_rows.append(line)
                 parsed_to_absolute_line_no[line_no] = absolute_line_no
 
-                if len(line) > max_columns and all(line):
-                    max_columns = len(line)
+                populated_columns = len([cell for cell in line if cell.strip()])
+                if populated_columns > max_columns:
+                    max_columns = populated_columns
                     header_index = line_no
                     logger.info(u'candidate header row: {}'.format(u', '.join(line)))
 
