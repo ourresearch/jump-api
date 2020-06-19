@@ -18,8 +18,19 @@ from excel import convert_spreadsheet_to_csv
 from package_file_error_rows import PackageFileErrorRow
 from util import convert_to_utf_8
 from util import safe_commit
+from app import get_db_cursor
 
 from raw_file_upload_object import RawFileUploadObject
+
+
+def _get_ricks_issns():
+    with get_db_cursor() as cursor:
+        cursor.execute('select distinct issn from ricks_journal_flat')
+        rows = cursor.fetchall()
+    return [r['issn'] for r in rows]
+
+
+_ricks_issns = frozenset(_get_ricks_issns())
 
 
 class PackageInput:
@@ -73,22 +84,8 @@ class PackageInput:
             issn = sub(ur'\s', '', issn).upper()
             if re.match(ur'^\d{4}-?\d{3}(?:X|\d)$', issn):
                 issn = issn.replace(u'-', '')
-                digits = [int(c) for c in issn[0:7]]
-                weights = [8, 7, 6, 5, 4, 3, 2]
-                weighted_sum = sum([digits[i] * weights[i] for i in range(0, 7)])
-                check = 11 - weighted_sum % 11
-                if check == 10:
-                    check = u'X'
-                elif check == 11:
-                    check = u'0'
-                else:
-                    check = unicode(check)
-
-                if issn[7] == check:
-                    return issn[0:4] + u'-' + issn[4:8]
-                else:
-                    return ParseWarning.invalid_issn
-
+                issn = issn[0:4] + u'-' + issn[4:8]
+                return issn
             elif re.match(ur'^[A-Z0-9]{4}-\d{3}(?:X|\d)$', issn):
                 return ParseWarning.bundle_issn
             else:
@@ -122,7 +119,7 @@ class PackageInput:
 
     @classmethod
     def translate_row(cls, row):
-        return [row]
+        return row
 
     @classmethod
     def ignore_row(cls, row):
@@ -328,6 +325,10 @@ class PackageInput:
                 return None
 
     @classmethod
+    def issn_column(cls):
+        return None
+
+    @classmethod
     def normalize_rows(cls, file_name):
         # convert to csv if needed
         if file_name.endswith(u'.xls') or file_name.endswith(u'.xlsx'):
@@ -403,6 +404,11 @@ class PackageInput:
             raw_column_names = parsed_rows[header_index]
             normalized_column_names = [cls.normalize_column_name(cn) for cn in raw_column_names]
             raw_to_normalized_map = dict(zip(raw_column_names, normalized_column_names))
+
+            normalized_to_raw_map = {}
+            for k, v in raw_to_normalized_map.items():
+                normalized_to_raw_map[v] = k
+
             required_keys = [k for k, v in cls.csv_columns().items() if v.get('required', True)]
 
             if set(required_keys).difference(set(normalized_column_names)):
@@ -449,8 +455,16 @@ class PackageInput:
                 if cls.ignore_row(normalized_row):
                     continue
 
+                normalized_row = cls.translate_row(normalized_row)
+
+                if cls.issn_column() and normalized_row.get('issn', None) and normalized_row['issn'] not in _ricks_issns:
+                    cell_warnings.append(cls.make_package_file_warning(
+                        ParseWarning.unknown_issn,
+                        raw_column_name=normalized_to_raw_map[cls.issn_column()],
+                    ))
+
                 if not cell_warnings:
-                    normalized_rows.extend(cls.translate_row(normalized_row))
+                    normalized_rows.append(normalized_row)
                 else:
                     error_row = {
                         'row_id': {
@@ -568,8 +582,8 @@ class ParseWarning(Enum):
         'label': 'bad_issn',
         'text': "This doesn't look like an ISSN."
     }
-    invalid_issn = {
-        'label': 'invalid_issn',
+    unknown_issn = {
+        'label': 'unknown_issn',
         'text': "This looks like an ISSN, but it isn't one we recognize."
     }
     bundle_issn = {
