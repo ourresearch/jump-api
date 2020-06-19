@@ -97,30 +97,16 @@ class CounterInput(db.Model, PackageInput):
 
     @classmethod
     def translate_row(cls, row):
-        rows = []
-        issn = row.get('print_issn', u'') or row.get('online_issn', u'')
-        if issn:
-            rows.append({
-                    'publisher': row['publisher'],
-                    'issn': issn,
-                    'total': row['total'] or 0,
-                    'journal_name': row['journal_name'],
-            })
-        else:
-            if row["journal_name"] != u"Total":
-                print u"warning: no print_issn in this row: {}".format(row)
+        return {
+                'publisher': row['publisher'],
+                'issn': row.get('print_issn', None),
+                'total': row['total'] or 0,
+                'journal_name': row['journal_name'],
+        }
 
-
-        # don't add these, or else they add duplicates
-        # if row['online_issn']:
-        #     rows.append({
-        #         'publisher': row['publisher'],
-        #         'issn': row['online_issn'],
-        #         'total': row['total'],
-        #         'journal_name': row['journal_name'],
-        #     })
-
-        return rows
+    @classmethod
+    def issn_column(cls):
+        return 'print_issn'
 
     @classmethod
     def apply_header(cls, normalized_rows, header_rows):

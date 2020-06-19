@@ -26,7 +26,6 @@ class TestPackageInput(unittest.TestCase):
         invalid_issns = [
             {'issn': '1234-56789',              'warning': ParseWarning.bad_issn},
             {'issn': '1234-56XX',               'warning': ParseWarning.bad_issn},
-            {'issn': '0990-7441',               'warning': ParseWarning.invalid_issn},
             {'issn': 'print: \nfs34-\n123x\t',  'warning': ParseWarning.bad_issn},
             {'issn': '\nfs34-\n5123x\t',        'warning': ParseWarning.bad_issn},
             {'issn': 'RT34-\n123x\t',           'warning': ParseWarning.bundle_issn},
@@ -68,7 +67,7 @@ class TestPackageInput(unittest.TestCase):
         assert_equals(PackageInput.normalize_int('lots'), ParseWarning.bad_int)
 
         assert_equals(PackageInput.normalize_int(''), None)
-        assert_equals(PackageInput.normalize_int('', warn_if_blank=True), ParseWarning.bad_int)
+        assert_equals(PackageInput.normalize_int('', warn_if_blank=True), ParseWarning.no_int)
 
     def test_normalize_price(self):
         assert_equals(PackageInput.normalize_price('$1,000,000.49'), 1000000)
@@ -82,7 +81,7 @@ class TestPackageInput(unittest.TestCase):
         assert_equals(PackageInput.normalize_price('$$$'), ParseWarning.bad_usd_price)
 
         assert_equals(PackageInput.normalize_price(''), None)
-        assert_equals(PackageInput.normalize_price('', warn_if_blank=True), ParseWarning.bad_usd_price)
+        assert_equals(PackageInput.normalize_price('', warn_if_blank=True), ParseWarning.no_usd_price)
 
     def test_normalize_rows(self):
         test_file = write_to_tempfile("""
@@ -100,7 +99,66 @@ class TestPackageInput(unittest.TestCase):
             {'int': 15, 'issn': u'4331-997X', 'price': 1000000},
         ], rows)
 
-        self.assertItemsEqual([], warnings)
+        self.assertIsNone(warnings)
+
+    def test_reject_unknown_issn(self):
+        class TestIssnFormat(PackageInput):
+            @classmethod
+            def issn_column(cls):
+                return 'issn'
+
+            @classmethod
+            def csv_columns(cls):
+                return {
+                    'issn': {
+                        'normalize': cls.normalize_issn,
+                        'name_snippets': [u'issn'],
+                        'required': True
+                    },
+                    'int': {
+                        'normalize': cls.normalize_int,
+                        'name_snippets': [u'int'],
+                        'required': True,
+                    },
+                }
+
+        test_file = write_to_tempfile("""
+issn,int
+3333-3333,1
+0024-3205,2
+        """.strip())
+
+        rows, warnings = TestIssnFormat.normalize_rows(test_file)
+
+        self.assertItemsEqual([
+            {'int': 2, 'issn': '0024-3205'},
+        ], rows)
+
+        self.assertItemsEqual(
+            [
+                {'id': 'int', 'name': 'int'},
+                {'id': 'issn', 'name': 'issn'},
+                {'id': 'row_id', 'name': 'Row Number'},
+            ],
+            warnings['headers']
+        )
+
+        self.assertItemsEqual(
+            [
+                {
+                    'int': {'value': u'1', 'error': None},
+                    'row_id': {'value': 2, 'error': None},
+                    'issn': {
+                        'value': u'3333-3333',
+                        'error': {
+                            'message': u"This looks like an ISSN, but it isn't one we recognize.",
+                            'label': 'unknown_issn'
+                        }
+                    },
+                },
+            ],
+            warnings['rows']
+        )
 
     def test_required_field(self):
         test_file = write_to_tempfile("""
@@ -128,16 +186,16 @@ class TestPackageInput(unittest.TestCase):
             {'int': 6, 'issn': u'9999-999X'},
         ], rows)
 
-        self.assertItemsEqual([], warnings)
+        self.assertIsNone(warnings)
 
     def test_warn_invalid_fields(self):
         test_file = write_to_tempfile("""
-            int,price,issn
-            5,$100.00,1234-5678
-            6,a few bucks,4444-444X
-            7,555,
-            8,500,FS66-6666
-            9,,3333-3333
+int,price,issn
+5,$100.00,1234-5678
+6,a few bucks,4444-444X
+7,555,
+8,500,FS66-6666
+9,,3333-3333
         """.strip())
 
         rows, warnings = TestInputFormat.normalize_rows(test_file)
@@ -147,11 +205,57 @@ class TestPackageInput(unittest.TestCase):
             {'int': 9, 'price': None, 'issn': '3333-3333'},
         ], rows)
 
-        self.assertItemsEqual([
-            {'message': 'Unrecognized USD format.', 'raw_value': u'a few bucks', 'row_no': 2, 'column_name': 'price','label': 'bad_usd_price', 'file': 'test_input'},
-            {'message': 'Invalid ISSN format.', 'raw_value': u'', 'row_no': 3, 'column_name': 'issn', 'label': 'bad_issn', 'file': 'test_input'},
-            {'message': 'ISSN represents a bundle of journals, not a single journal.', 'raw_value': u'FS66-6666', 'row_no': 4, 'column_name': 'issn', 'label': 'bundle_issn', 'file': 'test_input'},
-        ], warnings)
+        self.assertItemsEqual(
+            [
+                {'id': 'int', 'name': 'int'},
+                {'id': 'price', 'name': 'price'},
+                {'id': 'issn', 'name': 'issn'},
+                {'id': 'row_id', 'name': 'Row Number'},
+            ],
+            warnings['headers']
+        )
+
+        self.assertItemsEqual(
+            [
+                {
+                    'int': {'value': u'6', 'error': None},
+                    'row_id': {'value': 3, 'error': None},
+                    'issn': {'value': u'4444-444X', 'error': None},
+                    'price': {
+                        'value': u'a few bucks',
+                        'error': {
+                            'message': u'Unrecognized USD format.',
+                            'label': 'bad_usd_price'
+                        }
+                    }
+                },
+                {
+                    'int': {'value': u'7', 'error': None},
+                    'row_id': {'value': 4, 'error': None},
+                    'issn': {
+                        'value': u'',
+                        'error': {
+                            'message': u'An ISSN is required here.',
+                            'label': 'no_issn'
+                        }
+                    },
+                    'price': {'value': u'555', 'error': None}
+                },
+                {
+                    'int': {'value': u'8', 'error': None},
+                    'row_id': {'value': 5, 'error': None},
+                    'issn': {
+                        'value': u'FS66-6666',
+                        'error': {
+                            'message': u'ISSN represents a bundle of journals, not a single journal.',
+                            'label': 'bundle_issn'
+                        }
+                    },
+                    'price': {'value': u'500', 'error': None}
+                }
+            ],
+            warnings['rows']
+        )
 
     def test_excluded_name_snippet(self):
         class PickyInputFormat(TestInputFormat):

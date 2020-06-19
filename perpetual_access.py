@@ -37,12 +37,12 @@ class PerpetualAccessInput(db.Model, PackageInput):
         return PerpetualAccess.__tablename__
 
     @classmethod
-    def translate_row(cls, row):
-        return [row] if row['issn'] else []
-
-    @classmethod
     def file_type_label(cls):
         return u'perpetual-access'
+
+    @classmethod
+    def issn_column(cls):
+        return 'issn'
 
     @classmethod
     def csv_columns(cls):

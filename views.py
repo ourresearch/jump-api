@@ -789,18 +789,12 @@ def get_jwt():
 
 
 @app.route('/publisher/<publisher_id>', methods=['GET'])
-@jwt_required
+@jwt_optional
 # @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 def get_publisher(publisher_id):
+    authenticate_for_publisher(publisher_id, Permission.view())
+
     package = Package.query.filter(Package.package_id == publisher_id).scalar()
-
-    if not package:
-        abort_json(404, "Publisher not found")
-
-    auth_user = authenticated_user()
-    if not auth_user.has_permission(package.institution_id, Permission.view()) and not is_authorized_superuser():
-        abort_json(403, "Not authorized to view this publisher.")
-
     publisher_dict = package.to_publisher_dict()
     response = jsonify_fast_no_sort(publisher_dict)
 
