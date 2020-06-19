@@ -26,6 +26,7 @@ class TestPackageInput(unittest.TestCase):
         invalid_issns = [
             {'issn': '1234-56789',              'warning': ParseWarning.bad_issn},
             {'issn': '1234-56XX',               'warning': ParseWarning.bad_issn},
+            {'issn': '0990-7441',               'warning': ParseWarning.invalid_issn},
             {'issn': 'print: \nfs34-\n123x\t',  'warning': ParseWarning.bad_issn},
             {'issn': '\nfs34-\n5123x\t',        'warning': ParseWarning.bad_issn},
             {'issn': 'RT34-\n123x\t',           'warning': ParseWarning.bundle_issn},
