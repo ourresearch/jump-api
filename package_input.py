@@ -87,7 +87,7 @@ class PackageInput:
                 if issn[7] == check:
                     return issn[0:4] + u'-' + issn[4:8]
                 else:
-                    return ParseWarning.bad_issn
+                    return ParseWarning.invalid_issn
 
             elif re.match(ur'^[A-Z0-9]{4}-\d{3}(?:X|\d)$', issn):
                 return ParseWarning.bundle_issn
@@ -566,7 +566,11 @@ class PackageInput:
 class ParseWarning(Enum):
     bad_issn = {
         'label': 'bad_issn',
-        'text': 'Invalid ISSN format.'
+        'text': "This doesn't look like an ISSN."
+    }
+    invalid_issn = {
+        'label': 'invalid_issn',
+        'text': "This looks like an ISSN, but it isn't one we recognize."
     }
     bundle_issn = {
         'label': 'bundle_issn',
