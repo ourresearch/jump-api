@@ -865,13 +865,24 @@ def new_publisher():
     if 'publisher' not in request.json:
         return abort_json(400, u'publisher is required')
 
+    publisher = request.json['publisher'].lower()
+
+    if 'elsevier' in publisher:
+        publisher = 'Elsevier'
+    elif 'wiley' in publisher:
+        publisher = 'Wiley'
+    elif 'springer' in publisher:
+        publisher = 'SpringerNature'
+    else:
+        return abort_json(400, u'publisher must be one of [Elsevier, Wiley, SpringerNature]')
+
     now = datetime.datetime.utcnow().isoformat()
 
     new_package = Package()
     new_package.package_id = 'package-{}'.format(shortuuid.uuid()[0:12])
     new_package.institution_id = pub_institution.id
     new_package.package_name = request.json['name']
-    new_package.publisher = request.json['publisher']
+    new_package.publisher = publisher
     new_package.is_demo = pub_institution.is_demo_institution
     new_package.created = now
 
@@ -881,9 +892,9 @@ def new_publisher():
     db.session.execute('''
         insert into jump_apc_authorships (
             select * from jump_apc_authorships_view
-            where package_id = '{}' and publisher = '{}'
+            where package_id = '{}' and {}
         )
-    '''.format(new_package.package_id, new_package.publisher))
+    '''.format(new_package.package_id, new_package.publisher_where))
 
     safe_commit(db)
 
