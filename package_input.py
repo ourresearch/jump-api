@@ -473,13 +473,14 @@ class PackageInput:
                         }
                     }
 
-                    for normalized_name in normalized_row.keys():
-                        raw_name = normalized_to_raw_map[normalized_name]
+                    for normalized_name in normalized_to_raw_map.keys():
+                        if normalized_name:
+                            raw_name = normalized_to_raw_map[normalized_name]
 
-                        error_row[normalized_name] = {
-                            'value': row[raw_name],
-                            'error': cell_errors.get(normalized_name, None)
-                        }
+                            error_row[normalized_name] = {
+                                'value': row[raw_name],
+                                'error': cell_errors.get(normalized_name, None)
+                            }
 
                     error_rows['rows'].append(error_row)
 
