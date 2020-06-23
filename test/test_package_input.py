@@ -86,17 +86,17 @@ class TestPackageInput(unittest.TestCase):
     def test_normalize_rows(self):
         test_file = write_to_tempfile("""
             int,issn,price
-            5,1234-5668,$500
-            10, 9876-5432, 123.45
-            15, 4331-997X, 1000000
+            5,0031-9252,$500
+            10, 2093-968X, 123.45
+            15, 1990-7478, 1000000
         """.strip())
 
         rows, warnings = TestInputFormat.normalize_rows(test_file)
 
         self.assertItemsEqual([
-            {'int': 5, 'issn': u'1234-5668', 'price': 500},
-            {'int': 10, 'issn': u'9876-5432', 'price': 123},
-            {'int': 15, 'issn': u'4331-997X', 'price': 1000000},
+            {'int': 5, 'issn': u'0031-9252', 'price': 500},
+            {'int': 10, 'issn': u'2093-968X', 'price': 123},
+            {'int': 15, 'issn': u'1990-7478', 'price': 1000000},
         ], rows)
 
         self.assertIsNone(warnings)
@@ -175,15 +175,15 @@ issn,int
 
         test_file = write_to_tempfile("""
             int,issn
-            5,1234-5678
-            6,9999-999X
+            5,0031-9252
+            6,2093-968X
         """.strip())
 
         rows, warnings = TestInputFormat.normalize_rows(test_file)
 
         self.assertItemsEqual([
-            {'int': 5, 'issn': u'1234-5678'},
-            {'int': 6, 'issn': u'9999-999X'},
+            {'int': 5, 'issn': u'0031-9252'},
+            {'int': 6, 'issn': u'2093-968X'},
         ], rows)
 
         self.assertIsNone(warnings)
@@ -191,18 +191,18 @@ issn,int
     def test_warn_invalid_fields(self):
         test_file = write_to_tempfile("""
 int,price,issn
-5,$100.00,1234-5678
-6,a few bucks,4444-444X
+5,$100.00,2093-968X
+6,a few bucks,1749-8155
 7,555,
 8,500,FS66-6666
-9,,3333-3333
+9,,1990-7478
         """.strip())
 
         rows, warnings = TestInputFormat.normalize_rows(test_file)
 
         self.assertItemsEqual([
-            {'int': 5, 'price': 100, 'issn': u'1234-5678'},
-            {'int': 9, 'price': None, 'issn': '3333-3333'},
+            {'int': 5, 'price': 100, 'issn': '2093-968X'},
+            {'int': 9, 'price': None, 'issn': '1990-7478'},
         ], rows)
 
         self.assertItemsEqual(
@@ -220,7 +220,7 @@ int,price,issn
                 {
                     'int': {'value': u'6', 'error': None},
                     'row_id': {'value': 3, 'error': None},
-                    'issn': {'value': u'4444-444X', 'error': None},
+                    'issn': {'value': u'1749-8155', 'error': None},
                     'price': {
                         'value': u'a few bucks',
                         'error': {
@@ -235,7 +235,7 @@ int,price,issn
                     'issn': {
                         'value': u'',
                         'error': {
-                            'message': u'An ISSN is required here.',
+                            'message': u'No ISSN here.',
                             'label': 'no_issn'
                         }
                     },
@@ -274,6 +274,120 @@ int,price,issn
         self.assertIsNone(PickyInputFormat.normalize_column_name('excluded column'))
         self.assertEqual(PickyInputFormat.normalize_column_name('column'), 'picky_column')
 
+    def test_issn_columns(self):
+        class MultipleIssnFormat(TestInputFormat):
+            @classmethod
+            def csv_columns(cls):
+                return {
+                    'primary_issn': {
+                        'normalize': cls.normalize_issn,
+                        'name_snippets': [u'primary'],
+                        'warn_if_blank': True,
+                    },
+                    'secondary_issn': {
+                        'normalize': cls.normalize_issn,
+                        'name_snippets': [u'secondary'],
+                        'warn_if_blank': True,
+                    },
+                    'integer': {
+                        'normalize': cls.normalize_int,
+                        'name_snippets': [u'int'],
+                    },
+                }
+
+            @classmethod
+            def issn_columns(cls):
+                return ['primary_issn', 'secondary_issn']
+
+        test_file = write_to_tempfile("""
+            Int,Primary,Secondary
+            1,,0010-9355
+            2,2311-5459,1093-4537
+            3,xxxx-xxxx,0009-2363
+            4,1935-1194,FS00-0000
+            5,,xxxx-xxxx
+            6,,
+            7,FS00-0000,1111-1111
+        """, strip=True)
+
+        rows, warnings = MultipleIssnFormat.normalize_rows(test_file)
+
+        self.assertItemsEqual([
+            {'integer': 1, 'issn': '0010-9355'},
+            {'integer': 2, 'issn': '2311-5459'},
+            {'integer': 3, 'issn': '0009-2363'},
+            {'integer': 4, 'issn': '1935-1194'},
+        ], rows)
+
+        self.assertItemsEqual(
+            [
+                {'id': 'row_id', 'name': 'Row Number'},
+                {'id': 'integer', 'name': 'Int'},
+                {'id': 'primary_issn', 'name': 'Primary'},
+                {'id': 'secondary_issn', 'name': 'Secondary'},
+            ],
+            warnings['headers']
+        )
+
+        self.assertItemsEqual(
+            [
+                {
+                    'integer': {'value': '5', 'error': None},
+                    'row_id': {'value': 6, 'error': None},
+                    'primary_issn': {
+                        'value': '',
+                        'error': {
+                            'message': 'No ISSN here.',
+                            'label': 'no_issn'
+                        }
+                    },
+                    'secondary_issn': {
+                        'value': 'xxxx-xxxx',
+                        'error': {
+                            'message': "This doesn't look like an ISSN.",
+                            'label': 'bad_issn'
+                        }
+                    },
+                },
+                {
+                    'integer': {'value': '6', 'error': None},
+                    'row_id': {'value': 7, 'error': None},
+                    'primary_issn': {
+                        'value': '',
+                        'error': {
+                            'message': 'No ISSN here.',
+                            'label': 'no_issn'
+                        }
+                    },
+                    'secondary_issn': {
+                        'value': '',
+                        'error': {
+                            'message': 'No ISSN here.',
+                            'label': 'no_issn'
+                        }
+                    },
+                },
+                {
+                    'integer': {'value': '7', 'error': None},
+                    'row_id': {'value': 8, 'error': None},
+                    'primary_issn': {
+                        'value': 'FS00-0000',
+                        'error': {
+                            'message': 'ISSN represents a bundle of journals, not a single journal.',
+                            'label': 'bundle_issn'
+                        }
+                    },
+                    'secondary_issn': {
+                        'value': '1111-1111',
+                        'error': {
+                            'message': "This looks like an ISSN, but it isn't one we recognize.",
+                            'label': 'unknown_issn'
+                        }
+                    },
+                },
+            ],
+            warnings['rows']
+        )
 
 class TestInputFormat(PackageInput):
     @classmethod
