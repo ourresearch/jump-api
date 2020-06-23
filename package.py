@@ -572,7 +572,6 @@ class Package(db.Model):
         }
 
     def to_publisher_dict(self):
-        print "HERE"
         journal_detail = dict(self.get_package_counter_breakdown())
         journal_detail['publisher_id'] = journal_detail.pop('package_id')
 
@@ -629,7 +628,6 @@ class Package(db.Model):
             'is_demo': self.is_demo,
             'journal_detail': journal_detail,
             'scenarios': [{'name': s.scenario_name, 'id': s.scenario_id} for s in self.saved_scenarios],
-            'cost_bigdeal': self.big_deal_cost or Assumptions().cost_bigdeal,
             'data_files': [
                 {
                     'name': 'counter',
