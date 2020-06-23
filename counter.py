@@ -153,4 +153,16 @@ class CounterInput(db.Model, PackageInput):
             row['report_version'] = report_version
             row['report_year'] = report_year
 
+        # check for COUNTER 5
+        cop5_error = u"Sorry, we don't support COUNTER 5 yet. Please upload a COUNTER 4 JR_1 file."
+
+        for column_name in header_rows[-1]:
+            if column_name.lower().strip().replace('_', '') == u'metrictype':
+                raise RuntimeError(cop5_error)
+
+        for header_row in header_rows:
+            row_text = u'|'.join([cell.strip() for cell in header_row]).lower()
+            if u'report_id|tr_j1' in row_text or u'release|5' in row_text:
+                raise RuntimeError(cop5_error)
+
         return normalized_rows

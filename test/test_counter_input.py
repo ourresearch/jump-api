@@ -68,3 +68,10 @@ class TestCounterInput(unittest.TestCase):
     def test_imports_windows_1252(self):
         rows, warnings = CounterInput.normalize_rows('test/test_files/counter/counter4_jr1_2018_00_windows_1252.csv')
         self.assertItemsEqual(file_rows['counter4_jr1_2018_00.csv'], rows)
+
+    def test_rejects_counter5(self):
+        self.assertRaisesRegexp(
+            RuntimeError,
+            u'.*COUNTER 5.*',
+            lambda: CounterInput.normalize_rows('test/test_files/counter/counter5_tr_j1_2019_00.csv')
+        )
