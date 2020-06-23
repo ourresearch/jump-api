@@ -70,6 +70,7 @@ class CounterInput(db.Model, PackageInput):
                 'name_snippets': [u'online issn', u'online_issn', u'eissn'],
                 'exact_name': True,
                 'required': False,
+                'warn_if_blank': True,
             },
             'total': {
                 'normalize': cls.normalize_int,
@@ -96,17 +97,8 @@ class CounterInput(db.Model, PackageInput):
         return u'counter'
 
     @classmethod
-    def translate_row(cls, row):
-        return {
-                'publisher': row['publisher'],
-                'issn': row.get('print_issn', None),
-                'total': row['total'] or 0,
-                'journal_name': row['journal_name'],
-        }
-
-    @classmethod
-    def issn_column(cls):
-        return 'print_issn'
+    def issn_columns(cls):
+        return ['print_issn', 'online_issn']
 
     @classmethod
     def apply_header(cls, normalized_rows, header_rows):

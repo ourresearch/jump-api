@@ -936,7 +936,12 @@ def convert_to_utf_8(file_name):
     raise UnicodeError(u"Can't determine a text encoding for {} (tried {})".format(file_name, possible_encodings))
 
 
-def write_to_tempfile(file_contents):
+def write_to_tempfile(file_contents, strip=False):
+    if strip:
+        lines = file_contents.strip().split('\n')
+        lines = [line.strip() for line in lines]
+        file_contents = '\n'.join(lines)
+
     temp_file_name = tempfile.mkstemp()[1]
     with codecs.open(temp_file_name, 'w', 'utf-8') as temp_file:
         temp_file.write(file_contents)

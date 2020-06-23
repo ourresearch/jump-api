@@ -41,8 +41,8 @@ class PerpetualAccessInput(db.Model, PackageInput):
         return u'perpetual-access'
 
     @classmethod
-    def issn_column(cls):
-        return 'issn'
+    def issn_columns(cls):
+        return ['issn']
 
     @classmethod
     def csv_columns(cls):

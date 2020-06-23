@@ -45,8 +45,8 @@ class JournalPriceInput(db.Model, PackageInput):
         return JournalPrice.__tablename__
 
     @classmethod
-    def issn_column(cls):
-        return 'issn'
+    def issn_columns(cls):
+        return ['issn']
 
     @classmethod
     def csv_columns(cls):

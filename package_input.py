@@ -85,7 +85,10 @@ class PackageInput:
             if re.match(ur'^\d{4}-?\d{3}(?:X|\d)$', issn):
                 issn = issn.replace(u'-', '')
                 issn = issn[0:4] + u'-' + issn[4:8]
-                return issn
+                if issn in _ricks_issns:
+                    return issn
+                else:
+                    return ParseWarning.unknown_issn
             elif re.match(ur'^[A-Z0-9]{4}-\d{3}(?:X|\d)$', issn):
                 return ParseWarning.bundle_issn
             else:
@@ -280,9 +283,8 @@ class PackageInput:
         )
 
     @classmethod
-    def make_package_file_warning(cls, parse_warning, raw_column_name=None, additional_msg=None):
+    def make_package_file_warning(cls, parse_warning, additional_msg=None):
         return {
-            'column_name': raw_column_name,
             'label': parse_warning.value['label'],
             'message': u'{}{}'.format(
                 parse_warning.value['text'],
@@ -325,8 +327,8 @@ class PackageInput:
                 return None
 
     @classmethod
-    def issn_column(cls):
-        return None
+    def issn_columns(cls):
+        return []
 
     @classmethod
     def normalize_rows(cls, file_name):
@@ -427,43 +429,41 @@ class PackageInput:
             for row_no, row in enumerate(row_dicts):
                 absolute_row_no = parsed_to_absolute_line_no[row_no] + header_index + 1
                 normalized_row = {}
-                cell_warnings = []
+                cell_errors = {}
 
                 for raw_column_name in row.keys():
-                    try:
                         raw_value = row[raw_column_name]
                         normalized_name = cls.normalize_column_name(raw_column_name)
                         if normalized_name:
-                            normalized_value = cls.normalize_cell(normalized_name, raw_value)
-                            if isinstance(normalized_value, ParseWarning):
-                                parse_warning = normalized_value
-                                logger.info('parse warning: {}'.format(parse_warning))
-                                cell_warnings.append(cls.make_package_file_warning(
-                                    parse_warning,
-                                    raw_column_name=raw_column_name,
-                                ))
-                                normalized_row.setdefault(normalized_name, None)
-                            else:
-                                normalized_row.setdefault(normalized_name, normalized_value)
-                    except Exception as e:
-                        cell_warnings.append(cls.make_package_file_warning(
-                            ParseWarning.unknown,
-                            raw_column_name=raw_column_name,
-                            additional_msg=e.message
-                        ))
+                            try:
+                                normalized_value = cls.normalize_cell(normalized_name, raw_value)
+                                if isinstance(normalized_value, ParseWarning):
+                                    parse_warning = normalized_value
+                                    logger.info('parse warning: {}'.format(parse_warning))
+                                    cell_errors[normalized_name] = cls.make_package_file_warning(parse_warning)
+                                    normalized_row.setdefault(normalized_name, None)
+                                else:
+                                    normalized_row.setdefault(normalized_name, normalized_value)
+                            except Exception as e:
+                                cell_errors[normalized_name] = cls.make_package_file_warning(
+                                    ParseWarning.unknown, additional_msg=e.message
+                                )
 
                 if cls.ignore_row(normalized_row):
                     continue
 
                 normalized_row = cls.translate_row(normalized_row)
 
-                if cls.issn_column() and normalized_row.get('issn', None) and normalized_row['issn'] not in _ricks_issns:
-                    cell_warnings.append(cls.make_package_file_warning(
-                        ParseWarning.unknown_issn,
-                        raw_column_name=normalized_to_raw_map[cls.issn_column()],
-                    ))
+                # keep the first issn in this row
+                for issn_col in cls.issn_columns():
+                    if normalized_row.get(issn_col, None):
+                        row_issn = normalized_row[issn_col]
+                        [cell_errors.pop(c, None) for c in cls.issn_columns()]  # delete errors for all issn columns
+                        [normalized_row.pop(c, None) for c in cls.issn_columns()] # delete issn columns
+                        normalized_row['issn'] = row_issn
+                        break
 
-                if not cell_warnings:
+                if not cell_errors:
                     normalized_rows.append(normalized_row)
                 else:
                     error_row = {
@@ -473,27 +473,17 @@ class PackageInput:
                         }
                     }
 
-                    for raw_column_name in row.keys():
-                        if raw_to_normalized_map.get(raw_column_name, None):
-                            normalized_name = raw_to_normalized_map[raw_column_name]
+                    for normalized_name in normalized_row.keys():
+                        raw_name = normalized_to_raw_map[normalized_name]
 
-                            error_cell = {
-                                'value': row[raw_column_name],
-                                'error': None
-                            }
-
-                            for cell_warning in cell_warnings:
-                                if cell_warning['column_name'] == raw_column_name:
-                                    error_cell['error'] = {
-                                        'label': cell_warning['label'],
-                                        'message': cell_warning['message']
-                                    }
-
-                            error_row[normalized_name] = error_cell
+                        error_row[normalized_name] = {
+                            'value': row[raw_name],
+                            'error': cell_errors.get(normalized_name, None)
+                        }
 
                     error_rows['rows'].append(error_row)
 
-            for raw, normalized in raw_to_normalized_map.items():
+            for normalized, raw in normalized_to_raw_map.items():
                 if normalized:
                     error_rows['headers'].append({'id': normalized, 'name': raw})
 
@@ -592,7 +582,7 @@ class ParseWarning(Enum):
     }
     no_issn = {
         'label': 'no_issn',
-        'text': 'An ISSN is required here.'
+        'text': 'No ISSN here.'
     }
     bad_date = {
         'label': 'bad_date',
