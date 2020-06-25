@@ -352,13 +352,17 @@ class PackageInput:
             dialect_sample = ''
             for i in range(0, 20):
                 next_line = csv_file.readline()
-                dialect_sample = dialect_sample + next_line
+                # ignore header row when determining dialect
+                # data rows should be more consistent with each other
+                if i > 0:
+                    dialect_sample = dialect_sample + next_line
                 if not next_line:
                     break
 
             reader_params = {}
             try:
                 dialect = csv.Sniffer().sniff(dialect_sample)
+                logger.info(u'sniffed csv dialect:\n{}'.format(json.dumps(vars(dialect), indent=2)))
             except csv.Error:
                 dialect = None
                 if file_name.endswith(u'.tsv'):

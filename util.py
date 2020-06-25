@@ -918,7 +918,6 @@ def convert_to_utf_8(file_name):
 
         possible_encodings.append(chardet.detect(sample)['encoding'])
 
-
         for pe in possible_encodings:
             try:
                 new_file_name = tempfile.mkstemp('_{}_to_utf8_{}'.format(pe, os.path.split(file_name)[-1]))[1]
