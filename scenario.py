@@ -103,11 +103,6 @@ class Scenario(object):
             self.log_timing("get_common_package_data_from_cache")
             # logger.debug("get_common_package_data_from_cache")
 
-        self.data["default_to_no_perpetual_access"] = False
-        if my_package:
-            if my_package.default_to_no_perpetual_access:
-                self.data["default_to_no_perpetual_access"] = True
-
         self.set_clean_data()  #order for this one matters, after get common, before build journals
         self.log_timing("set_clean_data")
 
@@ -147,7 +142,11 @@ class Scenario(object):
                         if not prices_dict.get(my_issnl, 0):
                             prices_dict[my_issnl] = price
                         else:
-                            prices_dict[my_issnl] = min(prices_dict[my_issnl], price)
+                            # todo fix doesn't take min for anyone, but for now just start with this one
+                            if self.package_id in ["publisher-R6q4yQssnsAL"]:
+                                pass
+                            else:
+                                prices_dict[my_issnl] = min(prices_dict[my_issnl], price)
                         # print package_id_for_prices, my_issnl, price, "prices_dict[my_issnl]", prices_dict[my_issnl]
 
         self.data["prices"] = prices_dict
@@ -170,6 +169,16 @@ class Scenario(object):
         self.data["perpetual_access"] = get_perpetual_access_from_cache(self.package_id)
 
         self.data["journal_era_subjects"] = get_journal_era_subjects()
+
+    @property
+    def has_custom_perpetual_access(self):
+        perpetual_access_rows = get_perpetual_access_from_cache(self.package_id)
+        if perpetual_access_rows:
+            return True
+        from app import suny_consortium_package_ids
+        if self.package_id in suny_consortium_package_ids or self.consortium_package_id in suny_consortium_package_ids:
+            return True
+        return False
 
     @cached_property
     def apc_journals(self):
