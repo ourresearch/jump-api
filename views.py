@@ -36,7 +36,7 @@ import hashlib
 import pickle
 import tempfile
 
-import grid_search
+import ror_search
 import password_reset
 import prepared_demo_publisher
 from app import app
@@ -1204,9 +1204,9 @@ def live_scenario_id_get(scenario_id):
     return response
 
 
-@app.route('/grid/autocomplete/<path:query>', methods=['GET'])
-def grid_autocomplete(query):
-    return jsonify_fast_no_sort({'results': grid_search.autocomplete(query)})
+@app.route('/ror/autocomplete/<path:query>', methods=['GET'])
+def ror_autocomplete(query):
+    return jsonify_fast_no_sort({'results': ror_search.autocomplete(query)})
 
 
 @app.route('/scenario/<scenario_id>/summary', methods=['GET'])
