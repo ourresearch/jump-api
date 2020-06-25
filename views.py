@@ -55,7 +55,7 @@ from package import Package
 from package import get_ids
 from permission import Permission, UserInstitutionPermission
 from perpetual_access import PerpetualAccess, PerpetualAccessInput
-from ror_id import RorId
+from ror_id import RorId, RorGridCrosswalk
 from saved_scenario import SavedScenario, default_scenario
 from saved_scenario import get_latest_scenario
 from saved_scenario import save_raw_scenario_to_db
@@ -669,6 +669,35 @@ def institution(institution_id):
 
     if not authorize_institution(inst, Permission.view()):
         return abort_json(403, u'Must have read permission to get institution properties.')
+
+    return jsonify_fast_no_sort(inst.to_dict())
+
+
+@app.route('/institution/<institution_id>/ror/<ror_id>', methods=['POST', 'DELETE'])
+@jwt_optional
+def institution_ror_id(institution_id, ror_id):
+    inst = Institution.query.get(institution_id)
+    if not inst:
+        return abort_json(404, u'Institution does not exist.')
+
+    if not authorize_institution(inst, Permission.modify()):
+        return abort_json(403, u'Must have Write permission to modify institution properties.')
+
+    grid_ids = [x.grid_id for x in RorGridCrosswalk.query.filter(RorGridCrosswalk.ror_id == ror_id).all()]
+
+    if request.method == 'POST':
+        if not grid_ids:
+            return abort_json(404, u'Unknown ROR "{}".'.format(ror_id))
+
+        db.session.merge(RorId(institution_id=inst.id, ror_id=ror_id))
+        for grid_id in grid_ids:
+            db.session.merge(GridId(institution_id=inst.id, grid_id=grid_id))
+    elif request.method == 'DELETE':
+        RorId.query.filter(RorId.ror_id == ror_id, RorId.institution_id == institution_id).delete()
+        for grid_id in grid_ids:
+            GridId.query.filter(GridId.grid_id == grid_id, GridId.institution_id == institution_id).delete()
+
+    db.session.commit()
 
     return jsonify_fast_no_sort(inst.to_dict())
 
