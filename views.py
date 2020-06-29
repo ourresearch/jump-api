@@ -1045,19 +1045,12 @@ def jump_perpetual_access(package_id):
             return abort_json(400, _long_error_message())
         else:
             response = {}
-            if 'default_to_full' in request.json:
-                Package.query.get(package_id).default_to_no_perpetual_access = not request.json['default_to_full']
-                response.update({'default_to_full': request.json['default_to_full']})
-                db.session.commit()
-            elif 'default_to_none' in request.json:
-                Package.query.get(package_id).default_to_no_perpetual_access = request.json['default_to_none']
-                response.update({'default_to_none': request.json['default_to_none']})
-                db.session.commit()
+
             if 'file' in request.json and 'name' in request.json:
                 response.update(_load_package_file(package_id, request, PerpetualAccessInput))
 
             if not response:
-                return abort_json(400, u'expected a JSON object containing {default_to_full: <boolean>} and/or {file: <base64-encoded file>, name: <file name>}')
+                return abort_json(400, u'expected a JSON object containing {file: <base64-encoded file>, name: <file name>}')
 
             return jsonify_fast_no_sort(response)
 
