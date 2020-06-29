@@ -412,8 +412,3 @@ class TestPackage(ResponseTest):
 
     def test_package_counter_no_price(self):
         pass
-
-    def test_package_default_params(self):
-        p = Package()
-        self.assertFalse(p.default_to_no_perpetual_access)
-        self.assertFalse(p.is_deleted)
