@@ -914,9 +914,13 @@ def convert_to_utf_8(file_name):
 
         possible_encodings.append('UTF-8')
         possible_encodings.append('windows-1252')
+
+        chardet_encoding = chardet.detect(sample)['encoding']
+        if chardet_encoding:
+            possible_encodings.append(chardet_encoding)
+
         possible_encodings.append('cp437')
 
-        possible_encodings.append(chardet.detect(sample)['encoding'])
 
         for pe in possible_encodings:
             try:
@@ -932,7 +936,7 @@ def convert_to_utf_8(file_name):
             except UnicodeDecodeError:
                 continue
 
-    raise UnicodeError(u"Can't determine a text encoding for {} (tried {})".format(file_name, possible_encodings))
+    raise UnicodeError(u"Can't determine text encoding (tried {}).".format(possible_encodings))
 
 
 def write_to_tempfile(file_contents, strip=False):

@@ -347,7 +347,7 @@ class PackageInput:
         file_name = convert_to_utf_8(file_name)
         logger.info('converted file: {}'.format(file_name))
 
-        with open(file_name, 'r') as csv_file:
+        with open(file_name, 'rb') as csv_file:
             # determine the csv format
             dialect_sample = ''
             for i in range(0, 20):
@@ -503,7 +503,12 @@ class PackageInput:
     def load(cls, package_id, file_name, commit=False):
         try:
             normalized_rows, error_rows = cls.normalize_rows(file_name)
-        except (RuntimeError, UnicodeError) as e:
+        except (UnicodeError, csv.Error) as e:
+            message = u'Error reading file: "{}". Try opening this file, resaving as .xlsx, and uploading that.'.format(
+                e.message
+            )
+            return {'success': False, 'message': message, 'warnings': []}
+        except RuntimeError as e:
             return {'success': False, 'message': e.message, 'warnings': []}
 
         # save errors
