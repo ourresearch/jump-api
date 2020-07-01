@@ -43,14 +43,12 @@ class Package(db.Model):
     is_demo = db.Column(db.Boolean)
     big_deal_cost = db.Column(db.Numeric)
     is_deleted = db.Column(db.Boolean)
-    default_to_no_perpetual_access = db.Column(db.Boolean)
 
     saved_scenarios = db.relationship('SavedScenario', lazy='subquery', backref=db.backref("package", lazy="subquery"))
     institution = db.relationship('Institution', uselist=False)
 
     def __init__(self, **kwargs):
         self.created = datetime.datetime.utcnow().isoformat()
-        self.default_to_no_perpetual_access = False
         self.is_deleted = False
         super(Package, self).__init__(**kwargs)
 
@@ -445,16 +443,14 @@ class Package(db.Model):
                     'id': 'perpetual_access',
                     'source': (
                         'custom' if issn_l in pa_rows
-                        else 'default_none' if self.default_to_no_perpetual_access
-                        else 'default_full'
+                        else None if pa_rows
+                        else 'default'
                     ),
                     'value': (
                         [pa_rows[issn_l]['start_date'], pa_rows[issn_l]['end_date']] if issn_l in pa_rows
-                        else [None, None] if self.default_to_no_perpetual_access
+                        else [None, None] if pa_rows
                         else [datetime.datetime(2010, 1, 1), None]
                     ),
-                    'default_to_full': not self.default_to_no_perpetual_access,
-                    'default_to_none': self.default_to_no_perpetual_access,
                 },
                 {
                     'id': 'price',
@@ -640,8 +636,6 @@ class Package(db.Model):
                     'uploaded': False if self.is_demo else num_pa_rows > 0,
                     'rows_count': num_pa_rows,
                     'error_rows': pa_errors,
-                    'default_to_full': not self.default_to_no_perpetual_access,
-                    'default_to_none': self.default_to_no_perpetual_access,
                 },
                 {
                     'name': 'price',
