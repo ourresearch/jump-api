@@ -38,7 +38,10 @@ class PackageInput:
     def normalize_date(date_str, warn_if_blank=False, default=None):
         if date_str:
             try:
-                return dateutil.parser.parse(date_str, default=default).isoformat()
+                parsed_date = dateutil.parser.parse(date_str, default=default)
+                if unicode(parsed_date.year) not in date_str:
+                    return ParseWarning.ambiguous_date
+                return parsed_date.isoformat()
             except Exception:
                 return ParseWarning.bad_date
         else:
@@ -597,6 +600,10 @@ class ParseWarning(Enum):
     bad_date = {
         'label': 'bad_date',
         'text': 'Unrecognized date format.'
+    }
+    ambiguous_date = {
+        'label': 'ambiguous_date',
+        'text': 'Date must contain a 4-digit year.'
     }
     bad_year = {
         'label': 'bad_year',

@@ -46,6 +46,9 @@ class TestPackageInput(unittest.TestCase):
         assert_equals(PackageInput.normalize_date('the other day'), ParseWarning.bad_date)
         assert_equals(PackageInput.normalize_date('spring'), ParseWarning.bad_date)
 
+        assert_equals(PackageInput.normalize_date('June-20'), ParseWarning.ambiguous_date)
+        assert_equals(PackageInput.normalize_date('11/5/85'), ParseWarning.ambiguous_date)
+
         assert_equals(PackageInput.normalize_date(''), None)
         assert_equals(PackageInput.normalize_date('', warn_if_blank=True), ParseWarning.bad_date)
 
