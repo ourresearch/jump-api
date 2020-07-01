@@ -143,7 +143,7 @@ class Scenario(object):
                             prices_dict[my_issnl] = price
                         else:
                             # todo fix doesn't take min for anyone, but for now just start with this one
-                            if self.package_id in ["publisher-R6q4yQssnsAL"]:
+                            if self.package_id in ["publisher-R6q4yQssnsAL", "Kq7C5cEo"]:
                                 pass
                             else:
                                 prices_dict[my_issnl] = min(prices_dict[my_issnl], price)
