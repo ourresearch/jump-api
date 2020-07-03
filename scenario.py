@@ -39,23 +39,33 @@ def get_clean_package_id(http_request_args):
     return package_id
 
 
-def get_fresh_journal_list(scenario, my_jwt):
-    from package import Package
-    journals_to_exclude = ["0370-2693"]
-    issn_ls = scenario.data["unpaywall_downloads_dict"].keys()
 
-    issnls_to_build = [issn_l for issn_l in issn_ls if issn_l not in journals_to_exclude]
+def get_fresh_journal_list(scenario, my_jwt):
+
     if scenario.is_consortium:
-        # print "here in is_consortium"
         my_consortium = Consortium(scenario.package_id, my_jwt)
         journals = my_consortium.journals
     else:
+        from package import Package
         my_package = Package.query.filter(Package.package_id == scenario.package_id).scalar()
-        package_id = DEMO_PACKAGE_ID if my_package and my_package.is_demo else scenario.package_id
+
+        journals_to_exclude = ["0370-2693"]
+        issn_ls = scenario.data["unpaywall_downloads_dict"].keys()
+        issnls_to_build = [issn_l for issn_l in issn_ls if issn_l not in journals_to_exclude]
+
+        # only include things in the counter file
+        if my_package.is_demo:
+            issnls_to_build = [issn_l for issn_l in issn_ls if issn_l in scenario.data[DEMO_PACKAGE_ID]["counter_dict"].keys()]
+            package_id = DEMO_PACKAGE_ID
+        else:
+            issnls_to_build = [issn_l for issn_l in issn_ls if issn_l in scenario.data[scenario.package_id_for_db]["counter_dict"].keys()]
+            package_id = scenario.package_id
+
         journals = [Journal(issn_l, package_id=package_id) for issn_l in issnls_to_build]
 
     for my_journal in journals:
         my_journal.set_scenario(scenario)
+
 
     return journals
 
