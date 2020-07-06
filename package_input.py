@@ -23,14 +23,20 @@ from util import convert_to_utf_8
 from util import safe_commit
 
 
-def _get_ricks_issns():
+def _get_ricks_journals():
+    issns = {}
+
     with get_db_cursor() as cursor:
-        cursor.execute('select distinct issn from ricks_journal_flat')
+        cursor.execute('select issn, issn_l, publisher from ricks_journal_flat')
         rows = cursor.fetchall()
-    return [r['issn'] for r in rows]
+
+    for row in rows:
+        issns[row['issn']] = {'issn_l': row['issn_l'], 'publisher': row['publisher']}
+
+    return issns
 
 
-_ricks_issns = frozenset(_get_ricks_issns())
+_ricks_journals = _get_ricks_journals()
 
 
 class PackageInput:
@@ -93,7 +99,7 @@ class PackageInput:
             if re.match(ur'^\d{4}-?\d{3}(?:X|\d)$', issn):
                 issn = issn.replace(u'-', '')
                 issn = issn[0:4] + u'-' + issn[4:8]
-                if issn in _ricks_issns:
+                if issn in _ricks_journals:
                     return issn
                 else:
                     return ParseWarning.unknown_issn
@@ -296,7 +302,7 @@ class PackageInput:
             'label': parse_warning.value['label'],
             'message': u'{}{}'.format(
                 parse_warning.value['text'],
-                u' message: {}'.format(additional_msg) if additional_msg else u''
+                u' {}'.format(additional_msg) if additional_msg else u''
             )
         }
 
@@ -339,7 +345,7 @@ class PackageInput:
         return []
 
     @classmethod
-    def normalize_rows(cls, file_name):
+    def normalize_rows(cls, file_name, file_package=None):
         # convert to csv if needed
         if file_name.endswith(u'.xls') or file_name.endswith(u'.xlsx'):
             sheet_csv_file_names = convert_spreadsheet_to_csv(file_name, parsed=False)
@@ -438,6 +444,8 @@ class PackageInput:
             # combine the header and data rows into dicts
             row_dicts = [dict(zip(parsed_rows[header_index], x)) for x in parsed_rows[header_index+1:]]
 
+
+
             for row_no, row in enumerate(row_dicts):
                 absolute_row_no = parsed_to_absolute_line_no[row_no] + header_index + 1
                 normalized_row = {}
@@ -455,10 +463,32 @@ class PackageInput:
                                     cell_errors[normalized_name] = cls.make_package_file_warning(parse_warning)
                                     normalized_row.setdefault(normalized_name, None)
                                 else:
-                                    normalized_row.setdefault(normalized_name, normalized_value)
+                                    if normalized_name in cls.issn_columns() and file_package:
+                                        journal_publisher = _ricks_journals.get(
+                                            normalized_value, {}
+                                        ).get('publisher', None)
+
+                                        has_right_publisher = any(
+                                            s.lower() in journal_publisher.lower()
+                                            for s in file_package.publisher_name_snippets
+                                        )
+
+                                        if has_right_publisher:
+                                            normalized_row.setdefault(normalized_name, normalized_value)
+                                        else:
+                                            normalized_row.setdefault(normalized_name, None)
+                                            cell_errors[normalized_name] = cls.make_package_file_warning(
+                                                ParseWarning.wrong_publisher,
+                                                additional_msg=u'Expected {}, but got {}.'.format(
+                                                    file_package.publisher,
+                                                    journal_publisher
+                                                )
+                                            )
+                                    else:
+                                        normalized_row.setdefault(normalized_name, normalized_value)
                             except Exception as e:
                                 cell_errors[normalized_name] = cls.make_package_file_warning(
-                                    ParseWarning.unknown, additional_msg=e.message
+                                    ParseWarning.unknown, additional_msg=u'message: {}'.format(e.message)
                                 )
 
                 if cls.ignore_row(normalized_row):
@@ -509,8 +539,10 @@ class PackageInput:
 
     @classmethod
     def load(cls, package_id, file_name, commit=False):
+        my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
+
         try:
-            normalized_rows, error_rows = cls.normalize_rows(file_name)
+            normalized_rows, error_rows = cls.normalize_rows(file_name, file_package=my_package)
         except (UnicodeError, csv.Error) as e:
             message = u'Error reading file: "{}". Try opening this file, resaving as .xlsx, and uploading that.'.format(
                 e.message
@@ -564,8 +596,6 @@ class PackageInput:
             cls.update_dest_table(package_id)
             cls._copy_raw_to_s3(file_name, package_id)
 
-        my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
-
         if commit:
             db.session.commit()
             if my_package:
@@ -589,6 +619,10 @@ class ParseWarning(Enum):
     bad_issn = {
         'label': 'bad_issn',
         'text': "This doesn't look like an ISSN."
+    }
+    wrong_publisher = {
+        'label': 'wrong_publisher',
+        'text': "This journal doesn't have the expected publisher."
     }
     unknown_issn = {
         'label': 'unknown_issn',
