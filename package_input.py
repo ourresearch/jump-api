@@ -466,7 +466,7 @@ class PackageInput:
                                     if normalized_name in cls.issn_columns() and file_package:
                                         journal_publisher = _ricks_journals.get(
                                             normalized_value, {}
-                                        ).get('publisher', None)
+                                        ).get('publisher', u'')
 
                                         has_right_publisher = any(
                                             s.lower() in journal_publisher.lower()
