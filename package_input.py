@@ -345,6 +345,10 @@ class PackageInput:
         return []
 
     @classmethod
+    def validate_publisher(cls):
+        return False
+
+    @classmethod
     def normalize_rows(cls, file_name, file_package=None):
         # convert to csv if needed
         if file_name.endswith(u'.xls') or file_name.endswith(u'.xlsx'):
@@ -463,7 +467,7 @@ class PackageInput:
                                     cell_errors[normalized_name] = cls.make_package_file_warning(parse_warning)
                                     normalized_row.setdefault(normalized_name, None)
                                 else:
-                                    if normalized_name in cls.issn_columns() and file_package:
+                                    if cls.validate_publisher() and normalized_name in cls.issn_columns() and file_package:
                                         journal_publisher = _ricks_journals.get(
                                             normalized_value, {}
                                         ).get('publisher', u'')
