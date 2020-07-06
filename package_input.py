@@ -4,6 +4,7 @@ import re
 import tempfile
 from re import sub
 
+import babel.numbers
 import boto3
 import dateutil.parser
 import shortuuid
@@ -14,13 +15,12 @@ from sqlalchemy.sql import text
 import package
 import purge_cache
 from app import db, logger
+from app import get_db_cursor
 from excel import convert_spreadsheet_to_csv
 from package_file_error_rows import PackageFileErrorRow
+from raw_file_upload_object import RawFileUploadObject
 from util import convert_to_utf_8
 from util import safe_commit
-from app import get_db_cursor
-
-from raw_file_upload_object import RawFileUploadObject
 
 
 def _get_ricks_issns():
@@ -71,12 +71,17 @@ class PackageInput:
     def normalize_price(price, warn_if_blank=False):
         if price:
             try:
-                decimal = u',' if re.search(ur'\.\d{3}', price) or re.search(ur',\d{2}$', price) else ur'\.'
-                sub_pattern = ur'[^\d{}]'.format(decimal)
-                price = sub(sub_pattern, '', price)
-                price = sub(',', '.', price)
-                return int(round(float(price)))
-            except Exception:
+                if u'.' in price and u',' in price and price.find(u'.') < price.find(u','):
+                    locale = u'de'
+                elif price.count(u',') == 1 and (re.search(ur'\d{4,},', price) or not re.search(ur',\d{3}[$.]', price)):
+                    locale = u'de'
+                else:
+                    locale = u'en'
+
+                price = sub(ur'[^\d.,]', '', price)
+                parsed_price = babel.numbers.parse_decimal(price, locale=locale)
+                return int(round(parsed_price))
+            except babel.numbers.NumberFormatError:
                 return ParseWarning.bad_usd_price
         else:
             return ParseWarning.no_usd_price if warn_if_blank else None
