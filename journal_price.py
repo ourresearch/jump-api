@@ -87,3 +87,7 @@ class JournalPriceInput(db.Model, PackageInput):
     def clear_caches(cls, my_package):
         super(JournalPriceInput, cls).clear_caches(my_package)
         refresh_cached_prices_from_db(my_package.package_id, my_package.publisher)
+
+    @classmethod
+    def validate_publisher(cls):
+        return True
