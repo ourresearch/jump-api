@@ -187,6 +187,17 @@ class Package(db.Model):
         else:
             return 'false'
 
+    @property
+    def publisher_name_snippets(self):
+        if self.publisher == "Elsevier":
+            return ["elsevier"]
+        elif self.publisher == "Wiley":
+            return ["wiley"]
+        elif self.publisher == "SpringerNature":
+            return ["springer", "nature"]
+        else:
+            return []
+
     @cached_property
     def get_published_toll_access_in_2019_with_publisher(self):
         rows = self.get_base(and_where=""" and counter.issn_l in
