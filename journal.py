@@ -1371,7 +1371,7 @@ class Journal(object):
 
     def to_dict_export(self):
         response = self.to_dict_table()
-        response["table_row"]["ncppu_fuzzed"] = self.ncppu_fuzzed
+        response["table_row"]["cpu_fuzzed"] = self.ncppu_fuzzed
         response["table_row"]["subscription_cost_fuzzed"] = self.cost_subscription_fuzzed
         response["table_row"]["subscription_minus_ill_cost_fuzzed"] = self.cost_subscription_minus_ill_fuzzed
         response["table_row"]["usage_fuzzed"] = self.use_total_fuzzed
@@ -1390,8 +1390,8 @@ class Journal(object):
         table_row = OrderedDict()
 
         # table
-        table_row["ncppu"] = display_usage(self.ncppu)
-        table_row["ncppu_rank"] = display_usage(self.ncppu_rank)
+        table_row["cpu"] = display_usage(self.ncppu)
+        table_row["cpu_rank"] = display_usage(self.ncppu_rank)
         table_row["cost"] = self.cost_actual
         table_row["usage"] = round(self.use_total)
         table_row["instant_usage_percent"] = round(self.use_instant_percent)
@@ -1401,19 +1401,18 @@ class Journal(object):
         table_row["subscription_cost"] = round(self.cost_subscription)
         table_row["ill_cost"] = round(self.cost_ill)
         table_row["subscription_minus_ill_cost"] = round(self.cost_subscription_minus_ill)
-        table_row["old_school_cpu"] = display_usage(self.old_school_cpu)
-        table_row["old_school_cpu_rank"] = display_usage(self.old_school_cpu_rank)
+        # table_row["old_school_cpu"] = display_usage(self.old_school_cpu)
+        # table_row["old_school_cpu_rank"] = display_usage(self.old_school_cpu_rank)
 
         # fulfillment
-        table_row["use_asns_percent"] = round(float(100)*self.use_actual["social_networks"]/self.use_total)
-        table_row["use_oa_percent"] = round(float(100)*self.use_actual["oa"]/self.use_total)
+        table_row["use_oa_percent"] = round(float(100)*self.use_actual["oa_plus_social_networks"]/self.use_total)
         table_row["use_backfile_percent"] = round(float(100)*self.use_actual["backfile"]/self.use_total)
         table_row["use_subscription_percent"] = round(float(100)*self.use_actual["subscription"]/self.use_total)
         table_row["use_ill_percent"] = round(float(100)*self.use_actual["ill"]/self.use_total)
         table_row["use_other_delayed_percent"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
         table_row["perpetual_access_years_text"] = self.display_perpetual_access_years
         table_row["baseline_access_text"] = self.baseline_access
-        table_row["num_papers_slope_percent"] = self.num_papers_slope_percent
+        # table_row["num_papers_slope_percent"] = self.num_papers_slope_percent
 
         # oa
         table_row["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
