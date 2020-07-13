@@ -1410,14 +1410,16 @@ class Journal(object):
         table_row["use_subscription_percent"] = round(float(100)*self.use_actual["subscription"]/self.use_total)
         table_row["use_ill_percent"] = round(float(100)*self.use_actual["ill"]/self.use_total)
         table_row["use_other_delayed_percent"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
-        table_row["perpetual_access_years_text"] = self.display_perpetual_access_years
-        table_row["baseline_access_text"] = self.baseline_access
+        table_row["perpetual_access_years"] = self.display_perpetual_access_years
+        table_row["baseline_access"] = self.baseline_access
+        table_row["bronze_oa_embargo_months"] = self.oa_embargo_months
         # table_row["num_papers_slope_percent"] = self.num_papers_slope_percent
 
         # oa
         table_row["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
         table_row["use_hybrid_percent"] = round(float(100)*self.use_oa_hybrid/self.use_total)
         table_row["use_bronze_percent"] = round(float(100)*self.use_oa_bronze/self.use_total)
+        table_row["use_asns_percent"] = round(float(100)*self.use_social_networks/self.use_total)
         table_row["use_peer_reviewed_percent"] =  round(float(100)*self.use_oa_peer_reviewed/self.use_total)
 
         # impact
