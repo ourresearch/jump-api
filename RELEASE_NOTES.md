@@ -5,6 +5,7 @@ both its appearance and its underlying data.
 This means you will often see changes in the UI/UX, and sometimes in the presented data.  
 Most of these changes are too small to note, but we'll keep a record of the larger ones here:
 
+- 2020/07/12 Rename a few columns in export (documented in Knowledge Base)
 - 2020/07/03 Scenario now only includes journals in the uploaded COUNTER file
 - 2020/07/01 Fixed a modelling bug in custom prices: now use custom prices directly rather than as minimum with public price
 - 2020/06/17 Fixed a bug in perpetual access display:  don't show as <2010 because it sorts badly
