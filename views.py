@@ -147,7 +147,9 @@ def authenticate_for_publisher(publisher_id, required_permission):
             abort_json(400, u'Publisher is not owned by any institution.')
 
         if not auth_user.has_permission(package.institution.id, required_permission):
-            consortium_package = Package.query.get(package.consortium_package_id)
+            consortium_package = None
+            if package.consortium_package_id:
+                consortium_package = Package.query.get(package.consortium_package_id)
 
             if not consortium_package:
                 abort_json(403, u"Missing required permission '{}' for institution {}.".format(
@@ -1245,30 +1247,30 @@ def scenario_id_details_get(scenario_id):
 
 
 
-@app.route('/scenario/<scenario_id>/table', methods=['GET'])
-@jwt_optional
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
-# @my_memcached.cached(timeout=7*24*60*60)
-def live_scenario_id_table_get(scenario_id):
-    my_saved_scenario = get_saved_scenario(scenario_id)
-    response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table())
-    cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
-    response.headers["Cache-Tag"] = u",".join(cache_tags_list)
-    return response
+# @app.route('/scenario/<scenario_id>/table', methods=['GET'])
+# @jwt_optional
+# # @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
+# # @my_memcached.cached(timeout=7*24*60*60)
+# def live_scenario_id_table_get(scenario_id):
+#     my_saved_scenario = get_saved_scenario(scenario_id)
+#     response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table())
+#     cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
+#     response.headers["Cache-Tag"] = u",".join(cache_tags_list)
+#     return response
 
 
 
-@app.route('/scenario/<scenario_id>/slider', methods=['GET'])
-@jwt_optional
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
-# @my_memcached.cached(timeout=7*24*60*60)
-def live_scenario_id_slider_get(scenario_id):
-
-    my_saved_scenario = get_saved_scenario(scenario_id)
-    response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
-    cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
-    response.headers["Cache-Tag"] = u",".join(cache_tags_list)
-    return response
+# @app.route('/scenario/<scenario_id>/slider', methods=['GET'])
+# @jwt_optional
+# # @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
+# # @my_memcached.cached(timeout=7*24*60*60)
+# def live_scenario_id_slider_get(scenario_id):
+#
+#     my_saved_scenario = get_saved_scenario(scenario_id)
+#     response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
+#     cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
+#     response.headers["Cache-Tag"] = u",".join(cache_tags_list)
+#     return response
 
 
 @app.route('/package/<package_id>/apc', methods=['GET'])
@@ -1327,11 +1329,11 @@ def live_scenario_id_apc_get(scenario_id):
     response.headers["Cache-Tag"] = u",".join(cache_tags_list)
     return response
 
-@app.route('/scenario/<scenario_id>/report', methods=['GET'])
-@jwt_required
-def scenario_id_report_get(scenario_id):
-    my_saved_scenario = get_saved_scenario(scenario_id)
-    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_report())
+# @app.route('/scenario/<scenario_id>/report', methods=['GET'])
+# @jwt_required
+# def scenario_id_report_get(scenario_id):
+#     my_saved_scenario = get_saved_scenario(scenario_id)
+#     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_report())
 
 
 def export_get(my_saved_scenario):
@@ -1578,11 +1580,11 @@ def jump_debug_table_get():
     my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table(5000))
 
-@app.route('/debug/scenario/slider', methods=['GET'])
-def jump_debug_slider_get():
-    scenario_id = "demo-debug"
-    my_saved_scenario = get_saved_scenario(scenario_id)
-    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
+# @app.route('/debug/scenario/slider', methods=['GET'])
+# def jump_debug_slider_get():
+#     scenario_id = "demo-debug"
+#     my_saved_scenario = get_saved_scenario(scenario_id)
+#     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
 
 @app.route('/debug/scenario/apc', methods=['GET'])
 def jump_debug_apc_get():

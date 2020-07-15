@@ -779,33 +779,33 @@ class Scenario(object):
         response["_timing"] = self.timing_messages
         return response
 
-    def to_dict_report(self):
-        response = {
-                "_settings": self.settings.to_dict(),
-                "_summary": {
-                    "cost_percent": self.cost_spent_percent,
-                    "num_journals_subscribed": len(self.subscribed),
-                    "num_journals_total": len(self.journals),
-                    "use_instant_percent_by_year": self.use_instant_percent_by_year,
-                    "use_instant_percent": self.use_instant_percent,
-                    },
-                "journals": [j.to_dict_report() for j in self.journals_sorted_use_total],
-                "journals_count": len(self.journals),
-            }
-        self.log_timing("to dict")
-        response["_timing"] = self.timing_messages
-        return response
+    # def to_dict_report(self):
+    #     response = {
+    #             "_settings": self.settings.to_dict(),
+    #             "_summary": {
+    #                 "cost_percent": self.cost_spent_percent,
+    #                 "num_journals_subscribed": len(self.subscribed),
+    #                 "num_journals_total": len(self.journals),
+    #                 "use_instant_percent_by_year": self.use_instant_percent_by_year,
+    #                 "use_instant_percent": self.use_instant_percent,
+    #                 },
+    #             "journals": [j.to_dict_report() for j in self.journals_sorted_use_total],
+    #             "journals_count": len(self.journals),
+    #         }
+    #     self.log_timing("to dict")
+    #     response["_timing"] = self.timing_messages
+    #     return response
 
-    def to_dict_timeline(self):
-        response = {
-                "_settings": self.settings.to_dict(),
-                "_summary": self.to_dict_summary_dict(),
-                "journals": [j.to_dict_timeline() for j in self.journals_sorted_use_total],
-                "journals_count": len(self.journals),
-            }
-        self.log_timing("to dict")
-        response["_timing"] = self.timing_messages
-        return response
+    # def to_dict_timeline(self):
+    #     response = {
+    #             "_settings": self.settings.to_dict(),
+    #             "_summary": self.to_dict_summary_dict(),
+    #             "journals": [j.to_dict_timeline() for j in self.journals_sorted_use_total],
+    #             "journals_count": len(self.journals),
+    #         }
+    #     self.log_timing("to dict")
+    #     response["_timing"] = self.timing_messages
+    #     return response
 
     def to_dict_summary(self):
         response = {
@@ -825,15 +825,15 @@ class Scenario(object):
         response["_timing"] = self.timing_messages
         return response
 
-    def to_dict_slider(self):
-        response = {
-                "_settings": self.settings.to_dict(),
-                "_summary": self.to_dict_summary_dict(),
-                "journals": [j.to_dict_slider() for j in self.journals_sorted_ncppu],
-            }
-        self.log_timing("to dict")
-        response["_timing"] = self.timing_messages
-        return response
+    # def to_dict_slider(self):
+    #     response = {
+    #             "_settings": self.settings.to_dict(),
+    #             "_summary": self.to_dict_summary_dict(),
+    #             "journals": [j.to_dict_slider() for j in self.journals_sorted_ncppu],
+    #         }
+    #     self.log_timing("to dict")
+    #     response["_timing"] = self.timing_messages
+    #     return response
 
     def to_dict_summary_dict(self):
         response = {
