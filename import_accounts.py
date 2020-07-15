@@ -11,8 +11,6 @@ from dateutil import parser
 from werkzeug.security import generate_password_hash, check_password_hash
 import shortuuid
 import glob
-from lib.pycounter import report as reporter
-from lib.pycounter.exceptions import UnknownReportTypeError
 import codecs
 
 from app import db
