@@ -99,6 +99,9 @@ class Scenario(object):
         from package import Package
         my_package = Package.query.filter(Package.package_id == self.package_id_for_db).first()
         self.publisher_name = my_package.publisher
+        self.package_name = my_package.package_name
+        my_institution = my_package.institution
+        self.institution_name = my_institution.display_name
 
         if my_package and my_package.big_deal_cost:
             self.settings.cost_bigdeal = float(my_package.big_deal_cost)

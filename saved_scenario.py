@@ -125,6 +125,10 @@ class SavedScenario(db.Model):
     def journals(self):
         return self.set_live_scenario().journals
 
+    @property
+    def institution_name(self):
+        return self.set_live_scenario().institution_name
+
     def set_live_scenario(self, my_jwt=None):
         if not hasattr(self, "live_scenario") or not self.live_scenario:
             self.live_scenario = get_latest_scenario(self.scenario_id, my_jwt)
