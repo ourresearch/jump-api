@@ -83,6 +83,10 @@ class Journal(object):
         return self.my_scenario_data_row.get("publisher", "")
 
     @cached_property
+    def institution_name(self):
+        return self.scenario.institution_name
+
+    @cached_property
     def cost_subscription_2018(self):
         # return float(self.my_scenario_data_row.get("usa_usd", 0)) * (1 + self.settings.cost_content_fee_percent/float(100))
         my_lookup = self._scenario_data["prices"]
@@ -931,7 +935,10 @@ class Journal(object):
     @cached_property
     def ncppu_rank(self):
         if self.ncppu:
-            return self.scenario.ncppu_rank_lookup[self.issn_l]
+            try:
+                return self.scenario.ncppu_rank_lookup[self.issn_l]
+            except ReferenceError:
+                return None
         return None
 
     @cached_property
@@ -1440,6 +1447,7 @@ class Journal(object):
         table_row["era_subjects"] = self.era_subjects
         table_row["subscribed"] = self.subscribed
         table_row["is_society_journal"] = self.is_society_journal
+        table_row["institution_name"] = self.institution_name
 
         # these are below but with different names
         table_row["use_total"] = self.use_total
