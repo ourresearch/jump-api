@@ -3,6 +3,7 @@
 import argparse
 import logging
 from datetime import datetime
+import re
 
 import shortuuid
 import glob
@@ -30,23 +31,34 @@ from util import read_csv_file
 
 # configuration here
 
-institution_name = u"Test Windsor"
+institution_name = u"University of Kentucky"
 
-user_rows = [
-    {
-        'email': u'testwindsor@example.edu',  # required
-        'password': u'',  # required
-        'name': u'Windsoretta James',  # default is None
-        'institution_name': institution_name,
-        'permissions': [u'view', u'modify', u'admin', ]  # default is view, modify, admin
-    }
-]
 
 institution_rows = [{
     "institution_name": institution_name,
-    "username": "testwindsor",
-    "ror_id": "01gw3d370"
+    "username": u"uky",
+    "ror_id": "02k3smh20"
 }]
+
+user_rows = [
+    {
+        'email': None,
+        'name': None,
+        "email_and_name": u"Jennifer Montavon-Green <jen.montavon-green@uky.edu>",
+        'password': u'',
+        'institution_name': institution_name,
+        'permissions': [u'view', u'modify', u'admin', ]  # default is view, modify, admin
+    },
+    # ,
+    # {
+    #     'email': None,
+    #     'name': None,
+    #     "email_and_name": u"GWLA <team+gwla@ourresearch.org>",
+    #     'password': u'',
+    #     'institution_name': institution_name,
+    #     'permissions': [u'view', u'modify', u'admin', ]  # default is view, modify, admin
+    # },
+]
 
 
 
@@ -75,6 +87,9 @@ def add_institution(institution_name, old_username, ror_id):
         my_institution.is_consortium = False
         db.session.add(my_institution)
         logger.info(u'  adding {}'.format(my_institution))
+
+    if not ror_id:
+        return
 
     logger.info(u'adding ROR IDs')
 
@@ -150,7 +165,15 @@ def add_institution(institution_name, old_username, ror_id):
 def add_user(user_info):
     # create users and permissions
 
-    logger.info(u'\ninitializing user {}'.format(user_info['email']))
+    email = user_info.get("email", None)
+    user_name = user_info.get("name", None)
+    if "email_and_name" in user_info:
+        user_name, email = re.findall("(.*)<(.*)>", user_info["email_and_name"])[0]
+    email = email.strip()
+    user_name = user_name.strip()
+
+
+    logger.info(u'\ninitializing user {}'.format(email))
 
     my_institution = db.session.query(Institution).filter(Institution.display_name == user_info['institution_name']).scalar()
 
@@ -160,17 +183,17 @@ def add_user(user_info):
         logger.info(u"  *** FAILED: institution {} doesn't exist, exiting ***".format(user_info['institution_name']))
         return
 
-    my_user = db.session.query(User).filter(User.email == user_info['email']).scalar()
+    my_user = db.session.query(User).filter(User.email.ilike(email)).scalar()
 
     if my_user:
         logger.info(u'  *** user {} already exists. updating display name but not modifying password. ***'.format(my_user))
 
     else:
         my_user = User()
-        my_user.email = user_info['email']
+        my_user.email = email
         my_user.password_hash = generate_password_hash(user_info['password'])
 
-    my_user.display_name = user_info.get('name', None)
+    my_user.display_name = user_name
     db.session.merge(my_user)
     logger.info(u'  saving {}'.format(my_user))
 
@@ -212,7 +235,7 @@ def add_publisher(institution_username, counter_filename):
         publisher_name = "Wiley"
     else:
         raise NotImplementedError("not a known publisher")
-    package_display_name = u"{}".format(publisher_name)
+    package_display_name = u"{} {}".format(publisher_name, datetime.utcnow().isoformat())
 
     # add a Publisher
     logger.info(u'adding a Publisher')
@@ -344,7 +367,7 @@ if __name__ == "__main__":
                 logger.info('rollback, run with --commit to commit')
                 db.session.rollback()
 
-    elif parser.parse_args().users:
+    if parser.parse_args().users:
         if parser.parse_args().file:
             user_rows = read_csv_file(parser.parse_args().file)
 
@@ -358,7 +381,7 @@ if __name__ == "__main__":
                 logger.info('rollback, run with --commit to commit')
                 db.session.rollback()
 
-    elif parser.parse_args().counter:
+    if parser.parse_args().counter:
         add_publisher(parser.parse_args().username, parser.parse_args().file)
 
         # logging.getLogger('').setLevel(logging.WARNING)

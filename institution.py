@@ -22,7 +22,7 @@ class Institution(db.Model):
 
     grid_ids = relationship(GridId, lazy='subquery')
     ror_ids = relationship(RorId, lazy='subquery')
-    packages = relationship('Package')
+    packages = relationship('Package', lazy='subquery')
 
     def user_permissions(self):
         user_ids = db.session.query(UserInstitutionPermission.user_id).filter(

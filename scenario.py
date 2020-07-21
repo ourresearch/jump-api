@@ -102,6 +102,7 @@ class Scenario(object):
         self.package_name = my_package.package_name
         my_institution = my_package.institution
         self.institution_name = my_institution.display_name
+        self.institution_short_name = my_institution.old_username
 
         if my_package and my_package.big_deal_cost:
             self.settings.cost_bigdeal = float(my_package.big_deal_cost)
@@ -174,12 +175,16 @@ class Scenario(object):
 
         self.data["unpaywall_downloads_dict"] = clean_dict
 
+        # remove this
         self.data["perpetual_access"] = get_perpetual_access_from_cache(self.package_id)
 
+        # remove this
         self.data["journal_era_subjects"] = get_journal_era_subjects()
+
 
     @property
     def has_custom_perpetual_access(self):
+        # perpetual_access_rows = get_perpetual_access_from_cache([self.package_id])
         perpetual_access_rows = get_perpetual_access_from_cache(self.package_id)
         if perpetual_access_rows:
             return True
@@ -886,14 +891,120 @@ def get_consortium_package_ids(package_id):
     package_ids = [row["package_id"] for row in rows]
     return package_ids
 
+# @cache
+# def get_package_specific_scenario_data_from_db(input_package_ids):
+#     timing = []
+#     section_time = time()
+#
+#     package_ids_string = ",".join(["'{}'".format(package_id) for package_id in input_package_ids])
+#
+#     counter_dict = defaultdict(dict)
+#
+#     command = "select package_id, issn_l, total from jump_counter where package_id in ({});".format(package_ids_string)
+#     rows = None
+#     with get_db_cursor() as cursor:
+#         cursor.execute(command)
+#         rows = cursor.fetchall()
+#     for row in rows:
+#         if row["issn_l"] not in counter_dict[row["package_id"]]:
+#             counter_dict[row["package_id"]][row["issn_l"]] = 0
+#         counter_dict[row["package_id"]][row["issn_l"]] += row["total"]
+#
+#     timing.append(("time from db: counter", elapsed(section_time, 2)))
+#     section_time = time()
+#
+#
+#     command = """select package_id, citing.issn_l, citing.year::int, sum(num_citations) as num_citations
+#         from jump_citing citing
+#         join jump_grid_id institution_grid on citing.grid_id = institution_grid.grid_id
+#         join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id
+#         where citing.year < 2019
+#         and package_id in ({})
+#         group by issn_l, year, package_id""".format(package_ids_string)
+#     citation_rows = None
+#     with get_db_cursor() as cursor:
+#         cursor.execute(command)
+#         citation_rows = cursor.fetchall()
+#     citation_dict = defaultdict(dict)
+#     for row in citation_rows:
+#         if row["issn_l"] not in citation_dict[row["package_id"]]:
+#             citation_dict[row["package_id"]][row["issn_l"]] = defaultdict(int)
+#
+#         citation_dict[row["package_id"]][row["issn_l"]][row["year"]] = round(row["num_citations"])
+#
+#     timing.append(("time from db: citation_rows", elapsed(section_time, 2)))
+#     section_time = time()
+#
+#     command = """
+#         select package_id, authorship.issn_l, authorship.year::int, sum(num_authorships) as num_authorships
+#         from jump_authorship authorship
+#         join jump_grid_id institution_grid on authorship.grid_id = institution_grid.grid_id
+#         join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id
+#         where authorship.year < 2019
+#         and package_id in ({})
+#         group by issn_l, year, package_id""".format(package_ids_string)
+#     authorship_rows = None
+#     with get_db_cursor() as cursor:
+#         cursor.execute(command)
+#         authorship_rows = cursor.fetchall()
+#     authorship_dict = defaultdict(dict)
+#     for row in authorship_rows:
+#         if row["issn_l"] not in authorship_dict[row["package_id"]]:
+#             authorship_dict[row["package_id"]][row["issn_l"]] = defaultdict(int)
+#
+#         authorship_dict[row["package_id"]][row["issn_l"]][row["year"]] = round(row["num_authorships"])
+#
+#     timing.append(("time from db: authorship_rows", elapsed(section_time, 2)))
+#     section_time = time()
+#
+#     # perpetual_access_dict = get_perpetual_access_from_cache(input_package_ids)
+#     command = """select package_id, issn_l, start_date, end_date from jump_perpetual_access where package_id in ({})""".format(package_ids_string)
+#     with get_db_cursor() as cursor:
+#         cursor.execute(command)
+#         perpetual_access_rows = cursor.fetchall()
+#     perpetual_access_dict = defaultdict(dict)
+#     for row in perpetual_access_rows:
+#         perpetual_access_dict[row["package_id"]][row["issn_l"]] = row
+#
+#     timing.append(("time from db: perpetual_access_rows", elapsed(section_time, 2)))
+#     section_time = time()
+#
+#     # prices_dict = get_prices_from_cache(input_package_ids)
+#     command = """select package_id, issn_l, usa_usd from jump_journal_prices where package_id in ({})""".format(package_ids_string)
+#     # and publisher = :publisher_name""".format(package_ids_string)
+#     with get_db_cursor() as cursor:
+#         cursor.execute(command)
+#         prices_rows = cursor.fetchall()
+#     prices_dict = defaultdict(dict)
+#     for row in prices_rows:
+#         prices_dict[row["package_id"]][row["issn_l"]] = row["usa_usd"]
+#
+#     timing.append(("time from db: prices_rows", elapsed(section_time, 2)))
+#     section_time = time()
+#
+#
+#     data = {
+#         "timing": timing,
+#         "counter_dict": counter_dict,
+#         "citation_dict": citation_dict,
+#         "authorship_dict": authorship_dict,
+#         "perpetual_access_dict": perpetual_access_dict,
+#         "prices_dict": prices_dict,
+#     }
+#
+#     return data
+
+
 @cache
 def get_package_specific_scenario_data_from_db(input_package_id):
     timing = []
     section_time = time()
 
-    consortium_package_ids = get_consortium_package_ids(input_package_id)
+    consortium_package_ids = []
+    # consortium_package_ids = get_consortium_package_ids(input_package_id)
     if not consortium_package_ids:
         consortium_package_ids = [input_package_id]
+
     counter_dict = defaultdict(int)
     for package_id in consortium_package_ids:
 
@@ -956,7 +1067,6 @@ def get_package_specific_scenario_data_from_db(input_package_id):
 
     return data
 
-
 @cache
 def get_apc_data_from_db(input_package_id):
     if input_package_id == DEMO_PACKAGE_ID or input_package_id.startswith("demo"):
@@ -979,6 +1089,26 @@ def _perpetual_access_cache_key(package_id):
     return u'scenario.get_perpetual_access.{}'.format(package_id)
 
 
+# def refresh_perpetual_access_from_db(package_id):
+#     command = text(
+#         u'select package_id, issn_l, start_date, end_date from jump_perpetual_access where package_id = :package_id'
+#     ).bindparams(package_id=package_id)
+#
+#     rows = db.engine.execute(command).fetchall()
+#     clean_rows = []
+#     for row in rows:
+#         clean_row = dict(row)
+#         if row["start_date"]:
+#             clean_row["start_date"] = row["start_date"].isoformat()
+#         if row["end_date"]:
+#             clean_row["end_date"] = row["end_date"].isoformat()
+#         clean_rows.append(clean_row)
+#     package_dict = dict([(a["issn_l"], a) for a in clean_rows])
+#
+#     my_memcached.set(_perpetual_access_cache_key(package_id), package_dict)
+#
+#     return package_dict
+
 def refresh_perpetual_access_from_db(package_id):
     command = text(
         u'select * from jump_perpetual_access where package_id = :package_id'
@@ -992,10 +1122,20 @@ def refresh_perpetual_access_from_db(package_id):
     return package_dict
 
 
+# def get_perpetual_access_from_cache(package_ids, unused_publisher_name=None):
+#     lookup_dict = defaultdict(dict)
+#
+#     for package_id in package_ids:
+#         memcached_key = _perpetual_access_cache_key(package_id)
+#         # package_dict = my_memcached.get(memcached_key) or refresh_perpetual_access_from_db(package_id)
+#         package_dict = refresh_perpetual_access_from_db(package_id)
+#         lookup_dict[package_id] = package_dict
+#
+#     return lookup_dict
+
 def get_perpetual_access_from_cache(package_id, unused_publisher_name=None):
     memcached_key = _perpetual_access_cache_key(package_id)
     return my_memcached.get(memcached_key) or refresh_perpetual_access_from_db(package_id)
-
 
 @cache
 def get_core_list_from_db(input_package_id):
@@ -1060,7 +1200,7 @@ def refresh_cached_prices_from_db(package_id, publisher_name):
     return package_dict
 
 
-def get_prices_from_cache(package_ids, publisher_name):
+def get_prices_from_cache(package_ids, publisher_name=None):
 
     lookup_dict = defaultdict(dict)
 
@@ -1201,6 +1341,27 @@ def get_social_networks_data_from_db():
     return lookup_dict
 
 
+# @cache
+# def get_oa_adjustment_data_from_db():
+#     command = """select issn_l,
+#             max(mturk.max_oa_rate::float) as mturk_max_oa_rate,
+#             count(*) as num_papers_3_years,
+#             sum(case when u.oa_status = 'closed' then 0 else 1 end) as num_papers_3_years_oa,
+#             round(sum(case when u.oa_status = 'closed' then 0 else 1 end)/count(*)::float, 3) as unpaywall_measured_fraction_3_years_oa
+#             from jump_mturk_oa_rates mturk
+#             join unpaywall u on mturk.issn_l = u.journal_issn_l
+#             where year >= 2016 and year <= 2018
+#             and genre='journal-article'
+#             group by issn_l
+#                     """
+#     with get_db_cursor() as cursor:
+#         cursor.execute(command)
+#         rows = cursor.fetchall()
+#     lookup_dict = {}
+#     for row in rows:
+#         lookup_dict[row["issn_l"]] = row
+#     return lookup_dict
+
 @cache
 def get_oa_adjustment_data_from_db():
     command = """select issn_l, 
@@ -1222,7 +1383,6 @@ def get_oa_adjustment_data_from_db():
         lookup_dict[row["issn_l"]] = row
     return lookup_dict
 
-
 if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
     _load_ricks_journal_rows()
     _load_hybrid_2019_from_db()
@@ -1232,6 +1392,60 @@ if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
     get_social_networks_data_from_db()
     get_num_papers_from_db()
     get_oa_recent_data_from_db()
+
+
+def get_consortium_package_data(consortium_name):
+    total_start_time = time()
+
+    from save_groups import package_id_lists
+    package_ids = package_id_lists[consortium_name]
+
+    my_data = {}
+    for package_id in package_ids:
+        my_data[package_id] = get_package_specific_scenario_data_from_db(package_id)
+
+    print "done all: ", elapsed(total_start_time)
+
+    return my_data
+
+def get_consortium_package_data_common():
+    my_timing = TimingMessages()
+    my_data = {}
+
+    # not package_id specific
+
+    my_data["journal_era_subjects"] = get_journal_era_subjects()
+    my_timing.log_timing("get_core_list_from_db")
+
+    my_data["embargo_dict"] = get_embargo_data_from_db()
+    my_timing.log_timing("get_embargo_data_from_db")
+
+    my_data["unpaywall_downloads_dict_raw"] = get_unpaywall_downloads_from_db()
+    my_timing.log_timing("get_unpaywall_downloads_from_db")
+
+    my_data["oa"] = get_oa_data_from_db()
+    my_timing.log_timing("get_oa_data_from_db")
+
+    my_data["oa_recent"] = get_oa_recent_data_from_db()
+    my_timing.log_timing("get_oa_recent_data_from_db")
+
+    my_data["social_networks"] = get_social_networks_data_from_db()
+    my_timing.log_timing("get_social_networks_data_from_db")
+
+    # add this in later
+    # my_data["oa_adjustment"] = get_oa_adjustment_data_from_db()
+    # my_timing.log_timing("get_oa_adjustment_data_from_db")
+
+    my_data["society"] = get_society_data_from_db()
+    my_timing.log_timing("get_society_data_from_db")
+
+    my_data["num_papers"] = get_num_papers_from_db()
+    my_timing.log_timing("get_num_papers_from_db")
+
+    my_data["_timing"] = my_timing.to_dict()
+    print my_data["_timing"]
+
+    return my_data
 
 
 @cache
@@ -1257,7 +1471,12 @@ def get_common_package_data(package_id):
     my_data["core_list"] = get_core_list_from_db(package_id)
     my_timing.log_timing("get_core_list_from_db")
 
+
+
     # not package_id specific
+
+    my_data["journal_era_subjects"] = get_journal_era_subjects()
+    my_timing.log_timing("get_journal_era_subjects")
 
     my_data["embargo_dict"] = get_embargo_data_from_db()
     my_timing.log_timing("get_embargo_data_from_db")
