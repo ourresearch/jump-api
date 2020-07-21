@@ -87,6 +87,10 @@ class Journal(object):
         return self.scenario.institution_name
 
     @cached_property
+    def institution_short_name(self):
+        return self.scenario.institution_short_name
+
+    @cached_property
     def cost_subscription_2018(self):
         # return float(self.my_scenario_data_row.get("usa_usd", 0)) * (1 + self.settings.cost_content_fee_percent/float(100))
         my_lookup = self._scenario_data["prices"]
@@ -415,7 +419,8 @@ class Journal(object):
             # ugly.  working around whether cached or not cached
             try:
                 in_range = working_date > start_date and working_date < end_date
-            except:
+            except (AttributeError, TypeError):
+                # print "start_date", start_date, "end_date", end_date, "working_date", working_date
                 in_range = working_date > start_date.isoformat() and working_date < end_date.isoformat()
 
             if in_range:
@@ -1448,31 +1453,29 @@ class Journal(object):
         table_row["subscribed"] = self.subscribed
         table_row["is_society_journal"] = self.is_society_journal
         table_row["institution_name"] = self.institution_name
+        table_row["institution_short_name"] = self.institution_short_name
+        table_row["package_id"] = self.package_id
 
-        # these are below but with different names
-        table_row["use_total"] = self.use_total
+        # some important ones
+        table_row["usage"] = round(self.use_total)
         table_row["cost_subscription"] = self.cost_subscription
         table_row["cost_ill"] = self.cost_ill
+        table_row["ncppu"] = display_usage(self.ncppu)
+        table_row["ncppu_rank"] = display_usage(self.ncppu_rank)
+        table_row["cost"] = self.cost_actual
+
+        # more that show up as columns in table
+        table_row["instant_usage_percent"] = self.use_instant_percent
+        table_row["free_instant_usage_percent"] = round(self.use_free_instant_percent)
+        table_row["subscription_minus_ill_cost"] = round(self.cost_subscription_minus_ill)
+
+        # just used for debugging
         table_row["use_instant"] = self.use_instant
-        table_row["use_instant_percent"] = self.use_instant_percent
 
         # keep this format
         table_row["use_groups_free_instant"] = {"oa": self.use_oa_plus_social_networks, "backfile": self.use_backfile, "social_networks": 0}
         table_row["use_groups_if_subscribed"] = {"subscription": self.use_subscription}
         table_row["use_groups_if_not_subscribed"] = {"ill": self.use_ill, "other_delayed": self.use_other_delayed}
-
-        # table
-        table_row["ncppu"] = display_usage(self.ncppu)
-        table_row["ncppu_rank"] = display_usage(self.ncppu_rank)
-        table_row["cost"] = self.cost_actual
-        table_row["usage"] = round(self.use_total)
-        table_row["instant_usage_percent"] = round(self.use_instant_percent)
-        table_row["free_instant_usage_percent"] = round(self.use_free_instant_percent)
-
-        # cost
-        table_row["subscription_cost"] = round(self.cost_subscription)
-        table_row["ill_cost"] = round(self.cost_ill)
-        table_row["subscription_minus_ill_cost"] = round(self.cost_subscription_minus_ill)
 
         # fulfillment
         table_row["use_oa_percent"] = round(float(100)*self.use_actual["oa_plus_social_networks"]/self.use_total)
@@ -1484,7 +1487,6 @@ class Journal(object):
         table_row["baseline_access_text"] = self.baseline_access
 
         # oa
-        table_row["use_oa_percent"] = round(float(100)*self.use_actual["oa_plus_social_networks"]/self.use_total)
         table_row["use_asns_percent"] = round(float(100)*self.use_actual["social_networks"]/self.use_total)
         table_row["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
         table_row["use_hybrid_percent"] = round(float(100)*self.use_oa_hybrid/self.use_total)

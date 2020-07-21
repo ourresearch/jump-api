@@ -30,6 +30,22 @@ def save_raw_scenario_to_db(scenario_id, raw_scenario_definition, ip):
         # print command
         cursor.execute(command)
 
+def get_latest_scenario_raw(scenario_id, my_jwt=None):
+    rows = None
+    with get_db_cursor() as cursor:
+        command = u"""select scenario_json from jump_scenario_details_paid where scenario_id='{}' order by updated desc limit 1;""".format(
+            scenario_id
+        )
+        # print command
+        cursor.execute(command)
+        rows = cursor.fetchall()
+
+    if rows:
+        scenario_data = json.loads(rows[0]["scenario_json"])
+
+    return scenario_data
+
+
 def get_latest_scenario(scenario_id, my_jwt=None):
     my_saved_scenario = SavedScenario.query.get(scenario_id)
     if my_saved_scenario:
@@ -57,7 +73,6 @@ def get_latest_scenario(scenario_id, my_jwt=None):
 
     my_scenario = Scenario(package_id, scenario_data, my_jwt=my_jwt)
     return my_scenario
-
 
 
 class SavedScenario(db.Model):

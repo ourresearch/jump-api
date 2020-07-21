@@ -12,7 +12,7 @@ class ResetRequest(db.Model):
     requested = db.Column(db.DateTime)
     expires = db.Column(db.DateTime)
 
-    user = db.relationship("User")
+    user = db.relationship("User", lazy='subquery')
 
     def __init__(self, **kwargs):
         self.token = secrets.token_urlsafe(32)
