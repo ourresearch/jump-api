@@ -921,7 +921,7 @@ def new_publisher():
     db.session.execute('''
         insert into jump_apc_authorships (
             select * from jump_apc_authorships_view
-            where package_id = '{}' and {}
+            where package_id = '{}' and issn_l in (select issn_l from ricks_journal rj where {})
         )
     '''.format(new_package.package_id, new_package.publisher_where))
 
