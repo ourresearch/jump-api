@@ -923,7 +923,7 @@ def new_publisher():
                 select * from jump_apc_authorships_view
                 where package_id = '{}' and issn_l in (select issn_l from ricks_journal rj where {}))
         """.format(new_package.package_id, new_package.publisher_where)
-    print "q", q
+    # print "q", q
     db.session.execute(q)
 
     safe_commit(db)
