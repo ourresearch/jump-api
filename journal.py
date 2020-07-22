@@ -401,7 +401,7 @@ class Journal(object):
 
         #   if a start date and no end date, then has perpetual access till the model says it doesn't
         if not end_date:
-            end_date = datetime.datetime(2042, 1, 2)  # far in the future, let's really hope we have universal OA by then
+            end_date = datetime.datetime(2042, 1, 2).isoformat()  # far in the future, let's really hope we have universal OA by then
 
         #   if two dates, that is the perpetual access range
         response = []
