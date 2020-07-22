@@ -179,11 +179,11 @@ class Package(db.Model):
     @cached_property
     def publisher_where(self):
         if self.publisher == "Elsevier":
-            return "(publisher ilike '%elsevier%')"
+            return "(rj.publisher ilike '%elsevier%')"
         elif self.publisher == "Wiley":
-            return "(publisher ilike '%wiley%')"
+            return "(rj.publisher ilike '%wiley%')"
         elif self.publisher == "SpringerNature":
-            return "((publisher ilike '%springer%') or (publisher ilike '%nature%'))"
+            return "((rj.publisher ilike '%springer%') or (rj.publisher ilike '%nature%'))"
         else:
             return 'false'
 
@@ -201,19 +201,25 @@ class Package(db.Model):
     @cached_property
     def get_published_toll_access_in_2019_with_publisher(self):
         rows = self.get_base(and_where=""" and counter.issn_l in
-	            (select journal_issn_l from unpaywall u where year=2019 and journal_is_oa='false' 
-	            and {publisher_where} group by journal_issn_l) """.format(publisher_where=self.publisher_where))
+	            (select distinct journal_issn_l from unpaywall u 
+	            join ricks_journal rj on u.journal_issn_l=rj.issn_l
+	            where year=2019 and journal_is_oa='false'
+	            and {publisher_where}
+	            ) """.format(publisher_where=self.publisher_where))
         return self.filter_by_core_list(rows)
 
     @cached_property
     def get_published_toll_access_in_2019_with_publisher_have_price(self):
         rows = self.get_base(and_where=""" and counter.issn_l in
-	            (select journal_issn_l from unpaywall u where year=2019 and journal_is_oa='false' 
-	            and {publisher_where} group by journal_issn_l) 
+	            (select distinct journal_issn_l from unpaywall u 
+	            join ricks_journal rj on u.journal_issn_l=rj.issn_l
+	            where year=2019 and journal_is_oa='false'
+	            and {publisher_where}
+	            )
 	            and counter.issn_l in 
-                (select issn_l from jump_journal_prices 
+                (select distinct issn_l from jump_journal_prices 
                     where usa_usd > 0 and package_id in('658349d9', '{package_id}') 
-                group by issn_l) """.format(package_id=self.package_id, publisher_where=self.publisher_where))
+                ) """.format(package_id=self.package_id, publisher_where=self.publisher_where))
         return self.filter_by_core_list(rows)
 
     @cached_property
@@ -492,7 +498,10 @@ class Package(db.Model):
                 )
                 and journal_is_oa='false'
                 and year=2019
-                and {publisher_where}
+                and journal_issn_l in
+	            (select distinct issn_l from ricks_journal rj 
+	            and {publisher_where}
+	            )
                 and journal_issn_l not in (
                     select jump_counter.issn_l from jump_counter
                     join jump_journal_prices on jump_journal_prices.issn_l = jump_counter.issn_l
