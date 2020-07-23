@@ -98,7 +98,10 @@ class Journal(object):
     @cached_property
     def issns(self):
         if self._ricks_journal_row:
-            return json.loads(self._ricks_journal_row["issns"])
+            try:
+                return json.loads(self._ricks_journal_row["issns"])
+            except:
+                return self._ricks_journal_row["issns"]
         return []
 
     @cached_property
