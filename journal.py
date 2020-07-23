@@ -1414,6 +1414,7 @@ class Journal(object):
                     "title": self.title,
                     "subject": self.subject,
                     "era_subjects": self.era_subjects,
+                    "issns": u",".join(self.issns),
                     "subscribed": self.subscribed}
         table_row = OrderedDict()
 
