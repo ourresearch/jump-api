@@ -5,6 +5,7 @@ import weakref
 from collections import OrderedDict
 from collections import defaultdict
 from threading import Lock
+import simplejson as json
 
 import numpy as np
 import scipy
@@ -68,11 +69,15 @@ class Journal(object):
 
     @cached_property
     def title(self):
-        return self.my_scenario_data_row.get("title", "Unknown Title")
+        if self._ricks_journal_row:
+            return self._ricks_journal_row["title"]
+        return "Unknown Title"
+
 
     @cached_property
     def subject(self):
         return self.my_scenario_data_row.get("subject", "")
+
 
     @property
     def era_subjects(self):
@@ -80,7 +85,21 @@ class Journal(object):
 
     @cached_property
     def publisher(self):
-        return self.my_scenario_data_row.get("publisher", "")
+        if self._ricks_journal_row:
+            return self._ricks_journal_row["publisher"]
+        return "Unknown Publisher"
+
+    @cached_property
+    def _ricks_journal_row(self):
+        from scenario import get_ricks_journal_rows
+        row = get_ricks_journal_rows()[self.issn_l]
+        return row
+
+    @cached_property
+    def issns(self):
+        if self._ricks_journal_row:
+            return json.loads(self._ricks_journal_row["issns"])
+        return []
 
     @cached_property
     def cost_subscription_2018(self):
@@ -1360,6 +1379,7 @@ class Journal(object):
         response["meta"] = {"issn_l": self.issn_l,
                     "title": self.title,
                     "subject": self.subject,
+                    "issns": u",".join(self.issns),
                     "era_subjects": self.era_subjects,
                     "subscribed": self.subscribed}
         table_row = OrderedDict()
@@ -1442,6 +1462,7 @@ class Journal(object):
         table_row["issn_l"] = self.issn_l
         table_row["title"] = self.title
         table_row["subject"] = self.subject
+        table_row["issns"] = self.issns
         table_row["era_subjects"] = self.era_subjects
         table_row["subscribed"] = self.subscribed
         table_row["is_society_journal"] = self.is_society_journal
