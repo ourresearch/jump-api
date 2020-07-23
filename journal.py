@@ -5,6 +5,7 @@ import weakref
 from collections import OrderedDict
 from collections import defaultdict
 from threading import Lock
+import simplejson as json
 
 import numpy as np
 import scipy
@@ -68,11 +69,15 @@ class Journal(object):
 
     @cached_property
     def title(self):
-        return self.my_scenario_data_row.get("title", "Unknown Title")
+        if self._ricks_journal_row:
+            return self._ricks_journal_row["title"]
+        return "Unknown Title"
+
 
     @cached_property
     def subject(self):
         return self.my_scenario_data_row.get("subject", "")
+
 
     @property
     def era_subjects(self):
@@ -80,7 +85,24 @@ class Journal(object):
 
     @cached_property
     def publisher(self):
-        return self.my_scenario_data_row.get("publisher", "")
+        if self._ricks_journal_row:
+            return self._ricks_journal_row["publisher"]
+        return "Unknown Publisher"
+
+    @cached_property
+    def _ricks_journal_row(self):
+        from scenario import get_ricks_journal_rows
+        row = get_ricks_journal_rows()[self.issn_l]
+        return row
+
+    @cached_property
+    def issns(self):
+        if self._ricks_journal_row:
+            try:
+                return json.loads(self._ricks_journal_row["issns"])
+            except:
+                return self._ricks_journal_row["issns"]
+        return []
 
     @cached_property
     def institution_name(self):
@@ -415,13 +437,17 @@ class Journal(object):
         response = []
         for year in self.year_by_perpetual_access_years:
             working_date = datetime.datetime(year, 1, 2).isoformat()  # use January 2nd
-
-            # ugly.  working around whether cached or not cached
             try:
-                in_range = working_date > start_date and working_date < end_date
-            except (AttributeError, TypeError):
-                # print "start_date", start_date, "end_date", end_date, "working_date", working_date
-                in_range = working_date > start_date.isoformat() and working_date < end_date.isoformat()
+                start_date = start_date.isoformat()
+            except:
+                pass
+
+            try:
+                end_date = end_date.isoformat()
+            except:
+                pass
+
+            in_range = working_date > start_date and working_date < end_date
 
             if in_range:
                 # print year, "yes", data_dict[self.issn_l]
@@ -1398,6 +1424,7 @@ class Journal(object):
                     "title": self.title,
                     "subject": self.subject,
                     "era_subjects": self.era_subjects,
+                    "issns": u",".join(self.issns),
                     "subscribed": self.subscribed}
         table_row = OrderedDict()
 
@@ -1449,6 +1476,7 @@ class Journal(object):
         table_row["issn_l"] = self.issn_l
         table_row["title"] = self.title
         table_row["subject"] = self.subject
+        table_row["issns"] = self.issns
         table_row["era_subjects"] = self.era_subjects
         table_row["subscribed"] = self.subscribed
         table_row["is_society_journal"] = self.is_society_journal
