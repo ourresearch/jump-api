@@ -947,6 +947,7 @@ def new_publisher():
                 where package_id = '{}' and issn_l in (select issn_l from ricks_journal rj where {}))
         """.format(new_package.package_id, new_package.publisher_where)
     # print "q", q
+    # .replace("%", "%%")
     db.session.execute(q)
 
     safe_commit(db)
