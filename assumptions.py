@@ -18,8 +18,8 @@ class Assumptions(object):
         self.include_submitted_version = True
         self.include_social_networks = True
         self.include_backfile = True
-        self.consortium_name = None
-        self.min_bundle_size = True
+        # self.consortium_name = None  # for consortium?
+        # self.min_bundle_size = True
 
         if http_request_args:
             if "configs" in http_request_args:

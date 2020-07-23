@@ -31,20 +31,20 @@ from util import read_csv_file
 
 # configuration here
 
-institution_name = u"University of Kentucky"
+institution_name = u"University of Test"
 
 
 institution_rows = [{
     "institution_name": institution_name,
-    "username": u"uky",
-    "ror_id": "02k3smh20"
+    "username": u"boo",
+    "ror_id": "xxx"
 }]
 
 user_rows = [
     {
         'email': None,
         'name': None,
-        "email_and_name": u"Jennifer Montavon-Green <jen.montavon-green@uky.edu>",
+        "email_and_name": u"Me <here>",
         'password': u'',
         'institution_name': institution_name,
         'permissions': [u'view', u'modify', u'admin', ]  # default is view, modify, admin
