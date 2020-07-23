@@ -1243,8 +1243,8 @@ def scenario_id_journals_get(scenario_id):
 
     print "after get saved scenario", elapsed(start_time)
 
-    # if False:
-    if "consortium_name" in saved_row["configs"].keys() or "min_bundle_size" in saved_row["configs"].keys():
+    if False:
+    # if "consortium_name" in saved_row["configs"].keys() or "min_bundle_size" in saved_row["configs"].keys():
         # team+dev@ourresearch.org
         consortium_name = saved_row["configs"].get("consortium_name", None)
         min_bundle_size = int(saved_row["configs"].get("min_bundle_size", None))
