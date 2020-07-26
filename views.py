@@ -35,6 +35,7 @@ import functools
 import hashlib
 import pickle
 import tempfile
+from collections import OrderedDict
 
 import ror_search
 import password_reset
@@ -147,7 +148,9 @@ def authenticate_for_publisher(publisher_id, required_permission):
             abort_json(400, u'Publisher is not owned by any institution.')
 
         if not auth_user.has_permission(package.institution.id, required_permission):
-            consortium_package = Package.query.get(package.consortium_package_id)
+            consortium_package = None
+            if package.consortium_package_id:
+                consortium_package = Package.query.get(package.consortium_package_id)
 
             if not consortium_package:
                 abort_json(403, u"Missing required permission '{}' for institution {}.".format(
@@ -243,12 +246,42 @@ def base_endpoint():
 
 @app.route('/scenario/<scenario_id>/journal/<issn_l>', methods=['GET'])
 @jwt_optional
-# @my_memcached.cached(timeout=7*24*60*60)
 def jump_scenario_issn_get(scenario_id, issn_l):
     my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
     scenario = my_saved_scenario.live_scenario
-    my_journal = scenario.get_journal(issn_l)
-    return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
+
+    if scenario_id == "scenario-qQHgEKmD":
+        consortium_name = "crkn"
+        institution_journal_dicts = consortium_get_stored_data(consortium_name)
+        this_journal_dicts = [d for d in institution_journal_dicts if d["issn_l"]==issn_l]
+        response = {}
+        response["_settings"] = scenario.settings.to_dict()
+        response["journal"] = {}
+        response["institutions"] = []
+
+        sum_of_usage = float(sum(j["usage"] for j in this_journal_dicts))
+        my_dict["num_issn_l"] = len(this_journal_dicts)
+        my_dict["cost_subscription"] = round(sum(j["cost_subscription"] for j in this_journal_dicts if j["ncppu"] != "-"))
+        my_dict["cost_ill"] = round(sum(j["cost_ill"] for j in this_journal_dicts if j["ncppu"] != "-"))
+        my_dict["usage"] = round(sum_of_usage)
+
+        for j in this_journal_dicts:
+
+            my_dict = OrderedDict()
+
+            # written more than once
+            my_dict["package_id"] = institution_package_id
+            my_dict["institution_name"] = journal_list[0]["institution_name"]
+
+            # aggregaations across journals
+
+            response["institutions"].append(my_dict)
+        return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": response})
+
+    else:
+        my_journal = scenario.get_journal(issn_l)
+        return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
+
 
 @app.route('/live/data/common/<package_id>', methods=['GET'])
 def jump_data_package_id_get(package_id):
@@ -261,6 +294,29 @@ def jump_data_package_id_get(package_id):
 
     response = jsonify_fast_no_sort(response)
     response.headers["Cache-Tag"] = u",".join(["common", u"package_{}".format(package_id)])
+    return response
+
+@app.route('/live/data/consortium/<consortium_name>', methods=['GET'])
+def jump_data_consortium_get(consortium_name):
+    if not is_authorized_superuser():
+        abort_json(500, "Secret doesn't match, not getting package")
+
+    from scenario import get_consortium_package_data
+    response = get_consortium_package_data(consortium_name)
+
+    response = jsonify_fast_no_sort(response)
+    return response
+
+
+@app.route('/live/data/consortium/common', methods=['GET'])
+def jump_data_consortium_common_get():
+    if not is_authorized_superuser():
+        abort_json(500, "Secret doesn't match, not getting package")
+
+    from scenario import get_consortium_package_data_common
+    response = get_consortium_package_data_common()
+
+    response = jsonify_fast_no_sort(response)
     return response
 
 
@@ -648,6 +704,7 @@ def user_permissions():
 @app.route('/institution/<institution_id>', methods=['POST', 'GET'])
 @jwt_optional
 def institution(institution_id):
+
     inst = Institution.query.get(institution_id)
     if not inst:
         return abort_json(404, u'Institution does not exist.')
@@ -827,9 +884,6 @@ def get_publisher(publisher_id):
     publisher_dict = package.to_publisher_dict()
     response = jsonify_fast_no_sort(publisher_dict)
 
-    cache_tags_list = ["package", u"package_{}".format(package.package_id)]
-    cache_tags_list += ["scenario_{}".format(s.scenario_id) for s in package.unique_saved_scenarios]
-    response.headers["Cache-Tag"] = u",".join(cache_tags_list)
     return response
 
 
@@ -924,6 +978,7 @@ def new_publisher():
                 where package_id = '{}' and issn_l in (select issn_l from ricks_journal rj where {}))
         """.format(new_package.package_id, new_package.publisher_where)
     # print "q", q
+    # .replace("%", "%%")
     db.session.execute(q)
 
     safe_commit(db)
@@ -1179,11 +1234,8 @@ def subscriptions_scenario_id_post(scenario_id):
 
 
 
-
 @app.route('/scenario/<scenario_id>', methods=['GET'])
 @jwt_optional
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
-# @my_memcached.cached(timeout=7*24*60*60)
 def live_scenario_id_get(scenario_id):
     my_timing = TimingMessages()
     my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
@@ -1192,9 +1244,6 @@ def live_scenario_id_get(scenario_id):
     my_timing.log_timing("after to_dict()")
     response["_timing"] = my_timing.to_dict()
     response = jsonify_fast(response)
-    cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
-    # print "cache_tags for /scenario", cache_tags_list
-    response.headers["Cache-Tag"] = u",".join(cache_tags_list)
     return response
 
 
@@ -1205,7 +1254,6 @@ def ror_autocomplete(query):
 
 @app.route('/scenario/<scenario_id>/summary', methods=['GET'])
 @jwt_optional
-# @my_memcached.cached(timeout=7*24*60*60)
 def scenario_id_summary_get(scenario_id):
     my_timing = TimingMessages()
     my_saved_scenario = get_saved_scenario(scenario_id)
@@ -1213,16 +1261,166 @@ def scenario_id_summary_get(scenario_id):
     my_timing.log_timing("after to_dict()")
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_summary())
 
+
 @app.route('/scenario/<scenario_id>/journals', methods=['GET'])
 @jwt_optional
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 def scenario_id_journals_get(scenario_id):
-    my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
-    response = jsonify_fast_no_sort(my_saved_scenario.to_dict_journals())
-    cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
-    response.headers["Cache-Tag"] = u",".join(cache_tags_list)
+    start_time = time()
+
+    from saved_scenario import get_latest_scenario_raw
+    start_time = time()
+    saved_row = get_latest_scenario_raw(scenario_id)
+    print "\n\n\n query get get_latest_scenario_raw", elapsed(start_time)
+
+    print "after get saved scenario", elapsed(start_time)
+
+    if scenario_id == "scenario-qQHgEKmD":
+    # if "consortium_name" in saved_row["configs"].keys() or "min_bundle_size" in saved_row["configs"].keys():
+        # team+dev@ourresearch.org
+        # consortium_name = saved_row["configs"].get("consortium_name", None)
+        # min_bundle_size = int(saved_row["configs"].get("min_bundle_size", None))
+        consortium_name = "crkn"
+        min_bundle_size = 80
+        my_saved_scenario_dict = OrderedDict()
+        my_saved_scenario_dict["meta"] = {'publisher_name': u'Elsevier',
+                                          'institution_name': u'CRKN',
+                                          'scenario_id': scenario_id,
+                                          'institution_id': u'institution-cXyvCqwaeDC3',
+                                          'scenario_created': datetime.datetime(2020, 7, 18, 17, 12, 40, 335615),
+                                          'is_base_scenario': False,
+                                          'scenario_name': u'First Scenario',
+                                          'publisher_id': u'package-4vNfVUrSir6w'}
+
+        my_saved_scenario_dict["saved"] = saved_row
+
+        my_saved_scenario_dict["journals"] = consortium_get_journals(consortium_name, min_bundle_size)
+    else:
+        my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
+        my_saved_scenario_dict = my_saved_scenario.to_dict_journals()
+
+    response = jsonify_fast_no_sort(my_saved_scenario_dict)
     return response
 
+
+
+def consortium_get_stored_data(consortium_name=None):
+    start_time = time()
+
+    if not consortium_name:
+        consortium_name = "purdue"
+
+    command = """select * from jump_scenario_computed where scenario_id='{}'""".format(consortium_name)
+    start_time = time()
+    journal_dicts_by_issn_l = defaultdict(list)
+
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+
+    print "after db get", elapsed(start_time)
+    return rows
+
+
+def consortium_get_journals(consortium_name=None, min_bundle_size=None):
+    response_list = []
+
+    if not min_bundle_size:
+        min_bundle_size = 3
+
+    start_time = time()
+    institution_journal_dicts = consortium_get_stored_data(consortium_name)
+    journal_dicts_by_issn_l = defaultdict(list)
+    for row in institution_journal_dicts:
+        journal_dicts_by_issn_l[row["issn_l"]].append(json.loads(row["journals_dict"]))
+
+    # consortium_name = "crkn"
+    # min_bundle_size = 50
+
+    for issn_l, journal_list in journal_dicts_by_issn_l.iteritems():
+
+        sorted_journal_dicts = sorted(journal_list, key=lambda x: x["ncppu"], reverse=False)
+        sorted_journal_dicts = [j for j in sorted_journal_dicts if j["ncppu"] and j["usage"] >= 10]
+
+        if sorted_journal_dicts:
+            if min_bundle_size == 1:
+                min_bundle_size = 0  # use code below for all
+            else:
+                list_this_long = sorted_journal_dicts[:min_bundle_size]
+                sum_of_usage = float(sum(j["usage"] for j in list_this_long))
+                for j in list_this_long:
+                    if j["ncppu"] and j["usage"] and (isinstance(j["ncppu"], int) or isinstance(j["ncppu"], float)):
+                        j["ncppu_combo_by_usage"] = j["ncppu"] * j["usage"] / sum_of_usage
+                    elif (isinstance(j["ncppu"], int) or isinstance(j["ncppu"], float)):
+                        j["ncppu_combo_by_usage"] = j["ncppu"]
+                    else:
+                        j["ncppu_combo_by_usage"] = "-"
+                if sum_of_usage < 10:
+                    j["ncppu_combo_by_usage"] = "-"
+
+                # institution_names = u", ".join([j.get("institution_short_name", j["institution_name"]) for j in list_this_long])
+                institution_names_string = u", ".join([j.get("institution_name") for j in list_this_long])
+                package_ids = u", ".join([j["package_id"] for j in list_this_long])
+                normalized_cpu = sum(j["ncppu_combo_by_usage"] for j in list_this_long if j["ncppu_combo_by_usage"] != "-")
+                my_journal_dict = sorted_journal_dicts[0]
+                my_journal_dict["ncppu"] = normalized_cpu
+                my_journal_dict["usage"] = round(sum_of_usage)
+                my_journal_dict["cost"] = sum(j["cost"] for j in list_this_long if j["ncppu_combo_by_usage"] != "-")
+                my_journal_dict["cost_subscription"] = sum(j["cost_subscription"] for j in list_this_long if j["ncppu_combo_by_usage"] != "-")
+                my_journal_dict["cost_ill"] = sum(j["cost_ill"] for j in list_this_long if j["ncppu_combo_by_usage"] != "-")
+                my_journal_dict["institution_names"] = [j.get("institution_name") for j in list_this_long]
+                # my_journal_dict["title"] += u" [#1-{}: {}]".format(len(list_this_long), institution_names)
+                # my_journal_dict["issn_l"] += u"-[{}]".format(package_ids)
+                response_list.append(my_journal_dict)
+
+            # for i, my_journal_dict in enumerate(sorted_journal_dicts[min_bundle_size:]):
+            #     my_journal_dict["title"] += u" [#{}: {}]".format(i+min_bundle_size+1, my_journal_dict.get("institution_short_name", my_journal_dict["institution_name"]))
+            #     my_journal_dict["issn_l"] += u"-[{}]".format(my_journal_dict["package_id"])
+            #     response_list.append(my_journal_dict)
+
+    print "after loop", elapsed(start_time)
+
+    response_list = sorted(response_list, key=lambda x: x.get("ncppu", None), reverse=False)
+    for rank, my_journal_dict in enumerate(response_list):
+        my_journal_dict["ncppu_rank"] = rank + 1
+
+    return response_list
+
+@app.route('/scenario/<scenario_id>/institutions', methods=['GET'])
+@jwt_optional
+def scenario_institutions_get(scenario_id):
+    consortium_name = "crkn"
+
+    start_time = time()
+    institution_journal_dicts = consortium_get_stored_data(consortium_name)
+    journal_dicts_by_package_id = defaultdict(list)
+    for row in institution_journal_dicts:
+        journal_dicts_by_package_id[row["package_id"]].append(json.loads(row["journals_dict"]))
+
+    response_list = []
+
+    for institution_package_id, journal_list in journal_dicts_by_package_id.iteritems():
+
+        sum_of_usage = float(sum(j["usage"] for j in journal_list))
+
+        my_journal_dict = OrderedDict()
+
+        # written more than once
+        my_journal_dict["package_id"] = institution_package_id
+        my_journal_dict["institution_name"] = journal_list[0]["institution_name"]
+
+        # aggregaations across journals
+        my_journal_dict["num_issn_l"] = len(journal_list)
+        my_journal_dict["cost_subscription"] = round(sum(j["cost_subscription"] for j in journal_list if j["ncppu"] != "-"))
+        my_journal_dict["cost_ill"] = round(sum(j["cost_ill"] for j in journal_list if j["ncppu"] != "-"))
+        my_journal_dict["usage"] = round(sum_of_usage)
+
+        response_list.append(my_journal_dict)
+
+    print "after loop", elapsed(start_time)
+
+    response_list = sorted(response_list, key=lambda x: x.get("usage", None), reverse=True)
+
+    return jsonify_fast_no_sort(response_list)
 
 
 @app.route('/scenario/<scenario_id>/raw', methods=['GET'])
@@ -1238,38 +1436,32 @@ def check_authorized():
 
 @app.route('/scenario/<scenario_id>/details', methods=['GET'])
 @jwt_optional
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
-# @my_memcached.cached(timeout=7*24*60*60)
 def scenario_id_details_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_details())
 
 
 
-@app.route('/scenario/<scenario_id>/table', methods=['GET'])
-@jwt_optional
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
-# @my_memcached.cached(timeout=7*24*60*60)
-def live_scenario_id_table_get(scenario_id):
-    my_saved_scenario = get_saved_scenario(scenario_id)
-    response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table())
-    cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
-    response.headers["Cache-Tag"] = u",".join(cache_tags_list)
-    return response
+# @app.route('/scenario/<scenario_id>/table', methods=['GET'])
+# @jwt_optional
+# def live_scenario_id_table_get(scenario_id):
+#     my_saved_scenario = get_saved_scenario(scenario_id)
+#     response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table())
+#     return response
 
 
 
-@app.route('/scenario/<scenario_id>/slider', methods=['GET'])
-@jwt_optional
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
-# @my_memcached.cached(timeout=7*24*60*60)
-def live_scenario_id_slider_get(scenario_id):
-
-    my_saved_scenario = get_saved_scenario(scenario_id)
-    response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
-    cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
-    response.headers["Cache-Tag"] = u",".join(cache_tags_list)
-    return response
+# @app.route('/scenario/<scenario_id>/slider', methods=['GET'])
+# @jwt_optional
+# # @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
+# # @my_memcached.cached(timeout=7*24*60*60)
+# def live_scenario_id_slider_get(scenario_id):
+#
+#     my_saved_scenario = get_saved_scenario(scenario_id)
+#     response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
+#     cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
+#     response.headers["Cache-Tag"] = u",".join(cache_tags_list)
+#     return response
 
 
 @app.route('/package/<package_id>/apc', methods=['GET'])
@@ -1324,15 +1516,13 @@ def live_publisher_id_apc_get(publisher_id):
 def live_scenario_id_apc_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
     response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_apc())
-    cache_tags_list = ["apc", u"package_{}".format(my_saved_scenario.package_id)]
-    response.headers["Cache-Tag"] = u",".join(cache_tags_list)
     return response
 
-@app.route('/scenario/<scenario_id>/report', methods=['GET'])
-@jwt_required
-def scenario_id_report_get(scenario_id):
-    my_saved_scenario = get_saved_scenario(scenario_id)
-    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_report())
+# @app.route('/scenario/<scenario_id>/report', methods=['GET'])
+# @jwt_required
+# def scenario_id_report_get(scenario_id):
+#     my_saved_scenario = get_saved_scenario(scenario_id)
+#     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_report())
 
 
 def export_get(my_saved_scenario):
@@ -1579,11 +1769,11 @@ def jump_debug_table_get():
     my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table(5000))
 
-@app.route('/debug/scenario/slider', methods=['GET'])
-def jump_debug_slider_get():
-    scenario_id = "demo-debug"
-    my_saved_scenario = get_saved_scenario(scenario_id)
-    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
+# @app.route('/debug/scenario/slider', methods=['GET'])
+# def jump_debug_slider_get():
+#     scenario_id = "demo-debug"
+#     my_saved_scenario = get_saved_scenario(scenario_id)
+#     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
 
 @app.route('/debug/scenario/apc', methods=['GET'])
 def jump_debug_apc_get():

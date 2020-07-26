@@ -45,7 +45,7 @@ class Package(db.Model):
     is_deleted = db.Column(db.Boolean)
 
     saved_scenarios = db.relationship('SavedScenario', lazy='subquery', backref=db.backref("package", lazy="subquery"))
-    institution = db.relationship('Institution', uselist=False)
+    institution = db.relationship('Institution', lazy='subquery', uselist=False)
 
     def __init__(self, **kwargs):
         self.created = datetime.datetime.utcnow().isoformat()
@@ -74,6 +74,7 @@ class Package(db.Model):
 
     @property
     def has_custom_perpetual_access(self):
+        # perpetual_access_rows = get_perpetual_access_from_cache([self.package_id])
         perpetual_access_rows = get_perpetual_access_from_cache(self.package_id)
         if perpetual_access_rows:
             return True
@@ -231,7 +232,7 @@ class Package(db.Model):
         if not my_saved_scenario:
             my_saved_scenario = SavedScenario.query.get("demo")
         my_saved_scenario.set_live_scenario(None)
-        response = my_saved_scenario.live_scenario.to_dict_slider()
+        response = my_saved_scenario.to_dict_journals()
         rows = response["journals"]
         return self.filter_by_core_list(rows)
 
@@ -398,6 +399,7 @@ class Package(db.Model):
         counter_rows = dict((x['issn_l'], x) for x in self.get_unfiltered_counter_rows)
         counter_defaults = defaultdict(lambda: defaultdict(lambda: None), counter_rows)
 
+        # pa_rows = get_perpetual_access_from_cache([self.package_id])
         pa_rows = get_perpetual_access_from_cache(self.package_id)
         pa_defaults = defaultdict(lambda: defaultdict(lambda: None), pa_rows)
 

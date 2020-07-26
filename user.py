@@ -22,7 +22,7 @@ class User(db.Model):
     is_demo_user = db.Column(db.Boolean)
     email = db.Column(db.Text, unique=True)
 
-    permissions = relationship(UserInstitutionPermission)
+    permissions = relationship(UserInstitutionPermission, lazy='subquery')
 
     def __init__(self, **kwargs):
         self.id = u'user-{}'.format(shortuuid.uuid()[0:12])
