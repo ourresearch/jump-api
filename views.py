@@ -251,33 +251,33 @@ def jump_scenario_issn_get(scenario_id, issn_l):
     scenario = my_saved_scenario.live_scenario
 
     if scenario_id == "scenario-qQHgEKmD":
-        consortium_name = "crkn"
-        institution_journal_dicts = consortium_get_stored_data(consortium_name)
-        this_journal_dicts = [d for d in institution_journal_dicts if d["issn_l"]==issn_l]
-        response = {}
-        response["_settings"] = scenario.settings.to_dict()
-        response["journal"] = {}
-        response["institutions"] = []
-
-        sum_of_usage = float(sum(j["usage"] for j in this_journal_dicts))
-        my_dict["num_issn_l"] = len(this_journal_dicts)
-        my_dict["cost_subscription"] = round(sum(j["cost_subscription"] for j in this_journal_dicts if j["ncppu"] != "-"))
-        my_dict["cost_ill"] = round(sum(j["cost_ill"] for j in this_journal_dicts if j["ncppu"] != "-"))
-        my_dict["usage"] = round(sum_of_usage)
-
-        for j in this_journal_dicts:
-
-            my_dict = OrderedDict()
-
-            # written more than once
-            my_dict["package_id"] = institution_package_id
-            my_dict["institution_name"] = journal_list[0]["institution_name"]
-
-            # aggregaations across journals
-
-            response["institutions"].append(my_dict)
-        return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": response})
-
+        # consortium_name = "crkn"
+        # institution_journal_dicts = consortium_get_stored_data(consortium_name)
+        # this_journal_dicts = [d for d in institution_journal_dicts if d["issn_l"]==issn_l]
+        # response = {}
+        # response["_settings"] = scenario.settings.to_dict()
+        # response["journal"] = {}
+        # response["institutions"] = []
+        #
+        # sum_of_usage = float(sum(j["usage"] for j in this_journal_dicts))
+        # my_dict["num_issn_l"] = len(this_journal_dicts)
+        # my_dict["cost_subscription"] = round(sum(j["cost_subscription"] for j in this_journal_dicts if j["ncppu"] != "-"))
+        # my_dict["cost_ill"] = round(sum(j["cost_ill"] for j in this_journal_dicts if j["ncppu"] != "-"))
+        # my_dict["usage"] = round(sum_of_usage)
+        #
+        # for j in this_journal_dicts:
+        #
+        #     my_dict = OrderedDict()
+        #
+        #     # written more than once
+        #     my_dict["package_id"] = institution_package_id
+        #     my_dict["institution_name"] = journal_list[0]["institution_name"]
+        #
+        #     # aggregaations across journals
+        #
+        #     response["institutions"].append(my_dict)
+        # return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": response})
+        return abort_json(505, "not here yet sorry heather")
     else:
         my_journal = scenario.get_journal(issn_l)
         return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
