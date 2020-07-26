@@ -27,9 +27,7 @@ class Institution(db.Model):
     def user_permissions(self):
         user_ids = db.session.query(UserInstitutionPermission.user_id).filter(
             UserInstitutionPermission.institution_id == self.id).distinct()
-
         users = User.query.filter(User.id.in_(user_ids)).all()
-
         return [u.permissions_dict()[self.id] for u in users]
 
     def to_dict(self):
@@ -39,6 +37,7 @@ class Institution(db.Model):
             'ror_ids': [r.ror_id for r in self.ror_ids],
             'name': self.display_name,
             'is_demo': self.is_demo_institution,
+            'is_consortium': self.is_consortium,
             'user_permissions': self.user_permissions(),
             'publishers': [p.to_dict_micro() for p in self.packages],
         }
