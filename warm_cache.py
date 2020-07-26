@@ -45,6 +45,7 @@ def warm_the_cache():
     get_oa_recent_data_from_db()
     print u" finished get_oa_recent_data_from_db in {}".format(elapsed(start_time))
     start_time = time()
+    print u"done warming the cache!"
 
 
 

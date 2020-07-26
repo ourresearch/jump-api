@@ -1027,7 +1027,7 @@ def get_unpaywall_downloads_from_db():
 
 @cache
 def get_num_papers_from_db():
-    command = "select issn_l, year, num_papers from jump_num_papers_view"
+    command = "select issn_l, year, num_papers from jump_num_papers"
     with get_db_cursor() as cursor:
         cursor.execute(command)
         rows = cursor.fetchall()
