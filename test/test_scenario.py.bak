@@ -43,7 +43,7 @@ class MyTest(unittest.TestCase):
         self.scenario_id = "demo-debug"
         self.my_saved_scenario = get_saved_scenario(self.scenario_id, test_mode=True)
         self.live_scenario = self.my_saved_scenario.live_scenario
-        self.slider_dict = self.my_saved_scenario.live_scenario.to_dict_slider()
+        self.slider_dict = self.my_saved_scenario.live_scenario.to_dict_journals()
         self.table_dict = self.my_saved_scenario.live_scenario.to_dict_table()
         self.table_headers = self.table_dict["headers"]
         self.slider_journals = self.slider_dict["journals"]
