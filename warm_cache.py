@@ -15,8 +15,6 @@ from scenario import get_social_networks_data_from_db
 from scenario import get_num_papers_from_db
 from scenario import get_oa_recent_data_from_db
 
-from institution import Institution
-from package import Package
 from util import elapsed
 
 
