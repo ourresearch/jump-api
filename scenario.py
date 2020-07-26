@@ -11,6 +11,8 @@ import pickle
 import requests
 import os
 from sqlalchemy.sql import text
+from random import random
+from time import sleep
 
 from app import use_groups
 from app import get_db_cursor
@@ -1221,6 +1223,7 @@ def get_oa_adjustment_data_from_db():
 
 
 if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
+    sleep(random() * 5)  # sleep up to five seconds
     from warm_cache import warm_the_cache
     warm_the_cache()
 
