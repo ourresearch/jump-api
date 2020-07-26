@@ -1221,32 +1221,8 @@ def get_oa_adjustment_data_from_db():
 
 
 if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
-    start_time = time()
-    _load_ricks_journal_rows()
-    print u" finished _load_ricks_journal_rows in {}".format(elapsed(start_time))
-    start_time = time()
-    _load_hybrid_2019_from_db()
-    print u" finished _load_hybrid_2019_from_db in {}".format(elapsed(start_time))
-    start_time = time()
-    _load_journal_era_subjects_from_db()
-    print u" finished _load_journal_era_subjects_from_db in {}".format(elapsed(start_time))
-    start_time = time()
-    get_oa_data_from_db()
-    print u" finished get_oa_data_from_db in {}".format(elapsed(start_time))
-    start_time = time()
-    get_society_data_from_db()
-    print u" finished get_society_data_from_db in {}".format(elapsed(start_time))
-    start_time = time()
-    get_social_networks_data_from_db()
-    print u" finished get_social_networks_data_from_db in {}".format(elapsed(start_time))
-    start_time = time()
-    get_num_papers_from_db()
-    print u" finished get_num_papers_from_db in {}".format(elapsed(start_time))
-    start_time = time()
-    get_oa_recent_data_from_db()
-    print u" finished get_oa_recent_data_from_db in {}".format(elapsed(start_time))
-    start_time = time()
-
+    from warm_cache import warm_the_cache
+    warm_the_cache()
 
 @cache
 def get_common_package_data(package_id):
