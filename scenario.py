@@ -1188,9 +1188,17 @@ def _journal_price_cache_key(package_id, publisher_name):
 
 def refresh_cached_prices_from_db(package_id, publisher_name):
     package_dict = {}
-    command = text(
-        u'select issn_l, usa_usd from jump_journal_prices where package_id = :package_id and publisher = :publisher_name'
-    ).bindparams(package_id=package_id, publisher_name=publisher_name)
+    publisher_where = ""
+    if publisher_name == "Elsevier":
+        publisher_where = "(publisher ilike '%elsevier%')"
+    elif publisher_name == "Wiley":
+        publisher_where = "(publisher ilike '%wiley%')"
+    elif publisher_name == "SpringerNature":
+        publisher_where = "((publisher ilike '%springer%') or (publisher ilike '%nature%'))"
+    else:
+        return 'false'
+
+    command = text(u"select issn_l, usa_usd from jump_journal_prices where package_id = '{}' and '{}'").format(package_id, publisher_where)
 
     rows = db.engine.execute(command).fetchall()
 
