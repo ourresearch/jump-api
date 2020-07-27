@@ -5,6 +5,7 @@ both its appearance and its underlying data.
 This means you will often see changes in the UI/UX, and sometimes in the presented data.  
 Most of these changes are too small to note, but we'll keep a record of the larger ones here:
 
+- 2020/07/27 Allow fuzzy publisher matching for custom prices (some custom prices may be applied that were skipped before)
 - 2020/07/23 Update publishers for about 25 journals that recently moved to Elsevier and Wiley (will make them show up in some scenarios for the first time)
 - 2020/07/23 Merge 'Journal of Applied Corporate Finance' which will make them show up in some scenarios for the first time
 - 2020/07/12 Rename a few columns in export (documented in Knowledge Base)
