@@ -1198,7 +1198,7 @@ def refresh_cached_prices_from_db(package_id, publisher_name):
     else:
         return 'false'
 
-    command = u"select issn_l, usa_usd from jump_journal_prices where package_id = '{}' and {}".format(package_id, publisher_where)
+    command = text(u"select issn_l, usa_usd from jump_journal_prices where package_id = '{}' and {}".format(package_id, publisher_where))
 
     rows = db.engine.execute(command).fetchall()
 
