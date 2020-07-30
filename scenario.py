@@ -44,30 +44,25 @@ def get_clean_package_id(http_request_args):
 
 def get_fresh_journal_list(scenario, my_jwt):
 
-    if scenario.is_consortium:
-        my_consortium = Consortium(scenario.package_id, my_jwt)
-        journals = my_consortium.journals
+    from package import Package
+    my_package = Package.query.filter(Package.package_id == scenario.package_id).scalar()
+
+    journals_to_exclude = ["0370-2693"]
+    issn_ls = scenario.data["unpaywall_downloads_dict"].keys()
+    issnls_to_build = [issn_l for issn_l in issn_ls if issn_l not in journals_to_exclude]
+
+    # only include things in the counter file
+    if my_package.is_demo:
+        issnls_to_build = [issn_l for issn_l in issn_ls if issn_l in scenario.data[DEMO_PACKAGE_ID]["counter_dict"].keys()]
+        package_id = DEMO_PACKAGE_ID
     else:
-        from package import Package
-        my_package = Package.query.filter(Package.package_id == scenario.package_id).scalar()
+        issnls_to_build = [issn_l for issn_l in issn_ls if issn_l in scenario.data[scenario.package_id_for_db]["counter_dict"].keys()]
+        package_id = scenario.package_id
 
-        journals_to_exclude = ["0370-2693"]
-        issn_ls = scenario.data["unpaywall_downloads_dict"].keys()
-        issnls_to_build = [issn_l for issn_l in issn_ls if issn_l not in journals_to_exclude]
-
-        # only include things in the counter file
-        if my_package.is_demo:
-            issnls_to_build = [issn_l for issn_l in issn_ls if issn_l in scenario.data[DEMO_PACKAGE_ID]["counter_dict"].keys()]
-            package_id = DEMO_PACKAGE_ID
-        else:
-            issnls_to_build = [issn_l for issn_l in issn_ls if issn_l in scenario.data[scenario.package_id_for_db]["counter_dict"].keys()]
-            package_id = scenario.package_id
-
-        journals = [Journal(issn_l, package_id=package_id) for issn_l in issnls_to_build]
+    journals = [Journal(issn_l, package_id=package_id) for issn_l in issnls_to_build]
 
     for my_journal in journals:
         my_journal.set_scenario(scenario)
-
 
     return journals
 
@@ -1198,9 +1193,10 @@ def refresh_cached_prices_from_db(package_id, publisher_name):
     else:
         return 'false'
 
-    command = text(u"select issn_l, usa_usd from jump_journal_prices where package_id = '{}' and {}".format(package_id, publisher_where))
-
-    rows = db.engine.execute(command).fetchall()
+    command = u"select issn_l, usa_usd from jump_journal_prices where package_id = '{}' and {}".format(package_id, publisher_where)
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
 
     for row in rows:
         package_dict[row["issn_l"]] = row["usa_usd"]
@@ -1216,7 +1212,7 @@ def get_prices_from_cache(package_ids, publisher_name=None):
 
     for package_id in package_ids:
         # temp
-        # refresh_cached_prices_from_db(package_id, publisher_name)
+        refresh_cached_prices_from_db(package_id, publisher_name)
 
         memcached_key = _journal_price_cache_key(package_id, publisher_name)
         package_dict = my_memcached.get(memcached_key) or refresh_cached_prices_from_db(package_id, publisher_name)
@@ -1458,15 +1454,15 @@ def get_common_package_data(package_id):
 
     # package_id specific
     my_data = {}
-    org_package_ids = get_consortium_package_ids(package_id)
-    if org_package_ids:
-        my_data["org_package_ids"] = org_package_ids
+    member_package_ids = get_consortium_package_ids(package_id)
+    if member_package_ids:
+        my_data["member_package_ids"] = member_package_ids
     else:
-        my_data["org_package_ids"] = [package_id]
+        my_data["member_package_ids"] = [package_id]
     my_timing.log_timing("get_consortium_package_ids")
 
-    for org_package_id in my_data["org_package_ids"]:
-        my_data[org_package_id] = get_package_specific_scenario_data_from_db(org_package_id)
+    for member_package_id in my_data["member_package_ids"]:
+        my_data[member_package_id] = get_package_specific_scenario_data_from_db(member_package_id)
         my_timing.log_timing("get_package_specific_scenario_data_from_db")
 
     my_data["apc"] = get_apc_data_from_db(package_id)  # gets everything from consortium itself

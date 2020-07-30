@@ -161,7 +161,7 @@ class TestPackage(ResponseTest):
             'type': 'object',
 
             'required': [
-                'org_package_ids',
+                'member_package_ids',
                 'apc',
                 'core_list',
                 'embargo_dict',
@@ -176,7 +176,7 @@ class TestPackage(ResponseTest):
             'additionalProperties': True,
 
             'properties': {
-                'org_package_ids': {
+                'member_package_ids': {
                     'type': 'array',
                     'items': {'type': 'string'}
                 },
@@ -392,8 +392,8 @@ class TestPackage(ResponseTest):
 
                 assert_schema(response, package_schema, test_name)
 
-                for org_package_id in response['org_package_ids']:
-                    assert_schema(response[org_package_id], scenario_schema, test_name)
+                for member_package_id in response['member_package_ids']:
+                    assert_schema(response[member_package_id], scenario_schema, test_name)
 
     def test_package(self):
         pass
