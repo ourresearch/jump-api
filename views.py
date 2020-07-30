@@ -60,8 +60,13 @@ from ror_id import RorId, RorGridCrosswalk
 from saved_scenario import SavedScenario, default_scenario
 from saved_scenario import get_latest_scenario
 from saved_scenario import save_raw_scenario_to_db
+from saved_scenario import save_raw_member_institutions_included_to_db
+from saved_scenario import get_latest_scenario_raw
 from scenario import get_common_package_data, refresh_cached_prices_from_db, refresh_perpetual_access_from_db
 from scenario import get_clean_package_id
+from consortium import get_consortium_ids
+from consortium import Consortium
+
 from util import jsonify_fast
 from util import jsonify_fast_no_sort
 from util import str2bool
@@ -252,7 +257,7 @@ def jump_scenario_issn_get(scenario_id, issn_l):
 
     if scenario_id == "scenario-qQHgEKmD":
         # consortium_name = "crkn"
-        # institution_journal_dicts = consortium_get_stored_data(consortium_name)
+        # institution_journal_dicts = consortium_get_computed_data(consortium_name)
         # this_journal_dicts = [d for d in institution_journal_dicts if d["issn_l"]==issn_l]
         # response = {}
         # response["_settings"] = scenario.settings.to_dict()
@@ -1166,8 +1171,13 @@ def post_subscription_guts(scenario_id, scenario_name=None):
     if scenario_name:
         dict_to_save["scenario_name"] = scenario_name
     save_raw_scenario_to_db(scenario_id, dict_to_save, get_ip(request))
-
     return
+
+
+def post_member_institutions_included_guts(scenario_id):
+    print "request.get_json()", request.get_json()
+    save_raw_member_institutions_included_to_db(scenario_id, request.get_json(), get_ip(request))
+
 
 
 # used for saving scenario contents, also updating scenario name
@@ -1213,20 +1223,22 @@ def subscriptions_scenario_id_post(scenario_id):
     post_subscription_guts(scenario_id)
     my_timing.log_timing("save_raw_scenario_to_db()")
 
-    # kick this off now, as early as possible
-    my_jwt = get_jwt()
+    response = {"status": "success"}
+    response["_timing"] = my_timing.to_dict()
 
-    # print "start RunAsyncToRequestResponse"
-    #
-    # if False:
-    #     RunAsyncToRequestResponse("scenario/{}".format(scenario_id), my_jwt).start()
-    #     RunAsyncToRequestResponse("scenario/{}/slider".format(scenario_id), my_jwt).start()
-    #     RunAsyncToRequestResponse("scenario/{}/table".format(scenario_id), my_jwt).start()
-    #     my_timing.log_timing("start RunAsyncToRequestResponse")
-    #
-    # print "all done"
+    return jsonify_fast_no_sort(response)
 
-    my_timing.log_timing("after to_dict()")
+
+@app.route('/scenario/<scenario_id>/member-institutions', methods=['POST'])
+@jwt_required
+def member_institutions_scenario_id_post(scenario_id):
+
+    my_timing = TimingMessages()
+    print "request.get_json()", request.get_json()
+    post_member_institutions_included_guts(scenario_id)
+
+    my_timing.log_timing("post_member_institutions_included_guts()")
+
     response = {"status": "success"}
     response["_timing"] = my_timing.to_dict()
 
@@ -1267,33 +1279,10 @@ def scenario_id_summary_get(scenario_id):
 def scenario_id_journals_get(scenario_id):
     start_time = time()
 
-    from saved_scenario import get_latest_scenario_raw
-    start_time = time()
-    saved_row = get_latest_scenario_raw(scenario_id)
-    print "\n\n\n query get get_latest_scenario_raw", elapsed(start_time)
-
-    print "after get saved scenario", elapsed(start_time)
-
-    if scenario_id == "scenario-qQHgEKmD":
-    # if "consortium_name" in saved_row["configs"].keys() or "min_bundle_size" in saved_row["configs"].keys():
-        # team+dev@ourresearch.org
-        # consortium_name = saved_row["configs"].get("consortium_name", None)
-        # min_bundle_size = int(saved_row["configs"].get("min_bundle_size", None))
-        consortium_name = "crkn"
-        min_bundle_size = 80
-        my_saved_scenario_dict = OrderedDict()
-        my_saved_scenario_dict["meta"] = {'publisher_name': u'Elsevier',
-                                          'institution_name': u'CRKN',
-                                          'scenario_id': scenario_id,
-                                          'institution_id': u'institution-cXyvCqwaeDC3',
-                                          'scenario_created': datetime.datetime(2020, 7, 18, 17, 12, 40, 335615),
-                                          'is_base_scenario': False,
-                                          'scenario_name': u'First Scenario',
-                                          'publisher_id': u'package-4vNfVUrSir6w'}
-
-        my_saved_scenario_dict["saved"] = saved_row
-
-        my_saved_scenario_dict["journals"] = consortium_get_journals(consortium_name, min_bundle_size)
+    consortium_ids = get_consortium_ids()
+    if scenario_id in [d["scenario_id"] for d in consortium_ids]:
+        my_consortium = Consortium(scenario_id)
+        my_saved_scenario_dict = my_consortium.to_dict_journals()
     else:
         my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
         my_saved_scenario_dict = my_saved_scenario.to_dict_journals()
@@ -1302,125 +1291,27 @@ def scenario_id_journals_get(scenario_id):
     return response
 
 
-
-def consortium_get_stored_data(consortium_name=None):
-    start_time = time()
-
-    if not consortium_name:
-        consortium_name = "purdue"
-
-    command = """select * from jump_scenario_computed where scenario_id='{}'""".format(consortium_name)
-    start_time = time()
-    journal_dicts_by_issn_l = defaultdict(list)
-
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
-
-    print "after db get", elapsed(start_time)
-    return rows
-
-
-def consortium_get_journals(consortium_name=None, min_bundle_size=None):
-    response_list = []
-
-    if not min_bundle_size:
-        min_bundle_size = 3
-
-    start_time = time()
-    institution_journal_dicts = consortium_get_stored_data(consortium_name)
-    journal_dicts_by_issn_l = defaultdict(list)
-    for row in institution_journal_dicts:
-        journal_dicts_by_issn_l[row["issn_l"]].append(json.loads(row["journals_dict"]))
-
-    # consortium_name = "crkn"
-    # min_bundle_size = 50
-
-    for issn_l, journal_list in journal_dicts_by_issn_l.iteritems():
-
-        sorted_journal_dicts = sorted(journal_list, key=lambda x: x["ncppu"], reverse=False)
-        sorted_journal_dicts = [j for j in sorted_journal_dicts if j["ncppu"] and j["usage"] >= 10]
-
-        if sorted_journal_dicts:
-            if min_bundle_size == 1:
-                min_bundle_size = 0  # use code below for all
-            else:
-                list_this_long = sorted_journal_dicts[:min_bundle_size]
-                sum_of_usage = float(sum(j["usage"] for j in list_this_long))
-                for j in list_this_long:
-                    if j["ncppu"] and j["usage"] and (isinstance(j["ncppu"], int) or isinstance(j["ncppu"], float)):
-                        j["ncppu_combo_by_usage"] = j["ncppu"] * j["usage"] / sum_of_usage
-                    elif (isinstance(j["ncppu"], int) or isinstance(j["ncppu"], float)):
-                        j["ncppu_combo_by_usage"] = j["ncppu"]
-                    else:
-                        j["ncppu_combo_by_usage"] = "-"
-                if sum_of_usage < 10:
-                    j["ncppu_combo_by_usage"] = "-"
-
-                # institution_names = u", ".join([j.get("institution_short_name", j["institution_name"]) for j in list_this_long])
-                institution_names_string = u", ".join([j.get("institution_name") for j in list_this_long])
-                package_ids = u", ".join([j["package_id"] for j in list_this_long])
-                normalized_cpu = sum(j["ncppu_combo_by_usage"] for j in list_this_long if j["ncppu_combo_by_usage"] != "-")
-                my_journal_dict = sorted_journal_dicts[0]
-                my_journal_dict["ncppu"] = normalized_cpu
-                my_journal_dict["usage"] = round(sum_of_usage)
-                my_journal_dict["cost"] = sum(j["cost"] for j in list_this_long if j["ncppu_combo_by_usage"] != "-")
-                my_journal_dict["cost_subscription"] = sum(j["cost_subscription"] for j in list_this_long if j["ncppu_combo_by_usage"] != "-")
-                my_journal_dict["cost_ill"] = sum(j["cost_ill"] for j in list_this_long if j["ncppu_combo_by_usage"] != "-")
-                my_journal_dict["institution_names"] = [j.get("institution_name") for j in list_this_long]
-                # my_journal_dict["title"] += u" [#1-{}: {}]".format(len(list_this_long), institution_names)
-                # my_journal_dict["issn_l"] += u"-[{}]".format(package_ids)
-                response_list.append(my_journal_dict)
-
-            # for i, my_journal_dict in enumerate(sorted_journal_dicts[min_bundle_size:]):
-            #     my_journal_dict["title"] += u" [#{}: {}]".format(i+min_bundle_size+1, my_journal_dict.get("institution_short_name", my_journal_dict["institution_name"]))
-            #     my_journal_dict["issn_l"] += u"-[{}]".format(my_journal_dict["package_id"])
-            #     response_list.append(my_journal_dict)
-
-    print "after loop", elapsed(start_time)
-
-    response_list = sorted(response_list, key=lambda x: x.get("ncppu", None), reverse=False)
-    for rank, my_journal_dict in enumerate(response_list):
-        my_journal_dict["ncppu_rank"] = rank + 1
-
-    return response_list
-
-@app.route('/scenario/<scenario_id>/institutions', methods=['GET'])
+@app.route('/scenario/<scenario_id>/member-institutions', methods=['GET'])
 @jwt_optional
-def scenario_institutions_get(scenario_id):
-    consortium_name = "crkn"
+def scenario_member_institutions_get(scenario_id):
+    consortium_ids = get_consortium_ids()
+    for row in consortium_ids:
+        if scenario_id == row["scenario_id"]:
+            my_consortia = Consortium(scenario_id)
+            return jsonify_fast_no_sort({"institutions": my_consortia.to_dict_institutions()})
+    return abort_json(404, "not a consortium scenario_id")
 
-    start_time = time()
-    institution_journal_dicts = consortium_get_stored_data(consortium_name)
-    journal_dicts_by_package_id = defaultdict(list)
-    for row in institution_journal_dicts:
-        journal_dicts_by_package_id[row["package_id"]].append(json.loads(row["journals_dict"]))
 
-    response_list = []
+@app.route('/package/<package_id>/member-institutions', methods=['GET'])
+@jwt_optional
+def package_member_institutions_get(package_id):
+    consortium_ids = get_consortium_ids()
+    for row in consortium_ids:
+        if package_id == row["package_id"]:
+            my_consortia = Consortium(scenario_id=None, package_id=package_id)
+            return jsonify_fast_no_sort({"institutions": my_consortia.to_dict_institutions()})
+    return abort_json(404, "not a consortium package_id")
 
-    for institution_package_id, journal_list in journal_dicts_by_package_id.iteritems():
-
-        sum_of_usage = float(sum(j["usage"] for j in journal_list))
-
-        my_journal_dict = OrderedDict()
-
-        # written more than once
-        my_journal_dict["package_id"] = institution_package_id
-        my_journal_dict["institution_name"] = journal_list[0]["institution_name"]
-
-        # aggregaations across journals
-        my_journal_dict["num_issn_l"] = len(journal_list)
-        my_journal_dict["cost_subscription"] = round(sum(j["cost_subscription"] for j in journal_list if j["ncppu"] != "-"))
-        my_journal_dict["cost_ill"] = round(sum(j["cost_ill"] for j in journal_list if j["ncppu"] != "-"))
-        my_journal_dict["usage"] = round(sum_of_usage)
-
-        response_list.append(my_journal_dict)
-
-    print "after loop", elapsed(start_time)
-
-    response_list = sorted(response_list, key=lambda x: x.get("usage", None), reverse=True)
-
-    return jsonify_fast_no_sort(response_list)
 
 
 @app.route('/scenario/<scenario_id>/raw', methods=['GET'])
