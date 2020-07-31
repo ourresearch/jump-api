@@ -81,6 +81,19 @@ from app import logger
 
 from app import DEMO_PACKAGE_ID
 
+
+
+from diskcache import Index
+index = Index([('a', 1), ('b', 2), ('c', 3)])
+print 'b' in index
+print index['c']
+del index['a']
+print len(index)
+other = Index(index.directory)
+print len(other)
+print other.popitem(last=False)
+
+
 def build_cache_key(module_name, function_name, extra_key, *args, **kwargs):
     # Hash function args
     items = kwargs.items()
