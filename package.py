@@ -136,12 +136,12 @@ class Package(db.Model):
     def get_unfiltered_counter_rows(self):
         q = """
            select
-           counter.issn_l,
+           rj.issn_l,
            counter.issn as issns,
            title,
            total::int as num_2018_downloads
            from jump_counter counter
-           left outer join ricks_journal on counter.issn_l = ricks_journal.issn_l
+           left outer join ricks_journal_flat rj on counter.issn_l = rj.issn
            where package_id='{package_id}'
            order by num_2018_downloads desc
            """.format(package_id=self.package_id_for_db)
@@ -150,16 +150,16 @@ class Package(db.Model):
     def get_base(self, and_where=""):
         q = """
             select 
-            counter.issn_l, 
+            rj.issn_l, 
             listagg(counter.issn, ',') as issns,
             listagg(title, ',') as title, 
             sum(total::int) as num_2018_downloads, 
             count(*) as num_journals_with_issn_l
             from jump_counter counter
-            left outer join ricks_journal on counter.issn_l = ricks_journal.issn_l
+            left outer join ricks_journal_flat rj on counter.issn_l = rj.issn
             where package_id='{package_id}' 
             {and_where}
-            group by counter.issn_l
+            group by rj.issn_l
             order by num_2018_downloads desc
             """.format(package_id=self.package_id_for_db, and_where=and_where)
         rows = get_sql_dict_rows(q)
@@ -168,13 +168,19 @@ class Package(db.Model):
     @cached_property
     def get_published_in_2019(self):
         rows = self.get_base(and_where=""" and counter.issn_l in
-	            (select journal_issn_l from unpaywall u where year=2019 group by journal_issn_l) """)
+	            (select rj.issn_l from unpaywall u 
+	            join ricks_journal_flat rj on u.journal_issn_l = rj.issn
+	            where year=2019 
+	            group by rj.issn_l) """)
         return self.filter_by_core_list(rows)
 
     @cached_property
     def get_published_toll_access_in_2019(self):
         rows = self.get_base(and_where=""" and counter.issn_l in
-	            (select journal_issn_l from unpaywall u where year=2019 and journal_is_oa='false' group by journal_issn_l) """)
+	            (select rj.issn_l from unpaywall u 
+	            join ricks_journal_flat rj on u.journal_issn_l = rj.issn
+	            where year=2019 and journal_is_oa='false' 
+	            group by rj.issn_l) """)
         return self.filter_by_core_list(rows)
 
     @cached_property
@@ -201,9 +207,10 @@ class Package(db.Model):
 
     @cached_property
     def get_published_toll_access_in_2019_with_publisher(self):
-        rows = self.get_base(and_where=""" and counter.issn_l in
-	            (select distinct journal_issn_l from unpaywall u 
-	            join ricks_journal rj on u.journal_issn_l=rj.issn_l
+        rows = self.get_base(and_where=""" and rj.issn_l in
+	            (select distinct rj.issn_l 
+	            from unpaywall u 
+	            join ricks_journal_flat rj on u.journal_issn_l=rj.issn
 	            where year=2019 and journal_is_oa='false'
 	            and {publisher_where}
 	            ) """.format(publisher_where=self.publisher_where))
@@ -211,13 +218,14 @@ class Package(db.Model):
 
     @cached_property
     def get_published_toll_access_in_2019_with_publisher_have_price(self):
-        rows = self.get_base(and_where=""" and counter.issn_l in
-	            (select distinct journal_issn_l from unpaywall u 
-	            join ricks_journal rj on u.journal_issn_l=rj.issn_l
+        rows = self.get_base(and_where=""" and rj.issn_l in
+	            (select distinct rj.issn_l 
+	            from unpaywall u 
+	            join ricks_journal_flat rj on u.journal_issn_l=rj.issn
 	            where year=2019 and journal_is_oa='false'
 	            and {publisher_where}
 	            )
-	            and counter.issn_l in 
+	            and rj.issn_l in 
                 (select distinct issn_l from jump_journal_prices 
                     where usa_usd > 0 and package_id in('658349d9', '{package_id}') 
                 ) """.format(package_id=self.package_id, publisher_where=self.publisher_where))
@@ -487,24 +495,26 @@ class Package(db.Model):
     def get_unexpectedly_no_price(self):
         package_id = self.package_id_for_db
 
-        command = """select counter.issn_l, title, total::int as num_2018_downloads 
+        command = """select rj.issn_l, title, total::int as num_2018_downloads 
         from jump_counter counter
-        left outer join ricks_journal on counter.issn_l = ricks_journal.issn_l
+        left outer join ricks_journal_flat on counter.issn_l = ricks_journal.issn
         where 
             package_id='{package_id}' 
-            and counter.issn_l in ( 
-                select distinct journal_issn_l from unpaywall u 
-                where journal_issn_l in (	
-                select jump_counter.issn_l from jump_counter
-                 where package_id='{package_id}'	
+            and rj.issn_l in ( 
+                    select distinct rj.issn_l 
+                    from unpaywall u
+                    join ricks_journal_flat rj on u.journal_issn_l=rj.issn                 
+                    where rj.issn_l in (	
+                    select jump_counter.issn_l from jump_counter
+                     where package_id='{package_id}'	
                 )
                 and journal_is_oa='false'
                 and year=2019
-                and journal_issn_l in
-	            (select distinct issn_l from ricks_journal rj 
-	            and {publisher_where}
+                and rj.issn_l in (
+                    select distinct issn_l from ricks_journal rj 
+                    and {publisher_where}
 	            )
-                and journal_issn_l not in (
+                and rj.issn_l not in (
                     select jump_counter.issn_l from jump_counter
                     join jump_journal_prices on jump_journal_prices.issn_l = jump_counter.issn_l
                     where jump_counter.package_id='{package_id}' and jump_journal_prices.package_id='658349d9')
@@ -526,16 +536,18 @@ class Package(db.Model):
     def get_gold_oa(self):
         package_id = self.package_id_for_db
 
-        command = """select counter.issn_l, title, total::int as num_2018_downloads 
+        command = """select rj.issn_l, title, total::int as num_2018_downloads 
         from jump_counter counter
-        left outer join ricks_journal on counter.issn_l = ricks_journal.issn_l
+        left outer join ricks_journal on counter.issn_l = ricks_journal.issn
         where 
             package_id='{package_id}' 
-            and counter.issn_l not in ( 
-                select distinct journal_issn_l from unpaywall u 
-                where journal_issn_l in (	
-                select jump_counter.issn_l from jump_counter
-                 where package_id='{package_id}'	
+            and rj.issn_l not in ( 
+                select distinct rj.issn_l 
+                from unpaywall u 
+                join ricks_journal_flat rj on u.journal_issn_l=rj.issn                
+                where rj.issn_l in (	
+                    select jump_counter.issn_l from jump_counter
+                     where package_id='{package_id}'	
                 )
                 and journal_is_oa='false'
                 )
@@ -547,8 +559,10 @@ class Package(db.Model):
         return rows
 
 
+
     def get_toll_access_no_2019_papers(self):
         package_id = self.package_id_for_db
+
 
         command = """select counter.issn_l, title, total::int as num_2018_downloads 
         from jump_counter counter
@@ -556,8 +570,10 @@ class Package(db.Model):
         where 
             package_id='{package_id}' 
             and counter.issn_l not in ( 
-                select distinct journal_issn_l from unpaywall u 
-                where journal_issn_l in (	
+                select distinct rj.issn_l 
+                from unpaywall u 
+	            join ricks_journal_flat rj on u.journal_issn_l = rj.issn
+                where rj.issn_l in (	
                 select jump_counter.issn_l from jump_counter
                  where package_id='{package_id}'	
                 )

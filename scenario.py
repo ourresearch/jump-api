@@ -1198,9 +1198,12 @@ def refresh_cached_prices_from_db(package_id, publisher_name):
     else:
         return 'false'
 
-    command = text(u"select issn_l, usa_usd from jump_journal_prices where package_id = '{}' and {}".format(package_id, publisher_where))
+    command = u"select issn_l, usa_usd from jump_journal_prices where package_id = '{}' and {}".format(package_id, publisher_where)
+    # print command
 
-    rows = db.engine.execute(command).fetchall()
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
 
     for row in rows:
         package_dict[row["issn_l"]] = row["usa_usd"]
@@ -1374,16 +1377,17 @@ def get_social_networks_data_from_db():
 
 @cache
 def get_oa_adjustment_data_from_db():
-    command = """select issn_l, 
-            max(mturk.max_oa_rate::float) as mturk_max_oa_rate, 
+    command = """select rj.issn_l,
+            max(mturk.max_oa_rate::float) as mturk_max_oa_rate,
             count(*) as num_papers_3_years,
-            sum(case when u.oa_status = 'closed' then 0 else 1 end) as num_papers_3_years_oa, 
+            sum(case when u.oa_status = 'closed' then 0 else 1 end) as num_papers_3_years_oa,
             round(sum(case when u.oa_status = 'closed' then 0 else 1 end)/count(*)::float, 3) as unpaywall_measured_fraction_3_years_oa
             from jump_mturk_oa_rates mturk
             join unpaywall u on mturk.issn_l = u.journal_issn_l
+	        join ricks_journal_flat rj on u.journal_issn_l=rj.issn            
             where year >= 2016 and year <= 2018
             and genre='journal-article'
-            group by issn_l
+            group by rj.issn_l
                     """
     with get_db_cursor() as cursor:
         cursor.execute(command)

@@ -28,8 +28,11 @@ def purge_all_caches(package_id):
     refresh_perpetual_access_from_db(package_id)
 
     my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
-    my_package.clear_package_counter_breakdown_cache()
-    refresh_cached_prices_from_db(my_package.package_id, my_package.publisher)
+    if my_package:
+        my_package.clear_package_counter_breakdown_cache()
+        refresh_cached_prices_from_db(my_package.package_id, my_package.publisher)
+    else:
+        print u"package not found: {}".format(package_id)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
