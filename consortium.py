@@ -143,9 +143,14 @@ class Consortium(object):
         for d in rows:
             if d["package_id"] in self.member_institution_included_list:
                 rows_by_issn_l[d["issn_l"]].append(d)
+
         print "after calculating", elapsed(start_time)
         start_time = time()
-        response = [ConsortiumJournal(issn_l, rows_by_issn_l[issn_l]) for issn_l in issn_ls if rows_by_issn_l[issn_l]]
+        response = []
+        for issn_l in issn_ls:
+            if rows_by_issn_l[issn_l]:
+                response.append(ConsortiumJournal(issn_l, self.member_institution_included_list, rows_by_issn_l[issn_l]))
+
         print "after journals", elapsed(start_time)
         return response
 

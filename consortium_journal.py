@@ -49,9 +49,10 @@ from journal import Journal
 class ConsortiumJournal(Journal):
     years = range(0, 5)
 
-    def __init__(self, issn_l, all_member_data):
+    def __init__(self, issn_l, included_package_ids, all_member_data):
         start_time = time()
         self.issn_l = issn_l
+        self.included_package_ids = included_package_ids
         self.member_data = all_member_data
         # self.member_data = [d["journals_dict"] for d in all_member_data if issn_l==d["issn_l"]]
         self.meta_data = self.member_data[0]
@@ -69,10 +70,13 @@ class ConsortiumJournal(Journal):
         # used for citation, authorship lookup
         return range(2015, 2019+1)
 
-    def sum_attribute(self, attribute_name):
+    def sum_attribute(self, attribute_name, nesting_key=None):
         response = 0
         for my_member_dict in self.member_data:
-            response += my_member_dict.get(attribute_name, 0) or 0
+            if nesting_key:
+                response += my_member_dict[nesting_key].get(attribute_name, 0) or 0
+            else:
+                response += my_member_dict.get(attribute_name, 0) or 0
         return response
 
     def list_attribute(self, attribute_name):
@@ -165,17 +169,17 @@ class ConsortiumJournal(Journal):
     def use_paywalled(self):
         return self.use_total - self.use_free_instant
 
-    @cached_property
-    def ncppu(self):
-        if self.use_total < 10:
-            return None
-        ncppu = 0
-        for j in self.member_data:
-            if j["ncppu"] and j["usage"] and self.use_total:
-                ncppu += j["ncppu"] * j["usage"] / self.use_total
-        if ncppu:
-            return ncppu
-        return None
+    # @cached_property
+    # def ncppu(self):
+    #     if self.use_total < 10:
+    #         return None
+    #     ncppu = 0
+    #     for j in self.member_data:
+    #         if j["ncppu"] and j["usage"] and self.use_total:
+    #             ncppu += j["ncppu"] * j["usage"] / self.use_total
+    #     if ncppu:
+    #         return ncppu
+    #     return None
 
     @cached_property
     def ncppu_rank(self):
@@ -183,7 +187,7 @@ class ConsortiumJournal(Journal):
 
     @cached_property
     def cost_subscription(self):
-        return self.sum_attribute("cost_subscription")
+        return self.meta_data["cost_subscription"] * len(self.included_package_ids)
 
     @cached_property
     def cost_ill(self):
@@ -194,48 +198,28 @@ class ConsortiumJournal(Journal):
         return self.cost_subscription - self.cost_ill
 
     @cached_property
-    def use_actual(self):
-        my_dict = {}
-        for group in use_groups:
-            my_dict[group] = 0
-        # include the if to skip this if no useage
-        if self.use_total:
-            # true regardless
-            for group in use_groups_free_instant + ["total", "oa_plus_social_networks", "oa", "social_networks"]:
-                my_dict[group] = self.__getattribute__("use_{}".format(group))
-            # depends
-            if self.subscribed:
-                my_dict["subscription"] = self.use_subscription
-            else:
-                my_dict["ill"] = self.use_ill
-                my_dict["other_delayed"] = self.use_other_delayed
-            my_dict["oa_no_social_networks"] = my_dict["oa"]
-        return my_dict
-
-
-    @cached_property
     def use_social_networks(self):
-        return self.sum_attribute("use_asns")
+        return self.sum_attribute("social_networks", "use_groups_free_instant")
 
     @cached_property
-    def use_oa(self):
-        return self.sum_attribute("use_oa")
+    def use_oa_plus_social_networks(self):
+        return self.sum_attribute("oa", "use_groups_free_instant")
 
     @cached_property
     def use_subscription(self):
-        return self.sum_attribute("use_subscription")
+        return self.sum_attribute("subscription", "use_groups_if_subscribed")
 
     @cached_property
     def use_backfile(self):
-        return self.sum_attribute("use_backfile")
+        return self.sum_attribute("backfile", "use_groups_free_instant")
 
     @cached_property
     def use_ill(self):
-        return self.sum_attribute("use_ill")
+        return self.sum_attribute("ill", "use_groups_if_not_subscribed")
 
     @cached_property
     def use_other_delayed(self):
-        return self.sum_attribute("use_other_delayed")
+        return self.sum_attribute("other_delayed", "use_groups_if_not_subscribed")
 
     @cached_property
     def use_oa_green(self):
@@ -255,14 +239,12 @@ class ConsortiumJournal(Journal):
 
     @cached_property
     def use_free_instant(self):
-        response = 0
-        for group in use_groups_free_instant:
-            response += self.use_actual[group]
+        response = self.use_oa_plus_social_networks + self.use_backfile
         return min(response, self.use_total)
 
     @cached_property
     def use_instant(self):
-        response = self.use_free_instant + self.use_actual["subscription"]
+        response = self.use_free_instant + self.use_subscription
         return min(response, self.use_total)
 
     @cached_property
