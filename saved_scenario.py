@@ -30,7 +30,37 @@ def save_raw_scenario_to_db(scenario_id, raw_scenario_definition, ip):
         # print command
         cursor.execute(command)
 
-def get_latest_scenario_raw(scenario_id, my_jwt=None):
+def save_raw_member_institutions_included_to_db(scenario_id, member_institutions, ip):
+    scenario_members = json.dumps(member_institutions["member_institutions"])
+
+    with get_db_cursor() as cursor:
+        command = u"""INSERT INTO jump_consortium_member_institutions (scenario_id, updated, ip, scenario_members) values ('{}', sysdate, '{}', '{}');""".format(
+            scenario_id, ip, scenario_members
+        )
+        # print command
+        cursor.execute(command)
+
+
+def get_latest_member_institutions_raw(scenario_id):
+    scenario_data = None
+    with get_db_cursor() as cursor:
+        command = u"""select scenario_members from jump_consortium_member_institutions where scenario_id='{}' order by updated desc limit 1;""".format(
+            scenario_id
+        )
+        # print command
+        cursor.execute(command)
+        rows = cursor.fetchall()
+
+    if rows:
+        try:
+            scenario_members = json.loads(rows[0]["scenario_members"])
+        except TypeError:
+            scenario_members = []
+
+    return scenario_members
+
+
+def get_latest_scenario_raw(scenario_id):
     scenario_data = None
     with get_db_cursor() as cursor:
         command = u"""select scenario_json from jump_scenario_details_paid where scenario_id='{}' order by updated desc limit 1;""".format(

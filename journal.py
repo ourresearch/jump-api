@@ -84,12 +84,6 @@ class Journal(object):
         return self._scenario_data["journal_era_subjects"].get(self.issn_l, [])
 
     @cached_property
-    def publisher(self):
-        if self._ricks_journal_row:
-            return self._ricks_journal_row["publisher"]
-        return "Unknown Publisher"
-
-    @cached_property
     def _ricks_journal_row(self):
         from scenario import get_ricks_journal_rows
         row = get_ricks_journal_rows()[self.issn_l]
@@ -1577,7 +1571,7 @@ class Journal(object):
                 "title": self.title,
                 "subject": self.subject,
                 "era_subjects": self.era_subjects,
-                "publisher": self.publisher,
+                # "publisher": self.publisher,
                 "is_society_journal": self.is_society_journal,
                 "subscribed": self.subscribed,
                 "num_papers": self.num_papers,

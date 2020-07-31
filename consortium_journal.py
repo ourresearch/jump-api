@@ -7,6 +7,7 @@ import weakref
 import inspect
 import threading
 import requests
+from time import time
 from kids.cache import cache
 from collections import OrderedDict
 
@@ -17,32 +18,47 @@ from app import get_db_cursor
 from util import format_currency
 from util import format_percent
 from util import format_with_commas
+from util import elapsed
 from journal import Journal
+
+# start_time = time()
+# journal_dicts_by_issn_l = defaultdict(list)
+# for row in self.journal_member_data:
+#     journal_dicts_by_issn_l[row["issn_l"]].append(row["journals_dict"])
+#
+# response_list = []
+# for issn_l, list_this_long in journal_dicts_by_issn_l.iteritems():
+#     sum_of_usage = float(sum(j["usage"] for j in list_this_long))
+#     for j in list_this_long:
+#         if j["ncppu"] and j["usage"] and (isinstance(j["ncppu"], int) or isinstance(j["ncppu"], float)):
+#             j["ncppu_combo_by_usage"] = j["ncppu"] * j["usage"] / sum_of_usage
+#         elif (isinstance(j["ncppu"], int) or isinstance(j["ncppu"], float)):
+#             j["ncppu_combo_by_usage"] = j["ncppu"]
+#         else:
+#             j["ncppu_combo_by_usage"] = "-"
+#     if sum_of_usage < 10:
+#         j["ncppu_combo_by_usage"] = "-"
+#
+#     normalized_cpu = sum(j["ncppu_combo_by_usage"] for j in list_this_long if j["ncppu_combo_by_usage"] != "-")
+#     my_journal_dict = list_this_long[0]
+#     my_journal_dict["ncppu"] = normalized_cpu
+#     my_journal_dict["institution_names"] = [j.get("institution_name") for j in list_this_long]
+#     response_list.append(my_journal_dict)
 
 
 class ConsortiumJournal(Journal):
     years = range(0, 5)
 
-    def __init__(self, issn_l, meta_data, org_data):
+    def __init__(self, issn_l, all_member_data):
+        start_time = time()
         self.issn_l = issn_l
-        self.org_data = org_data
-        self.meta_data = meta_data
+        self.member_data = all_member_data
+        # self.member_data = [d["journals_dict"] for d in all_member_data if issn_l==d["issn_l"]]
+        self.meta_data = self.member_data[0]
         self.subscribed_bulk = False
         self.subscribed_custom = False
         self.use_default_download_curve = False
-
-    def set_scenario(self, scenario):
-        if scenario:
-            self.scenario = weakref.proxy(scenario)
-            self.settings = self.scenario.settings
-            # [j.set_scenario(scenario) for j in self.consortium_journals]
-        else:
-            self.scenario = None
-            self.settings = None
-
-    def set_scenario_data(self, scenario_data):
-        # [j.set_scenario_data(scenario_data) for j in self.consortium_journals]
-        self._scenario_data = scenario_data
+        # print ".",
 
     @cached_property
     def years_by_year(self):
@@ -55,31 +71,46 @@ class ConsortiumJournal(Journal):
 
     def sum_attribute(self, attribute_name):
         response = 0
-        for my_org_dict in self.org_data:
-            response += my_org_dict.get(attribute_name, 0) or 0
+        for my_member_dict in self.member_data:
+            response += my_member_dict.get(attribute_name, 0) or 0
         return response
+
+    def list_attribute(self, attribute_name):
+        return [my_member_dict.get(attribute_name, None) for my_member_dict in self.member_data]
 
     @cached_property
     def has_perpetual_access(self):
         response = False
-        for my_org_dict in self.org_data:
-            if my_org_dict.get("has_perpetual_access"):
+        for my_member_dict in self.member_data:
+            if my_member_dict.get("has_perpetual_access"):
                 response = True
         return response
 
     @cached_property
     def perpetual_access_years(self):
-        for my_org_dict in self.org_data:
-            if my_org_dict.get("perpetual_access_years"):
-                return my_org_dict.get("perpetual_access_years")
+        for my_member_dict in self.member_data:
+            if my_member_dict.get("perpetual_access_years"):
+                return my_member_dict.get("perpetual_access_years")
         return []
 
     @cached_property
     def baseline_access(self):
-        for my_org_dict in self.org_data:
-            if my_org_dict.get("baseline_access"):
-                return my_org_dict.get("baseline_access")
+        for my_member_dict in self.member_data:
+            if my_member_dict.get("baseline_access"):
+                return my_member_dict.get("baseline_access")
         return None
+
+    @cached_property
+    def institution_name(self):
+        return self.list_attribute("institution_name")
+
+    @cached_property
+    def institution_short_name(self):
+        return self.list_attribute("institution_short_name")
+
+    @cached_property
+    def package_id(self):
+        return self.list_attribute("package_id")
 
     @cached_property
     def title(self):
@@ -102,6 +133,10 @@ class ConsortiumJournal(Journal):
         return self.meta_data["oa_embargo_months"]
 
     @cached_property
+    def is_hybrid_2019(self):
+        return self.meta_data["is_hybrid_2019"]
+
+    @cached_property
     def num_authorships(self):
         return self.sum_attribute("authorships")
 
@@ -111,7 +146,7 @@ class ConsortiumJournal(Journal):
 
     @cached_property
     def use_total(self):
-        response = self.sum_attribute("total_usage")
+        response = self.sum_attribute("usage")
         if response == 0:
             response = 0.0001
         return response
@@ -132,17 +167,27 @@ class ConsortiumJournal(Journal):
 
     @cached_property
     def ncppu(self):
-        if not self.use_paywalled:
+        if self.use_total < 10:
             return None
-        return round(float(self.cost_subscription_minus_ill)/self.use_paywalled, 6)
+        ncppu = 0
+        for j in self.member_data:
+            if j["ncppu"] and j["usage"] and self.use_total:
+                ncppu += j["ncppu"] * j["usage"] / self.use_total
+        if ncppu:
+            return ncppu
+        return None
+
+    @cached_property
+    def ncppu_rank(self):
+        return None  # overwrite this by at the consortium level by ordering journals
 
     @cached_property
     def cost_subscription(self):
-        return self.sum_attribute("subscription_cost")
+        return self.sum_attribute("cost_subscription")
 
     @cached_property
     def cost_ill(self):
-        return self.sum_attribute("ill_cost")
+        return self.sum_attribute("cost_ill")
 
     @cached_property
     def cost_subscription_minus_ill(self):
@@ -233,12 +278,6 @@ class ConsortiumJournal(Journal):
         return min(100.0, round(100 * float(self.use_free_instant) / self.use_total, 4))
 
     @cached_property
-    def ncppu_rank(self):
-        if self.ncppu:
-            return self.scenario.ncppu_rank_lookup[self.issn_l]
-        return None
-
-    @cached_property
     def num_papers_slope_percent(self):
         # need to figure out how to do this well here @todo
         return None
@@ -264,187 +303,34 @@ class ConsortiumJournal(Journal):
                 "ncppu": format_currency(self.ncppu, True),
                 "use_instant_percent": self.use_instant_percent,
         }
-        #
-        # group_list = []
-        # for group in use_groups:
-        #     group_dict = OrderedDict()
-        #     group_dict["group"] = use_groups_lookup[group]["display"]
-        #     group_dict["usage"] = format_with_commas(round(self.use_actual[group]))
-        #     group_dict["usage_percent"] = format_percent(round(float(100)*self.use_actual[group]/self.use_total))
-        #     # group_dict["timeline"] = u",".join(["{:>7}".format(self.use_actual_by_year[group][year]) for year in self.years])
-        #     for year in self.years:
-        #         group_dict["year_"+str(2020 + year)] = format_with_commas(round(self.use_actual_by_year[group][year]))
-        #     group_list += [group_dict]
-        # response["fulfillment"] = {
-        #     "headers": [
-        #         {"text": "Type", "value": "group"},
-        #         {"text": "Usage (projected annual)", "value": "usage"},
-        #         {"text": "Usage (percent)", "value": "usage_percent"},
-        #         {"text": "Usage projected 2020", "value": "year_2020"},
-        #         {"text": "2021", "value": "year_2021"},
-        #         {"text": "2022", "value": "year_2022"},
-        #         {"text": "2023", "value": "year_2023"},
-        #         {"text": "2024", "value": "year_2024"},
-        #     ],
-        #     "data": group_list
-        #     }
-        # response["fulfillment"]["use_actual_by_year"] = self.use_actual_by_year
-        # response["fulfillment"]["downloads_per_paper_by_age"] = self.downloads_per_paper_by_age
-        # response["fulfillment"]["perpetual_access_years"] = self.perpetual_access_years
-        # response["fulfillment"]["display_perpetual_access_years"] = self.display_perpetual_access_years
-        #
-        # oa_list = []
-        # for oa_type in ["green", "hybrid", "bronze"]:
-        #     oa_dict = OrderedDict()
-        #     use = self.__getattribute__("use_oa_{}".format(oa_type))
-        #     oa_dict["oa_status"] = oa_type.title()
-        #     # oa_dict["num_papers"] = round(self.__getattribute__("num_{}_historical".format(oa_type)))
-        #     oa_dict["usage"] = format_with_commas(use)
-        #     oa_dict["usage_percent"] = format_percent(round(float(100)*use/self.use_total))
-        #     oa_list += [oa_dict]
-        # oa_list += [OrderedDict([("oa_status", "*Total*"),
-        #                         # ("num_papers", round(self.num_oa_historical)),
-        #                         ("usage", format_with_commas(self.use_oa)),
-        #                         ("usage_percent", format_percent(round(100*float(self.use_oa)/self.use_total)))])]
-        # response["oa"] = {
-        #     "oa_embargo_months": self.oa_embargo_months,
-        #     "headers": [
-        #         {"text": "OA Type", "value": "oa_status"},
-        #         # {"text": "Number of papers (annual)", "value": "num_papers"},
-        #         {"text": "Usage (projected annual)", "value": "usage"},
-        #         {"text": "Percent of all usage", "value": "usage_percent"},
-        #     ],
-        #     "data": oa_list
-        #     }
-        #
-        # impact_list = [
-        #     OrderedDict([("impact", "Downloads"),
-        #                  ("raw", format_with_commas(self.downloads_total)),
-        #                  ("weight", 1),
-        #                  ("contribution", format_with_commas(self.downloads_total))]),
-        #     OrderedDict([("impact", "Citations to papers in this journal"),
-        #                  ("raw", format_with_commas(self.num_citations, 1)),
-        #                  ("weight", self.settings.weight_citation),
-        #                  ("contribution", format_with_commas(self.num_citations * self.settings.weight_citation))]),
-        #     OrderedDict([("impact", "Authored papers in this journal"),
-        #                  ("raw", format_with_commas(self.num_authorships, 1)),
-        #                  ("weight", self.settings.weight_authorship),
-        #                  ("contribution", format_with_commas(self.num_authorships * self.settings.weight_authorship))]),
-        #     OrderedDict([("impact", "*Total*"),
-        #                  ("raw", "-"),
-        #                  ("weight", "-"),
-        #                  ("contribution", format_with_commas(self.use_total))])
-        #     ]
-        # response["impact"] = {
-        #     "usage_total": self.use_total,
-        #     "headers": [
-        #         {"text": "Impact", "value": "impact"},
-        #         {"text": "Raw (projected annual)", "value": "raw"},
-        #         {"text": "Weight", "value": "weight"},
-        #         {"text": "Usage contribution", "value": "contribution"},
-        #     ],
-        #     "data": impact_list
-        #     }
-        #
-        # cost_list = []
-        # for cost_type in ["cost_actual_by_year", "cost_subscription_by_year", "cost_ill_by_year", "cost_subscription_minus_ill_by_year"]:
-        #     cost_dict = OrderedDict()
-        #     if cost_type == "cost_actual_by_year":
-        #         cost_dict["cost_type"] = "*Your scenario cost*"
-        #     else:
-        #         cost_dict["cost_type"] = cost_type.replace("cost_", "").replace("_", " ").title()
-        #         cost_dict["cost_type"] = cost_dict["cost_type"].replace("Ill", "ILL")
-        #     costs = self.__getattribute__(cost_type)
-        #     for year in self.years:
-        #         cost_dict["year_"+str(2020 + year)] = format_currency(costs[year])
-        #     cost_list += [cost_dict]
-        #     cost_dict["cost_avg"] = format_currency(self.__getattribute__(cost_type.replace("_by_year", "")))
-        #     if self.use_paywalled:
-        #         cost_dict["cost_per_use"] = format_currency(self.__getattribute__(cost_type.replace("_by_year", "")) / float(self.use_paywalled), True)
-        #     else:
-        #         cost_dict["cost_per_use"] = "no paywalled usage"
-        # response["cost"] = {
-        #     "subscribed": self.subscribed,
-        #     "ncppu": format_currency(self.ncppu, True),
-        #     "headers": [
-        #         {"text": "Cost Type", "value": "cost_type"},
-        #         {"text": "Cost (projected annual)", "value": "cost_avg"},
-        #         {"text": "Cost-Type per paid use", "value": "cost_per_use"},
-        #         {"text": "Cost projected 2020", "value": "year_2020"},
-        #         {"text": "2021", "value": "year_2021"},
-        #         {"text": "2022", "value": "year_2022"},
-        #         {"text": "2023", "value": "year_2023"},
-        #         {"text": "2024", "value": "year_2024"},
-        #     ],
-        #     "data": cost_list
-        #     }
-        #
-        # from apc_journal import ApcJournal
-        # my_apc_journal = ApcJournal(self.issn_l, self._scenario_data)
-        # response["apc"] = {
-        #     "apc_price": my_apc_journal.apc_price_display,
-        #     "annual_projected_cost": my_apc_journal.cost_apc_historical,
-        #     "annual_projected_fractional_authorship": my_apc_journal.fractional_authorships_total,
-        #     "annual_projected_num_papers": my_apc_journal.num_apc_papers_historical,
-        # }
-
-        # response_debug = OrderedDict()
-        # response_debug["scenario_settings"] = self.settings.to_dict()
-        # response_debug["use_instant_percent"] = self.use_instant_percent
-        # response_debug["use_instant_percent_by_year"] = self.use_instant_percent_by_year
-        # response_debug["oa_embargo_months"] = self.oa_embargo_months
-        # response_debug["num_papers"] = self.num_papers
-        # response_debug["use_weight_multiplier_normalized"] = self.use_weight_multiplier_normalized
-        # response_debug["use_weight_multiplier"] = self.use_weight_multiplier
-        # response_debug["downloads_counter_multiplier_normalized"] = self.downloads_counter_multiplier_normalized
-        # response_debug["downloads_counter_multiplier"] = self.downloads_counter_multiplier
-        # response_debug["use_instant_by_year"] = self.use_instant_by_year
-        # response_debug["use_instant_percent_by_year"] = self.use_instant_percent_by_year
-        # response_debug["use_actual_by_year"] = self.use_actual_by_year
-        # response_debug["use_actual"] = self.use_actual
-        # # response_debug["use_oa_green"] = self.use_oa_green
-        # # response_debug["use_oa_hybrid"] = self.use_oa_hybrid
-        # # response_debug["use_oa_bronze"] = self.use_oa_bronze
-        # response_debug["perpetual_access_years"] = self.perpetual_access_years
-        # response_debug["display_perpetual_access_years"] = self.display_perpetual_access_years
-        # # response_debug["use_oa_peer_reviewed"] = self.use_oa_peer_reviewed
-        # response_debug["use_oa"] = self.use_oa
-        # response_debug["downloads_total_by_year"] = self.downloads_total_by_year
-        # response_debug["use_default_download_curve"] = self.use_default_download_curve
-        # response_debug["downloads_total_older_than_five_years"] = self.downloads_total_older_than_five_years
-        # response_debug["raw_downloads_by_age"] = self.raw_downloads_by_age
-        # response_debug["downloads_by_age"] = self.downloads_by_age
-        # response_debug["num_papers_by_year"] = self.num_papers_by_year
-        # response_debug["num_papers_growth_from_2018_by_year"] = self.num_papers_growth_from_2018_by_year
-        # response_debug["raw_num_papers_historical_by_year"] = self.raw_num_papers_historical_by_year
-        # response_debug["downloads_oa_by_year"] = self.downloads_oa_by_year
-        # response_debug["downloads_backfile_by_year"] = self.downloads_backfile_by_year
-        # response_debug["downloads_obs_pub_matrix"] = self.display_obs_pub_matrix(self.downloads_obs_pub)
-        # response_debug["oa_obs_pub_matrix"] = self.display_obs_pub_matrix(self.oa_obs_pub)
-        # response_debug["backfile_obs_pub_matrix"] = self.display_obs_pub_matrix(self.backfile_obs_pub)
-        # response_debug["use_oa_percent_by_year"] = self.use_oa_percent_by_year
-        # response_debug["ncppu"] = self.ncppu
-        # response_debug["ncppu_rank"] = self.ncppu_rank
-        # response_debug["old_school_cpu"] = self.old_school_cpu
-        # response_debug["old_school_cpu_rank"] = self.old_school_cpu_rank
-        # response_debug["downloads_oa_by_age"] = self.downloads_oa_by_age
-        # response_debug["num_oa_historical_by_year"] = self.num_oa_historical_by_year
-        # response_debug["num_oa_historical_by_year"] = self.num_oa_historical_by_year
-        # response_debug["num_bronze_by_year"] = self.num_bronze_by_year
-        # response_debug["num_hybrid_by_year"] = self.num_hybrid_by_year
-        # response_debug["num_green_by_year"] = self.num_green_by_year
-        # response_debug["downloads_oa_by_year"] = self.downloads_oa_by_year
-        # response_debug["downloads_oa_bronze_by_year"] = self.downloads_oa_bronze_by_year
-        # response_debug["downloads_oa_hybrid_by_year"] = self.downloads_oa_hybrid_by_year
-        # response_debug["downloads_oa_green_by_year"] = self.downloads_oa_green_by_year
-        # response_debug["downloads_oa_peer_reviewed_by_year"] = self.downloads_oa_peer_reviewed_by_year
-        # response_debug["downloads_oa_by_age"] = self.downloads_oa_by_age
-        # response_debug["downloads_oa_bronze_by_age"] = self.downloads_oa_bronze_by_age
-        # response_debug["downloads_oa_hybrid_by_age"] = self.downloads_oa_hybrid_by_age
-        # response_debug["downloads_oa_green_by_age"] = self.downloads_oa_green_by_age
-        # response_debug["downloads_oa_bronze_older"] = self.downloads_oa_bronze_older
-        # response_debug["downloads_oa_hybrid_older"] = self.downloads_oa_hybrid_older
-        # response_debug["downloads_oa_green_older"] = self.downloads_oa_green_older
-        # response["debug"] = response_debug
-
         return response
+
+
+
+
+
+# sum_of_usage = float(sum(j["usage"] for j in list_this_long))
+# for j in list_this_long:
+#     if j["ncppu"] and j["usage"] and (isinstance(j["ncppu"], int) or isinstance(j["ncppu"], float)):
+#         j["ncppu_combo_by_usage"] = j["ncppu"] * j["usage"] / sum_of_usage
+#     elif (isinstance(j["ncppu"], int) or isinstance(j["ncppu"], float)):
+#         j["ncppu_combo_by_usage"] = j["ncppu"]
+#     else:
+#         j["ncppu_combo_by_usage"] = "-"
+# if sum_of_usage < 10:
+#     j["ncppu_combo_by_usage"] = "-"
+#
+# # institution_names = u", ".join([j.get("institution_short_name", j["institution_name"]) for j in list_this_long])
+# institution_names_string = u", ".join([j.get("institution_name") for j in list_this_long])
+# package_ids = u", ".join([j["package_id"] for j in list_this_long])
+# normalized_cpu = sum(j["ncppu_combo_by_usage"] for j in list_this_long if j["ncppu_combo_by_usage"] != "-")
+# my_journal_dict = sorted_journal_dicts[0]
+# my_journal_dict["ncppu"] = normalized_cpu
+# my_journal_dict["usage"] = round(sum_of_usage)
+# my_journal_dict["cost"] = sum(j["cost"] for j in list_this_long if j["ncppu_combo_by_usage"] != "-")
+# my_journal_dict["cost_subscription"] = sum(j["cost_subscription"] for j in list_this_long if j["ncppu_combo_by_usage"] != "-")
+# my_journal_dict["cost_ill"] = sum(j["cost_ill"] for j in list_this_long if j["ncppu_combo_by_usage"] != "-")
+# my_journal_dict["institution_names"] = [j.get("institution_name") for j in list_this_long]
+# # my_journal_dict["title"] += u" [#1-{}: {}]".format(len(list_this_long), institution_names)
+# # my_journal_dict["issn_l"] += u"-[{}]".format(package_ids)
+# response_list.append(my_journal_dict)

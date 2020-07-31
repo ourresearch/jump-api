@@ -949,3 +949,20 @@ def write_to_tempfile(file_contents, strip=False):
     with codecs.open(temp_file_name, 'w', 'utf-8') as temp_file:
         temp_file.write(file_contents)
     return temp_file_name
+
+# f5 from https://www.peterbe.com/plog/uniqifiers-benchmark
+def uniquify_list(seq, idfun=None):
+   # order preserving
+   if idfun is None:
+       def idfun(x): return x
+   seen = {}
+   result = []
+   for item in seq:
+       marker = idfun(item)
+       # in old Python versions:
+       # if seen.has_key(marker)
+       # but in new ones:
+       if marker in seen: continue
+       seen[marker] = 1
+       result.append(item)
+   return result
