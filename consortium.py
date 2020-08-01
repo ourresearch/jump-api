@@ -8,11 +8,13 @@ from time import time
 import simplejson as json
 
 from app import get_db_cursor
+from app import disk_cache
 from consortium_journal import ConsortiumJournal
 from util import elapsed
 
 # team+dev@ourresearch.org
 
+@disk_cache.memoize()
 def get_consortium_ids():
     q = """select institution_id, old_username as consortium_short_name, p.package_id, s.scenario_id
                 from jump_package_scenario s
@@ -25,6 +27,7 @@ def get_consortium_ids():
     return rows
 
 
+@disk_cache.memoize()
 def consortium_get_computed_data(consortium_name):
     start_time = time()
 
@@ -41,24 +44,8 @@ def consortium_get_computed_data(consortium_name):
     print "after json loads in consortium_get_computed_data", elapsed(start_time)
     return rows
 
-def consortium_get_computed_data_simple(consortium_name):
-    start_time = time()
 
-    command = """select package_id, scenario_id, issn_l, journals_dict from jump_scenario_computed where scenario_id='{}'""".format(consortium_name)
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
-
-    print "after db get consortium_get_computed_data", elapsed(start_time)
-
-    start_time = time()
-    result = []
-    for row in rows:
-        result.append(json.loads(row["journals_dict"]))
-    print "after json loads in consortium_get_computed_data", elapsed(start_time)
-    return result
-
-
+@disk_cache.memoize()
 def consortium_get_issns(consortium_name):
     start_time = time()
 
@@ -69,6 +56,7 @@ def consortium_get_issns(consortium_name):
 
     print "after db get consortium_get_issns", elapsed(start_time)
     return [row["issn_l"] for row in rows]
+
 
 class Consortium(object):
     def __init__(self, scenario_id, package_id=None):
@@ -86,7 +74,7 @@ class Consortium(object):
 
     @cached_property
     def journal_member_data(self):
-        response = consortium_get_computed_data_simple(self.consortium_name)
+        response = consortium_get_computed_data(self.consortium_name)
         return response
 
     @cached_property
