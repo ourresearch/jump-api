@@ -12,7 +12,6 @@ import urlparse
 import numpy
 from contextlib import contextmanager
 from collections import OrderedDict
-from diskcache import Index
 
 warnings.filterwarnings("ignore", category=UserWarning, module='psycopg2')
 import psycopg2
