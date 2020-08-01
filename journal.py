@@ -71,7 +71,7 @@ class Journal(object):
     def title(self):
         if self._ricks_journal_row:
             return self._ricks_journal_row["title"]
-        return "Unknown Title"
+        return u"Unknown Title"
 
 
     @cached_property

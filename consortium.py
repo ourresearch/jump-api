@@ -6,18 +6,16 @@ from collections import OrderedDict
 import datetime
 from time import time
 import simplejson as json
+from kids.cache import cache
 
 from app import get_db_cursor
-# from app import disk_cache
 from consortium_journal import ConsortiumJournal
 from util import elapsed
 
 # team+dev@ourresearch.org
 
-from kids.cache import cache
 
 
-# @disk_cache.memoize()
 @cache
 def get_consortium_ids():
     q = """select institution_id, old_username as consortium_short_name, p.package_id, s.scenario_id
@@ -31,7 +29,6 @@ def get_consortium_ids():
     return rows
 
 
-# @disk_cache.memoize()
 @cache
 def consortium_get_computed_data(consortium_name):
     start_time = time()
@@ -50,7 +47,6 @@ def consortium_get_computed_data(consortium_name):
     return rows
 
 
-# @disk_cache.memoize()
 @cache
 def consortium_get_issns(consortium_name):
     start_time = time()
