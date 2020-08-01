@@ -8,13 +8,17 @@ from time import time
 import simplejson as json
 
 from app import get_db_cursor
-from app import disk_cache
+# from app import disk_cache
 from consortium_journal import ConsortiumJournal
 from util import elapsed
 
 # team+dev@ourresearch.org
 
-@disk_cache.memoize()
+from kids.cache import cache
+
+
+# @disk_cache.memoize()
+@cache
 def get_consortium_ids():
     q = """select institution_id, old_username as consortium_short_name, p.package_id, s.scenario_id
                 from jump_package_scenario s
@@ -27,7 +31,8 @@ def get_consortium_ids():
     return rows
 
 
-@disk_cache.memoize()
+# @disk_cache.memoize()
+@cache
 def consortium_get_computed_data(consortium_name):
     start_time = time()
 
@@ -45,7 +50,8 @@ def consortium_get_computed_data(consortium_name):
     return rows
 
 
-@disk_cache.memoize()
+# @disk_cache.memoize()
+@cache
 def consortium_get_issns(consortium_name):
     start_time = time()
 
@@ -119,25 +125,25 @@ class Consortium(object):
 
     @cached_property
     def journals(self):
+        response = None
         rows = self.journal_member_data
         start_time = time()
         print "creating consortium journals"
-        from util import uniquify_list
 
         issn_ls = consortium_get_issns(self.consortium_name)
         print "before journals", elapsed(start_time)
         start_time = time()
-        rows_by_issn_l = defaultdict(list)
+        journals_dicts_by_issn_l = defaultdict(list)
         for d in rows:
             if d["package_id"] in self.member_institution_included_list:
-                rows_by_issn_l[d["issn_l"]].append(d)
+                journals_dicts_by_issn_l[d["issn_l"]].append(d["journals_dict"])
 
         print "after calculating", elapsed(start_time)
         start_time = time()
         response = []
         for issn_l in issn_ls:
-            if len(rows_by_issn_l[issn_l]) > 0:
-                response.append(ConsortiumJournal(issn_l, self.member_institution_included_list, rows_by_issn_l[issn_l]))
+            if len(journals_dicts_by_issn_l[issn_l]) > 0:
+                response.append(ConsortiumJournal(issn_l, self.member_institution_included_list, journals_dicts_by_issn_l[issn_l]))
 
         print "after journals", elapsed(start_time)
         return response
