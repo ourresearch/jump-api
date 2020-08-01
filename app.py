@@ -205,11 +205,12 @@ use_groups_free_instant = [k for k, v in use_groups_lookup.iteritems() if v["fre
 suny_consortium_package_ids = ["P2NFgz7B", "PN3juRC5", "2k4Qs74v", "uwdhDaJ2"]
 
 
-print u"loading cache"
-consortium_name = "crkn"
+if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
+    print u"loading cache"
+    consortium_name = "crkn"
 
-import consortium
-consortium.get_consortium_ids()
-consortium.consortium_get_computed_data(consortium_name)
-consortium.consortium_get_issns(consortium_name)
-print u"done loading to cache"
+    import consortium
+    consortium.get_consortium_ids()
+    consortium.consortium_get_computed_data(consortium_name)
+    consortium.consortium_get_issns(consortium_name)
+    print u"done loading to cache"
