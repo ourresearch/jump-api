@@ -53,8 +53,7 @@ class ConsortiumJournal(Journal):
         start_time = time()
         self.issn_l = issn_l
         self.included_package_ids = included_package_ids
-        self.member_data = all_member_data
-        # self.member_data = [d["journals_dict"] for d in all_member_data if issn_l==d["issn_l"]]
+        self.member_data = [d["journals_dict"] for d in all_member_data if issn_l==d["issn_l"]]
         self.meta_data = self.member_data[0]
         self.subscribed_bulk = False
         self.subscribed_custom = False
@@ -118,7 +117,11 @@ class ConsortiumJournal(Journal):
 
     @cached_property
     def title(self):
-        return self.meta_data["title"]
+        try:
+            return self.meta_data["title"]
+        except:
+            print self.issn_l
+            print self.meta_data.keys()
 
     @cached_property
     def subject(self):
