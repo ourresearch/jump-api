@@ -116,14 +116,6 @@ class ConsortiumJournal(Journal):
         return self.list_attribute("package_id")
 
     @cached_property
-    def title(self):
-        try:
-            return self.meta_data["title"]
-        except:
-            print self.issn_l
-            print self.meta_data.keys()
-
-    @cached_property
     def subject(self):
         return self.meta_data["subject"]
 
