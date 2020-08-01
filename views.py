@@ -83,20 +83,6 @@ from app import DEMO_PACKAGE_ID
 
 
 
-from diskcache import Index
-index = Index('my_cache')
-if "c" in index:
-    print "cache already set up"
-else:
-    print "setting up cache"
-    index.update([('a', 4), ('b', 5), ('c', 5)])
-print index.keys()
-print 'b' in index
-print index['c']
-# del index['a']
-print len(index)
-index.cache.close()
-
 def build_cache_key(module_name, function_name, extra_key, *args, **kwargs):
     # Hash function args
     items = kwargs.items()
