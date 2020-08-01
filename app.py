@@ -217,9 +217,10 @@ import consortium
 from time import sleep
 from random import random
 
-time_to_sleep = 5 * random()
-print u"sleeping for {}s to stagger".format(time_to_sleep)
-sleep(time_to_sleep)
+if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
+    time_to_sleep = 5 * random()
+    print u"sleeping for {}s to stagger".format(time_to_sleep)
+    sleep(time_to_sleep)
 
 if "loading" in disk_cache:
     print u"cache already loaded"

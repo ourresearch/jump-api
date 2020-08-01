@@ -136,7 +136,7 @@ class Consortium(object):
         start_time = time()
         response = []
         for issn_l in issn_ls:
-            if rows_by_issn_l[issn_l]:
+            if len(rows_by_issn_l[issn_l]) > 0:
                 response.append(ConsortiumJournal(issn_l, self.member_institution_included_list, rows_by_issn_l[issn_l]))
 
         print "after journals", elapsed(start_time)
