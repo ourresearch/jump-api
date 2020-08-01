@@ -206,28 +206,11 @@ use_groups_free_instant = [k for k, v in use_groups_lookup.iteritems() if v["fre
 suny_consortium_package_ids = ["P2NFgz7B", "PN3juRC5", "2k4Qs74v", "uwdhDaJ2"]
 
 
-# Disk Cache
-
-print u"opening cache"
-disk_cache = Index('disk_cache')
-
 print u"loading cache"
 consortium_name = "crkn"
+
 import consortium
-from time import sleep
-from random import random
-
-if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
-    time_to_sleep = 5 * random()
-    print u"sleeping for {}s to stagger".format(time_to_sleep)
-    sleep(time_to_sleep)
-
-if "loading" in disk_cache:
-    print u"cache already loaded"
-else:
-    disk_cache["loading"] = True
-    print u"cache needs to be loaded"
-    consortium.get_consortium_ids()
-    consortium.consortium_get_computed_data(consortium_name)
-    consortium.consortium_get_issns(consortium_name)
+consortium.get_consortium_ids()
+consortium.consortium_get_computed_data(consortium_name)
+consortium.consortium_get_issns(consortium_name)
 print u"done loading to cache"

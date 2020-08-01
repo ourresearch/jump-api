@@ -53,7 +53,7 @@ class ConsortiumJournal(Journal):
         start_time = time()
         self.issn_l = issn_l
         self.included_package_ids = included_package_ids
-        self.member_data = [d["journals_dict"] for d in all_member_data if issn_l==d["issn_l"]]
+        self.member_data = all_member_data
         self.meta_data = self.member_data[0]
         self.subscribed_bulk = False
         self.subscribed_custom = False
@@ -291,31 +291,3 @@ class ConsortiumJournal(Journal):
         return response
 
 
-
-
-
-# sum_of_usage = float(sum(j["usage"] for j in list_this_long))
-# for j in list_this_long:
-#     if j["ncppu"] and j["usage"] and (isinstance(j["ncppu"], int) or isinstance(j["ncppu"], float)):
-#         j["ncppu_combo_by_usage"] = j["ncppu"] * j["usage"] / sum_of_usage
-#     elif (isinstance(j["ncppu"], int) or isinstance(j["ncppu"], float)):
-#         j["ncppu_combo_by_usage"] = j["ncppu"]
-#     else:
-#         j["ncppu_combo_by_usage"] = "-"
-# if sum_of_usage < 10:
-#     j["ncppu_combo_by_usage"] = "-"
-#
-# # institution_names = u", ".join([j.get("institution_short_name", j["institution_name"]) for j in list_this_long])
-# institution_names_string = u", ".join([j.get("institution_name") for j in list_this_long])
-# package_ids = u", ".join([j["package_id"] for j in list_this_long])
-# normalized_cpu = sum(j["ncppu_combo_by_usage"] for j in list_this_long if j["ncppu_combo_by_usage"] != "-")
-# my_journal_dict = sorted_journal_dicts[0]
-# my_journal_dict["ncppu"] = normalized_cpu
-# my_journal_dict["usage"] = round(sum_of_usage)
-# my_journal_dict["cost"] = sum(j["cost"] for j in list_this_long if j["ncppu_combo_by_usage"] != "-")
-# my_journal_dict["cost_subscription"] = sum(j["cost_subscription"] for j in list_this_long if j["ncppu_combo_by_usage"] != "-")
-# my_journal_dict["cost_ill"] = sum(j["cost_ill"] for j in list_this_long if j["ncppu_combo_by_usage"] != "-")
-# my_journal_dict["institution_names"] = [j.get("institution_name") for j in list_this_long]
-# # my_journal_dict["title"] += u" [#1-{}: {}]".format(len(list_this_long), institution_names)
-# # my_journal_dict["issn_l"] += u"-[{}]".format(package_ids)
-# response_list.append(my_journal_dict)

@@ -1698,6 +1698,7 @@ def jump_debug_ids():
     return jsonify_fast(response)
 
 
+#  flask run -h 0.0.0.0 -p 5004 --with-threads --reload
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5004))
-    app.run(host='0.0.0.0', port=port, debug=True, threaded=True, use_reloader=True)
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=True, use_reloader=True)
