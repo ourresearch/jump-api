@@ -1246,7 +1246,10 @@ def _load_ricks_journal_rows():
         _ricks_journal_rows = my_dict
 
 
+
 def get_ricks_journal_rows():
+    global _ricks_journal_rows
+
     _load_ricks_journal_rows()
     return _ricks_journal_rows
 
