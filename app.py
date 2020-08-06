@@ -227,8 +227,6 @@ def build_cache_key(module_name, function_name, *args):
 def memorycache(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        # global my_memorycache_dict
-
         cache_key = build_cache_key(func.__module__, func.__name__, *args)
 
         # Return cached version if available
@@ -274,7 +272,6 @@ def reset_cache(module_name, function_name, *args):
 
 if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
     print u"loading cache"
-    scenario_id = "scenario-fsVitXLd"
 
     start_time = time()
 
@@ -285,10 +282,11 @@ if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
     _load_hybrid_2019_from_db()
     _load_journal_era_subjects_from_db()
 
-    import consortium
-    consortium.get_consortium_ids()
-    consortium.consortium_get_computed_data(scenario_id)
-    consortium.consortium_get_issns(scenario_id)
+    # import consortium
+    # consortium_ids = consortium.get_consortium_ids()
+    # for scenario_id in [d["scenario_id"] for d in consortium_ids]:
+    #     consortium.consortium_get_computed_data(scenario_id)
+    #     consortium.consortium_get_issns(scenario_id)
 
     import scenario
     scenario.get_common_package_data_for_all()

@@ -44,7 +44,8 @@ def get_latest_member_institutions_raw(scenario_id):
 
     return scenario_members
 
-@memorycache
+# NO CACHE FOR NOW @memorycache
+# too slow to get refreshed across dynos
 def get_consortium_ids():
     q = """select institution_id, old_username as consortium_short_name, p.package_id, s.scenario_id
                 from jump_package_scenario s
