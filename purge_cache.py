@@ -5,7 +5,8 @@ import requests
 import package
 from app import db
 from institution import Institution
-from scenario import refresh_perpetual_access_from_db, refresh_cached_prices_from_db
+from scenario import refresh_perpetual_access_from_db
+from scenario import refresh_cached_prices_from_db
 
 
 def purge_common_package_data_cache(package_id):

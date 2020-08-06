@@ -20,6 +20,8 @@ from app import DEMO_PACKAGE_ID
 from app import db
 from app import my_memcached
 from app import logger
+from app import memorycache
+
 from time import time
 from util import elapsed
 from util import for_sorting
@@ -79,7 +81,7 @@ class Scenario(object):
         self.section_time = time()
         
     def __init__(self, package_id, http_request_args=None, my_jwt=None):
-        self.timing_messages = []; 
+        self.timing_messages = []
         self.section_time = time()        
         self.settings = Assumptions(http_request_args)
         self.is_consortium = False
@@ -104,15 +106,19 @@ class Scenario(object):
         if my_package and my_package.big_deal_cost:
             self.settings.cost_bigdeal = float(my_package.big_deal_cost)
 
-        from app import USE_PAPER_GROWTH
-        if USE_PAPER_GROWTH:
-            self.data = get_common_package_data(self.package_id_for_db)
-            self.log_timing("get_common_package_data_ NOT FROM from_cache")
-            logger.debug("get_common_package_data_NOT FROM from_cache")
-        else:
-            self.data = get_common_package_data_from_cache(self.package_id_for_db)
-            self.log_timing("get_common_package_data_from_cache")
-            # logger.debug("get_common_package_data_from_cache")
+        # from app import USE_PAPER_GROWTH
+        # if USE_PAPER_GROWTH:
+        #     self.data = get_common_package_data(self.package_id_for_db)
+        #     self.log_timing("get_common_package_data_ NOT FROM from_cache")
+        #     logger.debug("get_common_package_data_NOT FROM from_cache")
+        # else:
+        #     self.data = get_common_package_data_from_cache(self.package_id_for_db)
+        #     self.log_timing("get_common_package_data_from_cache")
+        #     # logger.debug("get_common_package_data_from_cache")
+
+        self.data = get_common_package_data(self.package_id_for_db)
+        self.log_timing("get_common_package_data from_cache")
+        logger.debug("get_common_package_data from_cache")
 
         self.set_clean_data()  #order for this one matters, after get common, before build journals
         self.log_timing("set_clean_data")
@@ -1395,66 +1401,31 @@ if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
     from warm_cache import warm_the_cache
     warm_the_cache()
 
-def get_consortium_package_data(consortium_name):
-    total_start_time = time()
 
-    from save_groups import package_id_lists
-    package_ids = package_id_lists[consortium_name]
-
-    my_data = {}
-    for package_id in package_ids:
-        my_data[package_id] = get_package_specific_scenario_data_from_db(package_id)
-
-    print "done all: ", elapsed(total_start_time)
-
-    return my_data
-
-def get_consortium_package_data_common():
-    my_timing = TimingMessages()
-    my_data = {}
-
-    # not package_id specific
-
-    my_data["journal_era_subjects"] = get_journal_era_subjects()
-    my_timing.log_timing("get_core_list_from_db")
-
-    my_data["embargo_dict"] = get_embargo_data_from_db()
-    my_timing.log_timing("get_embargo_data_from_db")
-
-    my_data["unpaywall_downloads_dict_raw"] = get_unpaywall_downloads_from_db()
-    my_timing.log_timing("get_unpaywall_downloads_from_db")
-
-    my_data["oa"] = get_oa_data_from_db()
-    my_timing.log_timing("get_oa_data_from_db")
-
-    my_data["oa_recent"] = get_oa_recent_data_from_db()
-    my_timing.log_timing("get_oa_recent_data_from_db")
-
-    my_data["social_networks"] = get_social_networks_data_from_db()
-    my_timing.log_timing("get_social_networks_data_from_db")
-
-    # add this in later
-    # my_data["oa_adjustment"] = get_oa_adjustment_data_from_db()
-    # my_timing.log_timing("get_oa_adjustment_data_from_db")
-
-    my_data["society"] = get_society_data_from_db()
-    my_timing.log_timing("get_society_data_from_db")
-
-    my_data["num_papers"] = get_num_papers_from_db()
-    my_timing.log_timing("get_num_papers_from_db")
-
-    my_data["_timing"] = my_timing.to_dict()
-    print my_data["_timing"]
-
-    return my_data
-
-
-@cache
+# not cached on purpose, because components are cached to save space
 def get_common_package_data(package_id):
     my_timing = TimingMessages()
+    my_data = {}
+
+    (my_data_specific, timing_specific) = get_common_package_data_specific(package_id)
+    my_timing.log_timing("LIVE get_common_package_data_specific")
+    my_data.update(my_data_specific)
+    # my_timing.messages += timing_specific.messages
+
+    (my_data_common, timing_common) = get_common_package_data_for_all()
+    my_timing.log_timing("LIVE get_common_package_data_for_all")
+    my_data.update(my_data_common)
+    # my_timing.messages += timing_common.messages
+
+    return my_data
+
+
+@memorycache
+def get_common_package_data_specific(package_id):
+    my_timing = TimingMessages()
+    my_data = {}
 
     # package_id specific
-    my_data = {}
     member_package_ids = get_consortium_package_ids(package_id)
     if member_package_ids:
         my_data["member_package_ids"] = member_package_ids
@@ -1472,9 +1443,12 @@ def get_common_package_data(package_id):
     my_data["core_list"] = get_core_list_from_db(package_id)
     my_timing.log_timing("get_core_list_from_db")
 
+    return (my_data, my_timing)
 
-
-    # not package_id specific
+@memorycache
+def get_common_package_data_for_all():
+    my_timing = TimingMessages()
+    my_data = {}
 
     my_data["journal_era_subjects"] = get_journal_era_subjects()
     my_timing.log_timing("get_journal_era_subjects")
@@ -1504,32 +1478,33 @@ def get_common_package_data(package_id):
     my_data["num_papers"] = get_num_papers_from_db()
     my_timing.log_timing("get_num_papers_from_db")
 
-    my_data["_timing"] = my_timing.to_dict()
+    my_data["_timing_common"] = my_timing.to_dict()
 
-    return my_data
+    return (my_data, my_timing)
 
 
-def get_common_package_data_from_cache(package_id):
-    from package import Package
-    package_id_in_cache = package_id
-    my_package = Package.query.filter(Package.package_id == package_id).scalar()
-
-    if not my_package or my_package.is_demo or package_id == DEMO_PACKAGE_ID:
-        package_id_in_cache = DEMO_PACKAGE_ID
-
-    url = "https://cdn.unpaywalljournals.org/live/data/common/{}?secret={}".format(
-        package_id_in_cache, os.getenv("JWT_SECRET_KEY"))
-
-    # url = "http://localhost:5004/live/data/common/{}?secret={}".format(
-    #     package_id_in_cache, os.getenv("JWT_SECRET_KEY"))
-
-    headers = {"Cache-Control": "public, max-age=31536000"}
-    r = requests.get(url, headers=headers)
-    if r.status_code == 200:
-        data = r.json()
-        logger.info(u"success in get_common_package_data_from_cache with {}".format(url))
-    else:
-        data = get_common_package_data(package_id_in_cache)
-        logger.info(u"not success in get_common_package_data_from_cache with {}, had to build locally".format(url))
-
-    return data
+#
+# def get_common_package_data_from_cache(package_id):
+#     from package import Package
+#     package_id_in_cache = package_id
+#     my_package = Package.query.filter(Package.package_id == package_id).scalar()
+#
+#     if not my_package or my_package.is_demo or package_id == DEMO_PACKAGE_ID:
+#         package_id_in_cache = DEMO_PACKAGE_ID
+#
+#     url = "https://cdn.unpaywalljournals.org/live/data/common/{}?secret={}".format(
+#         package_id_in_cache, os.getenv("JWT_SECRET_KEY"))
+#
+#     # url = "http://localhost:5004/live/data/common/{}?secret={}".format(
+#     #     package_id_in_cache, os.getenv("JWT_SECRET_KEY"))
+#
+#     headers = {"Cache-Control": "public, max-age=31536000"}
+#     r = requests.get(url, headers=headers)
+#     if r.status_code == 200:
+#         data = r.json()
+#         logger.info(u"success in get_common_package_data_from_cache with {}".format(url))
+#     else:
+#         data = get_common_package_data(package_id_in_cache)
+#         logger.info(u"not success in get_common_package_data_from_cache with {}, had to build locally".format(url))
+#
+#     return data

@@ -6,6 +6,9 @@ import sys
 import os
 import requests
 import simplejson as json
+import functools
+import hashlib
+import pickle
 import random
 import warnings
 import urlparse
@@ -125,7 +128,7 @@ app.config["SQLALCHEMY_BINDS"] = {
 #
 # db = NullPoolSQLAlchemy(app, session_options={"autoflush": False})
 
-app.config["SQLALCHEMY_POOL_SIZE"] = 10
+app.config["SQLALCHEMY_POOL_SIZE"] = 200
 db = SQLAlchemy(app, session_options={"autoflush": False, "autocommit": False})
 
 # do compression.  has to be above flask debug toolbar so it can override this.
@@ -149,7 +152,7 @@ app.config["COMPRESS_DEBUG"] = compress_json
 
 
 redshift_url = urlparse.urlparse(os.getenv("DATABASE_URL_REDSHIFT"))
-app.config['postgreSQL_pool'] = ThreadedConnectionPool(2, 5,
+app.config['postgreSQL_pool'] = ThreadedConnectionPool(2, 200,
                                   database=redshift_url.path[1:],
                                   user=redshift_url.username,
                                   password=redshift_url.password,
@@ -205,12 +208,84 @@ use_groups_free_instant = [k for k, v in use_groups_lookup.iteritems() if v["fre
 suny_consortium_package_ids = ["P2NFgz7B", "PN3juRC5", "2k4Qs74v", "uwdhDaJ2"]
 
 
+
+
+
+app.my_memorycache_dict = {}
+
+def build_cache_key(module_name, function_name, *args):
+    # just ignoring kwargs for now
+    hashable_args = args
+
+    # Generate unique cache key
+    key_raw = (module_name, function_name, hashable_args)
+    cache_key = json.dumps(key_raw)
+    return cache_key
+
+
+def memorycache(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # global my_memorycache_dict
+
+        cache_key = build_cache_key(func.__module__, func.__name__, *args)
+
+        # Return cached version if available
+        result = app.my_memorycache_dict.get(cache_key, None)
+        if result is not None:
+            print "cache hit on", cache_key
+            return result
+
+        print "cache miss on", cache_key
+
+        # Generate output
+        print u"> calling {}.{} with {}".format(func.__module__, func.__name__, args)
+        result = func(*args)
+
+        # Cache output if allowed
+        if result is not None:
+            app.my_memorycache_dict[cache_key] = result
+
+        # reset_cache(func.__module__, func.__name__, *args)
+
+        return result
+
+    return wrapper
+
+
+def reset_cache(module_name, function_name, *args):
+    # global my_memorycache_dict
+
+    print "args", args
+    cache_key = build_cache_key(module_name, function_name, *args)
+    print "cache_key", cache_key
+
+    if cache_key in app.my_memorycache_dict:
+        del app.my_memorycache_dict[cache_key]
+
+    delete_command = """delete from jump_cache_status where cache_call = '{}';""".format(cache_key)
+    insert_command = """insert into jump_cache_status (cache_call, updated)
+        values ('{}', sysdate) """.format(cache_key)
+    with get_db_cursor() as cursor:
+        cursor.execute(delete_command)
+        cursor.execute(insert_command)
+
+
 if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
     print u"loading cache"
-    consortium_name = "crkn"
+    scenario_id = "scenario-fsVitXLd"
 
     import consortium
     consortium.get_consortium_ids()
-    consortium.consortium_get_computed_data(consortium_name)
-    consortium.consortium_get_issns(consortium_name)
+    consortium.consortium_get_computed_data(scenario_id)
+    consortium.consortium_get_issns(scenario_id)
+
+    import scenario
+    scenario.get_common_package_data_for_all()
+
     print u"done loading to cache"
+
+#
+# print "clearing cache"
+# reset_cache("consortium", "consortium_get_computed_data", "scenario-fsVitXLd")
+# print "cache clear set"
