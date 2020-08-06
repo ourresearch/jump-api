@@ -61,7 +61,7 @@ def get_fresh_journal_list(scenario, my_jwt):
         issnls_to_build = [issn_l for issn_l in issn_ls if issn_l in scenario.data[scenario.package_id_for_db]["counter_dict"].keys()]
         package_id = scenario.package_id
 
-    journals = [Journal(issn_l, package_id=package_id) for issn_l in issnls_to_build]
+    journals = [Journal(issn_l, package_id=package_id) for issn_l in issnls_to_build if issn_l]
 
     for my_journal in journals:
         my_journal.set_scenario(scenario)
