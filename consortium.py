@@ -230,7 +230,7 @@ class Consortium(object):
 
         if not hasattr(threading.current_thread(), "_children"):
             threading.current_thread()._children = weakref.WeakKeyDictionary()
-        my_thread_pool = ThreadPool(25)
+        my_thread_pool = ThreadPool(1)
 
         print "starting threads"
 
