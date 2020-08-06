@@ -116,7 +116,11 @@ class Scenario(object):
         #     self.log_timing("get_common_package_data_from_cache")
         #     # logger.debug("get_common_package_data_from_cache")
 
-        self.data = get_common_package_data(self.package_id_for_db)
+        package_id_in_cache = self.package_id_for_db
+        if not my_package or my_package.is_demo or package_id == DEMO_PACKAGE_ID:
+            package_id_in_cache = DEMO_PACKAGE_ID
+
+        self.data = get_common_package_data(package_id_in_cache)
         self.log_timing("get_common_package_data from_cache")
         logger.debug("get_common_package_data from_cache")
 
