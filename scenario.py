@@ -1400,11 +1400,6 @@ def get_oa_adjustment_data_from_db():
         lookup_dict[row["issn_l"]] = row
     return lookup_dict
 
-if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
-    sleep(random() * 5)  # sleep up to five seconds
-    from warm_cache import warm_the_cache
-    warm_the_cache()
-
 
 # not cached on purpose, because components are cached to save space
 def get_common_package_data(package_id):

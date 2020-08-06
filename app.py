@@ -12,6 +12,7 @@ import pickle
 import random
 import warnings
 import urlparse
+from time import time
 import numpy
 from contextlib import contextmanager
 from collections import OrderedDict
@@ -275,6 +276,15 @@ if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
     print u"loading cache"
     scenario_id = "scenario-fsVitXLd"
 
+    start_time = time()
+
+    from scenario import _load_ricks_journal_rows
+    from scenario import _load_hybrid_2019_from_db
+    from scenario import _load_journal_era_subjects_from_db
+    _load_ricks_journal_rows()
+    _load_hybrid_2019_from_db()
+    _load_journal_era_subjects_from_db()
+
     import consortium
     consortium.get_consortium_ids()
     consortium.consortium_get_computed_data(scenario_id)
@@ -284,7 +294,7 @@ if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
     scenario.get_common_package_data_for_all()
     scenario.get_common_package_data_specific(DEMO_PACKAGE_ID)
 
-    print u"done loading to cache"
+    print u"done loading to cache in {}s".format(elapsed(start_time))
 
 #
 # print "clearing cache"

@@ -1591,6 +1591,7 @@ def start_cache_thread():
 
         while True:
             command = "select cache_call, updated from jump_cache_status where updated > '{}'::timestamp".format(cache_last_updated)
+            # print command
             with get_db_cursor() as cursor:
                 cursor.execute(command)
                 rows = cursor.fetchall()
