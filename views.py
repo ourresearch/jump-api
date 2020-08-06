@@ -18,34 +18,33 @@ from sqlalchemy import func as sql_func
 from werkzeug.security import safe_str_cmp
 from werkzeug.security import generate_password_hash, check_password_hash
 
-import base64
-import simplejson as json
+
 import os
 import sys
+import simplejson as json
 from collections import defaultdict
 from time import sleep
 from time import time
 import unicodecsv as csv
 import shortuuid
 import datetime
-from threading import Thread
 import requests
-import dateparser
-import functools
-import hashlib
-import pickle
 import tempfile
+import random
 from collections import OrderedDict
 
-import ror_search
-import password_reset
-import prepared_demo_publisher
+# from app import my_memorycache_dict
 from app import app
 from app import logger
 from app import jwt
 from app import db
 from app import my_memcached
 from app import get_db_cursor
+from app import reset_cache
+
+import ror_search
+import password_reset
+import prepared_demo_publisher
 from emailer import create_email, send
 from counter import Counter, CounterInput
 from grid_id import GridId
@@ -82,61 +81,6 @@ from app import logger
 from app import DEMO_PACKAGE_ID
 
 
-
-def build_cache_key(module_name, function_name, extra_key, *args, **kwargs):
-    # Hash function args
-    items = kwargs.items()
-    items.sort()
-    jwt = get_jwt()
-    if not jwt and is_authorized_superuser():
-        jwt = "superuser"
-    hashable_args = (args, tuple(items), jwt)
-    args_key = hashlib.md5(pickle.dumps(hashable_args)).hexdigest()
-
-    # Generate unique cache key
-    cache_key = '{0}-{1}-{2}-{3}'.format(
-        module_name,
-        function_name,
-        args_key,
-        extra_key() if hasattr(extra_key, '__call__') else extra_key
-    )
-    return cache_key
-
-def cached(extra_key=None):
-    def _cached(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-
-            cache_key = build_cache_key(func.__module__, func.__name__, extra_key, args, kwargs)
-
-            # Return cached version if allowed and available
-            result = my_memcached.get(cache_key)
-            if result is not None:
-                return result
-
-            # Generate output
-            result = func(*args, **kwargs)
-
-            # Cache output if allowed
-            if result is not None:
-                my_memcached.set(cache_key, result)
-
-                # later use this to store keys by scenario_id etc
-                # # from https://stackoverflow.com/a/27468294/596939
-                # # Retry loop, probably it should be limited to some reasonable retries
-                # while True:
-                #   scenario_id_key = "scenario_id:" + scenario_id
-                #   list_of_this_key = my_memcached.gets(scenario_id_key)
-                #   if list_of_this_key == None:
-                #       list_of_this_key = []
-                #   if my_memcached.set(scenario_id_key, list_of_this_key + [cache_key]):
-                #     break
-
-            return result
-
-        return wrapper
-
-    return _cached
 
 
 def authenticate_for_publisher(publisher_id, required_permission):
@@ -249,45 +193,14 @@ def base_endpoint():
 # def favicon():
 #     return redirect(url_for("static", filename="img/favicon.ico", _external=True, _scheme='https'))
 
-# hi heather
 
 @app.route('/scenario/<scenario_id>/journal/<issn_l>', methods=['GET'])
 @jwt_optional
 def jump_scenario_issn_get(scenario_id, issn_l):
     my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
     scenario = my_saved_scenario.live_scenario
-
-    if scenario_id == "scenario-qQHgEKmD":
-        # consortium_name = "crkn"
-        # institution_journal_dicts = consortium_get_computed_data(consortium_name)
-        # this_journal_dicts = [d for d in institution_journal_dicts if d["issn_l"]==issn_l]
-        # response = {}
-        # response["_settings"] = scenario.settings.to_dict()
-        # response["journal"] = {}
-        # response["institutions"] = []
-        #
-        # sum_of_usage = float(sum(j["usage"] for j in this_journal_dicts))
-        # my_dict["num_issn_l"] = len(this_journal_dicts)
-        # my_dict["cost_subscription"] = round(sum(j["cost_subscription"] for j in this_journal_dicts if j["ncppu"] != "-"))
-        # my_dict["cost_ill"] = round(sum(j["cost_ill"] for j in this_journal_dicts if j["ncppu"] != "-"))
-        # my_dict["usage"] = round(sum_of_usage)
-        #
-        # for j in this_journal_dicts:
-        #
-        #     my_dict = OrderedDict()
-        #
-        #     # written more than once
-        #     my_dict["package_id"] = institution_package_id
-        #     my_dict["institution_name"] = journal_list[0]["institution_name"]
-        #
-        #     # aggregaations across journals
-        #
-        #     response["institutions"].append(my_dict)
-        # return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": response})
-        return abort_json(505, "not here yet sorry heather")
-    else:
-        my_journal = scenario.get_journal(issn_l)
-        return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
+    my_journal = scenario.get_journal(issn_l)
+    return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
 
 
 @app.route('/live/data/common/<package_id>', methods=['GET'])
@@ -300,31 +213,8 @@ def jump_data_package_id_get(package_id):
     response = get_common_package_data(package_id)
 
     response = jsonify_fast_no_sort(response)
-    response.headers["Cache-Tag"] = u",".join(["common", u"package_{}".format(package_id)])
     return response
 
-@app.route('/live/data/consortium/<consortium_name>', methods=['GET'])
-def jump_data_consortium_get(consortium_name):
-    if not is_authorized_superuser():
-        abort_json(500, "Secret doesn't match, not getting package")
-
-    from scenario import get_consortium_package_data
-    response = get_consortium_package_data(consortium_name)
-
-    response = jsonify_fast_no_sort(response)
-    return response
-
-
-@app.route('/live/data/consortium/common', methods=['GET'])
-def jump_data_consortium_common_get():
-    if not is_authorized_superuser():
-        abort_json(500, "Secret doesn't match, not getting package")
-
-    from scenario import get_consortium_package_data_common
-    response = get_consortium_package_data_common()
-
-    response = jsonify_fast_no_sort(response)
-    return response
 
 
 @app.route('/login', methods=["GET", "POST"])
@@ -787,17 +677,6 @@ def super():
     return jsonify({"success": True})
 
 
-# def get_cached_response(url_end):
-#     url_end = url_end.lstrip("/")
-#     url = u"https://cdn.unpaywalljournals.org/live/{}?jwt={}".format(url_end, get_jwt())
-#     print u"getting cached request from {}".format(url_end)
-#     headers = {"Cache-Control": "public, max-age=31536000"}
-#     r = requests.get(url, headers=headers)
-#     if r.status_code == 200:
-#         print "cache response header:", r.headers["CF-Cache-Status"]
-#         return jsonify_fast_no_sort(r.json())
-#     return abort_json(r.status_code, "Problem.")
-
 def is_authorized_superuser():
     secret = request.args.get("secret", "")
     if secret and safe_str_cmp(secret, os.getenv("JWT_SECRET_KEY")):
@@ -848,23 +727,6 @@ def get_saved_scenario(scenario_id, test_mode=False, required_permission=None):
     my_saved_scenario.set_live_scenario(None)
 
     return my_saved_scenario
-
-# from https://stackoverflow.com/a/51480061/596939
-# class RunAsyncToRequestResponse(Thread):
-#     def __init__(self, url_end, my_jwt):
-#         Thread.__init__(self)
-#         self.url_end = url_end
-#         self.jwt = my_jwt
-#
-#     def run(self):
-#         print "sleeping for 2 seconds in RunAsyncToRequestResponse for {}".format(self.url_end)
-#         sleep(2)
-#         url = u"https://cdn.unpaywalljournals.org/live/{}?jwt={}".format(self.url_end, self.jwt)
-#         print u"starting RunAsyncToRequestResponse cache request for {}".format(self.url_end)
-#         headers = {"Cache-Control": "public, max-age=31536000"}
-#         r = requests.get(url, headers=headers)
-#         print u"cache RunAsyncToRequestResponse request status code {} for {}".format(r.status_code, self.url_end)
-#         print u"cache RunAsyncToRequestResponse response header:", r.headers["CF-Cache-Status"]
 
 
 @app.route('/account', methods=['GET'])
@@ -977,7 +839,7 @@ def new_publisher():
     new_package.created = now
 
     db.session.add(new_package)
-    db.session.flush()
+    safe_commit(db)
 
     q = """
             insert into jump_apc_authorships (
@@ -985,10 +847,8 @@ def new_publisher():
                 where package_id = '{}' and issn_l in (select issn_l from ricks_journal rj where {}))
         """.format(new_package.package_id, new_package.publisher_where)
     # print "q", q
-    # .replace("%", "%%")
-    db.session.execute(q)
-
-    safe_commit(db)
+    with get_db_cursor() as cursor:
+        cursor.execute(q)
 
     publisher_dict = new_package.to_publisher_dict()
     return jsonify_fast_no_sort(publisher_dict)
@@ -1172,13 +1032,14 @@ def post_subscription_guts(scenario_id, scenario_name=None):
     dict_to_save = request.get_json()
     if scenario_name:
         dict_to_save["scenario_name"] = scenario_name
-    save_raw_scenario_to_db(scenario_id, dict_to_save, get_ip(request))
+        save_raw_scenario_to_db(scenario_id, dict_to_save, get_ip(request))
+
     return
 
 
 def post_member_institutions_included_guts(scenario_id):
     print "request.get_json()", request.get_json()
-    save_raw_member_institutions_included_to_db(scenario_id, request.get_json(), get_ip(request))
+    save_raw_member_institutions_included_to_db(scenario_id, request.get_json()["member_institutions"], get_ip(request))
 
 
 
@@ -1203,6 +1064,12 @@ def scenario_id_post(scenario_id):
     my_timing = TimingMessages()
     post_subscription_guts(scenario_id, scenario_name)
     my_timing.log_timing("after post_subscription_guts()")
+
+    consortium_ids = get_consortium_ids()
+    if scenario_id in [d["scenario_id"] for d in consortium_ids]:
+        my_consortium = Consortium(scenario_id)
+        my_consortium.recompute_journal_dicts()
+
     return jsonify_fast_no_sort({"status": "success"})
 
 
@@ -1223,7 +1090,7 @@ def subscriptions_scenario_id_post(scenario_id):
 
     my_timing = TimingMessages()
     post_subscription_guts(scenario_id)
-    my_timing.log_timing("save_raw_scenario_to_db()")
+    my_timing.log_timing("post_subscription_guts()")
 
     response = {"status": "success"}
     response["_timing"] = my_timing.to_dict()
@@ -1319,7 +1186,6 @@ def package_member_institutions_get(package_id):
 @app.route('/scenario/<scenario_id>/raw', methods=['GET'])
 @jwt_optional
 # @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
-@cached()
 def scenario_id_raw_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_raw())
@@ -1332,30 +1198,6 @@ def check_authorized():
 def scenario_id_details_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_details())
-
-
-
-# @app.route('/scenario/<scenario_id>/table', methods=['GET'])
-# @jwt_optional
-# def live_scenario_id_table_get(scenario_id):
-#     my_saved_scenario = get_saved_scenario(scenario_id)
-#     response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table())
-#     return response
-
-
-
-# @app.route('/scenario/<scenario_id>/slider', methods=['GET'])
-# @jwt_optional
-# # @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
-# # @my_memcached.cached(timeout=7*24*60*60)
-# def live_scenario_id_slider_get(scenario_id):
-#
-#     my_saved_scenario = get_saved_scenario(scenario_id)
-#     response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
-#     cache_tags_list = ["scenario", u"package_{}".format(my_saved_scenario.package_id), u"scenario_{}".format(scenario_id)]
-#     response.headers["Cache-Tag"] = u",".join(cache_tags_list)
-#     return response
-
 
 @app.route('/package/<package_id>/apc', methods=['GET'])
 @jwt_optional
@@ -1376,7 +1218,7 @@ def live_package_id_apc_get(package_id):
     else:
         my_scenario = default_scenario(my_package.package_id)
         db.session.add(my_scenario)
-        db.session.flush()
+        safe_commit()
 
     scenario_id = my_scenario.scenario_id
     return live_scenario_id_apc_get(scenario_id)
@@ -1398,7 +1240,7 @@ def live_publisher_id_apc_get(publisher_id):
     else:
         my_scenario = default_scenario(my_package.package_id)
         db.session.add(my_scenario)
-        db.session.flush()
+        safe_commit()
 
     scenario_id = my_scenario.scenario_id
     return live_scenario_id_apc_get(scenario_id)
@@ -1483,19 +1325,38 @@ def scenario_post(package_id):
     new_saved_scenario.package_id = package_id
     new_saved_scenario.scenario_name = new_scenario_name
     new_saved_scenario.is_base_scenario = False
-    db.session.add(new_saved_scenario)
-    print "new_saved_scenario", new_saved_scenario
-    safe_commit(db)
 
 
     if my_saved_scenario_to_copy_from:
         dict_to_save = my_saved_scenario_to_copy_from.to_dict_saved()
+        dict_to_save["id"] = new_scenario_id
+        dict_to_save["name"] = new_scenario_name
     else:
         dict_to_save = new_saved_scenario.to_dict_saved()
 
     save_raw_scenario_to_db(new_scenario_id, dict_to_save, get_ip(request))
 
+    consortium_ids = get_consortium_ids()
+    if package_id in [d["package_id"] for d in consortium_ids]:
+        if copy_scenario_id:
+            consortia_to_copy_from = Consortium(copy_scenario_id)
+            save_raw_member_institutions_included_to_db(new_scenario_id, consortia_to_copy_from.member_institution_included_list, get_ip(request))
+            consortia_to_copy_from.copy_computed_journal_dicts(new_scenario_id)
+        else:
+            new_consortia = Consortium(new_scenario_id)
+            save_raw_member_institutions_included_to_db(new_scenario_id, new_consortia.member_institution_included_list, get_ip(request))
+            new_consortia.recompute_journal_dicts()
+
+    # clear cache
+    reset_cache("consortium", "get_consortium_ids", *[])
+
+    db.session.add(new_saved_scenario)
+    print "new_saved_scenario", new_saved_scenario
+    safe_commit(db)
+
+    print "getting my_new_scenario"
     my_new_scenario = get_saved_scenario(new_scenario_id, required_permission=Permission.view())
+    print "got my_new_scenario"
 
     return jsonify_fast_no_sort(my_new_scenario.to_dict_meta())
 
@@ -1524,10 +1385,26 @@ def publisher_scenario_post(publisher_id):
 
     if my_saved_scenario_to_copy_from:
         dict_to_save = my_saved_scenario_to_copy_from.to_dict_saved()
+        dict_to_save["id"] = new_scenario_id
+        dict_to_save["name"] = new_scenario_name
     else:
         dict_to_save = new_saved_scenario.to_dict_saved()
 
     save_raw_scenario_to_db(new_scenario_id, dict_to_save, get_ip(request))
+
+    consortium_ids = get_consortium_ids()
+    if publisher_id in [d["package_id"] for d in consortium_ids]:
+        if copy_scenario_id:
+            consortia_to_copy_from = Consortium(copy_scenario_id)
+            save_raw_member_institutions_included_to_db(new_scenario_id, consortia_to_copy_from.member_institution_included_list, get_ip(request))
+            consortia_to_copy_from.copy_computed_journal_dicts(new_scenario_id)
+        else:
+            new_consortia = Consortium(new_scenario_id)
+            save_raw_member_institutions_included_to_db(new_scenario_id, new_consortia.member_institution_included_list, get_ip(request))
+            new_consortia.recompute_journal_dicts()
+
+    # clear cache
+    reset_cache("consortium", "get_consortium_ids", *[])
 
     my_new_scenario = get_saved_scenario(new_scenario_id, required_permission=Permission.view())
 
@@ -1544,6 +1421,9 @@ def scenario_delete(scenario_id):
 
     with get_db_cursor() as cursor:
         cursor.execute(command)
+
+    # clear cache
+    reset_cache("consortium", "get_consortium_ids", *[])
 
     return jsonify_fast_no_sort({"response": "success"})
 
@@ -1698,7 +1578,58 @@ def jump_debug_ids():
     return jsonify_fast(response)
 
 
+
+cache_last_updated = "1999-01-01"
+
+def start_cache_thread():
+
+    from time import sleep
+
+    def do_stuff(dummy):
+        print "in do stuff"
+        global cache_last_updated
+
+        while True:
+            command = "select cache_call, updated from jump_cache_status where updated > '{}'::timestamp".format(cache_last_updated)
+            with get_db_cursor() as cursor:
+                cursor.execute(command)
+                rows = cursor.fetchall()
+                random.shuffle(rows)
+
+            # print ".",
+
+            for row in rows:
+                print "CACHE: found some things that need refreshing"
+                try:
+                    del app.my_memorycache_dict[row["cache_call"]]
+                except KeyError:
+                    # hadn't been cached before
+                    pass
+
+                (module_name, function_name, args) = json.loads(row["cache_call"])
+
+                module = __import__(module_name)
+                func = getattr(module, function_name)
+                func(*args)
+
+            if rows:
+                cache_last_updated = max([row["updated"] for row in rows]).isoformat()
+            sleep( 1 * random.random())
+
+
+    import threading
+
+    data = None
+    t = threading.Thread(target=do_stuff, args=[data])
+    t.daemon = True  # so it doesn't block
+    t.start()
+
+
+
 #  flask run -h 0.0.0.0 -p 5004 --with-threads --reload
 if __name__ == "__main__":
+
+    start_cache_thread()
+
     port = int(os.environ.get("PORT", 5004))
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True, use_reloader=True)
