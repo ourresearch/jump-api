@@ -282,6 +282,7 @@ if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
 
     import scenario
     scenario.get_common_package_data_for_all()
+    scenario.get_common_package_data_specific(DEMO_PACKAGE_ID)
 
     print u"done loading to cache"
 
