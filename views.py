@@ -425,7 +425,7 @@ def register_new_user():
         except KeyError as e:
             return abort_json(400, u'Missing key in user_permissions object: {}'.format(e.message))
 
-    old_permissions = req_user.permissions_dict()
+    old_permissions = req_user.to_dict_permissions()
 
     for institution_id, permission_names in permissions_by_institution.items():
         if auth_user.has_permission(institution_id, Permission.admin()):
@@ -450,7 +450,7 @@ def register_new_user():
     safe_commit(db)
 
     db.session.refresh(req_user)
-    new_permissions = req_user.permissions_dict()
+    new_permissions = req_user.to_dict_permissions()
 
     if new_user_created:
         email_institution = Institution.query.get(
@@ -556,7 +556,7 @@ def user_permissions():
         return abort_json(404, u'User does not exist.')
 
     if request.method == 'POST':
-        old_permissions = query_user.permissions_dict()
+        old_permissions = query_user.to_dict_permissions()
 
         auth_user = authenticated_user()
         if not auth_user:
@@ -599,11 +599,11 @@ def user_permissions():
         safe_commit(db)
 
         db.session.refresh(query_user)
-        new_permissions = query_user.permissions_dict()
+        new_permissions = query_user.to_dict_permissions()
 
         notify_changed_permissions(query_user, auth_user, old_permissions, new_permissions)
 
-    return jsonify_fast_no_sort(query_user.permissions_dict().get(institution_id, {}))
+    return jsonify_fast_no_sort(query_user.to_dict_permissions().get(institution_id, {}))
 
 
 @app.route('/institution/<institution_id>', methods=['POST', 'GET'])

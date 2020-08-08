@@ -18,12 +18,16 @@ class Permission(db.Model):
         return Permission.get('view')
 
     @staticmethod
+    def modify():
+        return Permission.get('modify')
+
+    @staticmethod
     def admin():
         return Permission.get('admin')
 
     @staticmethod
-    def modify():
-        return Permission.get('modify')
+    def consortium_admin():
+        return Permission.get('consortium_admin')
 
     def __repr__(self):
         return u"<{} ({}) {}>".format(self.__class__.__name__, self.id, self.name)

@@ -44,31 +44,31 @@ class User(db.Model):
         }
 
     def permissions_list(self):
-        dicts = self.permissions_dict()
+        dicts = self.to_dict_permissions()
         return dicts.values()
 
-    def permissions_dict(self):
+    def to_dict_permissions(self):
         dicts = {}
-        for permission in self.permissions:
-            if permission.institution_id not in dicts:
-                dicts[permission.institution_id] = {
-                    'institution_id': permission.institution_id,
+        for my_permission in self.permissions:
+            if my_permission.institution_id not in dicts:
+                dicts[my_permission.institution_id] = {
+                    'institution_id': my_permission.institution_id,
                     'user_id': self.id,
                     'user_email': self.email,
                     'username': self.username,
-                    'permissions': [permission.permission.name],
-                    'institution_name': permission.institution.display_name,
+                    'permissions': [my_permission.permission.name],
+                    'institution_name': my_permission.institution.display_name,
                     'user_name': self.display_name,
                     'is_authenticated_user': authenticated_user_id() == self.id,
-                    'is_demo_institution': permission.institution.is_demo_institution,
+                    'is_demo_institution': my_permission.institution.is_demo_institution,
                 }
             else:
-                dicts[permission.institution_id]['permissions'].append(permission.permission.name)
+                dicts[my_permission.institution_id]['permissions'].append(my_permission.permission.name)
 
         return dicts
 
     def has_permission(self, institution_id, permission):
-        return permission.name in self.permissions_dict().get(institution_id, {}).get('permissions', [])
+        return permission.name in self.to_dict_permissions().get(institution_id, {}).get('permissions', [])
 
     def __repr__(self):
         return u"<{} ({}) {}, {}>".format(self.__class__.__name__, self.id, self.email, self.display_name)
