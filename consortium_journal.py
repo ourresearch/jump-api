@@ -247,27 +247,3 @@ class ConsortiumJournal(Journal):
         # need to figure out how to do this well here @todo
         return None
 
-
-    def to_dict_details(self):
-        response = OrderedDict()
-
-        response["top"] = {
-                "issn_l": self.issn_l,
-                "title": self.title,
-                "subject": self.subject,
-                # "publisher": self.publisher,
-                # "is_society_journal": self.is_society_journal,
-                "subscribed": self.subscribed,
-                "subscribed_bulk": self.subscribed_bulk,
-                "subscribed_custom": self.subscribed_custom,
-                # "num_papers": self.num_papers,
-                "cost_subscription": format_currency(self.cost_subscription),
-                "cost_ill": format_currency(self.cost_ill),
-                "cost_actual": format_currency(self.cost_actual),
-                "cost_subscription_minus_ill": format_currency(self.cost_subscription_minus_ill),
-                "ncppu": format_currency(self.ncppu, True),
-                "use_instant_percent": self.use_instant_percent,
-        }
-        return response
-
-
