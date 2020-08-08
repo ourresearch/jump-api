@@ -743,16 +743,14 @@ def get_jwt():
     return None
 
 
-@app.route('/publisher/<publisher_id>', methods=['GET'])
+@app.route('/publisher/<package_id>', methods=['GET'])
 @jwt_optional
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
-def get_publisher(publisher_id):
-    authenticate_for_publisher(publisher_id, Permission.view())
+def get_package(package_id):
+    authenticate_for_publisher(package_id, Permission.view())
 
-    package = Package.query.filter(Package.package_id == publisher_id).scalar()
-    publisher_dict = package.to_publisher_dict()
-    response = jsonify_fast_no_sort(publisher_dict)
-
+    package = Package.query.filter(Package.package_id == package_id).scalar()
+    package_dict = package.to_package_dict()
+    response = jsonify_fast_no_sort(package_dict)
     return response
 
 
@@ -787,8 +785,8 @@ def update_publisher(publisher_id):
     db.session.merge(publisher)
     safe_commit(db)
 
-    publisher_dict = publisher.to_publisher_dict()
-    return jsonify_fast_no_sort(publisher_dict)
+    package_dict = publisher.to_package_dict()
+    return jsonify_fast_no_sort(package_dict)
 
 
 @app.route('/publisher/new', methods=['POST'])
@@ -850,8 +848,8 @@ def new_publisher():
     with get_db_cursor() as cursor:
         cursor.execute(q)
 
-    publisher_dict = new_package.to_publisher_dict()
-    return jsonify_fast_no_sort(publisher_dict)
+    package_dict = new_package.to_package_dict()
+    return jsonify_fast_no_sort(package_dict)
 
 
 @app.route('/package/<package_id>', methods=['GET'])

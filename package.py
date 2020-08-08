@@ -346,6 +346,15 @@ class Package(db.Model):
     def get_package_counter_breakdown_memcached_key(self):
         return "package.get_package_counter_breakdown.package_id_for_db.{}".format(self.package_id_for_db)
 
+    @cached_property
+    def is_owned_by_consortium(self):
+        # replace this once it is saved in the DB
+        from save_groups import package_id_lists
+        for consortium_name, package_ids in package_id_lists.iteritems():
+            if self.package_id in package_ids:
+                return True
+        return False
+
     def get_package_counter_breakdown(self):
         package_id = self.package_id_for_db
 
@@ -489,7 +498,7 @@ class Package(db.Model):
                     'value': package_price_defaults[issn_l] or public_price_defaults[issn_l],
                 },
             ],
-            'issns': journal_rows.get(issn_l, {}).get('issns', None)
+            'issns': journal_rows.get(issn_l, {}).get('issns', [])
         } for issn_l in distinct_issnls]
 
     def get_unexpectedly_no_price(self):
@@ -605,7 +614,7 @@ class Package(db.Model):
                 "name": self.package_name
         }
 
-    def to_publisher_dict(self):
+    def to_package_dict(self):
         journal_detail = dict(self.get_package_counter_breakdown())
         journal_detail['publisher_id'] = journal_detail.pop('package_id')
 
@@ -696,6 +705,7 @@ class Package(db.Model):
                 },
             ],
             'journals': self.get_journal_attributes(),
+            "is_owned_by_consortium": self.is_owned_by_consortium,
             'is_deleted': self.is_deleted is not None and self.is_deleted
         }
 
@@ -704,6 +714,7 @@ class Package(db.Model):
             "id": self.package_id,
             "name": self.package_name,
             "publisher": self.publisher,
+            "is_owned_by_consortium": self.is_owned_by_consortium,
             "is_deleted": self.is_deleted is not None and self.is_deleted,
         }
         return response
