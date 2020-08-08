@@ -1,5 +1,6 @@
 import datetime
 
+from cached_property import cached_property
 import shortuuid
 from sqlalchemy.orm import relationship
 
@@ -28,7 +29,14 @@ class Institution(db.Model):
         user_ids = db.session.query(UserInstitutionPermission.user_id).filter(
             UserInstitutionPermission.institution_id == self.id).distinct()
         users = User.query.filter(User.id.in_(user_ids)).all()
-        return [u.permissions_dict()[self.id] for u in users]
+        return [u.to_dict_permissions()[self.id] for u in users]
+
+    @cached_property
+    def is_consortium_member(self):
+        for my_package in self.packages:
+            if my_package.is_owned_by_consortium:
+                return True
+        return False
 
     def to_dict(self):
         return {
@@ -38,6 +46,7 @@ class Institution(db.Model):
             'name': self.display_name,
             'is_demo': self.is_demo_institution,
             'is_consortium': self.is_consortium,
+            'is_consortium_member': self.is_consortium_member,
             'user_permissions': self.user_permissions(),
             'publishers': [p.to_dict_minimal() for p in self.packages],
         }
