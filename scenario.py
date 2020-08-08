@@ -794,33 +794,6 @@ class Scenario(object):
         response["_timing"] = self.timing_messages
         return response
 
-    # def to_dict_report(self):
-    #     response = {
-    #             "_settings": self.settings.to_dict(),
-    #             "_summary": {
-    #                 "cost_percent": self.cost_spent_percent,
-    #                 "num_journals_subscribed": len(self.subscribed),
-    #                 "num_journals_total": len(self.journals),
-    #                 "use_instant_percent_by_year": self.use_instant_percent_by_year,
-    #                 "use_instant_percent": self.use_instant_percent,
-    #                 },
-    #             "journals": [j.to_dict_report() for j in self.journals_sorted_use_total],
-    #             "journals_count": len(self.journals),
-    #         }
-    #     self.log_timing("to dict")
-    #     response["_timing"] = self.timing_messages
-    #     return response
-
-    # def to_dict_timeline(self):
-    #     response = {
-    #             "_settings": self.settings.to_dict(),
-    #             "_summary": self.to_dict_summary_dict(),
-    #             "journals": [j.to_dict_timeline() for j in self.journals_sorted_use_total],
-    #             "journals_count": len(self.journals),
-    #         }
-    #     self.log_timing("to dict")
-    #     response["_timing"] = self.timing_messages
-    #     return response
 
     def to_dict_summary(self):
         response = {
@@ -830,25 +803,6 @@ class Scenario(object):
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
         return response
-
-    def to_dict_minimal(self):
-        response = {
-                "_settings": self.settings.to_dict(),
-                "_summary": self.to_dict_summary_dict(),
-            }
-        self.log_timing("to dict")
-        response["_timing"] = self.timing_messages
-        return response
-
-    # def to_dict_slider(self):
-    #     response = {
-    #             "_settings": self.settings.to_dict(),
-    #             "_summary": self.to_dict_summary_dict(),
-    #             "journals": [j.to_dict_slider() for j in self.journals_sorted_ncppu],
-    #         }
-    #     self.log_timing("to dict")
-    #     response["_timing"] = self.timing_messages
-    #     return response
 
     def to_dict_summary_dict(self):
         response = {
@@ -897,109 +851,6 @@ def get_consortium_package_ids(package_id):
         rows = cursor.fetchall()
     package_ids = [row["package_id"] for row in rows]
     return package_ids
-
-# @cache
-# def get_package_specific_scenario_data_from_db(input_package_ids):
-#     timing = []
-#     section_time = time()
-#
-#     package_ids_string = ",".join(["'{}'".format(package_id) for package_id in input_package_ids])
-#
-#     counter_dict = defaultdict(dict)
-#
-#     command = "select package_id, issn_l, total from jump_counter where package_id in ({});".format(package_ids_string)
-#     rows = None
-#     with get_db_cursor() as cursor:
-#         cursor.execute(command)
-#         rows = cursor.fetchall()
-#     for row in rows:
-#         if row["issn_l"] not in counter_dict[row["package_id"]]:
-#             counter_dict[row["package_id"]][row["issn_l"]] = 0
-#         counter_dict[row["package_id"]][row["issn_l"]] += row["total"]
-#
-#     timing.append(("time from db: counter", elapsed(section_time, 2)))
-#     section_time = time()
-#
-#
-#     command = """select package_id, citing.issn_l, citing.year::int, sum(num_citations) as num_citations
-#         from jump_citing citing
-#         join jump_grid_id institution_grid on citing.grid_id = institution_grid.grid_id
-#         join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id
-#         where citing.year < 2019
-#         and package_id in ({})
-#         group by issn_l, year, package_id""".format(package_ids_string)
-#     citation_rows = None
-#     with get_db_cursor() as cursor:
-#         cursor.execute(command)
-#         citation_rows = cursor.fetchall()
-#     citation_dict = defaultdict(dict)
-#     for row in citation_rows:
-#         if row["issn_l"] not in citation_dict[row["package_id"]]:
-#             citation_dict[row["package_id"]][row["issn_l"]] = defaultdict(int)
-#
-#         citation_dict[row["package_id"]][row["issn_l"]][row["year"]] = round(row["num_citations"])
-#
-#     timing.append(("time from db: citation_rows", elapsed(section_time, 2)))
-#     section_time = time()
-#
-#     command = """
-#         select package_id, authorship.issn_l, authorship.year::int, sum(num_authorships) as num_authorships
-#         from jump_authorship authorship
-#         join jump_grid_id institution_grid on authorship.grid_id = institution_grid.grid_id
-#         join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id
-#         where authorship.year < 2019
-#         and package_id in ({})
-#         group by issn_l, year, package_id""".format(package_ids_string)
-#     authorship_rows = None
-#     with get_db_cursor() as cursor:
-#         cursor.execute(command)
-#         authorship_rows = cursor.fetchall()
-#     authorship_dict = defaultdict(dict)
-#     for row in authorship_rows:
-#         if row["issn_l"] not in authorship_dict[row["package_id"]]:
-#             authorship_dict[row["package_id"]][row["issn_l"]] = defaultdict(int)
-#
-#         authorship_dict[row["package_id"]][row["issn_l"]][row["year"]] = round(row["num_authorships"])
-#
-#     timing.append(("time from db: authorship_rows", elapsed(section_time, 2)))
-#     section_time = time()
-#
-#     # perpetual_access_dict = get_perpetual_access_from_cache(input_package_ids)
-#     command = """select package_id, issn_l, start_date, end_date from jump_perpetual_access where package_id in ({})""".format(package_ids_string)
-#     with get_db_cursor() as cursor:
-#         cursor.execute(command)
-#         perpetual_access_rows = cursor.fetchall()
-#     perpetual_access_dict = defaultdict(dict)
-#     for row in perpetual_access_rows:
-#         perpetual_access_dict[row["package_id"]][row["issn_l"]] = row
-#
-#     timing.append(("time from db: perpetual_access_rows", elapsed(section_time, 2)))
-#     section_time = time()
-#
-#     # prices_dict = get_prices_from_cache(input_package_ids)
-#     command = """select package_id, issn_l, usa_usd from jump_journal_prices where package_id in ({})""".format(package_ids_string)
-#     # and publisher = :publisher_name""".format(package_ids_string)
-#     with get_db_cursor() as cursor:
-#         cursor.execute(command)
-#         prices_rows = cursor.fetchall()
-#     prices_dict = defaultdict(dict)
-#     for row in prices_rows:
-#         prices_dict[row["package_id"]][row["issn_l"]] = row["usa_usd"]
-#
-#     timing.append(("time from db: prices_rows", elapsed(section_time, 2)))
-#     section_time = time()
-#
-#
-#     data = {
-#         "timing": timing,
-#         "counter_dict": counter_dict,
-#         "citation_dict": citation_dict,
-#         "authorship_dict": authorship_dict,
-#         "perpetual_access_dict": perpetual_access_dict,
-#         "prices_dict": prices_dict,
-#     }
-#
-#     return data
 
 
 @cache
@@ -1096,26 +947,6 @@ def _perpetual_access_cache_key(package_id):
     return u'scenario.get_perpetual_access.{}'.format(package_id)
 
 
-# def refresh_perpetual_access_from_db(package_id):
-#     command = text(
-#         u'select package_id, issn_l, start_date, end_date from jump_perpetual_access where package_id = :package_id'
-#     ).bindparams(package_id=package_id)
-#
-#     rows = db.engine.execute(command).fetchall()
-#     clean_rows = []
-#     for row in rows:
-#         clean_row = dict(row)
-#         if row["start_date"]:
-#             clean_row["start_date"] = row["start_date"].isoformat()
-#         if row["end_date"]:
-#             clean_row["end_date"] = row["end_date"].isoformat()
-#         clean_rows.append(clean_row)
-#     package_dict = dict([(a["issn_l"], a) for a in clean_rows])
-#
-#     my_memcached.set(_perpetual_access_cache_key(package_id), package_dict)
-#
-#     return package_dict
-
 def refresh_perpetual_access_from_db(package_id):
     command = text(
         u'select * from jump_perpetual_access where package_id = :package_id'
@@ -1127,18 +958,6 @@ def refresh_perpetual_access_from_db(package_id):
     my_memcached.set(_perpetual_access_cache_key(package_id), package_dict)
 
     return package_dict
-
-
-# def get_perpetual_access_from_cache(package_ids, unused_publisher_name=None):
-#     lookup_dict = defaultdict(dict)
-#
-#     for package_id in package_ids:
-#         memcached_key = _perpetual_access_cache_key(package_id)
-#         # package_dict = my_memcached.get(memcached_key) or refresh_perpetual_access_from_db(package_id)
-#         package_dict = refresh_perpetual_access_from_db(package_id)
-#         lookup_dict[package_id] = package_dict
-#
-#     return lookup_dict
 
 def get_perpetual_access_from_cache(package_id, unused_publisher_name=None):
     memcached_key = _perpetual_access_cache_key(package_id)
@@ -1484,29 +1303,3 @@ def get_common_package_data_for_all():
 
     return (my_data, my_timing)
 
-
-#
-# def get_common_package_data_from_cache(package_id):
-#     from package import Package
-#     package_id_in_cache = package_id
-#     my_package = Package.query.filter(Package.package_id == package_id).scalar()
-#
-#     if not my_package or my_package.is_demo or package_id == DEMO_PACKAGE_ID:
-#         package_id_in_cache = DEMO_PACKAGE_ID
-#
-#     url = "https://cdn.unpaywalljournals.org/live/data/common/{}?secret={}".format(
-#         package_id_in_cache, os.getenv("JWT_SECRET_KEY"))
-#
-#     # url = "http://localhost:5004/live/data/common/{}?secret={}".format(
-#     #     package_id_in_cache, os.getenv("JWT_SECRET_KEY"))
-#
-#     headers = {"Cache-Control": "public, max-age=31536000"}
-#     r = requests.get(url, headers=headers)
-#     if r.status_code == 200:
-#         data = r.json()
-#         logger.info(u"success in get_common_package_data_from_cache with {}".format(url))
-#     else:
-#         data = get_common_package_data(package_id_in_cache)
-#         logger.info(u"not success in get_common_package_data_from_cache with {}, had to build locally".format(url))
-#
-#     return data
