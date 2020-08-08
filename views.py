@@ -580,6 +580,9 @@ def user_permissions():
         if query_user.id == auth_user.id and Permission.admin().name not in permission_names:
             return abort_json(400, u'Cannot revoke own admin permission.')
 
+        if ("consortium_admin" in permission_names) and not auth_user.has_permission(institution_id, Permission.consortium_admin()):
+            return abort_json(400, u'Only consortium_admin can alter consortium_admin permissions.')
+
         UserInstitutionPermission.query.filter(
             UserInstitutionPermission.user_id == query_user.id,
             UserInstitutionPermission.institution_id == institution_id
