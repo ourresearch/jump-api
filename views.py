@@ -199,8 +199,16 @@ def base_endpoint():
 def jump_scenario_issn_get(scenario_id, issn_l):
     my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
     scenario = my_saved_scenario.live_scenario
-    my_journal = scenario.get_journal(issn_l)
-    return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
+
+    consortium_ids = get_consortium_ids()
+    if scenario_id in [d["scenario_id"] for d in consortium_ids]:
+        my_consortium = Consortium(scenario_id)
+        response = {"journal": {"member_institutions": my_consortium.to_dict_journal_zoom(issn_l)}}
+    else:
+        my_journal = scenario.get_journal(issn_l)
+        response = {"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()}
+    response = jsonify_fast_no_sort(response)
+    return response
 
 
 @app.route('/live/data/common/<package_id>', methods=['GET'])

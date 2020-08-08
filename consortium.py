@@ -281,6 +281,34 @@ class Consortium(object):
         print "cache clear set"
 
 
+    def to_dict_journal_zoom(self, issn_l):
+        start_time = time()
+
+        command = """select i.id as institution_id, 
+            i.display_name as institution_name, 
+            s.member_package_id as package_id, 
+            s.usage as usage,
+            s.cpu as cpu
+            from jump_scenario_computed s
+            join jump_account_package p on s.member_package_id = p.package_id
+            join jump_institution i on i.id = p.institution_id
+            where s.scenario_id='{scenario_id}' 
+            and s.issn_l = '{issn_l}'
+             """.format(scenario_id=self.scenario_id, issn_l=issn_l)
+        with get_db_cursor() as cursor:
+            cursor.execute(command)
+            rows = cursor.fetchall()
+
+        response = []
+        if self.scenario_id is not None:
+            for row in rows:
+                if row["package_id"] in self.member_institution_included_list:
+                    response.append(row)
+
+        print "after db get to_dict_journal_zoom", elapsed(start_time)
+        return response
+
+
     @cached_property
     def journals(self):
         response = None
