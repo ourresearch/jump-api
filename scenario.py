@@ -84,12 +84,12 @@ class Scenario(object):
         self.timing_messages = []
         self.section_time = time()        
         self.settings = Assumptions(http_request_args)
-        self.is_consortium = False
         self.package_id = get_clean_package_id({"package": package_id})
         self.package_id_for_db = self.package_id
         if self.package_id.startswith("demo"):
             self.package_id_for_db = DEMO_PACKAGE_ID
 
+        self.is_consortium = False
         if get_consortium_package_ids(self.package_id):
             self.is_consortium = True
 
