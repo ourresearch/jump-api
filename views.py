@@ -1120,6 +1120,11 @@ def live_scenario_id_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
     my_timing.log_timing("after setting live scenario")
     response = my_saved_scenario.to_dict_definition()
+
+    # these are used by consortium
+    response["is_locked_pending_update"] = my_saved_scenario.is_locked_pending_update
+    response["update_percent_complete"] = my_saved_scenario.update_percent_complete
+
     my_timing.log_timing("after to_dict()")
     response["_timing"] = my_timing.to_dict()
     response = jsonify_fast(response)

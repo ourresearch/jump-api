@@ -189,6 +189,8 @@ class Consortium(object):
             my_journal_dict["ncppu_rank"] = rank + 1
         my_response["journals"] = response_list
         my_response["member_institutions"] = self.member_institution_included_list
+        my_response["is_locked_pending_update"] = True
+        my_response["update_percent_complete"] = 100
 
         return my_response
 

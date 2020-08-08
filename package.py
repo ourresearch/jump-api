@@ -608,12 +608,6 @@ class Package(db.Model):
                 # "numJournals": self.num_journals,
         }
 
-    def to_dict_minimal(self):
-        return {
-                "id": self.package_id,
-                "name": self.package_name
-        }
-
     def to_package_dict(self):
         journal_detail = dict(self.get_package_counter_breakdown())
         journal_detail['publisher_id'] = journal_detail.pop('package_id')
@@ -670,7 +664,7 @@ class Package(db.Model):
             'publisher': self.publisher,
             'is_demo': self.is_demo,
             'journal_detail': journal_detail,
-            'scenarios': [{'name': s.scenario_name, 'id': s.scenario_id} for s in self.saved_scenarios],
+            'scenarios': [s.to_dict_minimal() for s in self.saved_scenarios],
             'data_files': [
                 {
                     'name': 'counter',
@@ -709,7 +703,7 @@ class Package(db.Model):
             'is_deleted': self.is_deleted is not None and self.is_deleted
         }
 
-    def to_dict_micro(self):
+    def to_dict_minimal(self):
         response = {
             "id": self.package_id,
             "name": self.package_name,

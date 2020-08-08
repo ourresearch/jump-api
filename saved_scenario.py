@@ -155,6 +155,17 @@ class SavedScenario(db.Model):
     def institution_name(self):
         return self.set_live_scenario().institution_name
 
+
+    @cached_property
+    def is_locked_pending_update(self):
+        # fix this when ready
+        return True
+
+    @cached_property
+    def update_percent_complete(self):
+        # fix this when ready
+        return 100
+
     def set_live_scenario(self, my_jwt=None):
         if not hasattr(self, "live_scenario") or not self.live_scenario:
             self.live_scenario = get_latest_scenario(self.scenario_id, my_jwt)
@@ -193,21 +204,18 @@ class SavedScenario(db.Model):
         }
         return response
 
+
     def to_dict_minimal(self):
         response = {
             "id": self.scenario_id,
             "name": self.scenario_name,
-            "pkgId": self.package_id,
-            "saved": self.to_dict_saved()
+
+            # these are used by consortium
+            "is_locked_pending_update": self.is_locked_pending_update,
+            "update_percent_complete": self.update_percent_complete,
         }
         return response
 
-    def to_dict_micro(self):
-        response = {
-            "id": self.scenario_id,
-            "name": self.scenario_name,
-        }
-        return response
 
     def to_dict_meta(self):
         response = OrderedDict()
@@ -229,6 +237,11 @@ class SavedScenario(db.Model):
         response["meta"] = self.to_dict_meta()
         response["saved"] = self.to_dict_saved()
         response["journals"] = [j.to_dict_journals() for j in self.live_scenario.journals_sorted_ncppu]
+
+        # these are used by consortium
+        response["is_locked_pending_update"] = self.is_locked_pending_update
+        response["update_percent_complete"] = self.update_percent_complete
+
         response["_debug"] = {"summary": self.live_scenario.to_dict_summary_dict()}
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages

@@ -39,7 +39,7 @@ class Institution(db.Model):
             'is_demo': self.is_demo_institution,
             'is_consortium': self.is_consortium,
             'user_permissions': self.user_permissions(),
-            'publishers': [p.to_dict_micro() for p in self.packages],
+            'publishers': [p.to_dict_minimal() for p in self.packages],
         }
 
     def __init__(self, **kwargs):
