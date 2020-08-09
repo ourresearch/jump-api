@@ -158,12 +158,12 @@ class SavedScenario(db.Model):
 
     @cached_property
     def is_locked_pending_update(self):
-        # fix this when ready
+        # Always False for individual scenarios, overridden by Consortium object
         return False
 
     @cached_property
     def update_percent_complete(self):
-        # fix this when ready
+        # Always None for individual scenarios, overridden by Consortium object
         return None
 
     def set_live_scenario(self, my_jwt=None):

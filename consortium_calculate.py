@@ -3,6 +3,7 @@
 import os
 import sys
 import random
+import datetime
 from time import time
 from time import sleep
 
@@ -10,6 +11,7 @@ import argparse
 
 from app import get_db_cursor
 from consortium import Consortium
+from emailer import create_email, send
 from util import elapsed
 
 
@@ -32,7 +34,7 @@ def consortium_calculate():
             print "in consortium_calculate, done recompute_journal_dicts for scenario_id {} took {}s".format(
                 row["scenario_id"], elapsed(start_time))
 
-            # send email to row["email"] started at ["created"] finished at ["completed"]
+            print "updating jump_scenario_computed_update_queue with completed"
 
             command = "update jump_scenario_computed_update_queue set completed=sysdate where scenario_id='{}' and completed is null".format(
                 row["scenario_id"])
@@ -41,6 +43,17 @@ def consortium_calculate():
             with get_db_cursor() as cursor:
                 cursor.execute(command)
 
+            print "SENDING EMAIL"
+            done_email = create_email(row["email"], u'Unsub update complete', 'update_done', {
+                            'data': {
+                                 'consortium_name': row["consortium_name"],
+                                 'package_name': row["package_name"],
+                                 'start_time': row["created"],
+                                 'end_time': datetime.datetime.utcnow().isoformat(),
+                                 'scenario_id': row["scenario_id"]
+                             }})
+            send(done_email, for_real=True)
+            print "SENT EMAIL DONE"
 
         sleep( 2 * random.random())
 
