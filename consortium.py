@@ -210,9 +210,13 @@ class Consortium(object):
 
     @cached_property
     def all_member_package_ids(self):
-        from save_groups import package_id_lists
-
-        return package_id_lists[self.consortium_name]
+        q = u"select member_package_id from jump_consortium_members where consortium_package_id='{}'".format(self.package_id)
+        with get_db_cursor() as cursor:
+            cursor.execute(q)
+            rows = cursor.fetchall()
+        if rows:
+            return [row["member_package_id"] for row in rows]
+        return []
 
 
     @cached_property

@@ -348,11 +348,11 @@ class Package(db.Model):
 
     @cached_property
     def is_owned_by_consortium(self):
-        # replace this once it is saved in the DB
-        from save_groups import package_id_lists
-        for consortium_name, package_ids in package_id_lists.iteritems():
-            if self.package_id in package_ids:
-                return True
+        q = u"select member_package_id from jump_consortium_members where member_package_id='{}'".format(self.package_id)
+        with get_db_cursor() as cursor:
+            rows = cursor.execute(q)
+        if rows:
+            return True
         return False
 
     def get_package_counter_breakdown(self):
@@ -811,3 +811,44 @@ def clone_demo_package(institution):
     )
 
     return new_package
+
+
+#
+# # copy consortial packages
+# # jump_counter
+# insert into jump_counter (issn_l, package_id, organization, publisher, issn, journal_name, total) (
+#     select issn_l, member_package_id, organization, publisher, issn, journal_name, total
+#     from jump_counter
+#     join jump_consortium_members on jump_consortium_members.member_package_id_original=jump_counter.package_id
+# )
+#
+# # 'jump_perpetual_access'
+# insert into jump_perpetual_access (package_id, issn_l, start_date, end_date) (
+#     select member_package_id, issn_l, start_date, end_date
+#     from jump_perpetual_access
+#     join jump_consortium_members on jump_consortium_members.member_package_id_original=jump_perpetual_access.package_id
+# )
+#
+# # 'jump_apc_authorships'
+# insert into jump_apc_authorships (
+#     package_id, doi, publisher, num_authors_total, num_authors_from_uni, journal_name, issn_l, year, oa_status, apc) (
+#     select member_package_id, doi, publisher, num_authors_total, num_authors_from_uni, journal_name, issn_l, year, oa_status, apc
+#     from jump_apc_authorships
+#     join jump_consortium_members on jump_consortium_members.member_package_id_original=jump_apc_authorships.package_id
+# )
+#
+# # 'jump_journal_prices'
+# insert into jump_journal_prices (package_id, publisher, title, issn_l, usa_usd) (
+#     select member_package_id, publisher, title, issn_l, usa_usd
+#     from jump_journal_prices
+#     join jump_consortium_members on jump_consortium_members.member_package_id_original=jump_journal_prices.package_id
+# )
+#
+#
+# # jump_account_packages
+# insert into jump_account_package (package_id, publisher, package_name, created, consortium_package_id, institution_id, is_demo, big_deal_cost, is_deleted, updated, default_to_no_perpetual_access) (
+#     select member_package_id, publisher, package_name, created, jump_account_package.consortium_package_id, institution_id, is_demo, big_deal_cost, is_deleted, updated, default_to_no_perpetual_access
+#     from jump_account_package
+#     join jump_consortium_members on jump_consortium_members.member_package_id_original=jump_account_package.package_id
+# )
+

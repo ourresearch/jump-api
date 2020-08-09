@@ -353,3 +353,6 @@ if __name__ == "__main__":
         refresh_data_for_consortium_scenario(scenario_id)
         print u"done refresh_data_for_consortium_scenario for {} in {}s".format(scenario_id, elapsed(start_time))
 
+# for consortium_short_name, member_package_ids in package_id_lists.iteritems():
+#     for member_package_id in member_package_ids:
+#         print "('{}', '{}'),".format(consortium_short_name, member_package_id.replace("-", "-cmp"))
