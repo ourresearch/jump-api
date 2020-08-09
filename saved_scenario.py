@@ -159,12 +159,12 @@ class SavedScenario(db.Model):
     @cached_property
     def is_locked_pending_update(self):
         # fix this when ready
-        return True
+        return False
 
     @cached_property
     def update_percent_complete(self):
         # fix this when ready
-        return 100
+        return None
 
     def set_live_scenario(self, my_jwt=None):
         if not hasattr(self, "live_scenario") or not self.live_scenario:

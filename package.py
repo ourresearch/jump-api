@@ -822,6 +822,13 @@ def clone_demo_package(institution):
 #     from jump_counter
 #     join jump_consortium_members on jump_consortium_members.member_package_id_original=jump_counter.package_id
 # )
+
+# insert into jump_counter_input (organization, publisher, issn, journal_name, total, package_id) (
+#     select organization, publisher, issn, journal_name, total, member_package_id
+#     from jump_counter_input
+#     join jump_consortium_members on jump_consortium_members.member_package_id_original=jump_counter_input.package_id
+# )
+
 #
 # # 'jump_perpetual_access'
 # insert into jump_perpetual_access (package_id, issn_l, start_date, end_date) (
@@ -830,6 +837,13 @@ def clone_demo_package(institution):
 #     join jump_consortium_members on jump_consortium_members.member_package_id_original=jump_perpetual_access.package_id
 # )
 #
+
+# insert into jump_perpetual_access_input (package_id, issn, start_date, end_date) (
+#     select member_package_id, issn, start_date, end_date
+#     from jump_perpetual_access_input
+#      join jump_consortium_members on jump_consortium_members.member_package_id_original=jump_perpetual_access_input.package_id
+# )
+
 # # 'jump_apc_authorships'
 # insert into jump_apc_authorships (
 #     package_id, doi, publisher, num_authors_total, num_authors_from_uni, journal_name, issn_l, year, oa_status, apc) (
@@ -843,6 +857,12 @@ def clone_demo_package(institution):
 #     select member_package_id, publisher, title, issn_l, usa_usd
 #     from jump_journal_prices
 #     join jump_consortium_members on jump_consortium_members.member_package_id_original=jump_journal_prices.package_id
+# )
+
+# insert into jump_journal_prices_input (package_id, publisher, issn, usa_usd) (
+#     select member_package_id, publisher, issn, usa_usd
+#     from jump_journal_prices_input
+#     join jump_consortium_members on jump_consortium_members.member_package_id_original=jump_journal_prices_input.package_id
 # )
 #
 #
