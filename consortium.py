@@ -336,6 +336,7 @@ class Consortium(object):
             join jump_institution i on i.id = p.institution_id
             where s.scenario_id='{scenario_id}' 
             and s.issn_l = '{issn_l}'
+            order by usage desc
              """.format(scenario_id=self.scenario_id, issn_l=issn_l)
         with get_db_cursor() as cursor:
             cursor.execute(command)

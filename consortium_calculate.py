@@ -43,19 +43,20 @@ def consortium_calculate():
             with get_db_cursor() as cursor:
                 cursor.execute(command)
 
-            print "SENDING EMAIL"
-            done_email = create_email(row["email"], u'Unsub update complete', 'update_done', {
-                            'data': {
-                                 'consortium_name': row["consortium_name"],
-                                 'package_name': row["package_name"],
-                                 'start_time': row["created"],
-                                 'end_time': datetime.datetime.utcnow().isoformat(),
-                                 'institution_id': row["institution_id"],
-                                 'package_id': row["package_id"],
-                                 'scenario_id': row["scenario_id"]
-                             }})
-            send(done_email, for_real=True)
-            print "SENT EMAIL DONE"
+            if row["email"]:
+                print "SENDING EMAIL"
+                done_email = create_email(row["email"], u'Unsub update complete', 'update_done', {
+                                'data': {
+                                     'consortium_name': row.get("consortium_name", ""),
+                                     'package_name': row.get("package_name", ""),
+                                     'start_time': row.get("created", ""),
+                                     'end_time': datetime.datetime.utcnow().isoformat(),
+                                     'institution_id': row.get("institution_id", ""),
+                                     'package_id': row.get("package_id", ""),
+                                     'scenario_id': row["scenario_id"]
+                                 }})
+                send(done_email, for_real=True)
+                print "SENT EMAIL DONE"
 
         sleep( 2 * random.random())
 
