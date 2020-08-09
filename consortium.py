@@ -173,12 +173,27 @@ class Consortium(object):
 
     @cached_property
     def is_locked_pending_update(self):
-        # fix this when ready
+        command = "select 1 from jump_scenario_computed_update_queue where completed is null and scenario_id='{}'".format(self.scenario_id)
+        # print command
+        with get_db_cursor() as cursor:
+            cursor.execute(command)
+            rows = cursor.fetchall()
+        if rows:
+            return True
         return False
+
 
     @cached_property
     def update_percent_complete(self):
-        # fix this when ready
+        if self.is_locked_pending_update:
+            command = "select count(distinct member_package_id) as num_members_done from jump_scenario_computed where scenario_id='{}'".format(self.scenario_id)
+            # print command
+            with get_db_cursor() as cursor:
+                cursor.execute(command)
+                rows = cursor.fetchall()
+            if rows:
+                num_members_done = rows[0]["num_members_done"]
+                return 100 * float(num_members_done)/len(self.all_member_package_ids)
         return None
 
     def to_dict_journals(self):
@@ -233,15 +248,15 @@ class Consortium(object):
 
 
     @cached_property
-    def member_package_ids(self):
+    def included_member_package_ids(self):
         return uniquify_list([d["member_package_id"] for d in self.journal_member_data])
 
     def queue_for_recompute(self, email):
-        num_member_institutions = len(self.member_package_ids)
+        num_member_institutions = len(self.all_member_package_ids)
         command = u"""insert into jump_scenario_computed_update_queue (
-            consortium_short_name, scenario_id, email, num_member_institutions, created, completed) 
-            values ('{}', '{}', '{}', {}, sysdate, null)""".format(
-            self.consortium_short_name, self.scenario_id, email, num_member_institutions)
+            consortium_name, consortium_short_name, package_name, scenario_id, email, num_member_institutions, created, completed) 
+            values ('{}', '{}', '{}', '{}', '{}', {}, sysdate, null)""".format(
+            self.consortium_name, self.consortium_short_name, self.publisher, self.scenario_id, email, num_member_institutions)
         print "command queue_for_recompute\n", command
         with get_db_cursor() as cursor:
             cursor.execute(command)
