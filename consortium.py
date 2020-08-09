@@ -47,7 +47,8 @@ def get_latest_member_institutions_raw(scenario_id):
 # NO CACHE FOR NOW @memorycache
 # too slow to get refreshed across dynos
 def get_consortium_ids():
-    q = """select institution_id, old_username as consortium_short_name, p.package_id, s.scenario_id
+    q = """select institution_id, i.display_name as consortium_name, i.old_username as consortium_short_name, 
+            p.package_id, p.publisher, s.scenario_id
                 from jump_package_scenario s
                 join jump_account_package p on p.package_id = s.package_id
                 join jump_institution i on i.id = p.institution_id
@@ -137,8 +138,10 @@ class Consortium(object):
         elif package_id:
             my_row = [d for d in consortium_ids if d["package_id"]==package_id][0]
 
-        self.consortium_name = my_row["consortium_short_name"]
+        self.consortium_name = my_row["consortium_name"]
+        self.consortium_short_name = my_row["consortium_short_name"]
         self.package_id = my_row["package_id"]
+        self.publisher = my_row["publisher"]
         self.institution_id = my_row["institution_id"]
 
     @cached_property
@@ -168,10 +171,20 @@ class Consortium(object):
         response["configs"]["cost_bigdeal"] = self.big_deal_cost_for_included_members
         return response
 
+    @cached_property
+    def is_locked_pending_update(self):
+        # fix this when ready
+        return False
+
+    @cached_property
+    def update_percent_complete(self):
+        # fix this when ready
+        return None
+
     def to_dict_journals(self):
         my_response = OrderedDict()
-        my_response["meta"] = {'publisher_name': u'Elsevier',
-                                          'institution_name': u'CRKN',
+        my_response["meta"] = {'publisher_name': self.publisher,
+                                          'institution_name': self.consortium_name,
                                           'scenario_id': self.scenario_id,
                                           'institution_id': self.institution_id,
                                           'scenario_created': datetime.datetime(2020, 7, 18, 17, 12, 40, 335615),
@@ -189,8 +202,8 @@ class Consortium(object):
             my_journal_dict["ncppu_rank"] = rank + 1
         my_response["journals"] = response_list
         my_response["member_institutions"] = self.member_institution_included_list
-        my_response["is_locked_pending_update"] = True
-        my_response["update_percent_complete"] = 100
+        my_response["is_locked_pending_update"] = self.is_locked_pending_update
+        my_response["update_percent_complete"] = self.update_percent_complete
 
         return my_response
 
@@ -223,6 +236,16 @@ class Consortium(object):
     def member_package_ids(self):
         return uniquify_list([d["member_package_id"] for d in self.journal_member_data])
 
+    def queue_for_recompute(self, email):
+        num_member_institutions = len(self.member_package_ids)
+        command = u"""insert into jump_scenario_computed_update_queue (
+            consortium_short_name, scenario_id, email, num_member_institutions, created, completed) 
+            values ('{}', '{}', '{}', {}, sysdate, null)""".format(
+            self.consortium_short_name, self.scenario_id, email, num_member_institutions)
+        print "command queue_for_recompute\n", command
+        with get_db_cursor() as cursor:
+            cursor.execute(command)
+
 
     def recompute_journal_dicts(self):
 
@@ -254,7 +277,7 @@ class Consortium(object):
                         cpu = my_journal.ncppu or "null"
                         journals_dict_json = jsonify_fast_no_sort_simple(my_journal.to_dict_journals()).replace(u"'", u"''")
                         command_list.append(u"('{}', '{}', '{}', sysdate, '{}', {}, {}, '{}')".format(
-                            member_package_id, self.scenario_id, self.consortium_name, my_journal.issn_l, usage, cpu, journals_dict_json))
+                            member_package_id, self.scenario_id, self.consortium_short_name, my_journal.issn_l, usage, cpu, journals_dict_json))
 
                     # save all of these in the db
                     print "now writing to db", member_package_id

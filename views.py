@@ -1077,18 +1077,12 @@ def scenario_id_post(scenario_id):
     consortium_ids = get_consortium_ids()
     if scenario_id in [d["scenario_id"] for d in consortium_ids]:
         my_consortium = Consortium(scenario_id)
-        my_consortium.recompute_journal_dicts()
+        login_user = authenticated_user()
+        my_consortium.queue_for_recompute(login_user.email)
+        if not login_user.email:
+            return jsonify_fast_no_sort({"status": "success, but no email will be sent because no email set on account"})
 
     return jsonify_fast_no_sort({"status": "success"})
-
-
-# only call from cloudflare workers POST to prevent circularities
-@app.route('/cloudflare_prefetch_wrapper/<path:the_rest>', methods=['GET'])
-@jwt_optional
-def cloudflare_noncircular_wrapper(the_rest):
-    print("redirecting")
-    r = requests.get("https://api.unpaywalljournals.org/{}?jwt={}&fresh=1".format(the_rest, get_jwt()))
-    return jsonify_fast_no_sort(r.json())
 
 
 
