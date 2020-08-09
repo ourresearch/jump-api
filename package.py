@@ -350,7 +350,8 @@ class Package(db.Model):
     def is_owned_by_consortium(self):
         q = u"select member_package_id from jump_consortium_members where member_package_id='{}'".format(self.package_id)
         with get_db_cursor() as cursor:
-            rows = cursor.execute(q)
+            cursor.execute(q)
+            rows = cursor.fetchall()
         if rows:
             return True
         return False
