@@ -254,9 +254,9 @@ class Consortium(object):
     def queue_for_recompute(self, email):
         num_member_institutions = len(self.all_member_package_ids)
         command = u"""insert into jump_scenario_computed_update_queue (
-            consortium_name, consortium_short_name, package_name, scenario_id, email, num_member_institutions, created, completed) 
-            values ('{}', '{}', '{}', '{}', '{}', {}, sysdate, null)""".format(
-            self.consortium_name, self.consortium_short_name, self.publisher, self.scenario_id, email, num_member_institutions)
+            consortium_name, consortium_short_name, package_name, institution_id, package_id, scenario_id, email, num_member_institutions, created, completed) 
+            values ('{}', '{}', '{}', '{}', '{}', '{}', '{}', {}, sysdate, null)""".format(
+            self.consortium_name, self.consortium_short_name, self.publisher, self.institution_id, self.package_id, self.scenario_id, email, num_member_institutions)
         print "command queue_for_recompute\n", command
         with get_db_cursor() as cursor:
             cursor.execute(command)

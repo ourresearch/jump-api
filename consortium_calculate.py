@@ -50,6 +50,8 @@ def consortium_calculate():
                                  'package_name': row["package_name"],
                                  'start_time': row["created"],
                                  'end_time': datetime.datetime.utcnow().isoformat(),
+                                 'institution_id': row["institution_id"],
+                                 'package_id': row["package_id"],
                                  'scenario_id': row["scenario_id"]
                              }})
             send(done_email, for_real=True)
