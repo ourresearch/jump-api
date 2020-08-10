@@ -1199,34 +1199,9 @@ def scenario_id_details_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_details())
 
-@app.route('/package/<package_id>/apc', methods=['GET'])
-@jwt_optional
-def live_package_id_apc_get(package_id):
-    authenticate_for_publisher(package_id, Permission.view())
-
-    if package_id.startswith("demo"):
-        my_package = Package.query.get("demo")
-        my_package.package_id = package_id
-    else:
-        my_package = Package.query.get(package_id)
-
-    if not my_package:
-        abort_json(404, "Package not found")
-
-    if my_package.unique_saved_scenarios:
-        my_scenario = my_package.unique_saved_scenarios[0]
-    else:
-        my_scenario = default_scenario(my_package.package_id)
-        db.session.add(my_scenario)
-        safe_commit()
-
-    scenario_id = my_scenario.scenario_id
-    return live_scenario_id_apc_get(scenario_id)
-
 
 @app.route('/publisher/<publisher_id>/apc', methods=['GET'])
 @jwt_optional
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 def live_publisher_id_apc_get(publisher_id):
     authenticate_for_publisher(publisher_id, required_permission=Permission.view())
 
@@ -1243,15 +1218,11 @@ def live_publisher_id_apc_get(publisher_id):
         safe_commit()
 
     scenario_id = my_scenario.scenario_id
-    return live_scenario_id_apc_get(scenario_id)
 
-
-@app.route('/scenario/<scenario_id>/apc', methods=['GET'])
-@jwt_optional
-def live_scenario_id_apc_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
     response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_apc())
     return response
+
 
 def export_get(table_dicts):
     filename = "export.csv"
@@ -1507,57 +1478,6 @@ def admin_change_password():
 @app.route('/admin/register', methods=['GET'])
 def admin_register_user():
     return abort_json(404, 'Removed. Use /user/new or /user/demo.')
-
-
-@app.route('/debug/journal/<issn_l>', methods=['GET'])
-def jump_debug_issn_get(issn_l):
-    subscribe = str2bool(request.args.get('subscribe', "false"))
-    scenario_id = "demo-debug"
-    my_saved_scenario = get_saved_scenario(scenario_id)
-    scenario = my_saved_scenario.live_scenario
-    my_journal = scenario.get_journal(issn_l)
-    if subscribe:
-        my_journal.set_subscribe_custom()
-    if not my_journal:
-        abort_json(404, "journal not found")
-    return jsonify_fast_no_sort({"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()})
-
-
-@app.route('/debug/scenario/journals', methods=['GET'])
-def jump_debug_journals_get():
-    scenario_id = "demo-debug"
-    my_saved_scenario = get_saved_scenario(scenario_id)
-    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_journals())
-
-
-@app.route('/debug/scenario/apc', methods=['GET'])
-def jump_debug_apc_get():
-    scenario_id = "demo-debug"
-    my_saved_scenario = get_saved_scenario(scenario_id)
-    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_apc(5000))
-
-@app.route('/debug/counter/<package_id>', methods=['GET'])
-def jump_debug_counter_package_id(package_id):
-    if not is_authorized_superuser():
-        return abort_json(401, "Not authorized, need secret.")
-
-    if package_id.startswith("demo"):
-        my_package = Package.query.get("demo")
-        my_package.package_id = package_id
-    else:
-        my_package = Package.query.get(package_id)
-    response = my_package.get_package_counter_breakdown()
-    return jsonify_fast_no_sort(response)
-
-
-
-@app.route('/debug/ids', methods=['GET'])
-def jump_debug_ids():
-    if not is_authorized_superuser():
-        return abort_json(401, "Not authorized, need secret.")
-
-    response = get_ids()
-    return jsonify_fast(response)
 
 
 
