@@ -232,7 +232,7 @@ def memorycache(func):
         # Return cached version if available
         result = app.my_memorycache_dict.get(cache_key, None)
         if result is not None:
-            print "cache hit on", cache_key
+            # print "cache hit on", cache_key
             return result
 
         print "cache miss on", cache_key
