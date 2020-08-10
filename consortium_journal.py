@@ -66,6 +66,15 @@ class ConsortiumJournal(Journal):
                 response += my_member_dict.get(attribute_name, 0) or 0
         return response
 
+    def sum_attribute_multiplied_by_usage(self, attribute_name, nesting_key=None):
+        response = 0
+        for my_member_dict in self.member_data:
+            if nesting_key:
+                response += (my_member_dict[nesting_key].get(attribute_name, 0) or 0) * my_member_dict["usage"]
+            else:
+                response += (my_member_dict.get(attribute_name, 0) or 0) * my_member_dict["usage"]
+        return response
+
     def list_attribute(self, attribute_name):
         return [my_member_dict.get(attribute_name, None) for my_member_dict in self.member_data]
 
@@ -164,9 +173,6 @@ class ConsortiumJournal(Journal):
     #         return ncppu
     #     return None
 
-    @cached_property
-    def ncppu_rank(self):
-        return None  # overwrite this by at the consortium level by ordering journals
 
     @cached_property
     def cost_subscription(self):
@@ -179,10 +185,6 @@ class ConsortiumJournal(Journal):
     @cached_property
     def cost_subscription_minus_ill(self):
         return self.cost_subscription - self.cost_ill
-
-    @cached_property
-    def use_social_networks(self):
-        return self.sum_attribute("social_networks", "use_groups_free_instant")
 
     @cached_property
     def use_oa_plus_social_networks(self):
@@ -205,20 +207,24 @@ class ConsortiumJournal(Journal):
         return self.sum_attribute("other_delayed", "use_groups_if_not_subscribed")
 
     @cached_property
+    def use_social_networks(self):
+        return self.sum_attribute_multiplied_by_usage("use_asns_percent")/100.0
+
+    @cached_property
     def use_oa_green(self):
-        return self.sum_attribute("use_green")
+        return self.sum_attribute_multiplied_by_usage("use_green_percent")/100.0
 
     @cached_property
     def use_oa_hybrid(self):
-        return self.sum_attribute("use_hybrid")
+        return self.sum_attribute_multiplied_by_usage("use_hybrid_percent")/100.0
 
     @cached_property
     def use_oa_bronze(self):
-        return self.sum_attribute("use_bronze")
+        return self.sum_attribute_multiplied_by_usage("use_bronze_percent")/100.0
 
     @cached_property
     def use_oa_peer_reviewed(self):
-        return self.sum_attribute("use_peer_reviewed")
+        return self.sum_attribute_multiplied_by_usage("use_peer_reviewed_percent")/100.0
 
     @cached_property
     def use_free_instant(self):
@@ -247,3 +253,30 @@ class ConsortiumJournal(Journal):
         # need to figure out how to do this well here @todo
         return None
 
+    @cached_property
+    def cost_subscription_fuzzed(self):
+        return None
+
+    @cached_property
+    def cost_subscription_minus_ill_fuzzed(self):
+        return None
+
+    @cached_property
+    def ncppu_fuzzed(self):
+        return None
+
+    @cached_property
+    def use_total_fuzzed(self):
+        return None
+
+    @cached_property
+    def downloads_fuzzed(self):
+        return None
+
+    @cached_property
+    def num_authorships_fuzzed(self):
+        return None
+
+    @cached_property
+    def num_citations_fuzzed(self):
+        return None

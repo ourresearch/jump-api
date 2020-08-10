@@ -1190,14 +1190,6 @@ def package_member_institutions_get(package_id):
     return abort_json(404, "not a consortium package_id")
 
 
-
-@app.route('/scenario/<scenario_id>/raw', methods=['GET'])
-@jwt_optional
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
-def scenario_id_raw_get(scenario_id):
-    my_saved_scenario = get_saved_scenario(scenario_id)
-    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_raw())
-
 def check_authorized():
     return True
 
@@ -1261,34 +1253,21 @@ def live_scenario_id_apc_get(scenario_id):
     response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_apc())
     return response
 
-# @app.route('/scenario/<scenario_id>/report', methods=['GET'])
-# @jwt_required
-# def scenario_id_report_get(scenario_id):
-#     my_saved_scenario = get_saved_scenario(scenario_id)
-#     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_report())
-
-
-def export_get(my_saved_scenario):
-
-    table_dicts = my_saved_scenario.live_scenario.to_dict_export()["journals"]
-
+def export_get(table_dicts):
     filename = "export.csv"
     with open(filename, "w") as file:
         csv_writer = csv.writer(file, encoding='utf-8')
-        meta_keys = table_dicts[0]["meta"].keys()
-        keys = meta_keys + table_dicts[0]["table_row"].keys()
+        keys = table_dicts[0].keys()
+
         csv_writer.writerow(keys)
         for table_dict in table_dicts:
             row = []
             for my_key in keys:
-                if my_key in meta_keys:
-                    if my_key in "issn_l":
-                        # doing this hacky thing so excel doesn't format the issn as a date :(
-                        row.append(u"issn:{}".format(table_dict["meta"][my_key]))
-                    else:
-                        row.append(table_dict["meta"][my_key])
+                if my_key in "issn_l":
+                    # doing this hacky thing so excel doesn't format the issn as a date :(
+                    row.append(u"issn:{}".format(table_dict[my_key]))
                 else:
-                    row.append(table_dict["table_row"][my_key])
+                    row.append(table_dict[my_key])
             csv_writer.writerow(row)
 
     with open(filename, "r") as file:
@@ -1300,17 +1279,31 @@ def export_get(my_saved_scenario):
 @app.route('/scenario/<scenario_id>/export.csv', methods=['GET'])
 @jwt_required
 def scenario_id_export_csv_get(scenario_id):
-    my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
-    contents = export_get(my_saved_scenario)
-    # return Response(contents, mimetype="text/text")
+
+    consortium_ids = get_consortium_ids()
+    if scenario_id in [d["scenario_id"] for d in consortium_ids]:
+        my_consortium = Consortium(scenario_id)
+        table_dicts = my_consortium.to_dict_export()["journals"]
+    else:
+        my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
+        table_dicts = my_saved_scenario.live_scenario.to_dict_export()["journals"]
+
+    contents = export_get(table_dicts)
     return Response(contents, mimetype="text/csv")
 
 
 @app.route('/scenario/<scenario_id>/export', methods=['GET'])
 @jwt_required
 def scenario_id_export_get(scenario_id):
-    my_saved_scenario = get_saved_scenario(scenario_id)
-    contents = export_get(my_saved_scenario)
+    consortium_ids = get_consortium_ids()
+    if scenario_id in [d["scenario_id"] for d in consortium_ids]:
+        my_consortium = Consortium(scenario_id)
+        table_dicts = my_consortium.to_dict_export()["journals"]
+    else:
+        my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
+        table_dicts = my_saved_scenario.live_scenario.to_dict_export()["journals"]
+
+    contents = export_get(table_dicts)
     return Response(contents, mimetype="text/text")
 
 
@@ -1505,14 +1498,6 @@ def reset_password():
     return jsonify_fast_no_sort({'message': u'password reset for user {}'.format(reset_user.id)})
 
 
-@app.route('/debug/export', methods=['GET'])
-def debug_export_get():
-    scenario_id = "demo-debug"
-    my_saved_scenario = get_saved_scenario(scenario_id)
-    contents = export_get(my_saved_scenario)
-    return Response(contents, mimetype="text/text")
-
-
 @app.route('/admin/change_password', methods=['GET'])
 @app.route('/admin/change-password', methods=['GET'])
 def admin_change_password():
@@ -1544,17 +1529,6 @@ def jump_debug_journals_get():
     my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_journals())
 
-@app.route('/debug/scenario/table', methods=['GET'])
-def jump_debug_table_get():
-    scenario_id = "demo-debug"
-    my_saved_scenario = get_saved_scenario(scenario_id)
-    return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_table(5000))
-
-# @app.route('/debug/scenario/slider', methods=['GET'])
-# def jump_debug_slider_get():
-#     scenario_id = "demo-debug"
-#     my_saved_scenario = get_saved_scenario(scenario_id)
-#     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_slider())
 
 @app.route('/debug/scenario/apc', methods=['GET'])
 def jump_debug_apc_get():
