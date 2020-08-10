@@ -69,8 +69,8 @@ class Journal(object):
 
     @cached_property
     def title(self):
-        if self._ricks_journal_row:
-            return self._ricks_journal_row["title"]
+        if self.ricks_journal_row:
+            return self.ricks_journal_row["title"]
         return u"Unknown Title"
 
 
@@ -84,18 +84,18 @@ class Journal(object):
         return self._scenario_data["journal_era_subjects"].get(self.issn_l, [])
 
     @cached_property
-    def _ricks_journal_row(self):
-        from scenario import get_ricks_journal_rows
-        row = get_ricks_journal_rows()[self.issn_l]
+    def ricks_journal_row(self):
+        from scenario import get_ricks_journal
+        row = get_ricks_journal()[self.issn_l]
         return row
 
     @cached_property
     def issns(self):
-        if self._ricks_journal_row:
+        if self.ricks_journal_row:
             try:
-                return json.loads(self._ricks_journal_row["issns"])
+                return json.loads(self.ricks_journal_row["issns"])
             except:
-                return self._ricks_journal_row["issns"]
+                return self.ricks_journal_row["issns"]
         return []
 
     @cached_property

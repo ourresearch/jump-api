@@ -19,7 +19,7 @@ from journal_price import JournalPriceInput
 from perpetual_access import PerpetualAccessInput
 from saved_scenario import SavedScenario
 from scenario import get_hybrid_2019
-from scenario import get_ricks_journal_rows
+from scenario import get_ricks_journal
 from scenario import get_prices_from_cache
 from scenario import get_core_list_from_db
 from scenario import get_perpetual_access_from_cache
@@ -441,7 +441,7 @@ class Package(db.Model):
                                if x
                                ])
 
-        journal_rows = get_ricks_journal_rows()
+        journal_rows = get_ricks_journal()
 
         for issn_l, journal in journal_rows.items():
             try:

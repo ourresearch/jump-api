@@ -873,28 +873,24 @@ def get_prices_from_cache(package_ids, publisher_name=None):
     return lookup_dict
 
 
-_ricks_journal_rows = None
+@memorycache
+def get_ricks_journal():
+    command = """select issn_l, title, issns from ricks_journal"""
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+    my_dict = dict([(a["issn_l"], a) for a in rows])
+    return my_dict
 
-
-def _load_ricks_journal_rows():
-    global _ricks_journal_rows
-
-    if _ricks_journal_rows is None:
-        command = """select issn_l, title, issns from ricks_journal"""
-        with get_db_cursor() as cursor:
-            cursor.execute(command)
-            rows = cursor.fetchall()
-        my_dict = dict([(a["issn_l"], a) for a in rows])
-        _ricks_journal_rows = my_dict
-
-
-
-def get_ricks_journal_rows():
-    global _ricks_journal_rows
-
-    _load_ricks_journal_rows()
-    return _ricks_journal_rows
-
+@memorycache
+def get_ricks_journal_flat():
+    issns = {}
+    with get_db_cursor() as cursor:
+        cursor.execute('select issn, issn_l, publisher from ricks_journal_flat')
+        rows = cursor.fetchall()
+    for row in rows:
+        issns[row['issn']] = {'issn_l': row['issn_l'], 'publisher': row['publisher']}
+    return issns
 
 _hybrid_2019 = None
 

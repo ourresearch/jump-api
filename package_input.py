@@ -23,20 +23,7 @@ from util import convert_to_utf_8
 from util import safe_commit
 
 
-def _get_ricks_journals():
-    issns = {}
 
-    with get_db_cursor() as cursor:
-        cursor.execute('select issn, issn_l, publisher from ricks_journal_flat')
-        rows = cursor.fetchall()
-
-    for row in rows:
-        issns[row['issn']] = {'issn_l': row['issn_l'], 'publisher': row['publisher']}
-
-    return issns
-
-
-_ricks_journals = _get_ricks_journals()
 
 
 class PackageInput:
@@ -94,12 +81,13 @@ class PackageInput:
 
     @staticmethod
     def normalize_issn(issn, warn_if_blank=False):
+        from scenario import get_ricks_journal_flat
         if issn:
             issn = sub(ur'\s', '', issn).upper()
             if re.match(ur'^\d{4}-?\d{3}(?:X|\d)$', issn):
                 issn = issn.replace(u'-', '')
                 issn = issn[0:4] + u'-' + issn[4:8]
-                if issn in _ricks_journals:
+                if issn in get_ricks_journal_flat():
                     return issn
                 else:
                     return ParseWarning.unknown_issn
@@ -350,6 +338,8 @@ class PackageInput:
 
     @classmethod
     def normalize_rows(cls, file_name, file_package=None):
+        from scenario import get_ricks_journal_flat
+
         # convert to csv if needed
         if file_name.endswith(u'.xls') or file_name.endswith(u'.xlsx'):
             sheet_csv_file_names = convert_spreadsheet_to_csv(file_name, parsed=False)
@@ -468,7 +458,7 @@ class PackageInput:
                                     normalized_row.setdefault(normalized_name, None)
                                 else:
                                     if cls.validate_publisher() and normalized_name in cls.issn_columns() and file_package:
-                                        journal_publisher = _ricks_journals.get(
+                                        journal_publisher = get_ricks_journal_flat().get(
                                             normalized_value, {}
                                         ).get('publisher', u'')
 
