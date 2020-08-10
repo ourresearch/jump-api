@@ -55,10 +55,10 @@ def get_fresh_journal_list(scenario, my_jwt):
 
     # only include things in the counter file
     if my_package.is_demo:
-        issnls_to_build = [issn_l for issn_l in issn_ls if issn_l in scenario.data[DEMO_PACKAGE_ID]["counter_dict"].keys()]
+        issnls_to_build = [issn_l for issn_l in issnls_to_build if issn_l in scenario.data[DEMO_PACKAGE_ID]["counter_dict"].keys()]
         package_id = DEMO_PACKAGE_ID
     else:
-        issnls_to_build = [issn_l for issn_l in issn_ls if issn_l in scenario.data[scenario.package_id_for_db]["counter_dict"].keys()]
+        issnls_to_build = [issn_l for issn_l in issnls_to_build if issn_l in scenario.data[scenario.package_id_for_db]["counter_dict"].keys()]
         package_id = scenario.package_id
 
     journals = [Journal(issn_l, package_id=package_id) for issn_l in issnls_to_build if issn_l]
