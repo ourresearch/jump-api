@@ -20,6 +20,8 @@ from util import elapsed
 from util import chunks
 from util import uniquify_list
 from util import myconverter
+from util import for_sorting
+
 
 # team+dev@ourresearch.org
 
@@ -130,6 +132,7 @@ def jsonify_fast_no_sort_simple(*args, **kwargs):
 
 class Consortium(object):
     def __init__(self, scenario_id, package_id=None):
+        print "BUILDING SCENARIO OBJECT", scenario_id, package_id
         self.scenario_id = None
         consortium_ids = get_consortium_ids()
         if scenario_id:
@@ -196,6 +199,21 @@ class Consortium(object):
                 return 100 * float(num_members_done)/len(self.all_member_package_ids)
         return None
 
+    @cached_property
+    def journals_sorted_ncppu(self):
+        self.journals.sort(key=lambda k: for_sorting(k.ncppu), reverse=False)
+        return self.journals
+
+    @cached_property
+    def journals_sorted_use_total(self):
+        self.journals.sort(key=lambda k: for_sorting(k.use_total), reverse=True)
+        return self.journals
+
+    # @cached_property
+    # def apc_journals_sorted_spend(self):
+    #     self.apc_journals.sort(key=lambda k: for_sorting(k.cost_apc_historical), reverse=True)
+    #     return self.apc_journals
+
     def to_dict_journals(self):
         my_response = OrderedDict()
         my_response["meta"] = {'publisher_name': self.publisher,
@@ -209,12 +227,9 @@ class Consortium(object):
         my_response["saved"] = self.scenario_saved_dict
 
         start_time = time()
-        response_list = [j.to_dict_journals() for j in self.journals]
+        response_list = [j.to_dict_journals() for j in self.journals_sorted_ncppu]
         print "after to_dict_journals on each journal", elapsed(start_time)
 
-        response_list = sorted(response_list, key=lambda x: x.get("ncppu", None), reverse=False)
-        for rank, my_journal_dict in enumerate(response_list):
-            my_journal_dict["ncppu_rank"] = rank + 1
         my_response["journals"] = response_list
         my_response["member_institutions"] = self.member_institution_included_list
         my_response["is_locked_pending_update"] = self.is_locked_pending_update
@@ -322,7 +337,6 @@ class Consortium(object):
         reset_cache("consortium", "consortium_get_computed_data", self.scenario_id)
         print "cache clear set"
 
-
     def to_dict_journal_zoom(self, issn_l):
         start_time = time()
 
@@ -351,6 +365,10 @@ class Consortium(object):
         print "after db get to_dict_journal_zoom", elapsed(start_time)
         return response
 
+    def to_dict_export(self):
+        response = {}
+        response["journals"] = [j.to_dict_export() for j in self.journals_sorted_ncppu]
+        return response
 
     @cached_property
     def journals(self):
@@ -374,7 +392,12 @@ class Consortium(object):
             if len(journals_dicts_by_issn_l[issn_l]) > 0:
                 response.append(ConsortiumJournal(issn_l, self.member_institution_included_list, journals_dicts_by_issn_l[issn_l]))
 
+        response = sorted(response, key=lambda x: float('inf') if x.ncppu==None else x.ncppu, reverse=False)
+        for rank, my_journal_dict in enumerate(response):
+            my_journal_dict.ncppu_rank = rank + 1
+
         print "after journals", elapsed(start_time)
+
         return response
 
 

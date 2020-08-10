@@ -58,6 +58,8 @@ def consortium_calculate():
                 send(done_email, for_real=True)
                 print "SENT EMAIL DONE"
 
+        print "DONE UPDATING", row["scenario_id"]
+
         sleep( 2 * random.random())
 
 
