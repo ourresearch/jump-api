@@ -58,6 +58,7 @@ class User(db.Model):
                     'username': self.username,
                     'permissions': [my_permission.permission.name],
                     'institution_name': my_permission.institution.display_name,
+                    'is_consortium': my_permission.institution.is_consortium,
                     'user_name': self.display_name,
                     'is_authenticated_user': authenticated_user_id() == self.id,
                     'is_demo_institution': my_permission.institution.is_demo_institution,
