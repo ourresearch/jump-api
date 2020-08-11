@@ -1317,7 +1317,8 @@ def scenario_post(package_id):
         else:
             new_consortia = Consortium(new_scenario_id)
             save_raw_member_institutions_included_to_db(new_scenario_id, new_consortia.member_institution_included_list, get_ip(request))
-            new_consortia.recompute_journal_dicts()
+            login_user = authenticated_user()
+            new_consortia.queue_for_recompute(login_user.email)
 
     # clear cache
     reset_cache("consortium", "get_consortium_ids", *[])
