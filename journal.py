@@ -1388,11 +1388,11 @@ class Journal(object):
         # response["num_papers_slope_percent"] = self.num_papers_slope_percent
 
         # oa
-        response["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
-        response["use_hybrid_percent"] = round(float(100)*self.use_oa_hybrid/self.use_total)
-        response["use_bronze_percent"] = round(float(100)*self.use_oa_bronze/self.use_total)
-        response["use_asns_percent"] = round(float(100)*self.use_social_networks/self.use_total)
-        response["use_peer_reviewed_percent"] =  round(float(100)*self.use_oa_peer_reviewed/self.use_total)
+        # response["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
+        # response["use_hybrid_percent"] = round(float(100)*self.use_oa_hybrid/self.use_total)
+        # response["use_bronze_percent"] = round(float(100)*self.use_oa_bronze/self.use_total)
+        # response["use_asns_percent"] = round(float(100)*self.use_social_networks/self.use_total)
+        # response["use_peer_reviewed_percent"] =  round(float(100)*self.use_oa_peer_reviewed/self.use_total)
 
         # impact
         response["downloads"] = round(self.downloads_total)
