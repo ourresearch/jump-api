@@ -1308,6 +1308,10 @@ def scenario_post(package_id):
 
     save_raw_scenario_to_db(new_scenario_id, dict_to_save, get_ip(request))
 
+    db.session.add(new_saved_scenario)
+    print "new_saved_scenario", new_saved_scenario
+    safe_commit(db)
+
     consortium_ids = get_consortium_ids()
     if package_id in [d["package_id"] for d in consortium_ids]:
         if copy_scenario_id:
@@ -1322,10 +1326,6 @@ def scenario_post(package_id):
 
     # clear cache
     reset_cache("consortium", "get_consortium_ids", *[])
-
-    db.session.add(new_saved_scenario)
-    print "new_saved_scenario", new_saved_scenario
-    safe_commit(db)
 
     print "getting my_new_scenario"
     my_new_scenario = get_saved_scenario(new_scenario_id, required_permission=Permission.view())
