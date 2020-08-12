@@ -25,10 +25,6 @@ class Permission(db.Model):
     def admin():
         return Permission.get('admin')
 
-    @staticmethod
-    def consortium_admin():
-        return Permission.get('consortium_admin')
-
     def __repr__(self):
         return u"<{} ({}) {}>".format(self.__class__.__name__, self.id, self.name)
 
