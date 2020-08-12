@@ -37,15 +37,19 @@ class User(db.Model):
             'username': self.username,
             'is_demo': self.is_demo_user,
             'is_password_set': not check_password_hash(self.password_hash, u''),
-            'user_permissions': sorted(
-                self.permissions_list(),
-                key=lambda x: (x['is_demo_institution'], unidecode(unicode(x['institution_name'] or '')))
-            ),
+            'user_permissions': self.permissions_list(),
+            'institutions': self.permissions_list(is_consortium=False),
+            'consortia': self.permissions_list(is_consortium=True)
         }
 
-    def permissions_list(self):
+    def permissions_list(self, is_consortium=None):
         dicts = self.to_dict_permissions()
-        return dicts.values()
+        permission_dicts = sorted(
+                dicts.values(),
+                key=lambda x: (x['is_demo_institution'], unidecode(unicode(x['institution_name'] or ''))))
+        if is_consortium is not None:
+            permission_dicts = [d for d in permission_dicts if d["is_consortium"]==is_consortium]
+        return permission_dicts
 
     def to_dict_permissions(self):
         dicts = {}

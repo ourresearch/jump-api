@@ -25,11 +25,16 @@ class Institution(db.Model):
     ror_ids = relationship(RorId, lazy='subquery')
     packages = relationship('Package', lazy='subquery')
 
-    def user_permissions(self):
+    def user_permissions(self, is_consortium=None):
         user_ids = db.session.query(UserInstitutionPermission.user_id).filter(
             UserInstitutionPermission.institution_id == self.id).distinct()
         users = User.query.filter(User.id.in_(user_ids)).all()
-        return [u.to_dict_permissions()[self.id] for u in users]
+
+        permission_dicts = [u.to_dict_permissions()[self.id] for u in users]
+        if is_consortium is not None:
+            permission_dicts = [d for d in permission_dicts if d["is_consortium"]==is_consortium]
+
+        return permission_dicts
 
     @cached_property
     def is_consortium_member(self):
@@ -48,6 +53,8 @@ class Institution(db.Model):
             'is_consortium': self.is_consortium,
             'is_consortium_member': self.is_consortium_member,
             'user_permissions': self.user_permissions(),
+            'institutions': self.user_permissions(is_consortium=False),
+            'consortia': self.user_permissions(is_consortium=True),
             'publishers': [p.to_dict_minimal() for p in self.packages],
         }
 
