@@ -1358,7 +1358,17 @@ class Journal(object):
         response["title"] = self.title
         response["subject"] = self.subject
         response["era_subjects"] = self.era_subjects
-        response["issns"] = u",".join(self.issns)
+        try:
+            response["issns"] = u",".join(self.issns)
+        except TypeError:
+            print "BUG TypeError"
+            print self.issn_l
+            print self.issns
+            print self.ricks_journal_row
+            from scenario import get_ricks_journal
+            print len(get_ricks_journal())
+            response["issns"] = None
+
         response["subscribed"] = self.subscribed
 
         # overview
