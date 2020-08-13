@@ -1231,7 +1231,7 @@ def export_get(table_dicts):
         for table_dict in table_dicts:
             row = []
             for my_key in keys:
-                if my_key in "issn_l":
+                if my_key in ["issn_l", "issns"]:
                     # doing this hacky thing so excel doesn't format the issn as a date :(
                     row.append(u"issn:{}".format(table_dict[my_key]))
                 else:
