@@ -1212,7 +1212,7 @@ def live_publisher_id_apc_get(publisher_id):
     else:
         my_scenario = default_scenario(my_package.package_id)
         db.session.add(my_scenario)
-        safe_commit()
+        safe_commit(db)
 
     scenario_id = my_scenario.scenario_id
 
