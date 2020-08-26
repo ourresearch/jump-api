@@ -9,12 +9,11 @@
     Hi{% if data.display_name and 'Anon' not in data.display_name %} {{ data.display_name }}{% endif %},
 </p>
 <p>
-    Your Unsub permissions were changed by {{ data.admin_name }} ({{ data.admin_email }}). The changes were:
+    Just wanted to let you know that your Unsub permissions were changed by {{ data.admin_name }} ({{ data.admin_email }}).
 </p>
-<pre>{{ data.diff }}</pre>
 <p>
     Best,<br/>
-    Jason, Heather, and Richard
+    Jason and Heather
 </p>
 
 </body>
