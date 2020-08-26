@@ -89,10 +89,6 @@ class Scenario(object):
         if self.package_id.startswith("demo"):
             self.package_id_for_db = DEMO_PACKAGE_ID
 
-        self.is_consortium = False
-        if get_consortium_package_ids(self.package_id):
-            self.is_consortium = True
-
         self.log_timing("setup")
 
         from package import Package
@@ -130,9 +126,8 @@ class Scenario(object):
         self.journals = get_fresh_journal_list(self, my_jwt)
         self.log_timing("mint regular journals")
 
-        if not self.is_consortium:
-            [j.set_scenario_data(self.data) for j in self.journals]
-            self.log_timing("set data in journals")
+        [j.set_scenario_data(self.data) for j in self.journals]
+        self.log_timing("set data in journals")
 
         if http_request_args:
             for journal in self.journals:

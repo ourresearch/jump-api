@@ -162,6 +162,11 @@ class SavedScenario(db.Model):
         return False
 
     @cached_property
+    def update_notification_email(self):
+        # Always None for individual scenarios, overridden by Consortium object
+        return None
+
+    @cached_property
     def update_percent_complete(self):
         # Always None for individual scenarios, overridden by Consortium object
         return None

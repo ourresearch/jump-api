@@ -16,6 +16,12 @@ from util import elapsed
 
 
 def consortium_calculate():
+    # command = "truncate jump_scenario_computed_update_queue"
+    # print command
+    # with get_db_cursor() as cursor:
+    #    cursor.execute(command)
+
+
     while True:
         command = "select * from jump_scenario_computed_update_queue where completed is null order by random()"
         # print command
