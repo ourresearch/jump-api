@@ -217,6 +217,7 @@ class SavedScenario(db.Model):
 
             # these are used by consortium
             "is_locked_pending_update": self.is_locked_pending_update,
+            "update_notification_email": self.update_notification_email,
             "update_percent_complete": self.update_percent_complete,
         }
         return response
@@ -245,6 +246,7 @@ class SavedScenario(db.Model):
 
         # these are used by consortium
         response["is_locked_pending_update"] = self.is_locked_pending_update
+        response["update_notification_email"] = self.update_notification_email
         response["update_percent_complete"] = self.update_percent_complete
 
         response["_debug"] = {"summary": self.live_scenario.to_dict_summary_dict()}
