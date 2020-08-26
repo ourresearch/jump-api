@@ -176,15 +176,20 @@ class Consortium(object):
 
     @cached_property
     def is_locked_pending_update(self):
-        command = "select 1 from jump_scenario_computed_update_queue where completed is null and scenario_id='{}'".format(self.scenario_id)
+        if self.update_notification_email is not None:
+            return True
+        return False
+
+    @cached_property
+    def update_notification_email(self):
+        command = "select email from jump_scenario_computed_update_queue where completed is null and scenario_id='{}'".format(self.scenario_id)
         # print command
         with get_db_cursor() as cursor:
             cursor.execute(command)
             rows = cursor.fetchall()
         if rows:
-            return True
-        return False
-
+            return rows[0]["email"]
+        return None
 
     @cached_property
     def update_percent_complete(self):
@@ -222,7 +227,7 @@ class Consortium(object):
                                           'institution_id': self.institution_id,
                                           'scenario_created': datetime.datetime(2020, 7, 18, 17, 12, 40, 335615),
                                           'is_base_scenario': True,
-                                          'scenario_name': self.scenario_saved_dict["name"],
+                                          'scenario_name': self.scenario_saved_dict.get("name", "My Scenario"),
                                           'publisher_id': self.package_id}
         my_response["saved"] = self.scenario_saved_dict
 
@@ -233,6 +238,7 @@ class Consortium(object):
         my_response["journals"] = response_list
         my_response["member_institutions"] = self.member_institution_included_list
         my_response["is_locked_pending_update"] = self.is_locked_pending_update
+        my_response["update_notification_email"] = self.update_notification_email
         my_response["update_percent_complete"] = self.update_percent_complete
 
         return my_response

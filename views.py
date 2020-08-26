@@ -1125,6 +1125,7 @@ def live_scenario_id_get(scenario_id):
 
     # these are used by consortium
     response["is_locked_pending_update"] = my_saved_scenario.is_locked_pending_update
+    response["update_notification_email"] = my_saved_scenario.update_notification_email
     response["update_percent_complete"] = my_saved_scenario.update_percent_complete
 
     my_timing.log_timing("after to_dict()")

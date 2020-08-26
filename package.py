@@ -65,6 +65,10 @@ class Package(db.Model):
         return response
 
     @property
+    def scenario_ids(self):
+        return [s.scenario_id for s in self.saved_scenarios]
+
+    @property
     def is_demo_account(self):
         return self.package_id.startswith("demo")
 
@@ -659,6 +663,11 @@ class Package(db.Model):
             "select count(*) from jump_core_journals_input where package_id = '{}'".format(self.package_id)
         ).scalar()
 
+        if self.institution.is_consortium:
+            counter_uploaded = True
+        else:
+            counter_uploaded = num_counter_rows > 0
+
         return {
             'id': self.package_id,
             'name': self.package_name,
@@ -669,7 +678,7 @@ class Package(db.Model):
             'data_files': [
                 {
                     'name': 'counter',
-                    'uploaded': num_counter_rows > 0,
+                    'uploaded': counter_uploaded,
                     'rows_count': num_counter_rows,
                     'error_rows': counter_errors,
                 },
@@ -813,63 +822,4 @@ def clone_demo_package(institution):
 
     return new_package
 
-
-#
-# # copy consortial packages
-# # jump_counter
-# insert into jump_counter (issn_l, package_id, organization, publisher, issn, journal_name, total) (
-#     select issn_l, member_package_id, organization, publisher, issn, journal_name, total
-#     from jump_counter
-#     join jump_consortium_members on jump_consortium_members.member_package_id_original=jump_counter.package_id
-# )
-
-# insert into jump_counter_input (organization, publisher, issn, journal_name, total, package_id) (
-#     select organization, publisher, issn, journal_name, total, member_package_id
-#     from jump_counter_input
-#     join jump_consortium_members on jump_consortium_members.member_package_id_original=jump_counter_input.package_id
-# )
-
-#
-# # 'jump_perpetual_access'
-# insert into jump_perpetual_access (package_id, issn_l, start_date, end_date) (
-#     select member_package_id, issn_l, start_date, end_date
-#     from jump_perpetual_access
-#     join jump_consortium_members on jump_consortium_members.member_package_id_original=jump_perpetual_access.package_id
-# )
-#
-
-# insert into jump_perpetual_access_input (package_id, issn, start_date, end_date) (
-#     select member_package_id, issn, start_date, end_date
-#     from jump_perpetual_access_input
-#      join jump_consortium_members on jump_consortium_members.member_package_id_original=jump_perpetual_access_input.package_id
-# )
-
-# # 'jump_apc_authorships'
-# insert into jump_apc_authorships (
-#     package_id, doi, publisher, num_authors_total, num_authors_from_uni, journal_name, issn_l, year, oa_status, apc) (
-#     select member_package_id, doi, publisher, num_authors_total, num_authors_from_uni, journal_name, issn_l, year, oa_status, apc
-#     from jump_apc_authorships
-#     join jump_consortium_members on jump_consortium_members.member_package_id_original=jump_apc_authorships.package_id
-# )
-#
-# # 'jump_journal_prices'
-# insert into jump_journal_prices (package_id, publisher, title, issn_l, usa_usd) (
-#     select member_package_id, publisher, title, issn_l, usa_usd
-#     from jump_journal_prices
-#     join jump_consortium_members on jump_consortium_members.member_package_id_original=jump_journal_prices.package_id
-# )
-
-# insert into jump_journal_prices_input (package_id, publisher, issn, usa_usd) (
-#     select member_package_id, publisher, issn, usa_usd
-#     from jump_journal_prices_input
-#     join jump_consortium_members on jump_consortium_members.member_package_id_original=jump_journal_prices_input.package_id
-# )
-#
-#
-# # jump_account_packages
-# insert into jump_account_package (package_id, publisher, package_name, created, consortium_package_id, institution_id, is_demo, big_deal_cost, is_deleted, updated, default_to_no_perpetual_access) (
-#     select member_package_id, publisher, package_name, created, jump_account_package.consortium_package_id, institution_id, is_demo, big_deal_cost, is_deleted, updated, default_to_no_perpetual_access
-#     from jump_account_package
-#     join jump_consortium_members on jump_consortium_members.member_package_id_original=jump_account_package.package_id
-# )
 
