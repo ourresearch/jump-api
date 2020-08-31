@@ -190,3 +190,22 @@ if __name__ == "__main__":
 
     # consortium_create()
 
+    consortium_package_id = "package-2NNrG6YCAvAh"
+
+    # copy_package("package-UKqnJcsns7QL", "package-cmpUKqnJcsns7QL")
+    # command = """
+    #     insert into jump_consortium_members (consortium_short_name, consortium_package_id, member_package_id)
+    #     values ('{}', '{}', '{}')
+    #     """.format("colorado_alliance", consortium_package_id, "package-cmpUKqnJcsns7QL")
+    # print command
+    # with get_db_cursor() as cursor:
+    #     cursor.execute(command)
+
+    from consortium import get_consortium_ids
+    consortium_ids = get_consortium_ids()
+    for d in consortium_ids:
+        print d["package_id"]
+        if consortium_package_id==d["package_id"]:
+            new_consortia = Consortium(d["scenario_id"])
+            new_consortia.recompute_journal_dicts()
+            print u"recomputing {}".format(new_consortia)
