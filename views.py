@@ -1322,9 +1322,6 @@ def scenario_post(package_id):
             login_user = authenticated_user()
             new_consortia.queue_for_recompute(login_user.email)
 
-    # clear cache
-    reset_cache("consortium", "get_consortium_ids", *[])
-
     print "getting my_new_scenario"
     my_new_scenario = get_saved_scenario(new_scenario_id, required_permission=Permission.view())
     print "got my_new_scenario"
@@ -1374,9 +1371,6 @@ def publisher_scenario_post(publisher_id):
             save_raw_member_institutions_included_to_db(new_scenario_id, new_consortia.member_institution_included_list, get_ip(request))
             new_consortia.recompute_journal_dicts()
 
-    # clear cache
-    reset_cache("consortium", "get_consortium_ids", *[])
-
     my_new_scenario = get_saved_scenario(new_scenario_id, required_permission=Permission.view())
 
     return jsonify_fast_no_sort(my_new_scenario.to_dict_meta())
@@ -1392,9 +1386,6 @@ def scenario_delete(scenario_id):
 
     with get_db_cursor() as cursor:
         cursor.execute(command)
-
-    # clear cache
-    reset_cache("consortium", "get_consortium_ids", *[])
 
     return jsonify_fast_no_sort({"response": "success"})
 
