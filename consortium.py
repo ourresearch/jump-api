@@ -328,7 +328,7 @@ class Consortium(object):
                     print "done writing to db", member_package_id
 
             except Exception as e:
-                print "whoops exception", e
+                print "In get_insert_rows_for_member with Error: ", e
                 raise
             return command_list
 
