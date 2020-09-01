@@ -12,10 +12,10 @@ import unicodecsv as csv
 from enum import Enum
 from sqlalchemy.sql import text
 
+import package
 from app import db, logger
 from app import get_db_cursor
 from app import reset_cache
-import package
 from consortium import Consortium
 from excel import convert_spreadsheet_to_csv
 from package_file_error_rows import PackageFileErrorRow
