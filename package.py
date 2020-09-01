@@ -17,7 +17,8 @@ from assumptions import Assumptions
 from counter import CounterInput
 from journal_price import JournalPriceInput
 from perpetual_access import PerpetualAccessInput
-from saved_scenario import SavedScenario
+from saved_scenario import SavedScenario # used in relationship
+from institution import Institution  # used in relationship
 from scenario import get_hybrid_2019
 from scenario import get_ricks_journal
 from scenario import get_prices_from_cache
