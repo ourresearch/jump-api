@@ -12,11 +12,11 @@ import unicodecsv as csv
 from enum import Enum
 from sqlalchemy.sql import text
 
-import package
-import purge_cache
 from app import db, logger
 from app import get_db_cursor
 from app import reset_cache
+import package
+from consortium import Consortium
 from excel import convert_spreadsheet_to_csv
 from package_file_error_rows import PackageFileErrorRow
 from raw_file_upload_object import RawFileUploadObject
@@ -255,8 +255,12 @@ class PackageInput:
         # print "clearing cache"
         if my_package.is_owned_by_consortium:
             print u"clearing consortium cache for my_package.is_owned_by_consortium: {}".format(my_package)
-            for scenario_id in my_package.scenario_ids:
-                reset_cache("consortium", "consortium_get_computed_data", scenario_id)
+            for consortium_scenario_id in my_package.consortia_scenario_ids_who_own_this_package:
+
+                # this will actually recalculate all member institutions instead of just this one
+                # which will take longer, but don't worry about it for now
+                my_consortium = Consortium(consortium_scenario_id)
+                reset_cache("consortium", "consortium_get_computed_data", consortium_scenario_id)
         else:
             print u"NO NEED TO cache clear consortium_get_computed_data for my_package {}".format(my_package)
 
