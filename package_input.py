@@ -16,13 +16,12 @@ import package
 import purge_cache
 from app import db, logger
 from app import get_db_cursor
+from app import reset_cache
 from excel import convert_spreadsheet_to_csv
 from package_file_error_rows import PackageFileErrorRow
 from raw_file_upload_object import RawFileUploadObject
 from util import convert_to_utf_8
 from util import safe_commit
-
-
 
 
 
@@ -253,8 +252,15 @@ class PackageInput:
 
     @classmethod
     def clear_caches(cls, my_package):
+        # print "clearing cache"
+        if my_package.is_owned_by_consortium:
+            print u"clearing consortium cache for my_package.is_owned_by_consortium: {}".format(my_package)
+            for scenario_id in my_package.scenario_ids:
+                reset_cache("consortium", "consortium_get_computed_data", scenario_id)
+        else:
+            print u"NO NEED TO cache clear consortium_get_computed_data for my_package {}".format(my_package)
+
         my_package.clear_package_counter_breakdown_cache()
-        purge_cache.purge_common_package_data_cache(my_package.package_id)
 
     @classmethod
     def update_dest_table(cls, package_id):
