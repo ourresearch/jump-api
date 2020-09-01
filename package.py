@@ -352,13 +352,22 @@ class Package(db.Model):
 
     @cached_property
     def is_owned_by_consortium(self):
-        q = u"select member_package_id from jump_consortium_members where member_package_id='{}'".format(self.package_id)
+        if self.consortia_scenario_ids_who_own_this_package:
+            return True
+        return False
+
+    @cached_property
+    def consortia_scenario_ids_who_own_this_package(self):
+        q = u"""
+        select consortium_package_id, scenario_id as consortium_scenario_id
+            from jump_consortium_members cm
+            join jump_package_scenario ps on cm.consortium_package_id=ps.package_id
+            where member_package_id='{}'
+        """.format(self.package_id)
         with get_db_cursor() as cursor:
             cursor.execute(q)
             rows = cursor.fetchall()
-        if rows:
-            return True
-        return False
+        return [row["consortium_scenario_id"] for row in rows]
 
     def get_package_counter_breakdown(self):
         package_id = self.package_id_for_db
