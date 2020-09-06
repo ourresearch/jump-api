@@ -155,6 +155,13 @@ class SavedScenario(db.Model):
     def institution_name(self):
         return self.set_live_scenario().institution_name
 
+    @property
+    def timing_messages_safe(self):
+        try:
+            return self.timing_messages
+        except AttributeError:
+            return []
+
 
     @cached_property
     def is_locked_pending_update(self):
@@ -251,7 +258,7 @@ class SavedScenario(db.Model):
 
         response["_debug"] = {"summary": self.live_scenario.to_dict_summary_dict()}
         self.log_timing("to dict")
-        response["_timing"] = self.timing_messages
+        response["_timing"] = self.timing_messages_safe
         return response
 
     def __repr__(self):
