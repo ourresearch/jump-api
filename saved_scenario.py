@@ -155,13 +155,6 @@ class SavedScenario(db.Model):
     def institution_name(self):
         return self.set_live_scenario().institution_name
 
-    @property
-    def timing_messages_safe(self):
-        try:
-            return self.timing_messages
-        except AttributeError:
-            return []
-
 
     @cached_property
     def is_locked_pending_update(self):
@@ -257,8 +250,13 @@ class SavedScenario(db.Model):
         response["update_percent_complete"] = self.update_percent_complete
 
         response["_debug"] = {"summary": self.live_scenario.to_dict_summary_dict()}
-        self.log_timing("to dict")
-        response["_timing"] = self.timing_messages_safe
+
+        try:
+            self.log_timing("to dict")
+            response["_timing"] = self.timing_messages
+        except AttributeError:
+            response["_timing"] = ["timing unknown. self.timing_messages didn't load"]
+
         return response
 
     def __repr__(self):
