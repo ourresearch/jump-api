@@ -154,7 +154,7 @@ class Scenario(object):
             # print "package_id_for_prices", package_id_for_prices
             if package_id_for_prices in prices_raw:
                 for my_issnl, price in prices_raw[package_id_for_prices].iteritems():
-                    if price != 0 and price is not None:
+                    if price is not None:
                         if not prices_dict.get(my_issnl, 0):
                             prices_dict[my_issnl] = price
 
