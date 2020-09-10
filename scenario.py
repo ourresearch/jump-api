@@ -142,7 +142,7 @@ class Scenario(object):
         prices_dict = {}
         self.data["prices"] = {}
 
-        prices_to_consider = [self.package_id, DEMO_PACKAGE_ID]
+        prices_to_consider = [DEMO_PACKAGE_ID, self.package_id]
         from app import suny_consortium_package_ids
 
         # print "package_id", self.package_id_for_db, get_parent_consortium_package_id(self.package_id_for_db)
@@ -155,11 +155,9 @@ class Scenario(object):
             if package_id_for_prices in prices_raw:
                 for my_issnl, price in prices_raw[package_id_for_prices].iteritems():
                     if price is not None:
-                        if not prices_dict.get(my_issnl, 0):
-                            prices_dict[my_issnl] = price
+                        prices_dict[my_issnl] = price
 
                         # print package_id_for_prices, my_issnl, price, "prices_dict[my_issnl]", prices_dict[my_issnl]
-
         self.data["prices"] = prices_dict
 
         clean_dict = {}
