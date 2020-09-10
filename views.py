@@ -1326,7 +1326,7 @@ def scenario_post(package_id):
     my_new_scenario = get_saved_scenario(new_scenario_id, required_permission=Permission.view())
     print "got my_new_scenario"
 
-    return jsonify_fast_no_sort(my_new_scenario.to_dict_meta())
+    return jsonify_fast_no_sort(my_new_scenario.to_dict_journals())
 
 
 @app.route('/publisher/<publisher_id>/scenario', methods=["POST"])
