@@ -250,8 +250,13 @@ class SavedScenario(db.Model):
         response["update_percent_complete"] = self.update_percent_complete
 
         response["_debug"] = {"summary": self.live_scenario.to_dict_summary_dict()}
-        self.log_timing("to dict")
-        response["_timing"] = self.timing_messages
+
+        try:
+            self.log_timing("to dict")
+            response["_timing"] = self.timing_messages
+        except AttributeError:
+            response["_timing"] = ["timing unknown. self.timing_messages didn't load"]
+
         return response
 
     def __repr__(self):
