@@ -147,6 +147,7 @@ class Consortium(object):
         self.publisher = my_row["publisher"]
         self.institution_id = my_row["institution_id"]
 
+
     @cached_property
     def journal_member_data(self):
         response = consortium_get_computed_data(self.scenario_id)
@@ -393,18 +394,24 @@ class Consortium(object):
 
         print "after calculating", elapsed(start_time)
         start_time = time()
-        response = []
+        journal_list = []
         for issn_l in issn_ls:
             if len(journals_dicts_by_issn_l[issn_l]) > 0:
-                response.append(ConsortiumJournal(issn_l, self.member_institution_included_list, journals_dicts_by_issn_l[issn_l]))
+                journal_list.append(ConsortiumJournal(issn_l, self.member_institution_included_list, journals_dicts_by_issn_l[issn_l]))
 
-        response = sorted(response, key=lambda x: float('inf') if x.ncppu==None else x.ncppu, reverse=False)
-        for rank, my_journal_dict in enumerate(response):
-            my_journal_dict.ncppu_rank = rank + 1
+        for my_journal in journal_list:
+            if my_journal.issn_l in self.scenario_saved_dict.get("subrs", []):
+                my_journal.set_subscribe_bulk()
+            if my_journal.issn_l in self.scenario_saved_dict.get("customSubrs", []):
+                my_journal.set_subscribe_custom()
+
+        journal_list = sorted(journal_list, key=lambda x: float('inf') if x.ncppu==None else x.ncppu, reverse=False)
+        for rank, my_journal in enumerate(journal_list):
+            my_journal.ncppu_rank = rank + 1
 
         print "after journals", elapsed(start_time)
 
-        return response
+        return journal_list
 
 
     def to_dict_institutions(self):
