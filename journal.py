@@ -572,7 +572,7 @@ class Journal(object):
     @cached_property
     def use_backfile(self):
         # response = [min(response[year], self.use_total_by_year[year] - self.use_oa_by_year[year]) for year in self.years]
-        response = min(np.mean(self.downloads_backfile_by_year), self.use_total - self.use_oa - self.use_social_networks)
+        response = min(np.mean(self.use_backfile_by_year), self.use_total - self.use_oa - self.use_social_networks)
         return round(response, 4)
 
     @cached_property
