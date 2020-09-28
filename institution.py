@@ -37,6 +37,14 @@ class Institution(db.Model):
         return permission_dicts
 
     @cached_property
+    def packages_sorted(self):
+        response = self.packages
+        response.sort(key=lambda k: k["name"], reverse=False)
+        response.sort(key=lambda k: k["is_owned_by_consortium"], reverse=False) #minor
+        response.sort(key=lambda k: k["publisher"], reverse=False)  #main sorting key is last
+        return response
+
+    @cached_property
     def is_consortium_member(self):
         for my_package in self.packages:
             if my_package.is_owned_by_consortium:
@@ -55,7 +63,7 @@ class Institution(db.Model):
             'user_permissions': self.user_permissions(),
             'institutions': self.user_permissions(is_consortium=False),
             'consortia': self.user_permissions(is_consortium=True),
-            'publishers': [p.to_dict_minimal() for p in self.packages],
+            'publishers': [p.to_dict_minimal() for p in self.packages_sorted],
         }
 
     def __init__(self, **kwargs):
