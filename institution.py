@@ -39,9 +39,9 @@ class Institution(db.Model):
     @cached_property
     def packages_sorted(self):
         response = self.packages
-        response.sort(key=lambda k: k["name"], reverse=False)
-        response.sort(key=lambda k: k["is_owned_by_consortium"], reverse=False) #minor
-        response.sort(key=lambda k: k["publisher"], reverse=False)  #main sorting key is last
+        response.sort(key=lambda k: k.package_name, reverse=False)
+        response.sort(key=lambda k: k.is_owned_by_consortium, reverse=False) #minor
+        response.sort(key=lambda k: k.publisher, reverse=False)  #main sorting key is last
         return response
 
     @cached_property
