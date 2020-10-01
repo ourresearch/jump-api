@@ -155,6 +155,13 @@ class SavedScenario(db.Model):
     def institution_name(self):
         return self.set_live_scenario().institution_name
 
+    @property
+    def description(self):
+        return self.set_live_scenario().settings.description
+
+    @property
+    def notes(self):
+        return self.set_live_scenario().settings.notes
 
     @cached_property
     def is_locked_pending_update(self):
@@ -214,6 +221,8 @@ class SavedScenario(db.Model):
         response = {
             "id": self.scenario_id,
             "name": self.scenario_name,
+            "description": self.description,
+            "notes": self.notes,
 
             # these are used by consortium
             "is_locked_pending_update": self.is_locked_pending_update,
@@ -227,6 +236,8 @@ class SavedScenario(db.Model):
         response = OrderedDict()
         response["scenario_id"] = self.scenario_id
         response["scenario_name"] = self.scenario_name
+        response["scenario_description"] = self.description
+        response["scenario_notes"] = self.notes
 
         if self.package.institution_id:
             response["publisher_id"] = self.package_id
