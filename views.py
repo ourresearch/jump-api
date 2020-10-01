@@ -1103,7 +1103,7 @@ def subscriptions_scenario_id_post(scenario_id):
 def member_institutions_scenario_id_post(scenario_id):
 
     my_timing = TimingMessages()
-    print "request.get_json()", request.get_json()
+    print u"request.get_json()", request.get_json()
     post_member_institutions_included_guts(scenario_id)
 
     my_timing.log_timing("post_member_institutions_included_guts()")
