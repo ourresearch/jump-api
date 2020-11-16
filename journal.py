@@ -99,6 +99,10 @@ class Journal(object):
         return []
 
     @cached_property
+    def institution_id(self):
+        return self.scenario.institution_id
+
+    @cached_property
     def institution_name(self):
         return self.scenario.institution_name
 
@@ -421,10 +425,12 @@ class Journal(object):
 
         #   if no dates, then no perpetual access
         if not start_date:
-            return []
+            if self.institution_id in ["institution-W8v4xcUiDww4"]:
+                start_date = datetime.datetime(1899, 1, 1)  # far in the past
+            else:
+                return []
 
-
-        #   if a start date and no end date, then has perpetual access till the model says it doesn't
+        #   if no end date, then has perpetual access till the model says it doesn't
         if not end_date:
             end_date = datetime.datetime(2042, 1, 2)  # far in the future, let's really hope we have universal OA by then
 

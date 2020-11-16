@@ -98,6 +98,7 @@ class Scenario(object):
         my_institution = my_package.institution
         self.institution_name = my_institution.display_name
         self.institution_short_name = my_institution.old_username
+        self.institution_id = my_institution.id
 
         if my_package and my_package.big_deal_cost:
             self.settings.cost_bigdeal = float(my_package.big_deal_cost)
