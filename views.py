@@ -831,8 +831,12 @@ def new_publisher():
         publisher = 'Wiley'
     elif 'springer' in publisher:
         publisher = 'SpringerNature'
+    elif 'taylor' in publisher:
+        publisher = 'TaylorFrancis'
+    elif 'sage' in publisher:
+        publisher = 'Sage'
     else:
-        return abort_json(400, u'publisher must be one of [Elsevier, Wiley, SpringerNature]')
+        return abort_json(400, u'not a supported publisher')
 
     now = datetime.datetime.utcnow().isoformat()
 
@@ -1037,6 +1041,7 @@ def post_subscription_guts(scenario_id, scenario_name=None):
 
     dict_to_save = request.get_json()
     if scenario_name:
+        scenario_name = scenario_name.replace(u'"', u'\"')
         dict_to_save["scenario_name"] = scenario_name
         save_raw_scenario_to_db(scenario_id, dict_to_save, get_ip(request))
 
