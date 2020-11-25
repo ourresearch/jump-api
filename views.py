@@ -1229,7 +1229,7 @@ def live_publisher_id_apc_get(publisher_id):
 
 def export_get(table_dicts):
     keys_not_to_export = ["institution_name",
-                          "institutiion_short_name",
+                          "institution_short_name",
                           "package_id",
                           "use_groups_free_instant",
                           "use_groups_if_subscribed",
