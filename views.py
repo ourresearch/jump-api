@@ -1041,7 +1041,7 @@ def post_subscription_guts(scenario_id, scenario_name=None):
 
     dict_to_save = request.get_json()
     if scenario_name:
-        scenario_name = scenario_name.replace(u'"', u'\"')
+        scenario_name = scenario_name.replace(u'"', u'""')
         dict_to_save["scenario_name"] = scenario_name
         save_raw_scenario_to_db(scenario_id, dict_to_save, get_ip(request))
 
@@ -1228,10 +1228,25 @@ def live_publisher_id_apc_get(publisher_id):
 
 
 def export_get(table_dicts):
+    keys_not_to_export = ["institution_name",
+                          "institutiion_short_name",
+                          "package_id",
+                          "use_groups_free_instant",
+                          "use_groups_if_subscribed",
+                          "use_groups_if_not_subscribed",
+                          "use_instant_for_debugging",
+                          "is_hybrid_2019",
+                          "use_social_networks_percent",
+                          "use_green_percent",
+                          "use_hybrid_percent",
+                          "use_bronze_percent",
+                          "use_peer_reviewed_percent",
+                          ]
+
     filename = "export.csv"
     with open(filename, "w") as file:
         csv_writer = csv.writer(file, encoding='utf-8')
-        keys = table_dicts[0].keys()
+        keys = [my_key for my_key in table_dicts[0].keys() if my_key not in keys_not_to_export]
 
         csv_writer.writerow(keys)
         for table_dict in table_dicts:
@@ -1257,10 +1272,10 @@ def scenario_id_export_csv_get(scenario_id):
     consortium_ids = get_consortium_ids()
     if scenario_id in [d["scenario_id"] for d in consortium_ids]:
         my_consortium = Consortium(scenario_id)
-        table_dicts = my_consortium.to_dict_export()["journals"]
+        table_dicts = my_consortium.to_dict_journals()["journals"]
     else:
         my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
-        table_dicts = my_saved_scenario.live_scenario.to_dict_export()["journals"]
+        table_dicts = my_saved_scenario.to_dict_journals()["journals"]
 
     contents = export_get(table_dicts)
     return Response(contents, mimetype="text/csv")
@@ -1272,10 +1287,10 @@ def scenario_id_export_get(scenario_id):
     consortium_ids = get_consortium_ids()
     if scenario_id in [d["scenario_id"] for d in consortium_ids]:
         my_consortium = Consortium(scenario_id)
-        table_dicts = my_consortium.to_dict_export()["journals"]
+        table_dicts = my_consortium.to_dict_journals()["journals"]
     else:
         my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
-        table_dicts = my_saved_scenario.live_scenario.to_dict_export()["journals"]
+        table_dicts = my_saved_scenario.to_dict_journals()["journals"]
 
     contents = export_get(table_dicts)
     return Response(contents, mimetype="text/text")

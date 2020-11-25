@@ -74,9 +74,9 @@ class MyTest(unittest.TestCase):
         pass
         my_journal_objects = self.live_scenario.journals
         for my_journal in my_journal_objects:
-            if my_journal.oa_embargo_months:
+            if my_journal.bronze_oa_embargo_months:
                 for year in range(0, 5):
-                    if year*12 >= my_journal.oa_embargo_months:
+                    if year*12 >= my_journal.bronze_oa_embargo_months:
                         for group in ["backfile"]:
                             if my_journal.use_actual_by_year[group][year] != 0:
                                 print "here, is not zero", group, year, my_journal.title, my_journal.issn_l, my_journal.use_actual_by_year[group][year]
@@ -93,7 +93,7 @@ class MyTest(unittest.TestCase):
     def test_nonzero(self):
         number_that_have_zeros = 0
         for header in self.table_headers:
-            if header["value"] not in ["ncppu_rank", "use_subscription_percent"]:
+            if header["value"] not in ["cpu_rank", "use_subscription_percent"]:
                 print header["value"]
                 try:
                     assert_not_equals(header["raw"], None)

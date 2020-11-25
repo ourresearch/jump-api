@@ -253,7 +253,7 @@ class SavedScenario(db.Model):
         response = OrderedDict()
         response["meta"] = self.to_dict_meta()
         response["saved"] = self.to_dict_saved()
-        response["journals"] = [j.to_dict_journals() for j in self.live_scenario.journals_sorted_ncppu]
+        response["journals"] = [j.to_dict_journals() for j in self.live_scenario.journals_sorted_cpu]
 
         # these are used by consortium
         response["is_locked_pending_update"] = self.is_locked_pending_update
