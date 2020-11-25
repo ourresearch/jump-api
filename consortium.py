@@ -206,8 +206,8 @@ class Consortium(object):
         return None
 
     @cached_property
-    def journals_sorted_ncppu(self):
-        self.journals.sort(key=lambda k: for_sorting(k.ncppu), reverse=False)
+    def journals_sorted_cpu(self):
+        self.journals.sort(key=lambda k: for_sorting(k.cpu), reverse=False)
         return self.journals
 
     @cached_property
@@ -233,7 +233,7 @@ class Consortium(object):
         my_response["saved"] = self.scenario_saved_dict
 
         start_time = time()
-        response_list = [j.to_dict_journals() for j in self.journals_sorted_ncppu]
+        response_list = [j.to_dict_journals() for j in self.journals_sorted_cpu]
         print "after to_dict_journals on each journal", elapsed(start_time)
 
         my_response["journals"] = response_list
@@ -311,7 +311,7 @@ class Consortium(object):
                     print u"after my_live_scenario with {}".format(member_package_id)
                     for my_journal in my_live_scenario.journals:
                         usage = my_journal.use_total
-                        cpu = my_journal.ncppu or "null"
+                        cpu = my_journal.cpu or "null"
                         journals_dict_json = jsonify_fast_no_sort_simple(my_journal.to_dict_journals()).replace(u"'", u"''")
                         command_list.append(u"('{}', '{}', '{}', sysdate, '{}', {}, {}, '{}')".format(
                             member_package_id, self.scenario_id, self.consortium_short_name, my_journal.issn_l, usage, cpu, journals_dict_json))
@@ -374,7 +374,7 @@ class Consortium(object):
 
     def to_dict_export(self):
         response = {}
-        response["journals"] = [j.to_dict_export() for j in self.journals_sorted_ncppu]
+        response["journals"] = [j.to_dict_export() for j in self.journals_sorted_cpu]
         return response
 
     @cached_property
@@ -405,9 +405,9 @@ class Consortium(object):
             if my_journal.issn_l in self.scenario_saved_dict.get("customSubrs", []):
                 my_journal.set_subscribe_custom()
 
-        journal_list = sorted(journal_list, key=lambda x: float('inf') if x.ncppu==None else x.ncppu, reverse=False)
+        journal_list = sorted(journal_list, key=lambda x: float('inf') if x.cpu==None else x.cpu, reverse=False)
         for rank, my_journal in enumerate(journal_list):
-            my_journal.ncppu_rank = rank + 1
+            my_journal.cpu_rank = rank + 1
 
         print "after journals", elapsed(start_time)
 

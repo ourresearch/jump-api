@@ -287,7 +287,7 @@ def refresh_data_for_consortium(consortium_name):
         for my_journal in my_live_scenario.journals:
             all_journal_dicts.append(my_journal.to_dict_journals())
             usage = my_journal.use_total
-            cpu = my_journal.ncppu
+            cpu = my_journal.cpu
             if not cpu:
                 cpu = "null"
 

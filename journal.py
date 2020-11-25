@@ -26,11 +26,11 @@ scipy_lock = Lock()
 default_download_by_age = [0.371269, 0.137739, 0.095896, 0.072885, 0.058849]
 default_download_older_than_five_years = 1.0 - sum(default_download_by_age)
 
-def display_usage(value):
-    if value:
+def display_cpu(value):
+    if value and str(value).lower() != "nan":
         return value
     else:
-        return "—"
+        return u"-"
 
 class Journal(object):
     years = range(0, 5)
@@ -162,7 +162,7 @@ class Journal(object):
         return round(np.mean(self.num_authorships_historical_by_year), 4)
 
     @cached_property
-    def oa_embargo_months(self):
+    def bronze_oa_embargo_months(self):
         return self._scenario_data["embargo_dict"].get(self.issn_l, None)
 
     def set_subscribe_bulk(self):
@@ -205,18 +205,18 @@ class Journal(object):
     @cached_property
     def cost_actual_by_year(self):
         if self.subscribed:
-            return self.cost_subscription_by_year
-        return self.cost_ill_by_year
+            return self.subscription_cost_by_year
+        return self.ill_cost_by_year
 
     @cached_property
     def cost_actual(self):
         if self.subscribed:
-            return self.cost_subscription
-        return self.cost_ill
+            return self.subscription_cost
+        return self.ill_cost
 
 
     @cached_property
-    def cost_subscription_by_year(self):
+    def subscription_cost_by_year(self):
         if self.cost_subscription_2018 is not None:
             response = [round(((1+self.settings.cost_alacart_increase/float(100))**year) * self.cost_subscription_2018 )
                                                 for year in self.years]
@@ -226,12 +226,12 @@ class Journal(object):
         return response
 
     @cached_property
-    def cost_subscription(self):
-        return round(np.mean(self.cost_subscription_by_year), 4)
+    def subscription_cost(self):
+        return round(np.mean(self.subscription_cost_by_year), 4)
 
 
     @cached_property
-    def ncppu(self):
+    def cpu(self):
         if not self.use_paywalled or self.use_paywalled < 1:
             return None
         return round(self.cost_subscription_minus_ill/self.use_paywalled, 6)
@@ -240,7 +240,7 @@ class Journal(object):
     def old_school_cpu(self):
         if not self.downloads_total or self.downloads_total < 1:
             return None
-        return round(float(self.cost_subscription)/self.downloads_total, 6)
+        return round(float(self.subscription_cost)/self.downloads_total, 6)
 
     @cached_property
     def use_weight_multiplier(self):
@@ -792,9 +792,9 @@ class Journal(object):
     @cached_property
     def downloads_oa_by_age(self):
         response = [(float(self.downloads_per_paper_by_age[age])*self.num_oa_historical_by_year[age]) for age in self.years]
-        if self.oa_embargo_months:
+        if self.bronze_oa_embargo_months:
             for age in self.years:
-                if age*12 >= self.oa_embargo_months:
+                if age*12 >= self.bronze_oa_embargo_months:
                     response[age] = self.downloads_by_age[age]
 
         # if self.issn_l == "0031-9406":
@@ -949,26 +949,26 @@ class Journal(object):
 
 
     @cached_property
-    def cost_ill(self):
-        return round(np.mean(self.cost_ill_by_year), 4)
+    def ill_cost(self):
+        return round(np.mean(self.ill_cost_by_year), 4)
 
     @cached_property
-    def cost_ill_by_year(self):
+    def ill_cost_by_year(self):
         return [round(self.downloads_ill_by_year[year] * self.settings.cost_ill, 4) for year in self.years]
 
     @cached_property
     def cost_subscription_minus_ill_by_year(self):
-        return [self.cost_subscription_by_year[year] - self.cost_ill_by_year[year] for year in self.years]
+        return [self.subscription_cost_by_year[year] - self.ill_cost_by_year[year] for year in self.years]
 
     @cached_property
     def cost_subscription_minus_ill(self):
-        return round(self.cost_subscription - self.cost_ill, 4)
+        return round(self.subscription_cost - self.ill_cost, 4)
 
     @cached_property
-    def ncppu_rank(self):
-        if self.ncppu:
+    def cpu_rank(self):
+        if self.cpu:
             try:
-                return self.scenario.ncppu_rank_lookup[self.issn_l]
+                return self.scenario.cpu_rank_lookup[self.issn_l]
             except ReferenceError:
                 return None
         return None
@@ -988,8 +988,8 @@ class Journal(object):
         return self.scenario.cost_subscription_minus_ill_fuzzed_lookup[self.issn_l]
 
     @cached_property
-    def ncppu_fuzzed(self):
-        return self.scenario.ncppu_fuzzed_lookup[self.issn_l]
+    def cpu_fuzzed(self):
+        return self.scenario.cpu_fuzzed_lookup[self.issn_l]
 
     @cached_property
     def use_total_fuzzed(self):
@@ -1379,19 +1379,19 @@ class Journal(object):
         response["subscribed"] = self.subscribed
 
         # overview
-        response["cpu"] = display_usage(self.ncppu)
-        response["cpu_rank"] = display_usage(self.ncppu_rank)
+        response["cpu"] = display_cpu(self.cpu)
+        response["cpu_rank"] = display_cpu(self.cpu_rank)
         response["cost"] = self.cost_actual
         response["usage"] = round(self.use_total)
         response["instant_usage_percent"] = round(self.use_instant_percent)
         response["free_instant_usage_percent"] = round(self.use_free_instant_percent)
 
         # cost
-        response["subscription_cost"] = round(self.cost_subscription)
-        response["ill_cost"] = round(self.cost_ill)
+        response["subscription_cost"] = round(self.subscription_cost)
+        response["ill_cost"] = round(self.ill_cost)
         response["subscription_minus_ill_cost"] = round(self.cost_subscription_minus_ill)
-        # response["old_school_cpu"] = display_usage(self.old_school_cpu)
-        # response["old_school_cpu_rank"] = display_usage(self.old_school_cpu_rank)
+        # response["old_school_cpu"] = display_cpu(self.old_school_cpu)
+        # response["old_school_cpu_rank"] = display_cpu(self.old_school_cpu_rank)
 
         # fulfillment
         response["use_oa_percent"] = round(float(100)*self.use_actual["oa_plus_social_networks"]/self.use_total)
@@ -1401,14 +1401,14 @@ class Journal(object):
         response["use_other_delayed_percent"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
         response["perpetual_access_years"] = self.display_perpetual_access_years
         response["baseline_access"] = self.baseline_access
-        response["bronze_oa_embargo_months"] = self.oa_embargo_months
+        response["bronze_oa_embargo_months"] = self.bronze_oa_embargo_months
         # response["num_papers_slope_percent"] = self.num_papers_slope_percent
 
         # oa
         # response["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
         # response["use_hybrid_percent"] = round(float(100)*self.use_oa_hybrid/self.use_total)
         # response["use_bronze_percent"] = round(float(100)*self.use_oa_bronze/self.use_total)
-        # response["use_asns_percent"] = round(float(100)*self.use_social_networks/self.use_total)
+        # response["use_social_networks_percent"] = round(float(100)*self.use_social_networks/self.use_total)
         # response["use_peer_reviewed_percent"] =  round(float(100)*self.use_oa_peer_reviewed/self.use_total)
 
         # impact
@@ -1417,7 +1417,7 @@ class Journal(object):
         response["authorships"] = round(self.num_authorships, 1)
 
         # fuzzed
-        response["cpu_fuzzed"] = self.ncppu_fuzzed
+        response["cpu_fuzzed"] = self.cpu_fuzzed
         response["subscription_cost_fuzzed"] = self.cost_subscription_fuzzed
         response["subscription_minus_ill_cost_fuzzed"] = self.cost_subscription_minus_ill_fuzzed
         response["usage_fuzzed"] = self.use_total_fuzzed
@@ -1430,12 +1430,14 @@ class Journal(object):
 
     def to_dict_journals(self):
         table_row = OrderedDict()
+
         table_row["issn_l"] = self.issn_l
         table_row["title"] = self.title
-        table_row["subject"] = self.subject
         table_row["issns"] = self.issns
+        table_row["subject"] = self.subject
         table_row["era_subjects"] = self.era_subjects
         table_row["subscribed"] = self.subscribed
+
         table_row["is_society_journal"] = self.is_society_journal
         table_row["institution_name"] = self.institution_name
         table_row["institution_short_name"] = self.institution_short_name
@@ -1443,10 +1445,10 @@ class Journal(object):
 
         # some important ones
         table_row["usage"] = round(self.use_total)
-        table_row["cost_subscription"] = self.cost_subscription
-        table_row["cost_ill"] = self.cost_ill
-        table_row["ncppu"] = display_usage(self.ncppu)
-        table_row["ncppu_rank"] = display_usage(self.ncppu_rank)
+        table_row["subscription_cost"] = self.subscription_cost
+        table_row["ill_cost"] = self.ill_cost
+        table_row["cpu"] = display_cpu(self.cpu)
+        table_row["cpu_rank"] = display_cpu(self.cpu_rank)
         table_row["cost"] = self.cost_actual
 
         # more that show up as columns in table
@@ -1454,8 +1456,8 @@ class Journal(object):
         table_row["free_instant_usage_percent"] = round(self.use_free_instant_percent)
         table_row["subscription_minus_ill_cost"] = round(self.cost_subscription_minus_ill)
 
-        # just used for debugging
-        table_row["use_instant"] = self.use_instant
+        # just used for debugging, frontend calculates this itself
+        table_row["use_instant_for_debugging"] = self.use_instant
 
         # keep this format
         table_row["use_groups_free_instant"] = {"oa": self.use_oa_plus_social_networks, "backfile": self.use_backfile, "social_networks": 0}
@@ -1472,18 +1474,27 @@ class Journal(object):
         table_row["baseline_access_text"] = self.baseline_access
 
         # oa
-        table_row["use_asns_percent"] = round(float(100)*self.use_social_networks/self.use_total)
+        table_row["use_social_networks_percent"] = round(float(100)*self.use_social_networks/self.use_total)
         table_row["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
         table_row["use_hybrid_percent"] = round(float(100)*self.use_oa_hybrid/self.use_total)
         table_row["use_bronze_percent"] = round(float(100)*self.use_oa_bronze/self.use_total)
         table_row["use_peer_reviewed_percent"] =  round(float(100)*self.use_oa_peer_reviewed/self.use_total)
-        table_row["oa_embargo_months"] = self.oa_embargo_months
+        table_row["bronze_oa_embargo_months"] = self.bronze_oa_embargo_months
         table_row["is_hybrid_2019"] = self.is_hybrid_2019
 
         # impact
         table_row["downloads"] = round(self.downloads_total)
         table_row["citations"] = round(self.num_citations, 1)
         table_row["authorships"] = round(self.num_authorships, 1)
+
+        # fuzzed
+        table_row["cpu_fuzzed"] = display_cpu(self.cpu_fuzzed)
+        table_row["subscription_cost_fuzzed"] = self.cost_subscription_fuzzed
+        table_row["subscription_minus_ill_cost_fuzzed"] = self.cost_subscription_minus_ill_fuzzed
+        table_row["usage_fuzzed"] = self.use_total_fuzzed
+        table_row["downloads_fuzzed"] = self.downloads_fuzzed
+        table_row["citations_fuzzed"] = self.num_citations_fuzzed
+        table_row["authorships_fuzzed"] = self.num_authorships_fuzzed
 
         return table_row
 
@@ -1500,11 +1511,11 @@ class Journal(object):
                 "is_society_journal": self.is_society_journal,
                 "subscribed": self.subscribed,
                 "num_papers": self.num_papers,
-                "cost_subscription": format_currency(self.cost_subscription),
-                "cost_ill": format_currency(self.cost_ill),
+                "subscription_cost": format_currency(self.subscription_cost),
+                "ill_cost": format_currency(self.ill_cost),
                 "cost_actual": format_currency(self.cost_actual),
                 "cost_subscription_minus_ill": format_currency(self.cost_subscription_minus_ill),
-                "ncppu": format_currency(self.ncppu, True),
+                "cpu": format_currency(self.cpu, True),
                 "use_instant_percent": self.use_instant_percent,
         }
 
@@ -1555,7 +1566,7 @@ class Journal(object):
                                 ("usage", format_with_commas(self.use_oa_plus_social_networks)),
                                 ("usage_percent", format_percent(round(100*float(self.use_oa_plus_social_networks)/self.use_total)))])]
         response["oa"] = {
-            "oa_embargo_months": self.oa_embargo_months,
+            "bronze_oa_embargo_months": self.bronze_oa_embargo_months,
             "headers": [
                 {"text": "OA Type", "value": "oa_status"},
                 # {"text": "Number of papers (annual)", "value": "num_papers"},
@@ -1595,7 +1606,7 @@ class Journal(object):
             }
 
         cost_list = []
-        for cost_type in ["cost_actual_by_year", "cost_subscription_by_year", "cost_ill_by_year", "cost_subscription_minus_ill_by_year"]:
+        for cost_type in ["cost_actual_by_year", "subscription_cost_by_year", "ill_cost_by_year", "cost_subscription_minus_ill_by_year"]:
             cost_dict = OrderedDict()
             if cost_type == "cost_actual_by_year":
                 cost_dict["cost_type"] = "*Your scenario cost*"
@@ -1613,7 +1624,7 @@ class Journal(object):
                 cost_dict["cost_per_use"] = "no paywalled usage"
         response["cost"] = {
             "subscribed": self.subscribed,
-            "ncppu": format_currency(self.ncppu, True),
+            "cpu": format_currency(self.cpu, True),
             "headers": [
                 {"text": "Cost Type", "value": "cost_type"},
                 {"text": "Cost (projected annual)", "value": "cost_avg"},
@@ -1688,7 +1699,7 @@ class Journal(object):
         response_debug["scenario_settings"] = self.settings.to_dict()
         response_debug["use_instant_percent"] = self.use_instant_percent
         response_debug["use_instant_percent_by_year"] = self.use_instant_percent_by_year
-        response_debug["oa_embargo_months"] = self.oa_embargo_months
+        response_debug["bronze_oa_embargo_months"] = self.bronze_oa_embargo_months
         response_debug["num_papers"] = self.num_papers
         response_debug["use_weight_multiplier_normalized"] = self.use_weight_multiplier_normalized
         response_debug["use_weight_multiplier"] = self.use_weight_multiplier
@@ -1722,8 +1733,8 @@ class Journal(object):
         response_debug["oa_obs_pub_matrix"] = self.display_obs_pub_matrix(self.oa_obs_pub)
         response_debug["backfile_obs_pub_matrix"] = self.display_obs_pub_matrix(self.backfile_obs_pub)
         response_debug["use_oa_percent_by_year"] = self.use_oa_percent_by_year
-        response_debug["ncppu"] = self.ncppu
-        response_debug["ncppu_rank"] = self.ncppu_rank
+        response_debug["cpu"] = self.cpu
+        response_debug["cpu_rank"] = self.cpu_rank
         response_debug["old_school_cpu"] = self.old_school_cpu
         response_debug["old_school_cpu_rank"] = self.old_school_cpu_rank
         response_debug["downloads_oa_by_age"] = self.downloads_oa_by_age

@@ -208,8 +208,8 @@ class Scenario(object):
         return []
 
     @cached_property
-    def journals_sorted_ncppu(self):
-        self.journals.sort(key=lambda k: for_sorting(k.ncppu), reverse=False)
+    def journals_sorted_cpu(self):
+        self.journals.sort(key=lambda k: for_sorting(k.cpu), reverse=False)
         return self.journals
 
     @cached_property
@@ -224,68 +224,68 @@ class Scenario(object):
 
     @cached_property
     def subscribed(self):
-        return [j for j in self.journals_sorted_ncppu if j.subscribed]
+        return [j for j in self.journals_sorted_cpu if j.subscribed]
 
     @cached_property
     def subscribed_bulk(self):
-        return [j for j in self.journals_sorted_ncppu if j.subscribed_bulk]
+        return [j for j in self.journals_sorted_cpu if j.subscribed_bulk]
 
     @cached_property
     def subscribed_custom(self):
-        return [j for j in self.journals_sorted_ncppu if j.subscribed_custom]
+        return [j for j in self.journals_sorted_cpu if j.subscribed_custom]
 
     @cached_property
     def cost_subscription_fuzzed_lookup(self):
-        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.cost_subscription for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first')
+        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.subscription_cost for j in self.journals]})
+        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
     @cached_property
     def cost_subscription_minus_ill_fuzzed_lookup(self):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.cost_subscription_minus_ill for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first')
+        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
     @cached_property
     def num_citations_fuzzed_lookup(self):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.num_citations for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first')
+        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
     @cached_property
     def num_authorships_fuzzed_lookup(self):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.num_authorships for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first')
+        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
     @cached_property
     def use_total_fuzzed_lookup(self):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.use_total for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first')
+        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
     @cached_property
     def downloads_fuzzed_lookup(self):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.downloads_total for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first')
+        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
     @cached_property
-    def ncppu_fuzzed_lookup(self):
-        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.ncppu for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first')
+    def cpu_fuzzed_lookup(self):
+        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.cpu for j in self.journals]})
+        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
     @cached_property
-    def ncppu_rank_lookup(self):
-        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.ncppu for j in self.journals]})
-        df["rank"] = df.lookup_value.rank(method='first')
+    def cpu_rank_lookup(self):
+        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.cpu for j in self.journals]})
+        df["rank"] = df.lookup_value.rank(method='first', na_option="keep")
         return dict(zip(df.issn_l, df["rank"]))
 
     @cached_property
     def old_school_cpu_rank_lookup(self):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.old_school_cpu for j in self.journals]})
-        df["rank"] = df.lookup_value.rank(method='first')
+        df["rank"] = df.lookup_value.rank(method='first', na_option="keep")
         return dict(zip(df.issn_l, df["rank"]))
 
 
@@ -341,18 +341,18 @@ class Scenario(object):
         return response
 
     @cached_property
-    def ncppu(self):
+    def cpu(self):
         if self.use_paywalled:
             return round(self.cost_subscription_minus_ill / self.use_paywalled, 2)
         return None
 
     @cached_property
-    def cost_ill(self):
-        return round(sum([j.cost_ill for j in self.journals]))
+    def ill_cost(self):
+        return round(sum([j.ill_cost for j in self.journals]))
 
     @cached_property
-    def cost_subscription(self):
-        return round(sum([j.cost_subscription for j in self.journals]))
+    def subscription_cost(self):
+        return round(sum([j.subscription_cost for j in self.journals]))
 
     @cached_property
     def cost_subscription_minus_ill(self):
@@ -429,14 +429,14 @@ class Scenario(object):
     def do_wizardly_things(self, spend):
         my_max = spend/100.0 * self.cost_bigdeal_projected
 
-        my_spend_so_far = np.sum([j.cost_ill for j in self.journals])
+        my_spend_so_far = np.sum([j.ill_cost for j in self.journals])
 
-        for journal in self.journals_sorted_ncppu:
+        for journal in self.journals_sorted_cpu:
             if journal.cost_subscription_minus_ill < 0:
                 my_spend_so_far += journal.cost_subscription_minus_ill
                 journal.set_subscribe_bulk()
 
-        for journal in self.journals_sorted_ncppu:
+        for journal in self.journals_sorted_cpu:
             my_spend_so_far += journal.cost_subscription_minus_ill
             if my_spend_so_far > my_max:
                 return
@@ -574,17 +574,11 @@ class Scenario(object):
     def use_free_instant_percent(self):
         return round(self.use_instant_percent - self.use_subscription_percent, 1)
 
-    def to_dict_export(self):
-        response = {}
-        response["journals"] = [j.to_dict_export() for j in self.journals_sorted_ncppu]
-        return response
-
-
     def to_dict_details(self):
         response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": self.to_dict_summary_dict(),
-                "journals": [j.to_dict_details() for j in self.journals_sorted_ncppu],
+                "journals": [j.to_dict_details() for j in self.journals_sorted_cpu],
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
@@ -643,7 +637,7 @@ class Scenario(object):
         response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": self.to_dict_summary_dict(),
-                "journals": [j.to_dict() for j in self.journals_sorted_ncppu],
+                "journals": [j.to_dict() for j in self.journals_sorted_cpu],
                 "journals_count": len(self.journals),
             }
         self.log_timing("to dict")

@@ -59,12 +59,12 @@ for username in usernames:
 #     scenario_id = campus["scenario_id"]
 #     my_scenario = get_saved_scenario(scenario_id, test_mode=True)
 #     print len(my_scenario.live_scenario.subscribed)
-#     print [(j.title, j.ncppu) for j in my_scenario.live_scenario.journals_sorted_ncppu[0:3]]
+#     print [(j.title, j.cpu) for j in my_scenario.live_scenario.journals_sorted_cpu[0:3]]
 #
 #     top_number = 50
 #     if campus["consortium_package_id"] == "P2NFgz7B":
 #         top_number = 200
-#     top_issnls = [j.issn_l for j in my_scenario.live_scenario.journals_sorted_ncppu[0:top_number] if j.subscribed]
+#     top_issnls = [j.issn_l for j in my_scenario.live_scenario.journals_sorted_cpu[0:top_number] if j.subscribed]
 #     print len(top_issnls)
 #
 #     with get_db_cursor() as cursor:
