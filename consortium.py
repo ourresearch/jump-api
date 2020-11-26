@@ -329,7 +329,7 @@ class Consortium(object):
                     print "done writing to db", member_package_id
 
             except Exception as e:
-                print "In get_insert_rows_for_member with Error: ", e
+                print u"In get_insert_rows_for_member with Error: ", e
                 raise
             return command_list
 
@@ -405,7 +405,13 @@ class Consortium(object):
             if my_journal.issn_l in self.scenario_saved_dict.get("customSubrs", []):
                 my_journal.set_subscribe_custom()
 
-        journal_list = sorted(journal_list, key=lambda x: float('inf') if x.cpu==None else x.cpu, reverse=False)
+        try:
+            journal_list = sorted(journal_list, key=lambda x: float('inf') if x.cpu==None else x.cpu, reverse=False)
+        except KeyError as e:
+            # happens when I change keys, before reset in consortium
+            print u"KeyError in journal_list", e
+            pass
+
         for rank, my_journal in enumerate(journal_list):
             my_journal.cpu_rank = rank + 1
 
