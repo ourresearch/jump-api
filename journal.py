@@ -308,7 +308,7 @@ class Journal(object):
     def downloads_social_network_multiplier(self):
         if not self.settings.include_social_networks:
             return 0.0
-        return self._scenario_data["social_networks"].get(self.issn_l, 0)
+        return self._scenario_data["social_networks"].get(self.issn_l, 0.06)
 
     @cached_property
     def downloads_social_networks_by_year(self):
@@ -463,7 +463,7 @@ class Journal(object):
     def downloads_backfile_by_year(self):
         if self.settings.include_backfile:
             response = self.sum_obs_pub_matrix_by_obs(self.backfile_obs_pub)
-            # if self.issn_l == "0167-6423":
+            # if self.issn_l == "0271-678X":
             #     print self.backfile_obs_pub
             #     print self.sum_obs_pub_matrix_by_obs(self.backfile_obs_pub)
             response = [min(response[year], self.downloads_total_by_year[year] - self.downloads_oa_by_year[year]) for year in self.years]
@@ -489,6 +489,10 @@ class Journal(object):
             by_age_old = (self.downloads_total_older_than_five_years/5.0) * (self.downloads_oa_by_age[4]/(self.downloads_by_age[4]))
         growth_scaling = self.growth_scaling_oa_downloads
         my_matrix = self.obs_pub_matrix(by_age, by_age_old, growth_scaling)
+        # if self.issn_l == "0271-678X":
+        #     print "by_age", by_age
+        #     print "by_age_old", by_age_old
+        #     print "my_matrix", self.display_obs_pub_matrix(my_matrix)
         return my_matrix
 
     @cached_property
@@ -595,6 +599,10 @@ class Journal(object):
 
     @cached_property
     def downloads_oa_by_year(self):
+        # if self.issn_l == "0271-678X":
+        #     print "self.oa_obs_pub", self.oa_obs_pub
+        #     print "self.sum_obs_pub_matrix_by_obs(self.oa_obs_pub)", self.sum_obs_pub_matrix_by_obs(self.oa_obs_pub)
+
         return self.sum_obs_pub_matrix_by_obs(self.oa_obs_pub)
 
     @cached_property
@@ -605,6 +613,8 @@ class Journal(object):
     def use_oa(self):
         # return round(self.downloads_oa * self.use_weight_multiplier, 4)
         # return self.use_oa_green + self.use_oa_bronze + self.use_oa_hybrid
+        # if self.issn_l == "0271-678X":
+        #     print "self.use_oa_by_year", self.use_oa_by_year
         response = min(np.mean(self.use_oa_by_year), self.use_total)
         return round(response, 4)
 
@@ -719,6 +729,9 @@ class Journal(object):
             downloads_by_age_before_counter_correction_curve_to_use = [num*sum_total_downloads_by_age_before_counter_correction for num in default_download_by_age]
 
         downloads_by_age = [num * self.downloads_counter_multiplier for num in downloads_by_age_before_counter_correction_curve_to_use]
+
+        downloads_by_age = [max(val, 0.0) for val in downloads_by_age]
+
         return downloads_by_age
 
 
@@ -1095,7 +1108,7 @@ class Journal(object):
 
     @cached_property
     def raw_num_papers_historical_by_year(self):
-        # if self.issn_l == "0031-9406":
+        # if self.issn_l == "0271-678X":
         #     print "num_papers", self._scenario_data["num_papers"][self.issn_l]
         if self.issn_l in self._scenario_data["num_papers"]:
             my_raw_numbers = self._scenario_data["num_papers"][self.issn_l]
@@ -1188,6 +1201,8 @@ class Journal(object):
 
     @cached_property
     def num_green_historical_by_year(self):
+        # if self.issn_l == "0271-678X":
+        #     print "self.get_oa_data()", self.get_oa_data()
         my_dict = self.get_oa_data()["green"]
         return [my_dict.get(year, 0) for year in self.historical_years_by_year]
 

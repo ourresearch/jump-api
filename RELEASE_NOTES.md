@@ -5,6 +5,8 @@ both its appearance and its underlying data.
 This means you will often see changes in the UI/UX, and sometimes in the presented data.  
 Most of these changes are too small to note, but we'll keep a record of the larger ones here:
 
+- 2020/12/02 Add support for SAGE and T&F
+- 2020/12/02 Fix bug where projected downloads could sometimes be negative: affects very few journals
 - 2020/09/23 Bug fix to perpetual access. See announcement post (link tbd).
 - 2020/09/10 Allow custom journal prices to be 0 and journal to still appear in forecast
 - 2020/07/27 Allow fuzzy publisher matching for custom prices (some custom prices may be applied that were skipped before)

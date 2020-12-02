@@ -207,8 +207,13 @@ class Consortium(object):
 
     @cached_property
     def journals_sorted_cpu(self):
-        self.journals.sort(key=lambda k: for_sorting(k.cpu), reverse=False)
-        return self.journals
+        my_journals = []
+        try:
+            my_journals = self.journals
+            my_journals.sort(key=lambda k: for_sorting(k.cpu), reverse=False)
+        except KeyError as e:
+            print u"error", e
+        return my_journals
 
     @cached_property
     def journals_sorted_use_total(self):
