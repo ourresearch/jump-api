@@ -830,10 +830,15 @@ def refresh_cached_prices_from_db(package_id, publisher_name):
         publisher_where = "(publisher ilike '%wiley%')"
     elif publisher_name == "SpringerNature":
         publisher_where = "((publisher ilike '%springer%') or (publisher ilike '%nature%'))"
+    elif publisher_name == "Sage":
+        publisher_where = "(publisher ilike '%sage%')"
+    elif publisher_name == "TaylorFrancis":
+        publisher_where = "((publisher ilike '%informa uk%') or (publisher ilike '%taylorfrancis%'))"
     else:
         return 'false'
 
     command = u"select issn_l, usa_usd from jump_journal_prices where package_id = '{}' and {}".format(package_id, publisher_where)
+    # print "command", command
     with get_db_cursor() as cursor:
         cursor.execute(command)
         rows = cursor.fetchall()
@@ -926,7 +931,9 @@ def get_oa_recent_data_from_db():
         for bronze in ["with_bronze", "no_bronze"]:
             key = "{}_{}".format(submitted, bronze)
             command = """select * from jump_oa_recent_{}_precovid
-                        where (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')
+                        where (publisher ilike '%springer%' or publisher ilike '%elsevier%' 
+                        or publisher ilike '%nature%' or publisher ilike '%wiley%'
+                        or publisher ilike '%informa uk%' or publisher ilike '%sage%')
                             """.format(key)
 
             with get_db_cursor() as cursor:
@@ -948,7 +955,9 @@ def get_oa_data_from_db():
 
             command = """select * from jump_oa_{}_precovid
                         where year_int >= 2015
-                        and  (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')
+                        and  (publisher ilike '%springer%' or publisher ilike '%elsevier%' 
+                        or publisher ilike '%nature%' or publisher ilike '%wiley%'
+                        or publisher ilike '%informa uk%' or publisher ilike '%sage%')
                             """.format(key)
 
             with get_db_cursor() as cursor:

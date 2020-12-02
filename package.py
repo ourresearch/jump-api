@@ -196,6 +196,10 @@ class Package(db.Model):
             return "(rj.publisher ilike '%wiley%')"
         elif self.publisher == "SpringerNature":
             return "((rj.publisher ilike '%springer%') or (rj.publisher ilike '%nature%'))"
+        elif self.publisher == "Sage":
+            return "(rj.publisher ilike '%sage%')"
+        elif self.publisher == "TaylorFrancis":
+            return "(rj.publisher ilike '%informa uk%')"
         else:
             return 'false'
 
