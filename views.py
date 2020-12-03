@@ -943,7 +943,16 @@ def jump_counter(package_id):
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
-            return jsonify_fast_no_sort(_load_package_file(package_id, request, CounterInput))
+            response = _load_package_file(package_id, request, CounterInput)
+
+            # add a package scenario if there isn't already one
+            my_package = Package.query.get(package_id)
+            if not my_package.scenario_ids:
+                new_scenario = default_scenario(package_id)
+                db.session.add(new_scenario)
+                safe_commit(db)
+
+            return jsonify_fast_no_sort(response)
 
 
 @app.route('/publisher/<package_id>/counter/raw', methods=['GET'])
