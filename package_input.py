@@ -473,8 +473,7 @@ class PackageInput:
                                         ).get('publisher', u'')
 
                                         has_right_publisher = any(
-                                            s.lower() in journal_publisher.lower()
-                                            for s in file_package.publisher_name_snippets
+                                            [s.lower() in journal_publisher.lower() for s in file_package.publisher_name_snippets]
                                         )
 
                                         if has_right_publisher:

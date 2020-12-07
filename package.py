@@ -211,6 +211,10 @@ class Package(db.Model):
             return ["wiley"]
         elif self.publisher == "SpringerNature":
             return ["springer", "nature"]
+        elif self.publisher == "Sage":
+            return ["sage"]
+        elif self.publisher == "TaylorFrancis":
+            return ["taylor", "informa"]
         else:
             return []
 
