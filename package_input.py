@@ -467,28 +467,7 @@ class PackageInput:
                                     cell_errors[normalized_name] = cls.make_package_file_warning(parse_warning)
                                     normalized_row.setdefault(normalized_name, None)
                                 else:
-                                    if cls.validate_publisher() and normalized_name in cls.issn_columns() and file_package:
-                                        journal_publisher = get_ricks_journal_flat().get(
-                                            normalized_value, {}
-                                        ).get('publisher', u'')
-
-                                        has_right_publisher = any(
-                                            [s.lower() in journal_publisher.lower() for s in file_package.publisher_name_snippets]
-                                        )
-
-                                        if has_right_publisher:
-                                            normalized_row.setdefault(normalized_name, normalized_value)
-                                        else:
-                                            normalized_row.setdefault(normalized_name, None)
-                                            cell_errors[normalized_name] = cls.make_package_file_warning(
-                                                ParseWarning.wrong_publisher,
-                                                additional_msg=u'Expected {}, but got {}.'.format(
-                                                    file_package.publisher,
-                                                    journal_publisher
-                                                )
-                                            )
-                                    else:
-                                        normalized_row.setdefault(normalized_name, normalized_value)
+                                    normalized_row.setdefault(normalized_name, normalized_value)
                             except Exception as e:
                                 cell_errors[normalized_name] = cls.make_package_file_warning(
                                     ParseWarning.unknown, additional_msg=u'message: {}'.format(e.message)
@@ -622,10 +601,6 @@ class ParseWarning(Enum):
     bad_issn = {
         'label': 'bad_issn',
         'text': "This doesn't look like an ISSN."
-    }
-    wrong_publisher = {
-        'label': 'wrong_publisher',
-        'text': "This journal doesn't have the expected publisher."
     }
     unknown_issn = {
         'label': 'unknown_issn',
