@@ -7,9 +7,6 @@ class Counter(db.Model):
     __tablename__ = 'jump_counter'
     issn_l = db.Column(db.Text, primary_key=True)
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
-    organization = db.Column(db.Text)
-    publisher = db.Column(db.Text)
-    issn = db.Column(db.Text, primary_key=True)
     journal_name = db.Column(db.Text)
     total = db.Column(db.Numeric)
 
@@ -17,9 +14,6 @@ class Counter(db.Model):
         return {
             'issn_l': self.issn_l,
             'package_id': self.package_id,
-            'organization': self.organization,
-            'publisher': self.publisher,
-            'issn': self.issn,
             'journal_name': self.journal_name,
             'total': self.total,
         }
@@ -27,8 +21,6 @@ class Counter(db.Model):
 
 class CounterInput(db.Model, PackageInput):
     __tablename__ = 'jump_counter_input'
-    organization = db.Column(db.Text)
-    publisher = db.Column(db.Text)
     report_name = db.Column(db.Text)
     report_version = db.Column(db.Text)
     report_year = db.Column(db.Numeric)
@@ -37,11 +29,6 @@ class CounterInput(db.Model, PackageInput):
     issn = db.Column(db.Text, primary_key=True)
     journal_name = db.Column(db.Text)
     total = db.Column(db.Numeric)
-    age_0y = db.Column(db.Numeric)
-    age_1y = db.Column(db.Numeric)
-    age_2y = db.Column(db.Numeric)
-    age_3y = db.Column(db.Numeric)
-    age_4y = db.Column(db.Numeric)
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
 
     @classmethod
@@ -108,6 +95,10 @@ class CounterInput(db.Model, PackageInput):
                 'report_name': 'JR1',
                 'report_version': '4'
             },
+            'TR_J1': {
+                'report_name': 'TRJ1',
+                'report_version': '5'
+            },
         }
 
         report_name = None
@@ -115,8 +106,8 @@ class CounterInput(db.Model, PackageInput):
 
         normalized_header_text = u''.join([re.sub(ur'\s*', u'', u''.join(row)).lower() for row in header_rows])
         for label, values in version_labels.items():
-            label = re.sub(ur'\s*', '', 'Journal Report 1 (R4)',).lower()
-            if label in normalized_header_text:
+            normalized_label = re.sub(ur'\s*', '', label).lower()
+            if normalized_label in normalized_header_text:
                 report_name = values['report_name']
                 report_version = values['report_version']
                 break
@@ -128,6 +119,8 @@ class CounterInput(db.Model, PackageInput):
         possible_versions = [v['report_version'] for v in version_labels.values()]
         if report_version not in possible_versions:
             logger.warn(u"Got {} as report version, expected one of {}.".format(report_version, possible_versions))
+
+        print u"Detected report {} {}".format(report_name, report_version)
 
         # get the year
         # get the header rows that look like months

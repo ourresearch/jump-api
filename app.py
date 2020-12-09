@@ -58,12 +58,18 @@ libraries_to_mum_warning = [
     "stripe",
     "oauthlib",
     "boto",
+    "boto3",
+    "botocore",
+    "s3transfer",
     "newrelic",
     "RateLimiter",
     "paramiko",
     "chardet",
     "cryptography",
-    "bmemcached"
+    "bmemcached",
+    "pyexcel",
+    "lml",
+    "pyexcel_io"
 ]
 
 
@@ -86,9 +92,9 @@ for a_library in libraries_to_mum_error:
     the_logger.propagate = True
     warnings.filterwarnings("ignore", category=UserWarning, module=a_library)
 
-logging.getLogger('pyexcel').setLevel(logging.WARNING)
-logging.getLogger('lml').setLevel(logging.WARNING)
-logging.getLogger('pyexcel_io').setLevel(logging.WARNING)
+for name in logging.Logger.manager.loggerDict.keys():
+    if ('boto' in name) or ('urllib3' in name) or ('s3transfer' in name) or ('boto3' in name) or ('botocore' in name):
+        logging.getLogger(name).setLevel(logging.ERROR)
 
 with warnings.catch_warnings():
     warnings.filterwarnings('ignore', r'RuntimeWarning: overflow encountered in exp')
@@ -293,6 +299,13 @@ if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
     import scenario
     scenario.get_common_package_data_for_all()
     scenario.get_common_package_data_specific(DEMO_PACKAGE_ID)
+
+    # print u"done get_common_package_data in {}s".format(elapsed(start_time))
+    #
+    # from views.py import start_cache_thread
+    # start_cache_thread()
+    #
+    # print u"done start_cache_thread"
 
     print u"done loading to cache in {}s".format(elapsed(start_time))
 

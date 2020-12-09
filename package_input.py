@@ -380,7 +380,7 @@ class PackageInput:
             reader_params = {}
             try:
                 dialect = csv.Sniffer().sniff(dialect_sample)
-                logger.info(u'sniffed csv dialect:\n{}'.format(json.dumps(vars(dialect), indent=2)))
+                # logger.info(u'sniffed csv dialect:\n{}'.format(json.dumps(vars(dialect), indent=2)))
             except csv.Error:
                 dialect = None
                 if file_name.endswith(u'.tsv'):
@@ -456,22 +456,22 @@ class PackageInput:
                 cell_errors = {}
 
                 for raw_column_name in row.keys():
-                        raw_value = row[raw_column_name]
-                        normalized_name = cls.normalize_column_name(raw_column_name)
-                        if normalized_name:
-                            try:
-                                normalized_value = cls.normalize_cell(normalized_name, raw_value)
-                                if isinstance(normalized_value, ParseWarning):
-                                    parse_warning = normalized_value
-                                    logger.info('parse warning: {}'.format(parse_warning))
-                                    cell_errors[normalized_name] = cls.make_package_file_warning(parse_warning)
-                                    normalized_row.setdefault(normalized_name, None)
-                                else:
-                                    normalized_row.setdefault(normalized_name, normalized_value)
-                            except Exception as e:
-                                cell_errors[normalized_name] = cls.make_package_file_warning(
-                                    ParseWarning.unknown, additional_msg=u'message: {}'.format(e.message)
-                                )
+                    raw_value = row[raw_column_name]
+                    normalized_name = cls.normalize_column_name(raw_column_name)
+                    if normalized_name:
+                        try:
+                            normalized_value = cls.normalize_cell(normalized_name, raw_value)
+                            if isinstance(normalized_value, ParseWarning):
+                                parse_warning = normalized_value
+                                # logger.info('parse warning: {} for data {},  {}'.format(parse_warning, raw_column_name, row))
+                                cell_errors[normalized_name] = cls.make_package_file_warning(parse_warning)
+                                normalized_row.setdefault(normalized_name, None)
+                            else:
+                                normalized_row.setdefault(normalized_name, normalized_value)
+                        except Exception as e:
+                            cell_errors[normalized_name] = cls.make_package_file_warning(
+                                ParseWarning.unknown, additional_msg=u'message: {}'.format(e.message)
+                            )
 
                 if cls.ignore_row(normalized_row):
                     continue
@@ -551,7 +551,7 @@ class PackageInput:
         if normalized_rows:
             for row in normalized_rows:
                 row.update({'package_id': package_id})
-                logger.info(u'normalized row: {}'.format(json.dumps(row)))
+                # logger.info(u'normalized row: {}'.format(json.dumps(row)))
 
             db.session.query(cls).filter(cls.package_id == package_id).delete()
 
