@@ -96,7 +96,7 @@ def build_counter_import_file(filename=None, username=None):
     # print lines
     with open("/Users/hpiwowar/Downloads/counter_import.csv", "wb") as export_file:
         csv_writer = csv.writer(export_file, encoding='utf-8')
-        keys = ["organization", "publisher", "package_id", "issn", "total"]
+        keys = ["package_id", "issn", "total"]
         csv_writer.writerow(keys)
         for line in lines:
             csv_writer.writerow([line[k] for k in keys])

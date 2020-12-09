@@ -781,8 +781,8 @@ def clone_demo_package(institution):
     # jump_counter
     db.session.execute(
         """
-            insert into jump_counter (issn_l, package_id, organization, publisher, issn, journal_name, total) (
-                select issn_l, '{}', organization, publisher, issn, journal_name, total 
+            insert into jump_counter (issn_l, package_id, journal_name, total) (
+                select issn_l, '{}', journal_name, total 
                 from jump_counter
                 where package_id = '{}'
             )
@@ -792,8 +792,8 @@ def clone_demo_package(institution):
     # 'jump_counter_input',
     db.session.execute(
         """
-            insert into jump_counter_input (organization, publisher, issn, journal_name, total, package_id) (
-                select organization, publisher, issn, journal_name, total, '{}'
+            insert into jump_counter_input (issn, journal_name, total, package_id) (
+                select issn, journal_name, total, '{}'
                 from jump_counter_input
                 where package_id = '{}'
             )
