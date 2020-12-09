@@ -25,6 +25,7 @@ class CounterInput(db.Model, PackageInput):
     report_version = db.Column(db.Text)
     report_year = db.Column(db.Numeric)
     metric_type = db.Column(db.Text)
+    yop = db.Column(db.Numeric)
     start_date = db.Column(db.DateTime)
     end_date = db.Column(db.DateTime)
     issn = db.Column(db.Text, primary_key=True)
@@ -43,10 +44,6 @@ class CounterInput(db.Model, PackageInput):
     @classmethod
     def csv_columns(cls):
         return {
-            'publisher': {
-                'normalize': cls.strip_text,
-                'name_snippets': [u'publisher'],
-            },
             'print_issn': {
                 'normalize': cls.normalize_issn,
                 'name_snippets': [u'print issn', u'print_issn', u'issn'],
@@ -64,11 +61,25 @@ class CounterInput(db.Model, PackageInput):
                 'normalize': cls.normalize_int,
                 'name_snippets': [u'total'],
                 'warn_if_blank': True,
+                'required': True,
             },
             'journal_name': {
                 'normalize': cls.strip_text,
                 'name_snippets': [u'title', u'journal', u'journal_name'],
                 'exact_name': True,
+                'required': False,
+            },
+            'metric_type': {
+                'normalize': cls.strip_text,
+                'name_snippets': [u'metric_type'],
+                'exact_name': True,
+                'required': False,
+            },
+            'yop': {
+                'normalize': cls.normalize_int,
+                'name_snippets': [u'yop'],
+                'exact_name': True,
+                'required': False,
             },
         }
 
@@ -98,6 +109,18 @@ class CounterInput(db.Model, PackageInput):
             },
             'TR_J1': {
                 'report_name': 'TRJ1',
+                'report_version': '5'
+            },
+            'TR_J2': {
+                'report_name': 'TRJ2',
+                'report_version': '5'
+            },
+            'TR_J3': {
+                'report_name': 'TRJ3',
+                'report_version': '5'
+            },
+            'TR_J4': {
+                'report_name': 'TRJ4',
                 'report_version': '5'
             },
         }
@@ -148,11 +171,11 @@ class CounterInput(db.Model, PackageInput):
             row['report_year'] = report_year
 
         # check for COUNTER 5
-        cop5_error = u"Sorry, we don't support COUNTER 5 yet. Please upload a COUNTER 4 JR_1 file."
-
-        for header_row in header_rows:
-            row_text = u'|'.join([cell.strip() for cell in header_row]).lower()
-            if u'report_id|tr_j1' in row_text or u'release|5' in row_text:
-                raise RuntimeError(cop5_error)
+        # cop5_error = u"Sorry, we don't support COUNTER 5 yet. Please upload a COUNTER 4 JR_1 file."
+        #
+        # for header_row in header_rows:
+        #     row_text = u'|'.join([cell.strip() for cell in header_row]).lower()
+        #     if u'report_id|tr_j1' in row_text or u'release|5' in row_text:
+        #         raise RuntimeError(cop5_error)
 
         return normalized_rows
