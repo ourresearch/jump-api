@@ -925,6 +925,11 @@ def _load_package_file(package_id, req, table_class):
         )
 
 
+@app.route('/publisher/<package_id>/counter5_trj1', methods=['GET', 'POST', 'DELETE'])
+@jwt_optional
+def jump_counter5_trj1(package_id):
+    return jump_counter(package_id)
+
 @app.route('/publisher/<package_id>/counter', methods=['GET', 'POST', 'DELETE'])
 @jwt_optional
 # @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
@@ -955,17 +960,17 @@ def jump_counter(package_id):
             return jsonify_fast_no_sort(response)
 
 
-@app.route('/publisher/<package_id>/counter/raw', methods=['GET'])
-@jwt_optional
-def jump_get_raw_counter(package_id):
-    authenticate_for_publisher(package_id, Permission.view() if request.method == 'GET' else Permission.modify())
-
-    raw = CounterInput.get_raw_upload_object(package_id)
-
-    if not raw:
-        return abort_json(404, u'no raw counter file for package {}'.format(package_id))
-
-    return Response(raw['body'], content_type=raw['content_type'], headers=raw['headers'])
+# @app.route('/publisher/<package_id>/counter/raw', methods=['GET'])
+# @jwt_optional
+# def jump_get_raw_counter(package_id):
+#     authenticate_for_publisher(package_id, Permission.view() if request.method == 'GET' else Permission.modify())
+#
+#     raw = CounterInput.get_raw_upload_object(package_id)
+#
+#     if not raw:
+#         return abort_json(404, u'no raw counter file for package {}'.format(package_id))
+#
+#     return Response(raw['body'], content_type=raw['content_type'], headers=raw['headers'])
 
 
 @app.route('/publisher/<package_id>/perpetual-access', methods=['GET', 'POST', 'DELETE'])
@@ -997,17 +1002,17 @@ def jump_perpetual_access(package_id):
             return jsonify_fast_no_sort(response)
 
 
-@app.route('/publisher/<package_id>/perpetual-access/raw', methods=['GET'])
-@jwt_optional
-def jump_get_raw_perpetual_access(package_id):
-    authenticate_for_publisher(package_id, Permission.view() if request.method == 'GET' else Permission.modify())
-
-    raw = PerpetualAccessInput.get_raw_upload_object(package_id)
-
-    if not raw:
-        return abort_json(404, u'no raw perpetual access file for package {}'.format(package_id))
-
-    return Response(raw['body'], content_type=raw['content_type'], headers=raw['headers'])
+# @app.route('/publisher/<package_id>/perpetual-access/raw', methods=['GET'])
+# @jwt_optional
+# def jump_get_raw_perpetual_access(package_id):
+#     authenticate_for_publisher(package_id, Permission.view() if request.method == 'GET' else Permission.modify())
+#
+#     raw = PerpetualAccessInput.get_raw_upload_object(package_id)
+#
+#     if not raw:
+#         return abort_json(404, u'no raw perpetual access file for package {}'.format(package_id))
+#
+#     return Response(raw['body'], content_type=raw['content_type'], headers=raw['headers'])
 
 
 @app.route('/publisher/<package_id>/price', methods=['GET', 'POST', 'DELETE'])
@@ -1031,17 +1036,17 @@ def jump_journal_prices(package_id):
             return jsonify_fast_no_sort(_load_package_file(package_id, request, JournalPriceInput))
 
 
-@app.route('/publisher/<package_id>/price/raw', methods=['GET'])
-@jwt_optional
-def jump_get_raw_journal_prices(package_id):
-    authenticate_for_publisher(package_id, Permission.view() if request.method == 'GET' else Permission.modify())
-
-    raw = JournalPriceInput.get_raw_upload_object(package_id)
-
-    if not raw:
-        return abort_json(404, u'no raw journal price file for package {}'.format(package_id))
-
-    return Response(raw['body'], content_type=raw['content_type'], headers=raw['headers'])
+# @app.route('/publisher/<package_id>/price/raw', methods=['GET'])
+# @jwt_optional
+# def jump_get_raw_journal_prices(package_id):
+#     authenticate_for_publisher(package_id, Permission.view() if request.method == 'GET' else Permission.modify())
+#
+#     raw = JournalPriceInput.get_raw_upload_object(package_id)
+#
+#     if not raw:
+#         return abort_json(404, u'no raw journal price file for package {}'.format(package_id))
+#
+#     return Response(raw['body'], content_type=raw['content_type'], headers=raw['headers'])
 
 
 def post_subscription_guts(scenario_id, scenario_name=None):
@@ -1551,7 +1556,7 @@ def start_cache_thread():
 #  flask run -h 0.0.0.0 -p 5004 --with-threads --reload
 if __name__ == "__main__":
 
-    start_cache_thread()
+    # start_cache_thread()
 
     port = int(os.environ.get("PORT", 5004))
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True, use_reloader=True)

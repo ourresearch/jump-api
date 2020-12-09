@@ -142,12 +142,13 @@ class Package(db.Model):
         q = """
            select
            rj.issn_l,
-           counter.issn as issns,
-           title,
-           total::int as num_2018_downloads
+           listagg(counter.issn, ',') as issns,
+           listagg(title, ',') as title, 
+           sum(total::int) as num_2018_downloads
            from jump_counter counter
            left outer join ricks_journal_flat rj on counter.issn_l = rj.issn
            where package_id='{package_id}'
+           group by rj.issn_l           
            order by num_2018_downloads desc
            """.format(package_id=self.package_id_for_db)
         return get_sql_dict_rows(q)
@@ -172,7 +173,7 @@ class Package(db.Model):
 
     @cached_property
     def get_published_in_2019(self):
-        rows = self.get_base(and_where=""" and counter.issn_l in
+        rows = self.get_base(and_where=""" and rj.issn_l in
 	            (select rj.issn_l from unpaywall u 
 	            join ricks_journal_flat rj on u.journal_issn_l = rj.issn
 	            where year=2019 
@@ -181,7 +182,7 @@ class Package(db.Model):
 
     @cached_property
     def get_published_toll_access_in_2019(self):
-        rows = self.get_base(and_where=""" and counter.issn_l in
+        rows = self.get_base(and_where=""" and rj.issn_l in
 	            (select rj.issn_l from unpaywall u 
 	            join ricks_journal_flat rj on u.journal_issn_l = rj.issn
 	            where year=2019 and journal_is_oa='false' 
@@ -524,99 +525,104 @@ class Package(db.Model):
             'issns': journal_rows.get(issn_l, {}).get('issns', [])
         } for issn_l in distinct_issnls]
 
-    def get_unexpectedly_no_price(self):
-        package_id = self.package_id_for_db
-
-        command = """select rj.issn_l, title, total::int as num_2018_downloads 
-        from jump_counter counter
-        left outer join ricks_journal_flat on counter.issn_l = ricks_journal.issn
-        where 
-            package_id='{package_id}' 
-            and rj.issn_l in ( 
-                    select distinct rj.issn_l 
-                    from unpaywall u
-                    join ricks_journal_flat rj on u.journal_issn_l=rj.issn                 
-                    where rj.issn_l in (	
-                    select jump_counter.issn_l from jump_counter
-                     where package_id='{package_id}'	
-                )
-                and journal_is_oa='false'
-                and year=2019
-                and rj.issn_l in (
-                    select distinct issn_l from ricks_journal rj 
-                    and {publisher_where}
-	            )
-                and rj.issn_l not in (
-                    select jump_counter.issn_l from jump_counter
-                    join jump_journal_prices on jump_journal_prices.issn_l = jump_counter.issn_l
-                    where jump_counter.package_id='{package_id}' and jump_journal_prices.package_id='658349d9')
-                )
-        order by num_2018_downloads desc
-        """.format(package_id=package_id, publisher_where=self.publisher_where.replace("%", "%%"))
-        with get_db_cursor() as cursor:
-            cursor.execute(command)
-            rows = cursor.fetchall()
-        return rows
-
-    def get_unexpectedly_no_price_and_greater_than_200_downloads(self):
-        package_id = self.package_id_for_db
-        rows = self.get_unexpectedly_no_price()
-        answer_filtered = [row for row in rows if row["num_2018_downloads"] > 200]
-        return answer_filtered
-
-
-    def get_gold_oa(self):
-        package_id = self.package_id_for_db
-
-        command = """select rj.issn_l, title, total::int as num_2018_downloads 
-        from jump_counter counter
-        left outer join ricks_journal on counter.issn_l = ricks_journal.issn
-        where 
-            package_id='{package_id}' 
-            and rj.issn_l not in ( 
-                select distinct rj.issn_l 
-                from unpaywall u 
-                join ricks_journal_flat rj on u.journal_issn_l=rj.issn                
-                where rj.issn_l in (	
-                    select jump_counter.issn_l from jump_counter
-                     where package_id='{package_id}'	
-                )
-                and journal_is_oa='false'
-                )
-        order by num_2018_downloads desc
-        """.format(package_id=package_id)
-        with get_db_cursor() as cursor:
-            cursor.execute(command)
-            rows = cursor.fetchall()
-        return rows
+    # def get_unexpectedly_no_price(self):
+    #     package_id = self.package_id_for_db
+    #
+    #     command = """select counter.issn_l,
+    #     max(title) as title,
+    #     sum(total::int) as num_2018_downloads
+    #     from jump_counter counter
+    #     left outer join ricks_journal_flat on counter.issn_l = ricks_journal_flat.issn
+    #     where
+    #         package_id='{package_id}'
+    #         and rj.issn_l in (
+    #                 select distinct rj.issn_l
+    #                 from unpaywall u
+    #                 join ricks_journal_flat rj on u.journal_issn_l=rj.issn
+    #                 where rj.issn_l in (
+    #                 select jump_counter.issn_l from jump_counter
+    #                  where package_id='{package_id}'
+    #             )
+    #             and journal_is_oa='false'
+    #             and year=2019
+    #             and rj.issn_l in (
+    #                 select distinct issn_l from ricks_journal rj
+    #                 and {publisher_where}
+	#             )
+    #             and rj.issn_l not in (
+    #                 select jump_counter.issn_l from jump_counter
+    #                 join jump_journal_prices on jump_journal_prices.issn_l = jump_counter.issn_l
+    #                 where jump_counter.package_id='{package_id}' and jump_journal_prices.package_id='658349d9')
+    #             )
+    #     group by counter.issn_l
+    #     order by num_2018_downloads desc
+    #     """.format(package_id=package_id, publisher_where=self.publisher_where.replace("%", "%%"))
+    #     with get_db_cursor() as cursor:
+    #         cursor.execute(command)
+    #         rows = cursor.fetchall()
+    #     return rows
+    #
+    # def get_unexpectedly_no_price_and_greater_than_200_downloads(self):
+    #     package_id = self.package_id_for_db
+    #     rows = self.get_unexpectedly_no_price()
+    #     answer_filtered = [row for row in rows if row["num_2018_downloads"] > 200]
+    #     return answer_filtered
 
 
+    # def get_gold_oa(self):
+    #     package_id = self.package_id_for_db
+    #
+    #     command = """select rj.issn_l, max(title) as title, sum(total::int) as num_2018_downloads
+    #     from jump_counter counter
+    #     left outer join ricks_journal rj on counter.issn_l = rj.issn
+    #     where
+    #         package_id='{package_id}'
+    #         and rj.issn_l not in (
+    #             select distinct rj.issn_l
+    #             from unpaywall u
+    #             join ricks_journal_flat rj on u.journal_issn_l=rj.issn
+    #             where rj.issn_l in (
+    #                 select jump_counter.issn_l from jump_counter
+    #                  where package_id='{package_id}'
+    #             )
+    #             and journal_is_oa='false'
+    #             )
+    #     group by rj.issn_l
+    #     order by num_2018_downloads desc
+    #     """.format(package_id=package_id)
+    #     with get_db_cursor() as cursor:
+    #         cursor.execute(command)
+    #         rows = cursor.fetchall()
+    #     return rows
 
-    def get_toll_access_no_2019_papers(self):
-        package_id = self.package_id_for_db
 
 
-        command = """select counter.issn_l, title, total::int as num_2018_downloads 
-        from jump_counter counter
-        left outer join ricks_journal on counter.issn_l = ricks_journal.issn_l
-        where 
-            package_id='{package_id}' 
-            and counter.issn_l not in ( 
-                select distinct rj.issn_l 
-                from unpaywall u 
-	            join ricks_journal_flat rj on u.journal_issn_l = rj.issn
-                where rj.issn_l in (	
-                select jump_counter.issn_l from jump_counter
-                 where package_id='{package_id}'	
-                )
-                and journal_is_oa='false'
-                )
-        order by num_2018_downloads desc
-        """.format(package_id=package_id)
-        with get_db_cursor() as cursor:
-            cursor.execute(command)
-            rows = cursor.fetchall()
-        return rows
+    # def get_toll_access_no_2019_papers(self):
+    #     package_id = self.package_id_for_db
+    #
+    #
+    #     command = """select rj.issn_l, max(title) as title, sum(total::int) as num_2018_downloads
+    #     from jump_counter counter
+    #     left outer join ricks_journal jr on counter.issn_l = rj.issn_l
+    #     where
+    #         package_id='{package_id}'
+    #         and rj.issn_l not in (
+    #             select distinct rj.issn_l
+    #             from unpaywall u
+	#             join ricks_journal_flat rj on u.journal_issn_l = rj.issn
+    #             where rj.issn_l in (
+    #             select jump_counter.issn_l from jump_counter
+    #              where package_id='{package_id}'
+    #             )
+    #             and journal_is_oa='false'
+    #             )
+    #     group by rj.issn_l
+    #     order by num_2018_downloads desc
+    #     """.format(package_id=package_id)
+    #     with get_db_cursor() as cursor:
+    #         cursor.execute(command)
+    #         rows = cursor.fetchall()
+    #     return rows
 
 
     def to_dict_summary(self):
