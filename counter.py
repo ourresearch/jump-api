@@ -24,6 +24,7 @@ class CounterInput(db.Model, PackageInput):
     report_name = db.Column(db.Text)
     report_version = db.Column(db.Text)
     report_year = db.Column(db.Numeric)
+    metric_type = db.Column(db.Text)
     start_date = db.Column(db.DateTime)
     end_date = db.Column(db.DateTime)
     issn = db.Column(db.Text, primary_key=True)
@@ -33,7 +34,7 @@ class CounterInput(db.Model, PackageInput):
 
     @classmethod
     def import_view_name(cls):
-        return 'jump_counter_view_flat'
+        return 'jump_counter_view'
 
     @classmethod
     def destination_table(cls):
