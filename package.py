@@ -142,7 +142,7 @@ class Package(db.Model):
         q = """
            select
            rj.issn_l,
-           listagg(counter.issn, ',') as issns,
+           listagg(rj.issn, ',') as issns,
            listagg(title, ',') as title, 
            sum(total::int) as num_2018_downloads
            from jump_counter counter
@@ -157,7 +157,7 @@ class Package(db.Model):
         q = """
             select 
             rj.issn_l, 
-            listagg(counter.issn, ',') as issns,
+            listagg(rj.issn, ',') as issns,
             listagg(title, ',') as title, 
             sum(total::int) as num_2018_downloads, 
             count(*) as num_journals_with_issn_l
