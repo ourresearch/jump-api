@@ -5,7 +5,9 @@ both its appearance and its underlying data.
 This means you will often see changes in the UI/UX, and sometimes in the presented data.  
 Most of these changes are too small to note, but we'll keep a record of the larger ones here:
 
+- 2020/12/10 Was requiring a publisher match to include OA in forecast; now only requires an ISSN match
 - 2020/12/09 In the upload tab, show the sum of all COUNTER data for the same issn_l
+- 2020/12/08 Stop excluding journals in new uploads because of mismatched publisher
 - 2020/12/02 Add support for SAGE and T&F
 - 2020/12/02 Fix bug where projected downloads could sometimes be negative: affects very few journals
 - 2020/09/23 Bug fix to perpetual access. See announcement post (link tbd).

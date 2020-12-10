@@ -931,9 +931,6 @@ def get_oa_recent_data_from_db():
         for bronze in ["with_bronze", "no_bronze"]:
             key = "{}_{}".format(submitted, bronze)
             command = """select * from jump_oa_recent_{}_precovid
-                        where (publisher ilike '%springer%' or publisher ilike '%elsevier%' 
-                        or publisher ilike '%nature%' or publisher ilike '%wiley%'
-                        or publisher ilike '%informa uk%' or publisher ilike '%sage%')
                             """.format(key)
 
             with get_db_cursor() as cursor:
@@ -955,9 +952,6 @@ def get_oa_data_from_db():
 
             command = """select * from jump_oa_{}_precovid
                         where year_int >= 2015
-                        and  (publisher ilike '%springer%' or publisher ilike '%elsevier%' 
-                        or publisher ilike '%nature%' or publisher ilike '%wiley%'
-                        or publisher ilike '%informa uk%' or publisher ilike '%sage%')
                             """.format(key)
 
             with get_db_cursor() as cursor:
@@ -994,19 +988,20 @@ def get_social_networks_data_from_db():
         lookup_dict[row["issn_l"]] = row["asn_only_rate"]
     return lookup_dict
 
-
+#
 # @cache
 # def get_oa_adjustment_data_from_db():
-#     command = """select issn_l,
+#     command = """select rj.issn_l,
 #             max(mturk.max_oa_rate::float) as mturk_max_oa_rate,
 #             count(*) as num_papers_3_years,
 #             sum(case when u.oa_status = 'closed' then 0 else 1 end) as num_papers_3_years_oa,
 #             round(sum(case when u.oa_status = 'closed' then 0 else 1 end)/count(*)::float, 3) as unpaywall_measured_fraction_3_years_oa
 #             from jump_mturk_oa_rates mturk
 #             join unpaywall u on mturk.issn_l = u.journal_issn_l
+# 	        join ricks_journal_flat rj on u.journal_issn_l=rj.issn
 #             where year >= 2016 and year <= 2018
 #             and genre='journal-article'
-#             group by issn_l
+#             group by rj.issn_l
 #                     """
 #     with get_db_cursor() as cursor:
 #         cursor.execute(command)
@@ -1015,28 +1010,6 @@ def get_social_networks_data_from_db():
 #     for row in rows:
 #         lookup_dict[row["issn_l"]] = row
 #     return lookup_dict
-
-@cache
-def get_oa_adjustment_data_from_db():
-    command = """select rj.issn_l,
-            max(mturk.max_oa_rate::float) as mturk_max_oa_rate,
-            count(*) as num_papers_3_years,
-            sum(case when u.oa_status = 'closed' then 0 else 1 end) as num_papers_3_years_oa,
-            round(sum(case when u.oa_status = 'closed' then 0 else 1 end)/count(*)::float, 3) as unpaywall_measured_fraction_3_years_oa
-            from jump_mturk_oa_rates mturk
-            join unpaywall u on mturk.issn_l = u.journal_issn_l
-	        join ricks_journal_flat rj on u.journal_issn_l=rj.issn            
-            where year >= 2016 and year <= 2018
-            and genre='journal-article'
-            group by rj.issn_l
-                    """
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
-    lookup_dict = {}
-    for row in rows:
-        lookup_dict[row["issn_l"]] = row
-    return lookup_dict
 
 
 # not cached on purpose, because components are cached to save space
