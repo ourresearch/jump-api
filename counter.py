@@ -21,11 +21,12 @@ class Counter(db.Model):
 
 class CounterInput(db.Model, PackageInput):
     __tablename__ = 'jump_counter_input'
-    report_name = db.Column(db.Text)
     report_version = db.Column(db.Text)
+    report_name = db.Column(db.Text)
     report_year = db.Column(db.Numeric)
     metric_type = db.Column(db.Text)
     yop = db.Column(db.Numeric)
+    access_type = db.Column(db.Text)
     start_date = db.Column(db.DateTime)
     end_date = db.Column(db.DateTime)
     issn = db.Column(db.Text, primary_key=True)
@@ -81,12 +82,22 @@ class CounterInput(db.Model, PackageInput):
                 'exact_name': True,
                 'required': False,
             },
+            'access_type': {
+                'normalize': cls.strip_text,
+                'name_snippets': [u'access_type'],
+                'exact_name': True,
+                'required': False,
+            },
         }
 
     @classmethod
     def ignore_row(cls, row):
         journal_name = (row.get('journal_name', u'') or u'').lower()
         if (not journal_name or u'all journals' in journal_name) and row.get('print_issn', None) is None:
+            return True
+
+        lower_metric_type = (row.get('metric_type', u'') or u'').lower()
+        if lower_metric_type and lower_metric_type not in ["unique_item_requests", "no_license"]:
             return True
 
         return False
@@ -104,47 +115,47 @@ class CounterInput(db.Model, PackageInput):
         # get the counter version and file format
         version_labels = {
             'Journal Report 1 (R4)': {
-                'report_name': 'JR1',
-                'report_version': '4'
+                'report_version': '4',
+                'report_name': 'JR1'
             },
             'TR_J1': {
+                'report_version': '5',
                 'report_name': 'TRJ1',
-                'report_version': '5'
             },
             'TR_J2': {
+                'report_version': '5',
                 'report_name': 'TRJ2',
-                'report_version': '5'
             },
             'TR_J3': {
+                'report_version': '5',
                 'report_name': 'TRJ3',
-                'report_version': '5'
             },
             'TR_J4': {
+                'report_version': '5',
                 'report_name': 'TRJ4',
-                'report_version': '5'
             },
         }
 
-        report_name = None
         report_version = None
+        report_name = None
 
         normalized_header_text = u''.join([re.sub(ur'\s*', u'', u''.join(row)).lower() for row in header_rows])
         for label, values in version_labels.items():
             normalized_label = re.sub(ur'\s*', '', label).lower()
             if normalized_label in normalized_header_text:
-                report_name = values['report_name']
                 report_version = values['report_version']
+                report_name = values['report_name']
                 break
-
-        possible_names = [v['report_name'] for v in version_labels.values()]
-        if report_name not in possible_names:
-            logger.warn(u"Got {} as report name, expected one of {}.".format(report_name, possible_names))
 
         possible_versions = [v['report_version'] for v in version_labels.values()]
         if report_version not in possible_versions:
             logger.warn(u"Got {} as report version, expected one of {}.".format(report_version, possible_versions))
 
-        print u"Detected report {} {}".format(report_name, report_version)
+        possible_names = [v['report_name'] for v in version_labels.values()]
+        if report_name not in possible_names:
+            logger.warn(u"Got {} as report name, expected one of {}.".format(report_name, possible_names))
+
+        print u"Detected report {} {}".format(report_version, report_name)
 
         # get the year
         # get the header rows that look like months
@@ -166,9 +177,9 @@ class CounterInput(db.Model, PackageInput):
             logger.warn(u"Couldn't guess a year from column headers: {}".format(header_rows[-1]))
 
         for row in normalized_rows:
-            row['report_name'] = report_name
-            row['report_version'] = report_version
             row['report_year'] = report_year
+            row['report_version'] = report_version
+            row['report_name'] = report_name
 
         # check for COUNTER 5
         # cop5_error = u"Sorry, we don't support COUNTER 5 yet. Please upload a COUNTER 4 JR_1 file."
