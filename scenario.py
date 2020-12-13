@@ -101,9 +101,6 @@ class Scenario(object):
         self.institution_id = my_institution.id
         self.my_package = my_package
 
-        # reset with package if needed
-        self.settings.cost_bigdeal = self.cost_bigdeal_raw
-
         # from app import USE_PAPER_GROWTH
         # if USE_PAPER_GROWTH:
         #     self.data = get_common_package_data(self.package_id_for_db)
@@ -379,9 +376,9 @@ class Scenario(object):
             big_deal_cost = big_deal_cost.replace(",", "")
             big_deal_cost = float(big_deal_cost)
 
-        if self.my_package and self.my_package.big_deal_cost:
-            from assumptions import DEFAULT_COST_BIGDEAL
-            if big_deal_cost and big_deal_cost != float(DEFAULT_COST_BIGDEAL):
+        from assumptions import DEFAULT_COST_BIGDEAL
+        if big_deal_cost != float(DEFAULT_COST_BIGDEAL):
+            if self.my_package and self.my_package.big_deal_cost:
                 return float(self.my_package.big_deal_cost)
 
         return float(big_deal_cost)
