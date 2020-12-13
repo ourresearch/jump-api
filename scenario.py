@@ -99,9 +99,10 @@ class Scenario(object):
         self.institution_name = my_institution.display_name
         self.institution_short_name = my_institution.old_username
         self.institution_id = my_institution.id
+        self.my_package = my_package
 
-        if my_package and my_package.big_deal_cost:
-            self.settings.cost_bigdeal = float(my_package.big_deal_cost)
+        # reset with package if needed
+        self.settings.cost_bigdeal = self.cost_bigdeal_raw
 
         # from app import USE_PAPER_GROWTH
         # if USE_PAPER_GROWTH:
@@ -372,12 +373,23 @@ class Scenario(object):
 
 
     @cached_property
-    def cost_bigdeal_projected_by_year(self):
+    def cost_bigdeal_raw(self):
         big_deal_cost = self.settings.cost_bigdeal
         if isinstance(big_deal_cost, str):
             big_deal_cost = big_deal_cost.replace(",", "")
             big_deal_cost = float(big_deal_cost)
-        return [round(((1+self.settings.cost_bigdeal_increase/float(100))**year) * big_deal_cost )
+
+        if self.my_package and self.my_package.big_deal_cost:
+            from assumptions import DEFAULT_COST_BIGDEAL
+            if big_deal_cost and big_deal_cost != float(DEFAULT_COST_BIGDEAL):
+                return float(self.my_package.big_deal_cost)
+
+        return float(big_deal_cost)
+
+
+    @cached_property
+    def cost_bigdeal_projected_by_year(self):
+        return [round(((1+self.settings.cost_bigdeal_increase/float(100))**year) * self.cost_bigdeal_raw )
                                             for year in self.years]
 
     @cached_property
@@ -676,14 +688,20 @@ def get_package_specific_scenario_data_from_db(input_package_id):
 
     counter_dict = defaultdict(int)
     for package_id in consortium_package_ids:
-
-        command = "select issn_l, total from jump_counter where package_id='{}'".format(package_id)
+        command = "select issn_l, total, report_version, report_name from jump_counter where package_id='{}'".format(package_id)
         rows = None
         with get_db_cursor() as cursor:
             cursor.execute(command)
             rows = cursor.fetchall()
-        for row in rows:
-            counter_dict[row["issn_l"]] += row["total"]
+        if rows:
+            is_counter5 = (rows[0]["report_version"] == "5")
+            for row in rows:
+                if is_counter5:
+                    if row["report_name"] in ["TRJ2", "TRJ3"]:
+                        counter_dict[row["issn_l"]] += row["total"]
+                    # else don't do anything with it for now
+                else:
+                    counter_dict[row["issn_l"]] += row["total"]
 
     timing.append(("time from db: counter", elapsed(section_time, 2)))
     section_time = time()
