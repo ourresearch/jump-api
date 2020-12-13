@@ -1279,6 +1279,24 @@ def export_get(table_dicts):
     return contents
 
 
+@app.route('/scenario/<scenario_id>/export_subscriptions.txt', methods=['GET'])
+@jwt_required
+def scenario_id_export_subscriptions_txt_get(scenario_id):
+
+    consortium_ids = get_consortium_ids()
+    if scenario_id in [d["scenario_id"] for d in consortium_ids]:
+        my_consortium = Consortium(scenario_id)
+        table_dicts = my_consortium.to_dict_journals()["journals"]
+    else:
+        my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
+        table_dicts = my_saved_scenario.to_dict_journals()["journals"]
+
+    subscription_list = [d["issn_l"] for d in table_dicts if d["subscribed"]]
+    subscription_list_comma_separated = u",".join(subscription_list)
+
+    return Response(subscription_list_comma_separated, mimetype="text/text")
+
+
 @app.route('/scenario/<scenario_id>/export.csv', methods=['GET'])
 @jwt_required
 def scenario_id_export_csv_get(scenario_id):
