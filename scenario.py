@@ -685,7 +685,11 @@ def get_package_specific_scenario_data_from_db(input_package_id):
 
     counter_dict = defaultdict(int)
     for package_id in consortium_package_ids:
-        command = "select issn_l, total, report_version, report_name from jump_counter where package_id='{}'".format(package_id)
+        command = """select issn_l, total, report_version, report_name, metric_type 
+            from jump_counter 
+            where package_id='{}'
+            and (report_name is null or report_name != 'TRJ4')
+            """.format(package_id)
         rows = None
         with get_db_cursor() as cursor:
             cursor.execute(command)
@@ -695,7 +699,8 @@ def get_package_specific_scenario_data_from_db(input_package_id):
             for row in rows:
                 if is_counter5:
                     if row["report_name"] in ["TRJ2", "TRJ3"]:
-                        counter_dict[row["issn_l"]] += row["total"]
+                        if row["metric_type"] in ["Unique_Item_Requests", "No_License"]:
+                            counter_dict[row["issn_l"]] += row["total"]
                     # else don't do anything with it for now
                 else:
                     counter_dict[row["issn_l"]] += row["total"]
