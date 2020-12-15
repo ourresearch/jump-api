@@ -96,10 +96,6 @@ class CounterInput(db.Model, PackageInput):
         if (not journal_name or u'all journals' in journal_name) and row.get('print_issn', None) is None:
             return True
 
-        lower_metric_type = (row.get('metric_type', u'') or u'').lower()
-        if lower_metric_type and lower_metric_type not in ["unique_item_requests", "no_license"]:
-            return True
-
         return False
 
     @classmethod

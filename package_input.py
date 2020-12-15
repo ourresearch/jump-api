@@ -553,7 +553,18 @@ class PackageInput:
                 row.update({'package_id': package_id})
                 # logger.info(u'normalized row: {}'.format(json.dumps(row)))
 
-            db.session.query(cls).filter(cls.package_id == package_id).delete()
+            if cls.file_type_label() == "counter":
+                report_version = normalized_rows[1]["report_version"]
+                report_name = normalized_rows[1]["report_name"]
+                # delete all report_year and access_type and yop
+
+                rows_to_delete = db.session.query(cls).filter(cls.package_id == package_id,
+                                             cls.report_version == report_version,
+                                             cls.report_name == report_name)
+            else:
+                rows_to_delete = db.session.query(cls).filter(cls.package_id == package_id)
+
+            rows_to_delete.delete()
 
             sorted_fields = sorted(normalized_rows[0].keys())
             normalized_csv_filename = tempfile.mkstemp()[1]
