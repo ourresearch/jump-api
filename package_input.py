@@ -2,6 +2,7 @@ import json
 import os
 import re
 import tempfile
+import calendar
 from re import sub
 
 import babel.numbers
@@ -63,14 +64,14 @@ class PackageInput:
     def normalize_price(price, warn_if_blank=False):
         if price:
             try:
-                if u'.' in price and u',' in price and price.find(u'.') < price.find(u','):
-                    locale = u'de'
-                elif price.count(u',') == 1 and (re.search(ur'\d{4,},', price) or not re.search(ur',\d{3}[$.]', price)):
-                    locale = u'de'
+                if u"." in price and u"," in price and price.find(u".") < price.find(u","):
+                    locale = u"de"
+                elif price.count(u",") == 1 and (re.search(ur"\d{4,},", price) or not re.search(ur",\d{3}[$.]", price)):
+                    locale = u"de"
                 else:
-                    locale = u'en'
+                    locale = u"en"
 
-                price = sub(ur'[^\d.,]', '', price)
+                price = sub(ur"[^\d.,]", "", price)
                 parsed_price = babel.numbers.parse_decimal(price, locale=locale)
                 return int(round(parsed_price))
             except babel.numbers.NumberFormatError:
@@ -82,15 +83,15 @@ class PackageInput:
     def normalize_issn(issn, warn_if_blank=False):
         from scenario import get_ricks_journal_flat
         if issn:
-            issn = sub(ur'\s', '', issn).upper()
-            if re.match(ur'^\d{4}-?\d{3}(?:X|\d)$', issn):
-                issn = issn.replace(u'-', '')
-                issn = issn[0:4] + u'-' + issn[4:8]
+            issn = sub(ur"\s", "", issn).upper()
+            if re.match(ur"^\d{4}-?\d{3}(?:X|\d)$", issn):
+                issn = issn.replace(u"-", "")
+                issn = issn[0:4] + u"-" + issn[4:8]
                 if issn in get_ricks_journal_flat():
                     return issn
                 else:
                     return ParseWarning.unknown_issn
-            elif re.match(ur'^[A-Z0-9]{4}-\d{3}(?:X|\d)$', issn):
+            elif re.match(ur"^[A-Z0-9]{4}-\d{3}(?:X|\d)$", issn):
                 return ParseWarning.bundle_issn
             else:
                 return ParseWarning.bad_issn
@@ -136,13 +137,13 @@ class PackageInput:
     @classmethod
     def normalize_column_name(cls, raw_column_name):
         for canonical_name, spec in cls.csv_columns().items():
-            name_snippets = spec['name_snippets']
-            excluded_name_snippets = spec.get('excluded_name_snippets', [])
+            name_snippets = spec["name_snippets"]
+            excluded_name_snippets = spec.get("excluded_name_snippets", [])
 
             for snippet in name_snippets:
                 snippet = snippet.lower()
                 column_name = raw_column_name.strip().lower()
-                exact_name = spec.get('exact_name', False)
+                exact_name = spec.get("exact_name", False)
                 contains_excluded_snippet = False
 
                 for ens in excluded_name_snippets:
@@ -159,31 +160,31 @@ class PackageInput:
     @classmethod
     def normalize_cell(cls, normalized_column_name, raw_column_value):
         spec = cls.csv_columns()[normalized_column_name]
-        return spec['normalize'](raw_column_value, spec.get('warn_if_blank', False))
+        return spec["normalize"](raw_column_value, spec.get("warn_if_blank", False))
 
 
     @classmethod
     def _copy_staging_csv_to_s3(cls, filename, package_id):
-        s3 = boto3.client('s3')
-        bucket_name = 'jump-redshift-staging'
-        object_name = '{}_{}_{}'.format(package_id, cls.__name__, shortuuid.uuid())
+        s3 = boto3.client("s3")
+        bucket_name = "jump-redshift-staging"
+        object_name = "{}_{}_{}".format(package_id, cls.__name__, shortuuid.uuid())
         s3.upload_file(filename, bucket_name, object_name)
-        return 's3://{}/{}'.format(bucket_name, object_name)
+        return "s3://{}/{}".format(bucket_name, object_name)
 
     @classmethod
     def _raw_s3_bucket(cls):
-        return u'unsub-file-uploads'
+        return u"unsub-file-uploads"
 
     @classmethod
     def _copy_raw_to_s3(cls, filename, package_id):
-        s3 = boto3.client('s3')
+        s3 = boto3.client("s3")
 
-        if u'.' in filename:
-            suffix = u'.{}'.format(filename.split(u'.')[-1])
+        if u"." in filename:
+            suffix = u".{}".format(filename.split(u".")[-1])
         else:
-            suffix = u''
+            suffix = u""
 
-        object_name = '{}_{}{}'.format(package_id, cls.file_type_label(), suffix)
+        object_name = "{}_{}{}".format(package_id, cls.file_type_label(), suffix)
         bucket_name = cls._raw_s3_bucket()
 
         s3.upload_file(filename, bucket_name, object_name)
@@ -199,7 +200,7 @@ class PackageInput:
             object_name=object_name
         ))
 
-        return 's3://{}/{}'.format(bucket_name, object_name)
+        return "s3://{}/{}".format(bucket_name, object_name)
 
     @classmethod
     def get_raw_upload_object(cls, package_id):
@@ -210,20 +211,20 @@ class PackageInput:
         if not object_details:
             return None
 
-        s3 = boto3.client('s3')
+        s3 = boto3.client("s3")
 
         try:
             raw_object = s3.get_object(Bucket=object_details.bucket_name, Key=object_details.object_name)
 
             headers = {
-                'Content-Length': raw_object['ContentLength'],
-                'Content-Disposition': 'attachment; filename="{}"'.format(object_details.object_name)
+                "Content-Length": raw_object["ContentLength"],
+                "Content-Disposition": "attachment; filename="{}"".format(object_details.object_name)
             }
 
             return {
-                'body': raw_object['Body'],
-                'content_type': raw_object['ContentType'],
-                'headers': headers
+                "body": raw_object["Body"],
+                "content_type": raw_object["ContentType"],
+                "headers": headers
             }
         except s3.exceptions.NoSuchKey:
             return None
@@ -248,7 +249,7 @@ class PackageInput:
             cls.clear_caches(my_package)
 
 
-        return u'Deleted {} {} rows for package {}.'.format(num_deleted, cls.__name__, package_id)
+        return u"Deleted {} {} rows for package {}.".format(num_deleted, cls.__name__, package_id)
 
     @classmethod
     def clear_caches(cls, my_package):
@@ -268,20 +269,20 @@ class PackageInput:
 
     @classmethod
     def update_dest_table(cls, package_id):
-        # unload_cmd = text('''
+        # unload_cmd = text("""
         #     unload
         #     ('select * from {view} where package_id = \\'{package_id}\\'')
         #     to 's3://jump-redshift-staging/{package_id}_{view}_{uuid}/'
-        #     with credentials :creds csv'''.format(
+        #     with credentials :creds csv""".format(
         #         view=cls.import_view_name(),
         #         package_id=package_id,
         #         uuid=shortuuid.uuid(),
         #     )
         # )
         #
-        # aws_creds = 'aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}'.format(
-        #     aws_key=os.getenv('AWS_ACCESS_KEY_ID'),
-        #     aws_secret=os.getenv('AWS_SECRET_ACCESS_KEY')
+        # aws_creds = "aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}".format(
+        #     aws_key=os.getenv("AWS_ACCESS_KEY_ID"),
+        #     aws_secret=os.getenv("AWS_SECRET_ACCESS_KEY")
         # )
         #
         # db.session.execute(unload_cmd.bindparams(creds=aws_creds))
@@ -297,10 +298,10 @@ class PackageInput:
     @classmethod
     def make_package_file_warning(cls, parse_warning, additional_msg=None):
         return {
-            'label': parse_warning.value['label'],
-            'message': u'{}{}'.format(
-                parse_warning.value['text'],
-                u' {}'.format(additional_msg) if additional_msg else u''
+            "label": parse_warning.value["label"],
+            "message": u"{}{}".format(
+                parse_warning.value["text"],
+                u" {}".format(additional_msg) if additional_msg else u""
             )
         }
 
@@ -332,8 +333,8 @@ class PackageInput:
         if not rows:
             return None
         else:
-            errors = json.loads(u''.join([row.errors for row in rows]))
-            if errors['rows']:
+            errors = json.loads(u"".join([row.errors for row in rows]))
+            if errors["rows"]:
                 return errors
             else:
                 return None
@@ -351,23 +352,23 @@ class PackageInput:
         from scenario import get_ricks_journal_flat
 
         # convert to csv if needed
-        if file_name.endswith(u'.xls') or file_name.endswith(u'.xlsx'):
+        if file_name.endswith(u".xls") or file_name.endswith(u".xlsx"):
             sheet_csv_file_names = convert_spreadsheet_to_csv(file_name, parsed=False)
             if not sheet_csv_file_names:
-                raise RuntimeError(u'{} could not be opened as a spreadsheet'.format(file_name))
+                raise RuntimeError(u"{} could not be opened as a spreadsheet".format(file_name))
 
             if len(sheet_csv_file_names) > 1:
-                raise RuntimeError(u'Workbook contains multiple sheets.')
+                raise RuntimeError(u"Workbook contains multiple sheets.")
 
             file_name = sheet_csv_file_names[0]
 
         # convert to utf-8
         file_name = convert_to_utf_8(file_name)
-        logger.info('converted file: {}'.format(file_name))
+        logger.info("converted file: {}".format(file_name))
 
-        with open(file_name, 'rb') as csv_file:
+        with open(file_name, "rb") as csv_file:
             # determine the csv format
-            dialect_sample = ''
+            dialect_sample = ""
             for i in range(0, 20):
                 next_line = csv_file.readline()
                 # ignore header row when determining dialect
@@ -380,11 +381,11 @@ class PackageInput:
             reader_params = {}
             try:
                 dialect = csv.Sniffer().sniff(dialect_sample)
-                # logger.info(u'sniffed csv dialect:\n{}'.format(json.dumps(vars(dialect), indent=2)))
+                # logger.info(u"sniffed csv dialect:\n{}".format(json.dumps(vars(dialect), indent=2)))
             except csv.Error:
                 dialect = None
-                if file_name.endswith(u'.tsv'):
-                    reader_params['delimiter'] = '\t'
+                if file_name.endswith(u".tsv"):
+                    reader_params["delimiter"] = "\t"
 
             csv_file.seek(0)
 
@@ -409,7 +410,7 @@ class PackageInput:
                 if populated_columns > max_columns:
                     max_columns = populated_columns
                     header_index = line_no
-                    logger.info(u'candidate header row: {}'.format(u', '.join(line)))
+                    logger.info(u"candidate header row: {}".format(u", ".join(line)))
 
                 line_no += 1
 
@@ -418,8 +419,8 @@ class PackageInput:
                 raise RuntimeError(u"Couldn't identify a header row in the file.")
 
             error_rows = {
-                'rows': [],
-                'headers': [{'id': 'row_id', 'name': 'Row Number'}]
+                "rows": [],
+                "headers": [{"id": "row_id", "name": "Row Number"}]
             }
 
             normalized_rows = []
@@ -428,26 +429,35 @@ class PackageInput:
             raw_column_names = parsed_rows[header_index]
             normalized_column_names = [cls.normalize_column_name(cn) for cn in raw_column_names]
             raw_to_normalized_map = dict(zip(raw_column_names, normalized_column_names))
-
             normalized_to_raw_map = {}
             for k, v in raw_to_normalized_map.items():
                 normalized_to_raw_map[v] = k
 
-            required_keys = [k for k, v in cls.csv_columns().items() if v.get('required', True)]
+            # combine the header and data rows into dicts
+            row_dicts = [dict(zip(parsed_rows[header_index], x)) for x in parsed_rows[header_index+1:]]
+
+            required_keys = [k for k, v in cls.csv_columns().items() if v.get("required", True)]
+
+            if ("total" in required_keys) and ("total" not in normalized_column_names) and ("jan" in normalized_column_names):
+                for row in row_dicts:
+
+                    row["total"] = 0
+                    for month_idx in range(1, 13):
+                        month_name = calendar.month_abbr[month_idx].lower()
+                        new_value = cls.normalize_cell(month_name, row[normalized_to_raw_map[month_name]])
+                        row["total"] += new_value
+
+                normalized_column_names += ["total"]
 
             if set(required_keys).difference(set(normalized_column_names)):
-                explanation = u'Missing required columns. Expected [{}] but found {}.'.format(
-                    ', '.join(sorted(required_keys)),
-                    ', '.join([
-                        u'{} (from input column {})'.format(raw_to_normalized_map[raw], raw)
+                explanation = u"Missing required columns. Expected [{}] but found {}.".format(
+                    ", ".join(sorted(required_keys)),
+                    ", ".join([
+                        u"{} (from input column {})".format(raw_to_normalized_map[raw], raw)
                         for raw in sorted(raw_to_normalized_map.keys()) if raw_to_normalized_map[raw]
                     ])
                 )
                 raise RuntimeError(explanation)
-
-            # combine the header and data rows into dicts
-            row_dicts = [dict(zip(parsed_rows[header_index], x)) for x in parsed_rows[header_index+1:]]
-
 
 
             for row_no, row in enumerate(row_dicts):
@@ -463,14 +473,14 @@ class PackageInput:
                             normalized_value = cls.normalize_cell(normalized_name, raw_value)
                             if isinstance(normalized_value, ParseWarning):
                                 parse_warning = normalized_value
-                                # logger.info('parse warning: {} for data {},  {}'.format(parse_warning, raw_column_name, row))
+                                # logger.info("parse warning: {} for data {},  {}".format(parse_warning, raw_column_name, row))
                                 cell_errors[normalized_name] = cls.make_package_file_warning(parse_warning)
                                 normalized_row.setdefault(normalized_name, None)
                             else:
                                 normalized_row.setdefault(normalized_name, normalized_value)
                         except Exception as e:
                             cell_errors[normalized_name] = cls.make_package_file_warning(
-                                ParseWarning.unknown, additional_msg=u'message: {}'.format(e.message)
+                                ParseWarning.unknown, additional_msg=u"message: {}".format(e.message)
                             )
 
                 if cls.ignore_row(normalized_row):
@@ -484,16 +494,16 @@ class PackageInput:
                         row_issn = normalized_row[issn_col]
                         [cell_errors.pop(c, None) for c in cls.issn_columns()]  # delete errors for all issn columns
                         [normalized_row.pop(c, None) for c in cls.issn_columns()] # delete issn columns
-                        normalized_row['issn'] = row_issn
+                        normalized_row["issn"] = row_issn
                         break
 
                 if not cell_errors:
                     normalized_rows.append(normalized_row)
                 else:
                     error_row = {
-                        'row_id': {
-                            'value': absolute_row_no,
-                            'error': None
+                        "row_id": {
+                            "value": absolute_row_no,
+                            "error": None
                         }
                     }
 
@@ -502,19 +512,19 @@ class PackageInput:
                             raw_name = normalized_to_raw_map[normalized_name]
 
                             error_row[normalized_name] = {
-                                'value': row[raw_name],
-                                'error': cell_errors.get(normalized_name, None)
+                                "value": row[raw_name],
+                                "error": cell_errors.get(normalized_name, None)
                             }
 
-                    error_rows['rows'].append(error_row)
+                    error_rows["rows"].append(error_row)
 
             for normalized, raw in normalized_to_raw_map.items():
                 if normalized:
-                    error_rows['headers'].append({'id': normalized, 'name': raw})
+                    error_rows["headers"].append({"id": normalized, "name": raw})
 
             cls.apply_header(normalized_rows, parsed_rows[0:header_index+1])
 
-            if not error_rows['rows']:
+            if not error_rows["rows"]:
                 error_rows = None
 
             return normalized_rows, error_rows
@@ -526,13 +536,15 @@ class PackageInput:
         try:
             normalized_rows, error_rows = cls.normalize_rows(file_name, file_package=my_package)
         except (UnicodeError, csv.Error) as e:
-            message = u'Error reading file: "{}". Try opening this file, resaving as .xlsx, and uploading that.'.format(
+            message = u"Error reading file: "{}". Try opening this file, resaving as .xlsx, and uploading that.".format(
                 e.message
             )
-            return {'success': False, 'message': message, 'warnings': []}
+            return {"success": False, "message": message, "warnings": []}
         except RuntimeError as e:
-            return {'success': False, 'message': e.message, 'warnings': []}
+            return {"success": False, "message": e.message, "warnings": []}
 
+
+        print normalized_rows[0:4]
         # save errors
 
         db.session.query(PackageFileErrorRow).filter(
@@ -543,15 +555,15 @@ class PackageInput:
 
         # save normalized rows
 
-        aws_creds = 'aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}'.format(
-            aws_key=os.getenv('AWS_ACCESS_KEY_ID'),
-            aws_secret=os.getenv('AWS_SECRET_ACCESS_KEY')
+        aws_creds = "aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}".format(
+            aws_key=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret=os.getenv("AWS_SECRET_ACCESS_KEY")
         )
 
         if normalized_rows:
             for row in normalized_rows:
-                row.update({'package_id': package_id})
-                # logger.info(u'normalized row: {}'.format(json.dumps(row)))
+                row.update({"package_id": package_id})
+                # logger.info(u"normalized row: {}".format(json.dumps(row)))
 
             if cls.file_type_label() == "counter":
                 report_version = normalized_rows[1]["report_version"]
@@ -568,20 +580,20 @@ class PackageInput:
 
             sorted_fields = sorted(normalized_rows[0].keys())
             normalized_csv_filename = tempfile.mkstemp()[1]
-            with open(normalized_csv_filename, 'w') as normalized_csv_file:
-                writer = csv.DictWriter(normalized_csv_file, delimiter=',', encoding='utf-8', fieldnames=sorted_fields)
+            with open(normalized_csv_filename, "w") as normalized_csv_file:
+                writer = csv.DictWriter(normalized_csv_file, delimiter=",", encoding="utf-8", fieldnames=sorted_fields)
                 for row in normalized_rows:
                     writer.writerow(row)
 
             s3_object = cls._copy_staging_csv_to_s3(normalized_csv_filename, package_id)
 
-            copy_cmd = text('''
+            copy_cmd = text("""
                 copy {table} ({fields}) from '{s3_object}'
                 credentials :creds format as csv
                 timeformat 'auto';
-            '''.format(
+            """.format(
                 table=cls.__tablename__,
-                fields=', '.join(sorted_fields),
+                fields=", ".join(sorted_fields),
                 s3_object=s3_object,
             ))
 
@@ -596,76 +608,76 @@ class PackageInput:
 
         if normalized_rows:
             return {
-                'success': True,
-                'message': u'Inserted {} {} rows for package {}.'.format(len(normalized_rows), cls.__name__, package_id),
-                'warnings': error_rows
+                "success": True,
+                "message": u"Inserted {} {} rows for package {}.".format(len(normalized_rows), cls.__name__, package_id),
+                "warnings": error_rows
             }
         else:
             return {
-                'success': False,
-                'message': u'No usable rows found.',
-                'warnings': error_rows
+                "success": False,
+                "message": u"No usable rows found.",
+                "warnings": error_rows
             }
 
 
 class ParseWarning(Enum):
     bad_issn = {
-        'label': 'bad_issn',
-        'text': "This doesn't look like an ISSN."
+        "label": "bad_issn",
+        "text": "This doesn't look like an ISSN."
     }
     unknown_issn = {
-        'label': 'unknown_issn',
-        'text': "This looks like an ISSN, but it isn't one we recognize."
+        "label": "unknown_issn",
+        "text": "This looks like an ISSN, but it isn't one we recognize."
     }
     bundle_issn = {
-        'label': 'bundle_issn',
-        'text': 'ISSN represents a bundle of journals, not a single journal.'
+        "label": "bundle_issn",
+        "text": "ISSN represents a bundle of journals, not a single journal."
     }
     no_issn = {
-        'label': 'no_issn',
-        'text': 'No ISSN here.'
+        "label": "no_issn",
+        "text": "No ISSN here."
     }
     bad_date = {
-        'label': 'bad_date',
-        'text': 'Unrecognized date format.'
+        "label": "bad_date",
+        "text": "Unrecognized date format."
     }
     ambiguous_date = {
-        'label': 'ambiguous_date',
-        'text': 'Date must contain a 4-digit year.'
+        "label": "ambiguous_date",
+        "text": "Date must contain a 4-digit year."
     }
     bad_year = {
-        'label': 'bad_year',
-        'text': 'Unrecognized date or year.'
+        "label": "bad_year",
+        "text": "Unrecognized date or year."
     }
     bad_int = {
-        'label': 'bad_int',
-        'text': 'Unrecognized integer format.'
+        "label": "bad_int",
+        "text": "Unrecognized integer format."
     }
     no_int = {
-        'label': 'no_int',
-        'text': 'Expected an integer here.'
+        "label": "no_int",
+        "text": "Expected an integer here."
     }
     bad_usd_price = {
-        'label': 'bad_usd_price',
-        'text': 'Unrecognized USD format.'
+        "label": "bad_usd_price",
+        "text": "Unrecognized USD format."
     }
     no_usd_price = {
-        'label': 'no_usd_price',
-        'text': 'A price in USD is required here.'
+        "label": "no_usd_price",
+        "text": "A price in USD is required here."
     }
     blank_text = {
-        'label': 'blank_text',
-        'text': 'Expected text here.'
+        "label": "blank_text",
+        "text": "Expected text here."
     }
     unknown = {
-        'label': 'unknown_error',
-        'text': 'There was an unexpected error parsing this cell. Try to correct the cell value or contact support.'
+        "label": "unknown_error",
+        "text": "There was an unexpected error parsing this cell. Try to correct the cell value or contact support."
     }
     row_error = {
-        'label': 'row_error',
-        'text': 'Error for this row. See cell warnings for details.'
+        "label": "row_error",
+        "text": "Error for this row. See cell warnings for details."
     }
     no_rows = {
-        'label': 'no_rows',
-        'text': "No usable rows could be extracted."
+        "label": "no_rows",
+        "text": "No usable rows could be extracted."
     }
