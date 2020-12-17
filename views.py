@@ -485,7 +485,7 @@ def my_user_info():
         if "email" in request.json:
             email = request.json["email"]
             if not email:
-                return abort_json(400, u"Can"t remove your email address.")
+                return abort_json(400, u"Can't remove your email address.")
             email_user = lookup_user(email=email)
             if email_user and email_user.id != login_user.id:
                 return abort_json(409, u"A user with email {} already exists.".format(email))
@@ -649,12 +649,12 @@ def institution_ror_id(institution_id, ror_id):
 
     if request.method == "POST":
         if not grid_ids:
-            return abort_json(404, u"Unknown ROR "{}".".format(ror_id))
+            return abort_json(404, u"Unknown ROR '{}'.".format(ror_id))
 
         db.session.merge(RorId(institution_id=inst.id, ror_id=ror_id))
         for grid_id in grid_ids:
             db.session.merge(GridId(institution_id=inst.id, grid_id=grid_id))
-    elif request.method == "DELETE':
+    elif request.method == "DELETE":
         RorId.query.filter(RorId.ror_id == ror_id, RorId.institution_id == institution_id).delete()
         for grid_id in grid_ids:
             GridId.query.filter(GridId.grid_id == grid_id, GridId.institution_id == institution_id).delete()
