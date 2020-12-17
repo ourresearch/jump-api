@@ -522,7 +522,7 @@ class Package(db.Model):
                     "value": package_price_defaults[issn_l] or public_price_defaults[issn_l],
                 },
             ],
-            "issns": journal_rows.get(issn_l, {}).get("issns', [])
+            "issns": journal_rows.get(issn_l, {}).get("issns", [])
         } for issn_l in distinct_issnls]
 
     # def get_unexpectedly_no_price(self):

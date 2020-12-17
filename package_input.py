@@ -218,7 +218,7 @@ class PackageInput:
 
             headers = {
                 "Content-Length": raw_object["ContentLength"],
-                "Content-Disposition": "attachment; filename="{}"".format(object_details.object_name)
+                "Content-Disposition": "attachment; filename='{}'".format(object_details.object_name)
             }
 
             return {
@@ -536,7 +536,7 @@ class PackageInput:
         try:
             normalized_rows, error_rows = cls.normalize_rows(file_name, file_package=my_package)
         except (UnicodeError, csv.Error) as e:
-            message = u"Error reading file: "{}". Try opening this file, resaving as .xlsx, and uploading that.".format(
+            message = u"Error reading file: '{}'. Try opening this file, resaving as .xlsx, and uploading that.".format(
                 e.message
             )
             return {"success": False, "message": message, "warnings": []}

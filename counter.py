@@ -155,9 +155,7 @@ class CounterInput(db.Model, PackageInput):
                 report_name = values["report_name"]
 
         if not report_version or not report_name:
-
-
-        print u"Detected report {} {}".format(report_version, report_name)
+            print u"Detected report {} {}".format(report_version, report_name)
 
         # check for COUNTER 5
         # cop5_error = u"Sorry, we don"t support COUNTER 5 yet. Please upload a COUNTER 4 JR_1 file."
