@@ -34,7 +34,7 @@ def get_ids():
     return rows
 
 class Package(db.Model):
-    __tablename__ = 'jump_account_package'
+    __tablename__ = "jump_account_package"
     institution_id = db.Column(db.Text, db.ForeignKey("jump_institution.id"))
     package_id = db.Column(db.Text, primary_key=True)
     publisher = db.Column(db.Text)
@@ -45,8 +45,8 @@ class Package(db.Model):
     big_deal_cost = db.Column(db.Numeric)
     is_deleted = db.Column(db.Boolean)
 
-    saved_scenarios = db.relationship('SavedScenario', lazy='subquery', backref=db.backref("package", lazy="subquery"))
-    institution = db.relationship('Institution', lazy='subquery', uselist=False)
+    saved_scenarios = db.relationship("SavedScenario", lazy="subquery", backref=db.backref("package", lazy="subquery"))
+    institution = db.relationship("Institution", lazy="subquery", uselist=False)
 
     def __init__(self, **kwargs):
         self.created = datetime.datetime.utcnow().isoformat()
@@ -123,7 +123,7 @@ class Package(db.Model):
             title as title
             from jump_core_journals core
             left outer join ricks_journal on core.issn_l = ricks_journal.issn_l
-            where package_id='{package_id}' 
+            where package_id="{package_id}" 
             order by title desc
             """.format(package_id=self.package_id_for_db)
         rows = get_sql_dict_rows(q)
@@ -202,7 +202,7 @@ class Package(db.Model):
         elif self.publisher == "TaylorFrancis":
             return "(rj.publisher ilike '%informa uk%')"
         else:
-            return 'false'
+            return "false"
 
     @property
     def publisher_name_snippets(self):
@@ -437,7 +437,7 @@ class Package(db.Model):
         return response
 
     def get_journal_attributes(self):
-        counter_rows = dict((x['issn_l'], x) for x in self.get_unfiltered_counter_rows)
+        counter_rows = dict((x["issn_l"], x) for x in self.get_unfiltered_counter_rows)
         counter_defaults = defaultdict(lambda: defaultdict(lambda: None), counter_rows)
 
         # pa_rows = get_perpetual_access_from_cache([self.package_id])
@@ -450,9 +450,9 @@ class Package(db.Model):
         package_price_defaults = defaultdict(lambda: None, package_prices)
         public_price_defaults = defaultdict(lambda: None, public_prices)
 
-        open_access = set([x['issn_l'] for x in self.get_diff_open_access_journals])
-        not_published_2019 = set([x['issn_l'] for x in self.get_diff_not_published_in_2019])
-        changed_publisher = set([x['issn_l'] for x in self.get_diff_changed_publisher])
+        open_access = set([x["issn_l"] for x in self.get_diff_open_access_journals])
+        not_published_2019 = set([x["issn_l"] for x in self.get_diff_not_published_in_2019])
+        changed_publisher = set([x["issn_l"] for x in self.get_diff_changed_publisher])
 
         distinct_issnls = set([x for x in
                                counter_rows.keys() +
@@ -468,61 +468,61 @@ class Package(db.Model):
 
         for issn_l, journal in journal_rows.items():
             try:
-                journal['issns'] = json.loads(journal['issns'])
+                journal["issns"] = json.loads(journal["issns"])
             except (TypeError, ValueError):
-                journal['issns'] = None
+                journal["issns"] = None
 
         return [{
-            'issn_l': issn_l,
-            'name': journal_rows.get(issn_l, {}).get('title', None),
-            'upload_data': {
-                'counter_downloads': counter_defaults[issn_l]['num_2018_downloads'],
-                'perpetual_access_dates': [pa_defaults[issn_l]['start_date'], pa_defaults[issn_l]['end_date']],
-                'price': package_price_defaults[issn_l],
+            "issn_l": issn_l,
+            "name": journal_rows.get(issn_l, {}).get("title", None),
+            "upload_data": {
+                "counter_downloads": counter_defaults[issn_l]["num_2018_downloads"],
+                "perpetual_access_dates": [pa_defaults[issn_l]["start_date"], pa_defaults[issn_l]["end_date"]],
+                "price": package_price_defaults[issn_l],
             },
-            'has_upload_data': {
-                'counter': issn_l in counter_rows,
-                'perpetual_access': issn_l in pa_rows,
-                'price': issn_l in package_prices,
+            "has_upload_data": {
+                "counter": issn_l in counter_rows,
+                "perpetual_access": issn_l in pa_rows,
+                "price": issn_l in package_prices,
             },
-            'attributes': {
-                'is_oa': issn_l in open_access,
-                'not_published_2019': issn_l in not_published_2019,
-                'changed_publisher': issn_l in changed_publisher,
-                'is_hybrid_2019': issn_l in get_hybrid_2019(),
-                'has_public_price': issn_l in public_prices,
-                'public_price': public_price_defaults[issn_l],
+            "attributes": {
+                "is_oa": issn_l in open_access,
+                "not_published_2019": issn_l in not_published_2019,
+                "changed_publisher": issn_l in changed_publisher,
+                "is_hybrid_2019": issn_l in get_hybrid_2019(),
+                "has_public_price": issn_l in public_prices,
+                "public_price": public_price_defaults[issn_l],
             },
-            'data_sources': [
+            "data_sources": [
                 {
-                    'id': 'counter',
-                    'source': 'custom' if issn_l in counter_rows else None,
-                    'value': counter_defaults[issn_l]['num_2018_downloads'],
+                    "id": "counter",
+                    "source": "custom" if issn_l in counter_rows else None,
+                    "value": counter_defaults[issn_l]["num_2018_downloads"],
                 },
                 {
-                    'id': 'perpetual_access',
-                    'source': (
-                        'custom' if issn_l in pa_rows
+                    "id": "perpetual_access",
+                    "source": (
+                        "custom" if issn_l in pa_rows
                         else None if pa_rows
-                        else 'default'
+                        else "default"
                     ),
-                    'value': (
-                        [pa_rows[issn_l]['start_date'], pa_rows[issn_l]['end_date']] if issn_l in pa_rows
+                    "value": (
+                        [pa_rows[issn_l]["start_date"], pa_rows[issn_l]["end_date"]] if issn_l in pa_rows
                         else [None, None] if pa_rows
                         else [datetime.datetime(2010, 1, 1), None]
                     ),
                 },
                 {
-                    'id': 'price',
-                    'source': (
-                        'custom' if package_prices.get(issn_l, None) is not None
-                        else 'default' if public_prices.get(issn_l, None) is not None
+                    "id": "price",
+                    "source": (
+                        "custom" if package_prices.get(issn_l, None) is not None
+                        else "default" if public_prices.get(issn_l, None) is not None
                         else None
                     ),
-                    'value': package_price_defaults[issn_l] or public_price_defaults[issn_l],
+                    "value": package_price_defaults[issn_l] or public_price_defaults[issn_l],
                 },
             ],
-            'issns': journal_rows.get(issn_l, {}).get('issns', [])
+            "issns": journal_rows.get(issn_l, {}).get("issns', [])
         } for issn_l in distinct_issnls]
 
     # def get_unexpectedly_no_price(self):
@@ -541,7 +541,7 @@ class Package(db.Model):
     #                 join ricks_journal_flat rj on u.journal_issn_l=rj.issn
     #                 where rj.issn_l in (
     #                 select jump_counter.issn_l from jump_counter
-    #                  where package_id='{package_id}'
+    #                  where package_id="{package_id}'
     #             )
     #             and journal_is_oa='false'
     #             and year=2019
@@ -639,14 +639,14 @@ class Package(db.Model):
 
     def to_package_dict(self):
         journal_detail = dict(self.get_package_counter_breakdown())
-        journal_detail['publisher_id'] = journal_detail.pop('package_id')
+        journal_detail["publisher_id"] = journal_detail.pop("package_id")
 
         # counter stats
 
         counter_errors = CounterInput.load_errors(self.package_id)
 
         if counter_errors:
-            num_counter_error_rows = len(counter_errors['rows'])
+            num_counter_error_rows = len(counter_errors["rows"])
         else:
             num_counter_error_rows = 0
 
@@ -660,7 +660,7 @@ class Package(db.Model):
         pa_errors = PerpetualAccessInput.load_errors(self.package_id)
 
         if pa_errors:
-            num_pa_error_rows = len(pa_errors['rows'])
+            num_pa_error_rows = len(pa_errors["rows"])
         else:
             num_pa_error_rows = 0
 
@@ -674,7 +674,7 @@ class Package(db.Model):
         price_errors = JournalPriceInput.load_errors(self.package_id)
 
         if price_errors:
-            num_price_error_rows = len(price_errors['rows'])
+            num_price_error_rows = len(price_errors["rows"])
         else:
             num_price_error_rows = 0
 
@@ -693,48 +693,48 @@ class Package(db.Model):
             counter_uploaded = num_counter_rows > 0
 
         return {
-            'id': self.package_id,
-            'name': self.package_name,
-            'publisher': self.publisher,
-            'is_demo': self.is_demo,
-            'journal_detail': journal_detail,
-            'scenarios': [s.to_dict_minimal() for s in self.saved_scenarios],
-            'data_files': [
+            "id": self.package_id,
+            "name": self.package_name,
+            "publisher": self.publisher,
+            "is_demo": self.is_demo,
+            "journal_detail": journal_detail,
+            "scenarios": [s.to_dict_minimal() for s in self.saved_scenarios],
+            "data_files": [
                 {
-                    'name': 'counter',
-                    'uploaded': counter_uploaded,
-                    'rows_count': num_counter_rows,
-                    'error_rows': counter_errors,
+                    "name": "counter",
+                    "uploaded": counter_uploaded,
+                    "rows_count": num_counter_rows,
+                    "error_rows": counter_errors,
                 },
                 {
-                    'name': 'perpetual-access',
-                    'uploaded': False if self.is_demo else num_pa_rows > 0,
-                    'rows_count': num_pa_rows,
-                    'error_rows': pa_errors,
+                    "name": "perpetual-access",
+                    "uploaded": False if self.is_demo else num_pa_rows > 0,
+                    "rows_count": num_pa_rows,
+                    "error_rows": pa_errors,
                 },
                 {
-                    'name': 'price',
-                    'uploaded': False if self.is_demo else num_price_rows > 0,
-                    'rows_count': num_price_rows,
-                    'error_rows': price_errors,
+                    "name": "price",
+                    "uploaded": False if self.is_demo else num_price_rows > 0,
+                    "rows_count": num_price_rows,
+                    "error_rows": price_errors,
                 },
                 # TODO: remove prices when not used by frontend
                 {
-                    'name': 'prices',
-                    'uploaded': False if self.is_demo else num_price_rows > 0,
-                    'rows_count': num_price_rows,
-                    'error_rows': price_errors,
+                    "name": "prices",
+                    "uploaded": False if self.is_demo else num_price_rows > 0,
+                    "rows_count": num_price_rows,
+                    "error_rows": price_errors,
                 },
                 {
-                    'name': 'core-journals',
-                    'uploaded': False if self.is_demo else num_core_rows > 0,
-                    'rows_count': num_core_rows,
-                    'error_rows': None,
+                    "name": "core-journals",
+                    "uploaded": False if self.is_demo else num_core_rows > 0,
+                    "rows_count": num_core_rows,
+                    "error_rows": None,
                 },
             ],
-            'journals': self.get_journal_attributes(),
+            "journals": self.get_journal_attributes(),
             "is_owned_by_consortium": self.is_owned_by_consortium,
-            'is_deleted': self.is_deleted is not None and self.is_deleted
+            "is_deleted": self.is_deleted is not None and self.is_deleted
         }
 
     def to_dict_minimal(self):
@@ -757,7 +757,7 @@ def clone_demo_package(institution):
 
     # jump_account_package
     new_package = Package(
-        package_id='package-{}'.format(shortuuid.uuid()[0:12]),
+        package_id="package-{}".format(shortuuid.uuid()[0:12]),
         publisher=demo_package.publisher,
         package_name=demo_package.publisher,
         created=now,
@@ -770,7 +770,7 @@ def clone_demo_package(institution):
     # jump_package_scenario
     demo_scenarios = SavedScenario.query.filter(SavedScenario.package_id == DEMO_PACKAGE_ID).all()
     for scenario in demo_scenarios:
-        new_scenario = SavedScenario(False, 'scenario-{}'.format(shortuuid.uuid()[0:12]), None)
+        new_scenario = SavedScenario(False, "scenario-{}".format(shortuuid.uuid()[0:12]), None)
         new_scenario.package_id = new_package.package_id
         new_scenario.scenario_name = scenario.scenario_name
         new_scenario.created = now

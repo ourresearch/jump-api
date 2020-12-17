@@ -4,7 +4,7 @@ from scenario import refresh_cached_prices_from_db
 
 
 class JournalPrice(db.Model):
-    __tablename__ = 'jump_journal_prices'
+    __tablename__ = "jump_journal_prices"
 
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
     publisher = db.Column(db.Text)
@@ -16,18 +16,18 @@ class JournalPrice(db.Model):
 
     def to_dict(self):
         return {
-            'package_id': self.package_id,
-            'publisher': self.publisher,
-            'title': self.title,
-            'issn_l': self.issn_l,
-            'subject': self.subject,
-            'usa_usd': self.usa_usd,
-            'year': self.year,
+            "package_id": self.package_id,
+            "publisher": self.publisher,
+            "title": self.title,
+            "issn_l": self.issn_l,
+            "subject": self.subject,
+            "usa_usd": self.usa_usd,
+            "year": self.year,
         }
 
 
 class JournalPriceInput(db.Model, PackageInput):
-    __tablename__ = 'jump_journal_prices_input'
+    __tablename__ = "jump_journal_prices_input"
 
     publisher = db.Column(db.Text)
     issn = db.Column(db.Text, primary_key=True)
@@ -38,7 +38,7 @@ class JournalPriceInput(db.Model, PackageInput):
 
     @classmethod
     def import_view_name(cls):
-        return 'jump_journal_prices_view'
+        return "jump_journal_prices_view"
 
     @classmethod
     def destination_table(cls):
@@ -46,42 +46,42 @@ class JournalPriceInput(db.Model, PackageInput):
 
     @classmethod
     def issn_columns(cls):
-        return ['issn']
+        return ["issn"]
 
     @classmethod
     def csv_columns(cls):
         return {
-            'publisher': {
-                'normalize': cls.strip_text,
-                'name_snippets': [u'publisher'],
-                'required': False,
+            "publisher": {
+                "normalize": cls.strip_text,
+                "name_snippets": [u"publisher"],
+                "required": False,
             },
-            'issn': {
-                'normalize': cls.normalize_issn,
-                'name_snippets': [u'issn'],
-                'required': True,
-                'warn_if_blank': True,
+            "issn": {
+                "normalize": cls.normalize_issn,
+                "name_snippets": [u"issn"],
+                "required": True,
+                "warn_if_blank": True,
             },
-            'subject': {
-                'normalize': cls.strip_text,
-                'name_snippets': [u'subj'],
-                'required': False,
+            "subject": {
+                "normalize": cls.strip_text,
+                "name_snippets": [u"subj"],
+                "required": False,
             },
-            'usa_usd': {
-                'normalize': cls.normalize_price,
-                'name_snippets': [u'price', u'usd', u'cost'],
-                'warn_if_blank': True,
+            "usa_usd": {
+                "normalize": cls.normalize_price,
+                "name_snippets": [u"price", u"usd", u"cost"],
+                "warn_if_blank": True,
             },
-            'year': {
-                'normalize': cls.normalize_year,
-                'name_snippets': [u'year', u'date'],
-                'required': False,
+            "year": {
+                "normalize": cls.normalize_year,
+                "name_snippets": [u"year", u"date"],
+                "required": False,
             }
         }
 
     @classmethod
     def file_type_label(cls):
-        return u'price'
+        return u"price"
 
     @classmethod
     def clear_caches(cls, my_package):
