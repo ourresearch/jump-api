@@ -23,17 +23,12 @@ for filename in filenames:
     contents_string = s3_clientobj["Body"].read().decode("utf-8")
 
     contents_json = json.loads(contents_string)
-    print("json loaded data")
-    print(type(contents_json))
-    print contents_json.keys()
 
     report_type = contents_json["Report_Header"]["Report_ID"]
     institution_name = contents_json["Report_Header"]["Institution_Name"]
 
-    print report_type, institution_name
-
     report_items = contents_json["Report_Items"]
-    print len(report_items)
+    print report_type, institution_name, len(report_items)
 
     input_dict["package_id"] = u"package-jiscels{}".format(filename[0:3])
     input_dict["report_year"] = 2020
@@ -79,12 +74,14 @@ for filename in filenames:
     input_strings = input_strings.replace("None", "null")
 
     with get_db_cursor() as cursor:
+        print "starting db insert"
         command = """
                 insert into jump_counter_input (issn, total, package_id, report_year, report_name, report_version, metric_type, yop, access_type) 
                 values {}
             """.format(input_strings)
         # print command
         cursor.execute(command)
+        print "db insert done"
 
 with get_db_cursor() as cursor:
     command = """delete from jump_counter where package_id ilike 'package-jiscels%'"""
