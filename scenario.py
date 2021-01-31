@@ -700,10 +700,10 @@ def get_package_specific_scenario_data_from_db(input_package_id):
                 if is_counter5:
                     if row["report_name"] in ["TRJ2", "TRJ3"]:
                         if row["metric_type"] in ["Unique_Item_Requests", "No_License"]:
-                            counter_dict[row["issn_l"]] += row["total"]
+                            counter_dict[row["issn_l"]] += row.get("total", 0)
                     # else don't do anything with it for now
                 else:
-                    counter_dict[row["issn_l"]] += row["total"]
+                    counter_dict[row["issn_l"]] += row.get("total")
 
     timing.append(("time from db: counter", elapsed(section_time, 2)))
     section_time = time()
