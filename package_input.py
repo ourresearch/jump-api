@@ -543,8 +543,6 @@ class PackageInput:
         except RuntimeError as e:
             return {"success": False, "message": e.message, "warnings": []}
 
-
-        print normalized_rows[0:4]
         # save errors
 
         db.session.query(PackageFileErrorRow).filter(
@@ -576,6 +574,8 @@ class PackageInput:
             else:
                 rows_to_delete = db.session.query(cls).filter(cls.package_id == package_id)
 
+
+            db.session.flush()
             rows_to_delete.delete()
 
             sorted_fields = sorted(normalized_rows[0].keys())
@@ -602,6 +602,7 @@ class PackageInput:
             cls._copy_raw_to_s3(file_name, package_id)
 
         if commit:
+            db.session.flush()  # see if this fixes Serializable isolation violation
             db.session.commit()
             if my_package:
                 cls.clear_caches(my_package)

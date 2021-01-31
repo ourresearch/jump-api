@@ -123,8 +123,7 @@ class CounterInput(db.Model, PackageInput):
         version_labels = {
             "Journal Report 1 (R4)": {
                 "report_version": "4",
-                "report_name": "JR1",
-                "non_null_columns": [""]
+                "report_name": "JR1"
             },
             "TR_J1": {
                 "report_version": "5",
@@ -144,18 +143,34 @@ class CounterInput(db.Model, PackageInput):
             },
         }
 
-        report_version = None
-        report_name = None
+        assigned_label = None
 
         normalized_header_text = u"".join([re.sub(ur"\s*", u"", u"".join(row)).lower() for row in header_rows])
-        for label, values in version_labels.items():
+        for label in version_labels:
             normalized_label = re.sub(ur"\s*", "", label).lower()
             if normalized_label in normalized_header_text:
-                report_version = values["report_version"]
-                report_name = values["report_name"]
+                assigned_label = label
 
-        if not report_version or not report_name:
-            print u"Detected report {} {}".format(report_version, report_name)
+        if not assigned_label:
+            first_row = normalized_rows[0]
+            if "metric_type" not in first_row:
+                assigned_label = "Journal Report 1 (R4)"
+            elif "yop" in first_row:
+                assigned_label = "TR_J4"
+            elif first_row["metric_type"] == "No_License":
+                assigned_label = "TR_J2"
+            elif "OA_Gold" in [row["access_type"] for row in normalized_rows]:
+                assigned_label = "TR_J3"
+
+        if assigned_label:
+            print u"Recognized the file type as {}".format(version_labels[assigned_label])
+            report_version = version_labels[assigned_label]["report_version"]
+            report_name = version_labels[assigned_label]["report_name"]
+        else:
+            print u"Warning: Didn't recognize the counter file type"
+            report_version = None
+            report_name = None
+
 
         # check for COUNTER 5
         # cop5_error = u"Sorry, we don"t support COUNTER 5 yet. Please upload a COUNTER 4 JR_1 file."

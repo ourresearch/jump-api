@@ -15,13 +15,12 @@ import codecs
 
 from app import db
 from app import get_db_cursor
-from account import Account
 from package import Package
-from account_grid_id import AccountGridId
 from saved_scenario import SavedScenario
 from util import read_csv_file
 from util import safe_commit
 from util import is_issn
+from util import write_to_tempfile
 
 
 def convert_from_utf16_to_utf8(filename):
@@ -52,59 +51,6 @@ def convert_date_spaces_to_dashes(filename):
     return new_filename
 
 
-def build_counter_import_file_for_one(counter_file, username, publisher):
-
-    print u"building counter for {} using filename {}".format(username, counter_file)
-    response = []
-
-    my_account = Account.query.filter(Account.username == username).first()
-    package_id = my_account.packages[0].package_id
-
-    # counter_file = convert_from_utf16_to_utf8(counter_file)
-    counter_rows = read_csv_file(counter_file)
-    for counter_row in counter_rows:
-        export_dict = {}
-        export_dict["organization"] = username
-        export_dict["package_id"] = package_id
-        export_dict["publisher"] = publisher
-        export_dict["issn"] = counter_row["ISSN"]
-        export_dict["total"] = counter_row["Total"]
-        response.append(export_dict)
-
-    return response
-
-
-
-def build_counter_import_file(filename=None, username=None):
-    publisher = "Elsevier"
-
-    if filename:
-        rows = read_csv_file(filename)
-        usernames = [row["username"] for row in rows if row["add_now"]=="1"]
-    else:
-        usernames = [username]
-    lines = []
-    for username in usernames:
-        my_files = glob.glob("/Users/hpiwowar/Downloads/{}_counter.csv".format(username.replace(" ", "_")))
-        if not my_files:
-            print "error, doesn't match any counter input files"
-
-        for counter_file in my_files:
-            new_lines = build_counter_import_file_for_one(counter_file, username, publisher)
-            lines += new_lines
-
-    # print lines
-    with open("/Users/hpiwowar/Downloads/counter_import.csv", "wb") as export_file:
-        csv_writer = csv.writer(export_file, encoding='utf-8')
-        keys = ["package_id", "issn", "total"]
-        csv_writer.writerow(keys)
-        for line in lines:
-            csv_writer.writerow([line[k] for k in keys])
-
-    print "/Users/hpiwowar/Downloads/counter_import.csv"
-
-
-
 
 def import_consortium_counter_xls(xls_filename):
     results = []
@@ -123,8 +69,8 @@ def import_consortium_counter_xls(xls_filename):
             column_names[column.value] = i
 
         for row_cells in sheet.iter_rows(min_row=1):
-            issn = row_cells[column_names['Print ISSN']].value
-            total = row_cells[column_names['Reporting period total']].value
+            issn = row_cells[column_names["Print ISSN"]].value
+            total = row_cells[column_names["Reporting period total"]].value
             if is_issn(issn):
                 results.append({
                     "university": university,
@@ -135,7 +81,7 @@ def import_consortium_counter_xls(xls_filename):
                 # print university, issn, total
 
         with open("data/countercleaned.csv", "w") as csv_file:
-            csv_writer = csv.writer(csv_file, encoding='utf-8')
+            csv_writer = csv.writer(csv_file, encoding="utf-8")
             header = ["university", "issn", "total"]
             csv_writer.writerow(header)
             for my_dict in results:
@@ -162,10 +108,10 @@ def import_perpetual_access_files():
                     column_names[column.value] = i
 
                 for row_cells in sheet.iter_rows(min_row=1):
-                    username = row_cells[column_names['Account Name']].value
-                    issn = row_cells[column_names['ISSN (FS split)']].value
-                    start_date = row_cells[column_names['Content Start Date']].value
-                    end_date = row_cells[column_names['Content End Date']].value
+                    username = row_cells[column_names["Account Name"]].value
+                    issn = row_cells[column_names["ISSN (FS split)"]].value
+                    start_date = row_cells[column_names["Content Start Date"]].value
+                    end_date = row_cells[column_names["Content End Date"]].value
                     if is_issn(issn):
                         new_dict = {
                             "username": username,
@@ -191,7 +137,7 @@ def import_perpetual_access_files():
                 print ".",
 
     with open("/Users/hpiwowar/Downloads/perpetual_access_cleaned.csv", "w") as csv_file:
-        csv_writer = csv.writer(csv_file, encoding='utf-8')
+        csv_writer = csv.writer(csv_file, encoding="utf-8")
         header = ["username", "issn", "start_date", "end_date"]
         csv_writer.writerow(header)
         for my_dict in results:
@@ -199,113 +145,94 @@ def import_perpetual_access_files():
     print "/Users/hpiwowar/Downloads/perpetual_access_cleaned.csv"
 
 
-def create_accounts(filename):
-    rows = read_csv_file(filename)
-    # todo just one for now
-    for row in rows:
-        print "row:", row["username"], row["display_name"], row["grid_id"], row["add_now"]
 
-        if not row["add_now"] == "1":
-            print u"skipping {}, add_row != 1".format(row["username"])
-        elif Account.query.filter(Account.username==row["username"]).first():
-            if row["grid_id"] and not row["display_name"]:
-                if AccountGridId.query.filter(AccountGridId.grid_id==row["grid_id"]).first():
-                    print "grid id already there"
-                else:
-                    my_account = Account.query.filter(Account.username==row["username"]).first()
-                    print u"adding new grid id {} to {}".format(row["grid_id"], row["username"])
-                    new_account_grid_object = AccountGridId()
-                    new_account_grid_object.grid_id = row["grid_id"]
-                    my_account.grid_id_objects += [new_account_grid_object]
-                    db.session.add(new_account_grid_object)
-                    safe_commit(db)
-            else:
-                print u"skipping {}, already in db".format(row["username"])
-        else:
-            new_account = Account()
-            new_account.username = row["username"]
-            new_account.password_hash = generate_password_hash(u"{}123".format(row["username"]))
-            new_account.display_name = row["display_name"]
-            new_account.is_consortium = False
-
-            new_account_grid_object = AccountGridId()
-            new_account_grid_object.grid_id = row["grid_id"]
-
-            new_package = Package()
-            new_package.package_id = shortuuid.uuid()[0:8]
-            new_package.publisher = "Elsevier"
-            new_package.package_name = u"{} Elsevier".format(row["display_name"])
-
-            scenario_id = shortuuid.uuid()[0:8]
-            new_saved_scenario = SavedScenario(False, scenario_id, None)
-            new_saved_scenario.scenario_name = u"My first scenario"
-            new_saved_scenario.is_base_scenario = True
-
-            new_package.saved_scenarios = [new_saved_scenario]
-            new_account.packages = [new_package]
-            new_account.grid_id_objects = [new_account_grid_object]
-
-            db.session.add(new_account)
-            safe_commit(db)
-
-            print u"created {}, package_id={}".format(new_account.username, new_account.packages[0].package_id)
-
-
-def check_passwords():
-    accounts = Account.query.all()
-    for my_account in accounts:
-        # hashed_username_password = generate_password_hash(u"{}".format(my_account.username))
-        if check_password_hash(my_account.password_hash, my_account.username):
-            if not my_account.consortium_id and my_account.username not in ("cern", "msu", "windsor", "demo", "suny"):
-                print u"{} has NOT changed password.  {}".format(my_account, my_account.created.isoformat())
-                new_hashed_username_password = generate_password_hash(u"{}123".format(my_account.username))
-                my_account.password_hash = new_hashed_username_password
-        else:
-            pass
-            # print ".",
-            # print u"{} has changed password".format(my_account)
-
-    safe_commit(db)
-    print "committed"
 
 
 # python import_accounts.py --filename=~/Downloads/new_accounts.csv
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run stuff.")
-    parser.add_argument('--filename', type=str, default=None, help="input file to parse")
-    parser.add_argument('--username', type=str, default=None, help="username to input")
+    parser.add_argument("--filename", type=str, default=None, help="input file to parse")
+    parser.add_argument("--username", type=str, default=None, help="username to input")
 
     parsed_args = parser.parse_args()
     parsed_vars = vars(parsed_args)
 
-
-    # check_passwords()
-    # import_perpetual_access_files()
-
-    create_accounts(parsed_vars["filename"])
-    build_counter_import_file(filename=parsed_vars["filename"], username=parsed_vars["username"])
+    # create_accounts(parsed_vars["filename"])
+    # build_counter_import_file(filename=parsed_vars["filename"], username=parsed_vars["username"])
 
 
-    # then import it into jump_counter_input
-    # then
-    # create table jump_counter_newest distkey (package_id) interleaved sortkey (package_id, issn_l) as (select * from jump_counter_view);
-    # select * from jump_counter_newest order by random() limit 1000;
-    # alter table jump_counter rename to jump_counter_old;
-    # alter table jump_counter_newest rename to jump_counter;
-    # drop table jump_counter_old;
-    #
-    # drop table jump_apc_authorships_new;
-    # create table jump_apc_authorships_new distkey (package_id) interleaved sortkey (package_id, doi, issn_l) as (select * from jump_apc_authorships_view);
-    # select * from jump_apc_authorships_new order by random() limit 1000;
-    # alter table jump_apc_authorships rename to jump_apc_authorships_old;
-    # alter table jump_apc_authorships_new rename to jump_apc_authorships;
-    # drop table jump_apc_authorships_old;
-    #
-    # create table jump_citing_new distkey(issn_l) interleaved sortkey (citing_org, grid_id, year, issn_l) as (select * from jump_citing_view where grid_id in (select grid_id from jump_account_grid_id))
-    # select * from jump_citing_new order by random() limit 1000;
-    # alter table jump_citing rename to jump_citing_old;
-    # alter table jump_citing_new rename to jump_citing;
-    # drop table jump_citing_old;
+    crkn_ids = read_csv_file(u"/Users/hpiwowar/Documents/Projects/tiv2/jump-api/data/crkn_lookup.csv")
+    institution_for_all_these_packages = "institution-fVnPvXK9iBYA"
+
+    # report_name = "TRJ2"
+    # all_in_one_data_rows = read_csv_file(u"/Users/hpiwowar/Documents/Projects/tiv2/jump-api/data/counter5_crkn/TR_J2 SUSHI Harvester CRKN_Wiley-2019_incl-non-participants.csv")
+
+    # report_name = "TRJ3"
+    # all_in_one_data_rows = read_csv_file(u"/Users/hpiwowar/Documents/Projects/tiv2/jump-api/data/counter5_crkn/TR_J3 SUSHI Harvester CRKN_Wiley-2019.csv")
+
+    # report_name = "TRJ4"
+    # all_in_one_data_rows = read_csv_file(u"/Users/hpiwowar/Documents/Projects/tiv2/jump-api/data/counter5_crkn/1 TR_J4 SUSHI Harvester CRKN_Wiley-2019.csv")
+    # all_in_one_data_rows = read_csv_file(u"/Users/hpiwowar/Documents/Projects/tiv2/jump-api/data/counter5_crkn/2 TR_J4 SUSHI Harvester CRKN_Wiley-2019.csv")
+
+    report_name = "TRJ4"
+    all_in_one_data_rows = read_csv_file(u" /Users/hpiwowar/Dropbox/companywide/unsub_customer_data/learn_counter5/raw_from_unis/crkn/elsevier/COP5_TR_J4_2019_UIR.xlsx")
+
+    for row in crkn_ids:
+        print u"row: {}".format(row.values())
+
+        publisher_name = u"Elseiver"
+        crkn_institution_id = row["crkn_elsevier"]
+
+
+
+        institution_number = row["institution_id"].replace("institution-", "")
+        package_id = u"package-CRKNcounter5{}{}".format(publisher_name, institution_number)
+        package_name = u"CRKN COUNTER5 {} {}".format(publisher_name, row["name"])
+
+        from counter import CounterInput
+        my_counter_test = CounterInput.query.filter(CounterInput.package_id == package_id,
+                                                    CounterInput.report_name == report_name).first()
+        has_counter_data_to_load = False
+
+        if my_counter_test:
+            print u"counter already loaded for {}".format(report_name)
+        else:
+            temp_filename = "data/temp.csv"
+            with open(temp_filename, "w") as csv_file:
+                csv_writer = csv.writer(csv_file, encoding="utf-8")
+                header = all_in_one_data_rows[0].keys()
+                csv_writer.writerow(header)
+                for row in all_in_one_data_rows:
+                    if row["Customer ID"] == crkn_institution_id:
+                        # doing this hacky thing so excel doesn't format the issn as a date :(
+                        csv_writer.writerow([row[k] for k in header])
+                        has_counter_data_to_load = True
+
+            print u"now loading in counter data"
+            if not has_counter_data_to_load:
+                print u"has no counter data to load"
+            else:
+                # see if package exists:
+                my_package = Package.query.get(package_id)
+                if not my_package:
+                    my_package = Package(
+                        package_id=package_id,
+                        publisher=publisher_name,
+                        package_name=package_name,
+                        created=datetime.datetime.utcnow().isoformat(),
+                        institution_id=institution_for_all_these_packages,
+                        is_demo=False
+                    )
+                    db.session.add(my_package)
+                    safe_commit(db)
+                else:
+                    print "package already created"
+
+                print u"{}".format(my_package)
+
+                CounterInput.load(package_id, temp_filename, commit=True)
+
+
 
 
 
