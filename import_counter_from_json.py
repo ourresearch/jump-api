@@ -83,7 +83,7 @@ for filename in filenames:
                 insert into jump_counter_input (issn, total, package_id, report_year, report_name, report_version, metric_type, yop, access_type) 
                 values {}
             """.format(input_strings)
-        print command
+        # print command
         cursor.execute(command)
 
 with get_db_cursor() as cursor:
