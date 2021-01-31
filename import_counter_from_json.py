@@ -6,10 +6,10 @@ from app import get_db_cursor
 
 s3_client = boto3.client("s3")
 
-# filenames = [key["Key"] for key in s3_client.list_objects(Bucket="unsub-jisc")["Contents"]]
-filenames = ["oxf_787_SD_tr_j2_2020-01_2020-12.json",
-             "oxf_787_SD_tr_j3_2020-01_2020-12.json",
-             "oxf_787_SD_tr_j4_2020-01_2020-12.json"]
+filenames = [key["Key"] for key in s3_client.list_objects(Bucket="unsub-jisc")["Contents"]]
+# filenames = ["oxf_787_SD_tr_j2_2020-01_2020-12.json",
+#              "oxf_787_SD_tr_j3_2020-01_2020-12.json",
+#              "oxf_787_SD_tr_j4_2020-01_2020-12.json"]
 print filenames
 print len(filenames)
 
