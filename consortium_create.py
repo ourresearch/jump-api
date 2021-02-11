@@ -19,39 +19,52 @@ from saved_scenario import save_raw_scenario_to_db
 from saved_scenario import save_raw_member_institutions_included_to_db
 from util import safe_commit
 
-consortium_institution_id = "institution-3tLYzP8JuYUf"
+consortium_institution_id = "institution-abc"
 publisher = "Elsevier"
 
-# consortium_display_name = "Elsevier (Full)"
-# consortium_short_name = "viva_elsevier_full"
-# member_package_name = "Elsevier (Full)"
 
-consortium_display_name = "Elsevier (Freedom)"
-consortium_short_name = "viva_elsevier_freedom"
-member_package_name = "Elsevier (Freedom)"
+consortium_display_name = "Elsevier"
+consortium_short_name = "abc_elsevier"
+# member_package_name = "Wiley"
 
 institution_ids = """
-        institution-79mQVmZAnGhj
-        institution-mDphqabkcBRz
-        institution-AcGRzdBPpVuP
-        institution-uRR3tLL7xAaz
-        institution-xFFDfqtaBXik
-        institution-vh9p98yHbuoG
-        institution-ehji2ZJBrdhc
         """.split()
-institution_ids_string = u",".join(["'{}'".format(institution_id) for institution_id in institution_ids])
 
+ror_ids = """
+        """.split()
+ror_ids_string = u",".join(["'{}'".format(ror_id) for ror_id in ror_ids])
+
+member_package_ids = """
+package-NQ6YonMPJtWB
+package-4UpjbmC5fe2e
+package-FY8xHeUGqfxJ
+package-KY48QtfPPgtU
+package-sKQBiEiAMCX3
+package-gZCyezUoBKYy
+package-pEPeqCsyMZjC
+package-Qxw3wrAy7eSF
+package-4hUQ94AXnFLe
+package-WXUrtAv3hUz9
+package-naXCqKPaugZr
+package-Lviw9nZcVTTg
+package-LAJN9utXErwe
+package-8Ve7FGNrz66J
+package-XBr23Xc6vXH5
+package-wdwVfDbHbnmA
+package-WxCmwk5d4yWU
+""".split()
+member_package_id_string = u",".join(["'{}'".format(package_id) for package_id in member_package_ids])
 
 def copy_package(old_package_id, new_package_id):
     command = """
-        insert into jump_counter (issn_l, package_id, organization, publisher, issn, journal_name, total) (
-            select issn_l, '{new_package_id}', organization, publisher, issn, journal_name, total
+        insert into jump_counter (issn_l, package_id, journal_name, total, report_year, report_name, report_version, metric_type, yop, access_type) (
+            select issn_l, '{new_package_id}', journal_name, total, report_year, report_name, report_version, metric_type, yop, access_type
             from jump_counter
             where package_id = '{old_package_id}'
         );
         
-        insert into jump_counter_input (organization, publisher, issn, journal_name, total, package_id) (
-            select organization, publisher, issn, journal_name, total, '{new_package_id}'
+        insert into jump_counter_input (issn, journal_name, total, package_id, report_year, report_name, report_version, metric_type, yop, access_type) (
+            select issn, journal_name, total, '{new_package_id}', report_year, report_name, report_version, metric_type, yop, access_type
             from jump_counter_input
             where package_id = '{old_package_id}'
         );
@@ -99,85 +112,146 @@ def copy_package(old_package_id, new_package_id):
         cursor.execute(command)
 
 
+def copy_institution(old_institution_id, new_institution_id):
+
+
+    print "need to make this jump_institutions thing work"
+    print "and also copy into jump_grid_id"
+    print 1/0
+    command = """
+        insert into jump_institution (something) (
+            select  '{new_institution_id}', something
+            from jump_institution
+            where package_id = '{old_institution_id}'
+        );
+
+    """.format(old_institution_id=old_institution_id, new_institution_id=new_institution_id)
+    print command
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+
+    command = """select package_id from jump_account_package
+        where institution_id = '{old_institution_id}'
+        and publisher='Elsevier' and not is_deleted
+        """.format(old_institution_id=old_institution_id)
+
+    print command
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+
+    old_package_ids = [row["package_id"] for row in rows]
+
+    for old_package_id in old_package_ids:
+        new_package_id = u'package-{}'.format(shortuuid.uuid()[0:12])
+        copy_package(old_package_id, new_package_id)
+
+
 def consortium_create():
 
-    # create a package for this
-    consortium_package_id = u'package-{}'.format(shortuuid.uuid()[0:12])
-    my_package = Package(
-        package_id=consortium_package_id,
-        publisher=publisher,
-        package_name=consortium_display_name,
-        created=datetime.datetime.utcnow().isoformat(),
-        institution_id=consortium_institution_id,
-        is_demo=False
-    )
-    db.session.add(my_package)
-    db.session.flush()
-
-    my_scenario_id = u'scenario-{}'.format(shortuuid.uuid()[0:12])
-    my_scenario_name = u'First Scenario'
-    my_scenario = SavedScenario(False, my_scenario_id, None)
-    my_scenario.package_id = my_package.package_id
-    my_scenario.scenario_name = my_scenario_name
-    my_scenario.created = datetime.datetime.utcnow().isoformat()
-    my_scenario.is_base_scenario = True
-
-    db.session.add(my_scenario)
-    safe_commit(db)
-    print u"made consortium package {} and scenario {}".format(my_package, my_scenario)
-
-    dict_to_save = my_scenario.to_dict_saved()
-    dict_to_save["name"] = my_scenario_name
-    save_raw_scenario_to_db(my_scenario_id, dict_to_save, None)
+    consortium_package_id = "package-3WkCDEZTqo6S"
+    my_scenario_id = "scenario-QC2kbHfUhj9W"
 
 
-    command = """select * from jump_account_package
-        where institution_id in ({institution_ids_string})
-        and package_name='{member_package_name}' and not is_deleted
-        """.format(member_package_name=member_package_name, institution_ids_string=institution_ids_string)
+    #
+    # # create a package for this
+    # consortium_package_id = u'package-{}'.format(shortuuid.uuid()[0:12])
+    # my_package = Package(
+    #     package_id=consortium_package_id,
+    #     publisher=publisher,
+    #     package_name=consortium_display_name,
+    #     created=datetime.datetime.utcnow().isoformat(),
+    #     institution_id=consortium_institution_id,
+    #     is_demo=False
+    # )
+    # db.session.add(my_package)
+    # db.session.flush()
+    #
+    # my_scenario_id = u'scenario-{}'.format(shortuuid.uuid()[0:12])
+    # my_scenario_name = u'First Scenario'
+    # my_scenario = SavedScenario(False, my_scenario_id, None)
+    # my_scenario.package_id = my_package.package_id
+    # my_scenario.scenario_name = my_scenario_name
+    # my_scenario.created = datetime.datetime.utcnow().isoformat()
+    # my_scenario.is_base_scenario = True
+    #
+    # db.session.add(my_scenario)
+    # safe_commit(db)
+    # print u"made consortium package {} and scenario {}".format(my_package, my_scenario)
+    #
+    # dict_to_save = my_scenario.to_dict_saved()
+    # dict_to_save["name"] = my_scenario_name
+    # save_raw_scenario_to_db(my_scenario_id, dict_to_save, None)
 
-    print command
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
+
+    # global institution_ids
+    #
+    # if not institution_ids:
+    #     print "ror_ids_string", ror_ids_string
+    #     command = """select * from jump_ror_id
+    #         where ror_id in ({ror_ids_string})
+    #         """.format(ror_ids_string=ror_ids_string)
+    #     with get_db_cursor() as cursor:
+    #         cursor.execute(command)
+    #         rows = cursor.fetchall()
+    #         institution_ids = [row["institution_id"] for row in rows]
 
 
-    for row in rows:
-        old_package_id = row["package_id"]
-        new_package_id = old_package_id.replace("-", "-cmp")
-        print old_package_id
-        print new_package_id
+    # for row in rows:
+    #     row["package_id"] = u'package-{}'.format(shortuuid.uuid()[0:12])
 
-        command = """
-            insert into jump_consortium_members (consortium_short_name, consortium_package_id, member_package_id)
-            values ('{}', '{}', '{}')
-            """.format(consortium_short_name, consortium_package_id, new_package_id)
-        print command
-        with get_db_cursor() as cursor:
-            cursor.execute(command)
-        print
-
-        print u"copying package {} to {}".format(old_package_id, new_package_id)
-        copy_package(old_package_id, new_package_id)
-        print u"done copying package {} to {}".format(old_package_id, new_package_id)
-        print
-
+    # command = """select * from jump_account_package
+    #     where institution_id in ({institution_ids_string})
+    #     and package_name='{member_package_name}' and not is_deleted
+    #     """.format(member_package_name=member_package_name, institution_ids_string=institution_ids_string)
+    #
+    # command = """select * from jump_account_package
+    #     where package_id in ({member_package_id_string}) and not is_deleted
+    #     """.format(member_package_id_string=member_package_id_string)
+    #
+    # print command
+    # with get_db_cursor() as cursor:
+    #     cursor.execute(command)
+    #     rows = cursor.fetchall()
+    #
+    # for row in rows:
+    #     old_package_id = row["package_id"]
+    #     new_package_id = old_package_id
+    #     # new_package_id = old_package_id.replace("-", "-2")
+    #     print old_package_id
+    #     print new_package_id
+    #
+    #     command = """
+    #         insert into jump_consortium_members (consortium_short_name, consortium_package_id, member_package_id)
+    #         values ('{}', '{}', '{}')
+    #         """.format(consortium_short_name, consortium_package_id, new_package_id)
+    #     print command
+    #     with get_db_cursor() as cursor:
+    #         cursor.execute(command)
+    #     print
+    #
+    #     print u"copying package {} to {}".format(old_package_id, new_package_id)
+    #     copy_package(old_package_id, new_package_id)
+    #     print u"done copying package {} to {}".format(old_package_id, new_package_id)
+    #     print
+    #
+    #
     # now save first scenario with all member institutions set
-    command = """
-        select member_package_id from jump_consortium_members where consortium_package_id = '{}'
-        """.format(consortium_package_id)
-    print command
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
-    all_member_ids = [row["member_package_id"] for row in rows]
-
-    print all_member_ids
-    save_raw_member_institutions_included_to_db(my_scenario_id, all_member_ids, None)
-
-    # now kick off the computing
-    new_consortia = Consortium(my_scenario_id)
-    new_consortia.recompute_journal_dicts()
+    # command = """
+    #     select member_package_id from jump_consortium_members where consortium_package_id = '{}'
+    #     """.format(consortium_package_id)
+    # print command
+    # with get_db_cursor() as cursor:
+    #     cursor.execute(command)
+    #     rows = cursor.fetchall()
+    # all_member_ids = [row["member_package_id"] for row in rows]
+    #
+    # print all_member_ids
+    # save_raw_member_institutions_included_to_db(my_scenario_id, all_member_ids, None)
+    #
+    # # now kick off the computing
+    # new_consortia = Consortium(my_scenario_id)
+    # new_consortia.recompute_journal_dicts()
 
 
 
@@ -188,24 +262,66 @@ if __name__ == "__main__":
     parsed_args = parser.parse_args()
     parsed_vars = vars(parsed_args)
 
+
+    # for old_institution_id in """
+    #     institution-SMh3xurt2V5C
+    #     institution-8phSSAkfiXbm
+    #     institution-V9SQXczdPneA
+    #     institution-jscQRozbejja
+    #     institution-YJTPGtaJgntF
+    #     institution-gFnkmtWE5Z7S
+    #     institution-xr8pxYvWqJvT
+    #     institution-MKviQpUBbHEi
+    #     institution-577QzSroJYWJ
+    #     institution-i7guvoLsnBVM
+    #     institution-jsNxxfWm5zcM
+    #     institution-gWwB9iSCivMt
+    #     institution-2KoLu8fgJtbi
+    #     institution-ZLZYsK5AQyqC""".split():
+    #
+    #     new_institution_id = u'package-demo{}'.format(shortuuid.uuid()[0:12])
+    #     copy_institution(old_institution_id, new_institution_id)
+
+
+
     # consortium_create()
 
-    consortium_package_id = "package-2NNrG6YCAvAh"
+    #
+    # consortium_short_name = "crkn_wiley"
+    # consortium_package_id = "package-yvUUnbGpkzkk"
+    #
+    #
+    # old_package_id = "package-Hy32mkFpvASp"
+    #
+    # for old_package_id in member_package_ids:
+    #     new_package_id = old_package_id.replace("-", "-cmp")
+    #     print old_package_id
+    #     print new_package_id
+    #
+    #     command = """
+    #         insert into jump_consortium_members (consortium_short_name, consortium_package_id, member_package_id)
+    #         values ('{}', '{}', '{}')
+    #         """.format(consortium_short_name, consortium_package_id, new_package_id)
+    #     print command
+    #     with get_db_cursor() as cursor:
+    #         cursor.execute(command)
+    #     print
+    #
+    #     print u"copying package {} to {}".format(old_package_id, new_package_id)
+    #     copy_package(old_package_id, new_package_id)
+    #     print u"done copying package {} to {}".format(old_package_id, new_package_id)
+    #     print
 
-    # copy_package("package-UKqnJcsns7QL", "package-cmpUKqnJcsns7QL")
-    # command = """
-    #     insert into jump_consortium_members (consortium_short_name, consortium_package_id, member_package_id)
-    #     values ('{}', '{}', '{}')
-    #     """.format("colorado_alliance", consortium_package_id, "package-cmpUKqnJcsns7QL")
-    # print command
-    # with get_db_cursor() as cursor:
-    #     cursor.execute(command)
+    #
+    #
+    consortium_package_id = 'package-3WkCDEZTqo6S'
 
     from consortium import get_consortium_ids
     consortium_ids = get_consortium_ids()
     for d in consortium_ids:
         print d["package_id"]
         if consortium_package_id==d["package_id"]:
+            print u"start recomputing {}".format(d["scenario_id"])
             new_consortia = Consortium(d["scenario_id"])
             new_consortia.recompute_journal_dicts()
-            print u"recomputing {}".format(new_consortia)
+            print u"done recomputing {}".format(d["scenario_id"])

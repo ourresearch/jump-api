@@ -6,10 +6,13 @@ from app import get_db_cursor
 
 s3_client = boto3.client("s3")
 
-filenames = [key["Key"] for key in s3_client.list_objects(Bucket="unsub-jisc")["Contents"]]
-# filenames = ["oxf_787_SD_tr_j2_2020-01_2020-12.json",
-#              "oxf_787_SD_tr_j3_2020-01_2020-12.json",
-#              "oxf_787_SD_tr_j4_2020-01_2020-12.json"]
+# filenames = [key["Key"] for key in s3_client.list_objects(Bucket="unsub-jisc")["Contents"]]
+# filenames.reverse()
+
+filenames = ["smu_SD_tr_j2_2020-01_2020-12.json",
+             "smu_SD_tr_j3_2020-01_2020-12.json",
+             "smu_SD_tr_j4_2020-01_2020-12.json"]
+
 print filenames
 print len(filenames)
 
@@ -27,7 +30,7 @@ for filename in filenames:
     report_type = contents_json["Report_Header"]["Report_ID"]
     institution_name = contents_json["Report_Header"]["Institution_Name"]
 
-    report_items = contents_json["Report_Items"]
+    report_items = contents_json.get("Report_Items", [])
     print report_type, institution_name, len(report_items)
 
     input_dict["package_id"] = u"package-jiscels{}".format(filename[0:3])
