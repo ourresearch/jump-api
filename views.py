@@ -244,6 +244,7 @@ def make_identity_dict(user):
 
 @app.route("/user/login", methods=["POST"])
 def user_login():
+    print u"in user_login"
     request_args = request.args
     if request.is_json:
         request_args = request.json
@@ -255,11 +256,14 @@ def user_login():
     if username is None and email is None:
         return abort_json(400, "Username or email parameter is required.")
 
+    print u"before lookup_user"
     login_user = lookup_user(email=email, username=username)
 
     # maybe the username was passed as an email
     if not login_user and email and not username:
         login_user = lookup_user(username=email)
+
+    print u"after lookup_user"
 
     if not login_user:
         return abort_json(404, u"User does not exist.")
@@ -276,9 +280,13 @@ def user_login():
         UserInstitutionPermission.user_id == login_user.id,
     ).first()
 
+    print u"done query"
+
     if not login_user_permissions:
         assign_demo_institution(login_user)
         safe_commit(db)
+
+    print u"done assign_demo_institution"
 
     return jsonify({"access_token": access_token})
 
