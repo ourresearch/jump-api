@@ -275,9 +275,8 @@ def reset_cache(module_name, function_name, *args):
         cursor.execute(delete_command)
         cursor.execute(insert_command)
 
-
-if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
-    print u"loading cache"
+def warm_cache():
+    print u"warming cache"
 
     start_time = time()
 
@@ -300,14 +299,28 @@ if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
     scenario.get_common_package_data_for_all()
     scenario.get_common_package_data_specific(DEMO_PACKAGE_ID)
 
-    # print u"done get_common_package_data in {}s".format(elapsed(start_time))
-    #
-    # from views.py import start_cache_thread
+    print u"done get_common_package_data in {}s".format(elapsed(start_time))
+
+
+if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
+    print u"warming caches"
+    start_time = time()
+
+    import threading
+
+    data = None
+    t = threading.Thread(target=warm_cache)
+    t.daemon = True  # so it doesn't block
+    t.start()
+    print u"done start warm_cache"
+
+    # from views import start_cache_thread
     # start_cache_thread()
-    #
     # print u"done start_cache_thread"
 
     print u"done loading to cache in {}s".format(elapsed(start_time))
+else:
+    print u"not warming caches"
 
 #
 # print "clearing cache"
