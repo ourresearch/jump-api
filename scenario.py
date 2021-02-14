@@ -1080,23 +1080,31 @@ def get_common_package_data_for_all():
     my_timing = TimingMessages()
     my_data = {}
 
+    print my_timing.to_dict()
+
     my_data["journal_era_subjects"] = get_journal_era_subjects()
     my_timing.log_timing("get_journal_era_subjects")
+    print my_timing.to_dict()
 
     my_data["embargo_dict"] = get_embargo_data_from_db()
     my_timing.log_timing("get_embargo_data_from_db")
+    print my_timing.to_dict()
 
     my_data["unpaywall_downloads_dict_raw"] = get_unpaywall_downloads_from_db()
     my_timing.log_timing("get_unpaywall_downloads_from_db")
+    print my_timing.to_dict()
 
     my_data["oa"] = get_oa_data_from_db()
     my_timing.log_timing("get_oa_data_from_db")
+    print my_timing.to_dict()
 
     my_data["oa_recent"] = get_oa_recent_data_from_db()
     my_timing.log_timing("get_oa_recent_data_from_db")
+    print my_timing.to_dict()
 
     my_data["social_networks"] = get_social_networks_data_from_db()
     my_timing.log_timing("get_social_networks_data_from_db")
+    print my_timing.to_dict()
 
     # add this in later
     # my_data["oa_adjustment"] = get_oa_adjustment_data_from_db()
@@ -1104,11 +1112,15 @@ def get_common_package_data_for_all():
 
     my_data["society"] = get_society_data_from_db()
     my_timing.log_timing("get_society_data_from_db")
+    print my_timing.to_dict()
 
     my_data["num_papers"] = get_num_papers_from_db()
     my_timing.log_timing("get_num_papers_from_db")
+    print my_timing.to_dict()
 
     my_data["_timing_common"] = my_timing.to_dict()
+    print "my timing"
+    print my_timing.to_dict()
 
     return (my_data, my_timing)
 
