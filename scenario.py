@@ -1075,36 +1075,77 @@ def get_common_package_data_specific(package_id):
 
     return (my_data, my_timing)
 
+
+import bz2
+import pickle
+import cPickle
+import gc
+
+import simplejson as json
+
+# from https://medium.com/better-programming/load-fast-load-big-with-compressed-pickles-5f311584507e
+# Pickle a file and then compress it into a file with extension
+# compressed_pickle('example_cp', data)
+def compressed_pickle(title, data):
+    # with bz2.BZ2File(title + ".pbz2", "w") as f:
+    #     cPickle.dump(data, f)
+
+    output = open(title + '.json', 'wb')
+    json.dump(data, output)
+    output.close()
+
+
+# from https://medium.com/better-programming/load-fast-load-big-with-compressed-pickles-5f311584507e
+# data = decompress_pickle('example_cp')
+def decompress_pickle(file):
+    # data = bz2.BZ2File(file + ".pbz2", "rb")
+    # data = cPickle.load(data)
+
+    # # disable garbage collector
+    # gc.disable()
+    # data = bz2.BZ2File(file, "rb")
+    # data = cPickle.load(data)
+    #
+    # # enable garbage collector again
+    # gc.enable()
+
+    output = open(file + '.json', 'rb')
+    data = json.load(output)
+    output.close()
+
+    return data
+
 @memorycache
 def get_common_package_data_for_all():
+    try:
+        print u"trying to load in pickle"
+        my_data = decompress_pickle("data/get_common_package_data_for_all")
+        print u"found pickled, returning"
+        return my_data
+    except Exception as e:
+        print u"no pickle data, so computing", e
+        pass
+
     my_timing = TimingMessages()
     my_data = {}
 
-    print my_timing.to_dict()
-
     my_data["journal_era_subjects"] = get_journal_era_subjects()
     my_timing.log_timing("get_journal_era_subjects")
-    print my_timing.to_dict()
 
     my_data["embargo_dict"] = get_embargo_data_from_db()
     my_timing.log_timing("get_embargo_data_from_db")
-    print my_timing.to_dict()
 
     my_data["unpaywall_downloads_dict_raw"] = get_unpaywall_downloads_from_db()
     my_timing.log_timing("get_unpaywall_downloads_from_db")
-    print my_timing.to_dict()
 
     my_data["social_networks"] = get_social_networks_data_from_db()
     my_timing.log_timing("get_social_networks_data_from_db")
-    print my_timing.to_dict()
 
     my_data["oa_recent"] = get_oa_recent_data_from_db()
     my_timing.log_timing("get_oa_recent_data_from_db")
-    print my_timing.to_dict()
 
     my_data["oa"] = get_oa_data_from_db()
     my_timing.log_timing("get_oa_data_from_db")
-    print my_timing.to_dict()
 
     # add this in later
     # my_data["oa_adjustment"] = get_oa_adjustment_data_from_db()
@@ -1112,17 +1153,12 @@ def get_common_package_data_for_all():
 
     my_data["society"] = get_society_data_from_db()
     my_timing.log_timing("get_society_data_from_db")
-    print my_timing.to_dict()
 
     my_data["num_papers"] = get_num_papers_from_db()
     my_timing.log_timing("get_num_papers_from_db")
-    print my_timing.to_dict()
 
-    print u"SIZE OF EVERYTHING"
-    import sys
-    import decimal
-    for k, v in sorted(my_data.iteritems()):
-        print k, sys.getsizeof(v)
+    compressed_pickle("data/get_common_package_data_for_all", my_data)
+    my_timing.log_timing("pickling")
 
     my_data["_timing_common"] = my_timing.to_dict()
     print "my timing"
