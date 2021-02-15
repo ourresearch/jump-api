@@ -812,7 +812,7 @@ def get_embargo_data_from_db():
         cursor.execute(command)
         embargo_rows = cursor.fetchall()
     embargo_dict = dict((a["issn_l"], round(a["embargo"])) for a in embargo_rows)
-    return embargo_dic
+    return embargo_dict
 
 @cache
 def get_unpaywall_downloads_from_db():
