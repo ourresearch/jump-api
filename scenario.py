@@ -812,7 +812,135 @@ def get_embargo_data_from_db():
         cursor.execute(command)
         embargo_rows = cursor.fetchall()
     embargo_dict = dict((a["issn_l"], round(a["embargo"])) for a in embargo_rows)
-    return embargo_dict
+    return embargo_dic
+
+@cache
+def get_unpaywall_downloads_from_db():
+    command = "select * from jump_unpaywall_downloads where issn_l in (select distinct issn_l from jump_counter)"
+    big_view_rows = None
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        big_view_rows = cursor.fetchall()
+    unpaywall_downloads_dict = dict((row["issn_l"], row) for row in big_view_rows)
+    return unpaywall_downloads_dict
+
+@cache
+def get_num_papers_from_db():
+    command = "select issn_l, year, num_papers from jump_num_papers"
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+    lookup_dict = defaultdict(dict)
+    for row in rows:
+        lookup_dict[row["issn_l"]][row["year"]] = row["num_papers"]
+    return lookup_dict
+
+
+def _journal_price_cache_key(package_id, publisher_name):
+    return u'scenario.get_journal_prices.{}.{}'.format(package_id, publisher_name)
+
+
+def refresh_cached_prices_from_db(package_id, publisher_name):
+    package_dict = {}
+    publisher_where = ""
+    if publisher_name == "Elsevier":
+        publisher_where = "(publisher ilike '%elsevier%')"
+    elif publisher_name == "Wiley":
+        publisher_where = "(publisher ilike '%wiley%')"
+    elif publisher_name == "SpringerNature":
+        publisher_where = "((publisher ilike '%springer%') or (publisher ilike '%nature%'))"
+    elif publisher_name == "Sage":
+        publisher_where = "(publisher ilike '%sage%')"
+    elif publisher_name == "TaylorFrancis":
+        publisher_where = "((publisher ilike '%informa uk%') or (publisher ilike '%taylorfrancis%'))"
+    else:
+        return 'false'
+
+    command = u"select issn_l, usa_usd from jump_journal_prices where package_id = '{}' and {}".format(package_id, publisher_where)
+    # print "command", command
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+
+    for row in rows:
+        package_dict[row["issn_l"]] = row["usa_usd"]
+
+    my_memcached.set(_journal_price_cache_key(package_id, publisher_name), package_dict)
+
+    return package_dict
+
+
+def get_prices_from_cache(package_ids, publisher_name=None):
+
+    lookup_dict = defaultdict(dict)
+
+    for package_id in package_ids:
+        # temp
+        refresh_cached_prices_from_db(package_id, publisher_name)
+
+        memcached_key = _journal_price_cache_key(package_id, publisher_name)
+        package_dict = my_memcached.get(memcached_key) or refresh_cached_prices_from_db(package_id, publisher_name)
+        lookup_dict[package_id] = package_dict
+
+    return lookup_dict
+
+
+@memorycache
+def get_ricks_journal():
+    command = """select issn_l, title, issns from ricks_journal"""
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+    my_dict = dict([(a["issn_l"], a) for a in rows])
+    return my_dict
+
+@memorycache
+def get_ricks_journal_flat():
+    issns = {}
+    with get_db_cursor() as cursor:
+        cursor.execute('select issn, issn_l, publisher from ricks_journal_flat')
+        rows = cursor.fetchall()
+    for row in rows:
+        issns[row['issn']] = {'issn_l': row['issn_l'], 'publisher': row['publisher']}
+    return issns
+
+_hybrid_2019 = None
+
+
+def _load_hybrid_2019_from_db():
+    global _hybrid_2019
+
+    if _hybrid_2019 is None:
+        with get_db_cursor() as cursor:
+            cursor.execute('select issn_l from jump_hybrid_journals_2019')
+            rows = cursor.fetchall()
+        _hybrid_2019 = {row["issn_l"] for row in rows}
+
+
+def get_hybrid_2019():
+    _load_hybrid_2019_from_db()
+    return _hybrid_2019
+
+
+_journal_era_subjects = None
+
+
+def _load_journal_era_subjects_from_db():
+    global _journal_era_subjects
+
+    if _journal_era_subjects is None:
+        _journal_era_subjects = defaultdict(list)
+
+        with get_db_cursor() as cursor:
+            cursor.execute('select issn_l, subject_code, subject_description, explicit from jump_journal_era_subjects')
+            rows = cursor.fetchall()
+
+        for row in rows:
+            _journal_era_subjects[row["issn_l"]].append([row["subject_code"], row["subject_description"]])
+
+def get_journal_era_subjects():
+    _load_journal_era_subjects_from_db()
+    return _journal_era_subjects
 
 
 @cache
@@ -1049,6 +1177,7 @@ def get_common_package_data(package_id):
 
     return my_data
 
+
 @memorycache
 def get_common_package_data_specific(package_id):
     my_timing = TimingMessages()
@@ -1073,6 +1202,7 @@ def get_common_package_data_specific(package_id):
     my_timing.log_timing("get_core_list_from_db")
 
     return (my_data, my_timing)
+
 
 
 import bz2
@@ -1121,35 +1251,35 @@ def decompress_pickle(file):
 
 @memorycache
 def get_common_package_data_for_all():
-    try:
-        print u"trying to load in pickle"
-        my_data = decompress_pickle("data/get_common_package_data_for_all")
-        print u"found pickled, returning"
-        return my_data
-    except Exception as e:
-        print u"no pickle data, so computing", e
-        pass
-
     my_timing = TimingMessages()
     my_data = {}
 
+    print my_timing.to_dict()
+
     my_data["journal_era_subjects"] = get_journal_era_subjects()
     my_timing.log_timing("get_journal_era_subjects")
+    print my_timing.to_dict()
 
     my_data["embargo_dict"] = get_embargo_data_from_db()
     my_timing.log_timing("get_embargo_data_from_db")
+    print my_timing.to_dict()
 
     my_data["unpaywall_downloads_dict_raw"] = get_unpaywall_downloads_from_db()
     my_timing.log_timing("get_unpaywall_downloads_from_db")
+    print my_timing.to_dict()
 
     my_data["social_networks"] = get_social_networks_data_from_db()
     my_timing.log_timing("get_social_networks_data_from_db")
+    print my_timing.to_dict()
 
     my_data["oa_recent"] = get_oa_recent_data_from_db()
     my_timing.log_timing("get_oa_recent_data_from_db")
+    print my_timing.to_dict()
 
     my_data["oa"] = get_oa_data_from_db()
     my_timing.log_timing("get_oa_data_from_db")
+    print my_timing.to_dict()
+
 
     # add this in later
     # my_data["oa_adjustment"] = get_oa_adjustment_data_from_db()
@@ -1163,6 +1293,7 @@ def get_common_package_data_for_all():
 
     compressed_pickle("data/get_common_package_data_for_all", my_data)
     my_timing.log_timing("pickling")
+
 
     my_data["_timing_common"] = my_timing.to_dict()
     print "my timing"
