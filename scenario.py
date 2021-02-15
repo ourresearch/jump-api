@@ -1203,10 +1203,6 @@ def get_common_package_data_specific(package_id):
     return (my_data, my_timing)
 
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 39fa133c95fe0db2fc6328e12617bf86298a72d9
 import bz2
 import pickle
 import cPickle
@@ -1296,10 +1292,6 @@ def get_common_package_data_for_all():
 
     compressed_pickle("data/get_common_package_data_for_all", my_data)
     my_timing.log_timing("pickling")
-<<<<<<< HEAD
-
-=======
->>>>>>> 39fa133c95fe0db2fc6328e12617bf86298a72d9
 
     my_data["_timing_common"] = my_timing.to_dict()
     print "my timing"
