@@ -966,12 +966,22 @@ def get_oa_recent_data_from_db():
 @cache
 def get_oa_data_from_db():
     oa_dict = {}
-    command = """select * from jump_oa_all_precovid"""
+    for submitted in ["with_submitted", "no_submitted"]:
+        for bronze in ["with_bronze", "no_bronze"]:
+            key = "{}_{}".format(submitted, bronze)
 
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
-    return rows
+            command = """select * from jump_oa_{}_precovid	
+                        where year_int >= 2015	
+                            """.format(key)
+
+            with get_db_cursor() as cursor:
+                cursor.execute(command)
+                rows = cursor.fetchall()
+            lookup_dict = defaultdict(list)
+            for row in rows:
+                lookup_dict[row["issn_l"]] += [row]
+            oa_dict[key] = lookup_dict
+    return oa_dict
 
 
 @cache
