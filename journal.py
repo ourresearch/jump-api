@@ -1184,7 +1184,7 @@ class Journal(object):
         my_dict = defaultdict(dict)
 
         key = u"{}_{}".format(submitted, bronze)
-        my_rows = [my_dict for my_dict in self._scenario_data["oa"] if my_dict["issn_l"]==self.issn_l and my_dict["my_key"]==key]
+        my_rows = [my_dict for my_dict in self._scenario_data["oa"] if my_dict["issn_l"]==self.issn_l and my_dict["my_subset"]==key]
         my_recent_rows = self._scenario_data["oa_recent"][key].get(self.issn_l, [])
 
         for row in my_rows:
