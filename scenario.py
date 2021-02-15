@@ -1084,16 +1084,16 @@ def get_common_package_data_for_all():
     my_timing.log_timing("get_unpaywall_downloads_from_db")
     print my_timing.to_dict()
 
-    my_data["oa"] = get_oa_data_from_db()
-    my_timing.log_timing("get_oa_data_from_db")
+    my_data["social_networks"] = get_social_networks_data_from_db()
+    my_timing.log_timing("get_social_networks_data_from_db")
     print my_timing.to_dict()
 
     my_data["oa_recent"] = get_oa_recent_data_from_db()
     my_timing.log_timing("get_oa_recent_data_from_db")
     print my_timing.to_dict()
 
-    my_data["social_networks"] = get_social_networks_data_from_db()
-    my_timing.log_timing("get_social_networks_data_from_db")
+    my_data["oa"] = get_oa_data_from_db()
+    my_timing.log_timing("get_oa_data_from_db")
     print my_timing.to_dict()
 
     # add this in later
@@ -1107,6 +1107,12 @@ def get_common_package_data_for_all():
     my_data["num_papers"] = get_num_papers_from_db()
     my_timing.log_timing("get_num_papers_from_db")
     print my_timing.to_dict()
+
+    print u"SIZE OF EVERYTHING"
+    import sys
+    import decimal
+    for k, v in sorted(my_data.iteritems()):
+        print k, sys.getsizeof(v)
 
     my_data["_timing_common"] = my_timing.to_dict()
     print "my timing"
