@@ -1081,7 +1081,6 @@ import cPickle
 import gc
 
 
-
 # from https://medium.com/better-programming/load-fast-load-big-with-compressed-pickles-5f311584507e
 # Pickle a file and then compress it into a file with extension
 # compressed_pickle('example_cp', data)
