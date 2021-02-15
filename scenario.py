@@ -1177,7 +1177,6 @@ def get_common_package_data(package_id):
 
     return my_data
 
-
 @memorycache
 def get_common_package_data_specific(package_id):
     my_timing = TimingMessages()
@@ -1204,7 +1203,10 @@ def get_common_package_data_specific(package_id):
     return (my_data, my_timing)
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 39fa133c95fe0db2fc6328e12617bf86298a72d9
 import bz2
 import pickle
 import cPickle
@@ -1251,34 +1253,35 @@ def decompress_pickle(file):
 
 @memorycache
 def get_common_package_data_for_all():
+    try:
+        print u"trying to load in pickle"
+        my_data = decompress_pickle("data/get_common_package_data_for_all")
+        print u"found pickled, returning"
+        return my_data
+    except Exception as e:
+        print u"no pickle data, so computing", e
+        pass
+
     my_timing = TimingMessages()
     my_data = {}
 
-    print my_timing.to_dict()
-
     my_data["journal_era_subjects"] = get_journal_era_subjects()
     my_timing.log_timing("get_journal_era_subjects")
-    print my_timing.to_dict()
 
     my_data["embargo_dict"] = get_embargo_data_from_db()
     my_timing.log_timing("get_embargo_data_from_db")
-    print my_timing.to_dict()
 
     my_data["unpaywall_downloads_dict_raw"] = get_unpaywall_downloads_from_db()
     my_timing.log_timing("get_unpaywall_downloads_from_db")
-    print my_timing.to_dict()
 
     my_data["social_networks"] = get_social_networks_data_from_db()
     my_timing.log_timing("get_social_networks_data_from_db")
-    print my_timing.to_dict()
 
     my_data["oa_recent"] = get_oa_recent_data_from_db()
     my_timing.log_timing("get_oa_recent_data_from_db")
-    print my_timing.to_dict()
 
     my_data["oa"] = get_oa_data_from_db()
     my_timing.log_timing("get_oa_data_from_db")
-    print my_timing.to_dict()
 
 
     # add this in later
@@ -1293,7 +1296,10 @@ def get_common_package_data_for_all():
 
     compressed_pickle("data/get_common_package_data_for_all", my_data)
     my_timing.log_timing("pickling")
+<<<<<<< HEAD
 
+=======
+>>>>>>> 39fa133c95fe0db2fc6328e12617bf86298a72d9
 
     my_data["_timing_common"] = my_timing.to_dict()
     print "my timing"
