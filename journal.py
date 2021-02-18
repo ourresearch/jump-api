@@ -1405,8 +1405,8 @@ class Journal(object):
         response["subscription_cost"] = round(self.subscription_cost)
         response["ill_cost"] = round(self.ill_cost)
         response["subscription_minus_ill_cost"] = round(self.cost_subscription_minus_ill)
-        # response["old_school_cpu"] = display_cpu(self.old_school_cpu)
-        # response["old_school_cpu_rank"] = display_cpu(self.old_school_cpu_rank)
+        response["old_school_cpu"] = display_cpu(self.old_school_cpu)
+        response["old_school_cpu_rank"] = display_cpu(self.old_school_cpu_rank)
 
         # fulfillment
         response["use_oa_percent"] = round(float(100)*self.use_actual["oa_plus_social_networks"]/self.use_total)

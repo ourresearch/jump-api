@@ -1213,7 +1213,7 @@ import gc
 # Pickle a file and then compress it into a file with extension
 # compressed_pickle('example_cp', data)
 def compressed_pickle(title, data):
-    with bz2.BZ2File(title + ".pbz2", "w") as f:
+    with bz2.BZ2File(title + ".pbz2", "wb") as f:
         cPickle.dump(data, f)
 
     # output = open(title + '.json', 'wb')
@@ -1230,12 +1230,12 @@ def decompress_pickle(file):
     # data = cPickle.load(data)
 
     # disable garbage collector
-    gc.disable()
-    data = bz2.BZ2File(file + ".pbz2", "rb")
-    data = cPickle.load(data)
+    # gc.disable()
+    my_file = bz2.BZ2File(file + ".pbz2", "rb")
+    data = cPickle.load(my_file)
 
     # enable garbage collector again
-    gc.enable()
+    # gc.enable()
 
     # output = open(file + '.json', 'rb')
     # data = json.load(output)
@@ -1249,14 +1249,14 @@ def decompress_pickle(file):
 
 @memorycache
 def get_common_package_data_for_all():
-    try:
-        print u"trying to load in pickle"
-        my_data = decompress_pickle("data/get_common_package_data_for_all")
-        print u"found pickled, returning"
-        return my_data
-    except Exception as e:
-        print u"no pickle data, so computing", e
-        pass
+    # try:
+    #     print u"trying to load in pickle"
+    #     my_data = decompress_pickle("data/get_common_package_data_for_all")
+    #     print u"found pickled, returning"
+    #     return my_data
+    # except Exception as e:
+    #     print u"no pickle data, so computing.  Error message: ", e
+    #     pass
 
     my_timing = TimingMessages()
     my_data = {}
@@ -1290,8 +1290,8 @@ def get_common_package_data_for_all():
     my_data["num_papers"] = get_num_papers_from_db()
     my_timing.log_timing("get_num_papers_from_db")
 
-    compressed_pickle("data/get_common_package_data_for_all", my_data)
-    my_timing.log_timing("pickling")
+    # compressed_pickle("data/get_common_package_data_for_all", my_data)
+    # my_timing.log_timing("pickling")
 
     my_data["_timing_common"] = my_timing.to_dict()
     print "my timing"
