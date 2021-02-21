@@ -446,7 +446,10 @@ class Package(db.Model):
         pa_rows = get_perpetual_access_from_cache(self.package_id)
         pa_defaults = defaultdict(lambda: defaultdict(lambda: None), pa_rows)
 
-        all_prices = get_prices_from_cache([self.package_id, DEMO_PACKAGE_ID], self.publisher)
+        price_packages = [self.package_id]
+        if self.currency == "USD":
+            price_packages += [DEMO_PACKAGE_ID]
+        all_prices = get_prices_from_cache(price_packages, self.publisher)
         package_prices = all_prices[self.package_id]
         public_prices = all_prices[DEMO_PACKAGE_ID]
         package_price_defaults = defaultdict(lambda: None, package_prices)
