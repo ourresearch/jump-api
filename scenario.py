@@ -141,9 +141,14 @@ class Scenario(object):
         prices_dict = {}
         self.data["prices"] = {}
 
-        prices_to_consider = [DEMO_PACKAGE_ID, self.package_id]
-        from app import suny_consortium_package_ids
+        prices_to_consider = [self.package_id]
 
+        # use defaults if USD
+        if self.my_package and self.my_package.currency == "USD":
+            prices_to_consider += [DEMO_PACKAGE_ID]
+
+        # special workaround for SUNY
+        from app import suny_consortium_package_ids
         # print "package_id", self.package_id_for_db, get_parent_consortium_package_id(self.package_id_for_db)
         if get_parent_consortium_package_id(self.package_id) in suny_consortium_package_ids or self.package_id in suny_consortium_package_ids:
             prices_to_consider += ["68f1af1d", "93YfzkaA"]
@@ -904,8 +909,8 @@ def get_ricks_journal_flat():
         issns[row['issn']] = {'issn_l': row['issn_l'], 'publisher': row['publisher']}
     return issns
 
-_hybrid_2019 = None
 
+_hybrid_2019 = None
 
 def _load_hybrid_2019_from_db():
     global _hybrid_2019
@@ -923,7 +928,6 @@ def get_hybrid_2019():
 
 
 _journal_era_subjects = None
-
 
 def _load_journal_era_subjects_from_db():
     global _journal_era_subjects
@@ -997,79 +1001,6 @@ def refresh_cached_prices_from_db(package_id, publisher_name):
     my_memcached.set(_journal_price_cache_key(package_id, publisher_name), package_dict)
 
     return package_dict
-
-
-def get_prices_from_cache(package_ids, publisher_name=None):
-
-    lookup_dict = defaultdict(dict)
-
-    for package_id in package_ids:
-        # temp
-        refresh_cached_prices_from_db(package_id, publisher_name)
-
-        memcached_key = _journal_price_cache_key(package_id, publisher_name)
-        package_dict = my_memcached.get(memcached_key) or refresh_cached_prices_from_db(package_id, publisher_name)
-        lookup_dict[package_id] = package_dict
-
-    return lookup_dict
-
-
-@memorycache
-def get_ricks_journal():
-    command = """select issn_l, title, issns from ricks_journal"""
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
-    my_dict = dict([(a["issn_l"], a) for a in rows])
-    return my_dict
-
-@memorycache
-def get_ricks_journal_flat():
-    issns = {}
-    with get_db_cursor() as cursor:
-        cursor.execute('select issn, issn_l, publisher from ricks_journal_flat')
-        rows = cursor.fetchall()
-    for row in rows:
-        issns[row['issn']] = {'issn_l': row['issn_l'], 'publisher': row['publisher']}
-    return issns
-
-_hybrid_2019 = None
-
-
-def _load_hybrid_2019_from_db():
-    global _hybrid_2019
-
-    if _hybrid_2019 is None:
-        with get_db_cursor() as cursor:
-            cursor.execute('select issn_l from jump_hybrid_journals_2019')
-            rows = cursor.fetchall()
-        _hybrid_2019 = {row["issn_l"] for row in rows}
-
-
-def get_hybrid_2019():
-    _load_hybrid_2019_from_db()
-    return _hybrid_2019
-
-
-_journal_era_subjects = None
-
-
-def _load_journal_era_subjects_from_db():
-    global _journal_era_subjects
-
-    if _journal_era_subjects is None:
-        _journal_era_subjects = defaultdict(list)
-
-        with get_db_cursor() as cursor:
-            cursor.execute('select issn_l, subject_code, subject_description, explicit from jump_journal_era_subjects')
-            rows = cursor.fetchall()
-
-        for row in rows:
-            _journal_era_subjects[row["issn_l"]].append([row["subject_code"], row["subject_description"]])
-
-def get_journal_era_subjects():
-    _load_journal_era_subjects_from_db()
-    return _journal_era_subjects
 
 
 @cache
