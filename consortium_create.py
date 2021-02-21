@@ -101,8 +101,8 @@ def copy_package(old_package_id, new_package_id):
             where package_id = '{old_package_id}'
         );
 
-        insert into jump_account_package (package_id, publisher, package_name, created, consortium_package_id, institution_id, is_demo, big_deal_cost, is_deleted, updated, default_to_no_perpetual_access) (
-            select '{new_package_id}', publisher, package_name, sysdate, consortium_package_id, institution_id, is_demo, big_deal_cost, is_deleted, updated, default_to_no_perpetual_access
+        insert into jump_account_package (package_id, publisher, package_name, created, consortium_package_id, institution_id, is_demo, big_deal_cost, is_deleted, updated, default_to_no_perpetual_access, currency) (
+            select '{new_package_id}', publisher, package_name, sysdate, consortium_package_id, institution_id, is_demo, big_deal_cost, is_deleted, updated, default_to_no_perpetual_access, currency
             from jump_account_package
             where package_id = '{old_package_id}'
         );

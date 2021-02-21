@@ -872,11 +872,6 @@ def new_publisher():
     return jsonify_fast_no_sort(package_dict)
 
 
-@app.route("/package/<package_id>", methods=["GET"])
-@jwt_optional
-def live_package_id_get(package_id):
-    return get_publisher(package_id)
-
 ## examples
 # /counter/diff_no_price
 # /counter/diff_changed_publisher

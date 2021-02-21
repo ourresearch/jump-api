@@ -632,6 +632,7 @@ class Package(db.Model):
         return {
                 "id": self.package_id,
                 "name": self.package_name,
+                "currency": self.currency,
                 "hasCounterData": self.has_counter_data,
                 "hasCustomPrices": self.has_custom_prices,
                 "hasCoreJournalList": self.has_core_journal_list,
@@ -697,6 +698,7 @@ class Package(db.Model):
         return {
             "id": self.package_id,
             "name": self.package_name,
+            "currency": self.currency,
             "publisher": self.publisher,
             "is_demo": self.is_demo,
             "journal_detail": journal_detail,
@@ -743,6 +745,7 @@ class Package(db.Model):
         response = {
             "id": self.package_id,
             "name": self.package_name,
+            "currency": self.currency,
             "publisher": self.publisher,
             "is_owned_by_consortium": self.is_owned_by_consortium,
             "is_deleted": self.is_deleted is not None and self.is_deleted,
