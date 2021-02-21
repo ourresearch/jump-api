@@ -243,7 +243,7 @@ class Package(db.Model):
 	            )
 	            and rj.issn_l in 
                 (select distinct issn_l from jump_journal_prices 
-                    where usa_usd > 0 and package_id in('658349d9', '{package_id}') 
+                    where price > 0 and package_id in('658349d9', '{package_id}') 
                 ) """.format(package_id=self.package_id, publisher_where=self.publisher_where))
         return self.filter_by_core_list(rows)
 

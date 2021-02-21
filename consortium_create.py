@@ -81,14 +81,14 @@ def copy_package(old_package_id, new_package_id):
             where package_id = '{old_package_id}'
         );
         
-        insert into jump_journal_prices (package_id, publisher, title, issn_l, usa_usd) (
-            select '{new_package_id}', publisher, title, issn_l, usa_usd
+        insert into jump_journal_prices (package_id, publisher, title, issn_l, price) (
+            select '{new_package_id}', publisher, title, issn_l, price
             from jump_journal_prices
             where package_id = '{old_package_id}'
         );
         
-        insert into jump_journal_prices_input (package_id, publisher, issn, usa_usd) (
-            select '{new_package_id}', publisher, issn, usa_usd
+        insert into jump_journal_prices_input (package_id, publisher, issn, price) (
+            select '{new_package_id}', publisher, issn, price
             from jump_journal_prices_input
             where package_id = '{old_package_id}'
         );
@@ -325,3 +325,6 @@ if __name__ == "__main__":
             new_consortia = Consortium(d["scenario_id"])
             new_consortia.recompute_journal_dicts()
             print u"done recomputing {}".format(d["scenario_id"])
+
+
+# heroku run --size=performance-l python consortium_create.py

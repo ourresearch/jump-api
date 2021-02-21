@@ -11,7 +11,7 @@ class JournalPrice(db.Model):
     title = db.Column(db.Text)
     issn_l = db.Column(db.Text, primary_key=True)
     subject = db.Column(db.Text)
-    usa_usd = db.Column(db.Numeric)
+    price = db.Column(db.Numeric)
     year = db.Column(db.Numeric)
 
     def to_dict(self):
@@ -21,7 +21,7 @@ class JournalPrice(db.Model):
             "title": self.title,
             "issn_l": self.issn_l,
             "subject": self.subject,
-            "usa_usd": self.usa_usd,
+            "price": self.price,
             "year": self.year,
         }
 
@@ -32,7 +32,7 @@ class JournalPriceInput(db.Model, PackageInput):
     publisher = db.Column(db.Text)
     issn = db.Column(db.Text, primary_key=True)
     subject = db.Column(db.Text)
-    usa_usd = db.Column(db.Numeric)
+    price = db.Column(db.Numeric)
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
     year = db.Column(db.Numeric)
 
@@ -67,7 +67,7 @@ class JournalPriceInput(db.Model, PackageInput):
                 "name_snippets": [u"subj"],
                 "required": False,
             },
-            "usa_usd": {
+            "price": {
                 "normalize": cls.normalize_price,
                 "name_snippets": [u"price", u"usd", u"cost"],
                 "warn_if_blank": True,

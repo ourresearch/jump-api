@@ -112,7 +112,7 @@ class Journal(object):
 
     @cached_property
     def cost_subscription_2018(self):
-        # return float(self.my_scenario_data_row.get("usa_usd", 0)) * (1 + self.settings.cost_content_fee_percent/float(100))
+        # return float(self.my_scenario_data_row.get("price", 0)) * (1 + self.settings.cost_content_fee_percent/float(100))
         my_lookup = self._scenario_data["prices"]
         if my_lookup.get(self.issn_l, None) is None:
             print u"no price for {}".format(self.issn_l)
