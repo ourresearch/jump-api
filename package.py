@@ -44,6 +44,7 @@ class Package(db.Model):
     is_demo = db.Column(db.Boolean)
     big_deal_cost = db.Column(db.Numeric)
     is_deleted = db.Column(db.Boolean)
+    currency = db.Column(db.Text)
 
     saved_scenarios = db.relationship("SavedScenario", lazy="subquery", backref=db.backref("package", lazy="subquery"))
     institution = db.relationship("Institution", lazy="subquery", uselist=False)
@@ -51,6 +52,7 @@ class Package(db.Model):
     def __init__(self, **kwargs):
         self.created = datetime.datetime.utcnow().isoformat()
         self.is_deleted = False
+        self.currency = "USD"
         super(Package, self).__init__(**kwargs)
 
     @property
