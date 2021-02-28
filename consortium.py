@@ -428,15 +428,18 @@ class Consortium(object):
     def to_dict_institutions(self):
         start_time = time()
 
-        command = """select max(i.id) as institution_id, 
+        command = """with tags as (select institution_id, listagg(tag_string, ', ') as tag_listagg from jump_tag_institution group by institution_id)
+            select max(i.id) as institution_id, 
             max(i.old_username) as institution_short_name, 
             max(i.display_name) as institution_name, 
             s.member_package_id as package_id, 
             sum(s.usage) as usage,
-            count(s.member_package_id) as num_journals
+            count(s.member_package_id) as num_journals,
+            max(t.tag_listagg) as tags
             from jump_scenario_computed s
             join jump_account_package p on s.member_package_id = p.package_id
             join jump_institution i on i.id = p.institution_id
+            left join tags t on t.institution_id=p.institution_id
             where s.scenario_id='{scenario_id}' 
             group by s.member_package_id
             order by usage desc

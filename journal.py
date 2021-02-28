@@ -111,12 +111,13 @@ class Journal(object):
         return self.scenario.institution_short_name
 
     @cached_property
-    def cost_subscription_2018(self):
+    def cost_first_year_including_content_fee(self):
         # return float(self.my_scenario_data_row.get("price", 0)) * (1 + self.settings.cost_content_fee_percent/float(100))
         my_lookup = self._scenario_data["prices"]
         if my_lookup.get(self.issn_l, None) is None:
             print u"no price for {}".format(self.issn_l)
             return None
+        # print "my price", self.issn_l, float(my_lookup.get(self.issn_l)) * (1 + self.settings.cost_content_fee_percent/float(100))
         return float(my_lookup.get(self.issn_l)) * (1 + self.settings.cost_content_fee_percent/float(100))
 
     @cached_property
@@ -217,8 +218,8 @@ class Journal(object):
 
     @cached_property
     def subscription_cost_by_year(self):
-        if self.cost_subscription_2018 is not None:
-            response = [round(((1+self.settings.cost_alacart_increase/float(100))**year) * self.cost_subscription_2018 )
+        if self.cost_first_year_including_content_fee is not None:
+            response = [round(((1+self.settings.cost_alacart_increase/float(100))**year) * self.cost_first_year_including_content_fee )
                                                 for year in self.years]
         else:
             # will cause errors further down the line

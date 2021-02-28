@@ -845,37 +845,9 @@ def _journal_price_cache_key(package_id, publisher_name):
     return u'scenario.get_journal_prices.{}.{}'.format(package_id, publisher_name)
 
 
-def refresh_cached_prices_from_db(package_id, publisher_name):
-    package_dict = {}
-    publisher_where = ""
-    if publisher_name == "Elsevier":
-        publisher_where = "(publisher ilike '%elsevier%')"
-    elif publisher_name == "Wiley":
-        publisher_where = "(publisher ilike '%wiley%')"
-    elif publisher_name == "SpringerNature":
-        publisher_where = "((publisher ilike '%springer%') or (publisher ilike '%nature%'))"
-    elif publisher_name == "Sage":
-        publisher_where = "(publisher ilike '%sage%')"
-    elif publisher_name == "TaylorFrancis":
-        publisher_where = "((publisher ilike '%informa uk%') or (publisher ilike '%taylorfrancis%'))"
-    else:
-        return 'false'
-
-    command = u"select issn_l, price from jump_journal_prices where package_id = '{}' and {}".format(package_id, publisher_where)
-    # print "command", command
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
-
-    for row in rows:
-        package_dict[row["issn_l"]] = row["price"]
-
-    my_memcached.set(_journal_price_cache_key(package_id, publisher_name), package_dict)
-
-    return package_dict
 
 
-def get_prices_from_cache(package_ids, publisher_name=None):
+def get_prices_from_cache(package_ids, publisher_name):
 
     lookup_dict = defaultdict(dict)
 
@@ -884,7 +856,9 @@ def get_prices_from_cache(package_ids, publisher_name=None):
         refresh_cached_prices_from_db(package_id, publisher_name)
 
         memcached_key = _journal_price_cache_key(package_id, publisher_name)
-        package_dict = my_memcached.get(memcached_key) or refresh_cached_prices_from_db(package_id, publisher_name)
+        package_dict = my_memcached.get(memcached_key)
+        if not package_dict:
+            package_dict = refresh_cached_prices_from_db(package_id, publisher_name)
         lookup_dict[package_id] = package_dict
 
     return lookup_dict
@@ -945,32 +919,6 @@ def _load_journal_era_subjects_from_db():
 def get_journal_era_subjects():
     _load_journal_era_subjects_from_db()
     return _journal_era_subjects
-
-
-@cache
-def get_unpaywall_downloads_from_db():
-    command = "select * from jump_unpaywall_downloads where issn_l in (select distinct issn_l from jump_counter)"
-    big_view_rows = None
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        big_view_rows = cursor.fetchall()
-    unpaywall_downloads_dict = dict((row["issn_l"], row) for row in big_view_rows)
-    return unpaywall_downloads_dict
-
-@cache
-def get_num_papers_from_db():
-    command = "select issn_l, year, num_papers from jump_num_papers"
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
-    lookup_dict = defaultdict(dict)
-    for row in rows:
-        lookup_dict[row["issn_l"]][row["year"]] = row["num_papers"]
-    return lookup_dict
-
-
-def _journal_price_cache_key(package_id, publisher_name):
-    return u'scenario.get_journal_prices.{}.{}'.format(package_id, publisher_name)
 
 
 def refresh_cached_prices_from_db(package_id, publisher_name):
