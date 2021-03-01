@@ -1131,14 +1131,26 @@ def decompress_pickle(file):
 @memorycache
 def get_common_package_data_for_all():
     my_timing = TimingMessages()
-    # try:
-    #     print u"trying to load in pickle"
-    #     my_data = decompress_pickle("data/get_common_package_data_for_all")
-    #     print u"found pickled, returning"
-    #     return (my_data, my_timing)
-    # except Exception as e:
-    #     print u"no pickle data, so computing.  Error message: ", e
-    #     pass
+    try:
+        # print u"trying to load in pickle"
+        # my_data = decompress_pickle("data/get_common_package_data_for_all")
+        # print u"found pickled, returning"
+        # return (my_data, my_timing)
+
+        import boto3
+        s3_client = boto3.client("s3")
+        print u"made s3_client"
+
+        s3_clientobj = s3_client.get_object(Bucket="unsub-cache", Key="get_common_package_data_for_all.json")
+        print u"made s3_clientobj"
+        contents_string = s3_clientobj["Body"].read().decode("utf-8")
+        contents_json = json.loads(contents_string)
+        print u"got contents_json"
+        return (contents_json, my_timing)
+
+    except Exception as e:
+        print u"no pickle data, so computing.  Error message: ", e
+        pass
 
     my_data = {}
 
