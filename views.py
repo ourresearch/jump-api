@@ -32,6 +32,7 @@ import requests
 import tempfile
 import random
 from collections import OrderedDict
+import boto3
 
 # from app import my_memorycache_dict
 from app import app
@@ -80,7 +81,17 @@ from app import logger
 
 from app import DEMO_PACKAGE_ID
 
+s3_client = boto3.client("s3")
+print "made s3_client"
 
+def s3_cache_get(url):
+    print u"in cache_get with", url
+
+    filename = u"{}.json".format(url.replace("/", "~"))
+    s3_clientobj = s3_client.get_object(Bucket="unsub-cache", Key=filename)
+    contents_string = s3_clientobj["Body"].read().decode("utf-8")
+    contents_json = json.loads(contents_string)
+    return contents_json
 
 
 def authenticate_for_publisher(publisher_id, required_permission):
@@ -613,6 +624,24 @@ def user_permissions():
 
     return jsonify_fast_no_sort(query_user.to_dict_permissions().get(institution_id, {}))
 
+@app.route("/institution/institution-Afxc4mAYXoJH", methods=["GET"])
+@jwt_optional
+def institution_jisc(institution_id="institution-Afxc4mAYXoJH"):
+    print u"in institution_jisc"
+
+    inst = Institution.query.get(institution_id)
+    if not inst:
+        return abort_json(404, u"Institution does not exist.")
+
+    if not authorize_institution(inst, Permission.view()):
+        return abort_json(403, u"Must have read permission to get institution properties.")
+
+    print "authorized"
+    response_dict = s3_cache_get("institution/institution-Afxc4mAYXoJH")
+
+    return jsonify_fast_no_sort(response_dict)
+
+
 
 @app.route("/institution/<institution_id>", methods=["POST", "GET"])
 @jwt_optional
@@ -757,6 +786,15 @@ def get_jwt():
     if "Authorization" in request.headers and request.headers["Authorization"] and "Bearer " in request.headers["Authorization"]:
         return request.headers["Authorization"].replace("Bearer ", "")
     return None
+
+
+@app.route("/publisher/package-3WkCDEZTqo6S", methods=["GET"])
+@jwt_optional
+def get_package_package_3WkCDEZTqo6S(package_id="package-3WkCDEZTqo6S"):
+    authenticate_for_publisher(package_id, Permission.view())
+    print u"in get_package_package_3WkCDEZTqo6S"
+    response_dict = s3_cache_get("publisher/package-3WkCDEZTqo6S")
+    return jsonify_fast_no_sort(response_dict)
 
 
 @app.route("/publisher/<package_id>", methods=["GET"])
@@ -1169,6 +1207,28 @@ def scenario_id_summary_get(scenario_id):
     my_timing.log_timing("after setting live scenario")
     my_timing.log_timing("after to_dict()")
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_summary())
+
+
+
+@app.route("/scenario/tGUVWRiN/journals", methods=["GET"])
+@jwt_optional
+def scenario_id_journals_get_jisc_tGUVWRiN(scenario_id="tGUVWRiN"):
+    print u"in scenario_id_journals_get_jisc_tGUVWRiN"
+    response_dict = s3_cache_get("scenario/tGUVWRiN/journals")
+    from saved_scenario import get_latest_scenario_raw
+    my_latest_scenario_raw = get_latest_scenario_raw(scenario_id)
+    response_dict["saved"] = my_latest_scenario_raw
+    return jsonify_fast_no_sort(response_dict)
+
+@app.route("/scenario/scenario-QC2kbHfUhj9W/journals", methods=["GET"])
+@jwt_optional
+def scenario_id_journals_get_jisc_scenario_QC2kbHfUhj9W(scenario_id="scenario-QC2kbHfUhj9W"):
+    print u"in scenario_id_journals_get_jisc_scenario_QC2kbHfUhj9W"
+    response_dict = s3_cache_get("scenario/scenario-QC2kbHfUhj9W/journals")
+    from saved_scenario import get_latest_scenario_raw
+    my_latest_scenario_raw = get_latest_scenario_raw(scenario_id)
+    response_dict["saved"] = my_latest_scenario_raw
+    return jsonify_fast_no_sort(response_dict)
 
 
 @app.route("/scenario/<scenario_id>/journals", methods=["GET"])

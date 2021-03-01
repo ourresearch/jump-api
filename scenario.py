@@ -13,6 +13,11 @@ import os
 from sqlalchemy.sql import text
 from random import random
 from time import sleep
+import bz2
+import pickle
+import cPickle
+import gc
+import simplejson as json
 
 from app import use_groups
 from app import get_db_cursor
@@ -1082,22 +1087,19 @@ def get_common_package_data_specific(package_id):
     return (my_data, my_timing)
 
 
-import bz2
-import pickle
-import cPickle
-import gc
-
 
 # from https://medium.com/better-programming/load-fast-load-big-with-compressed-pickles-5f311584507e
 # Pickle a file and then compress it into a file with extension
 # compressed_pickle('example_cp', data)
 def compressed_pickle(title, data):
-    with bz2.BZ2File(title + ".pbz2", "wb") as f:
-        cPickle.dump(data, f)
+    # with bz2.BZ2File(title + ".pbz2", "wb") as f:
+    #     cPickle.dump(data, f)
 
-    # output = open(title + '.json', 'wb')
-    # json.dump(data, output)
-    # output.close()
+    print u"pickling"
+    output = open(title + '.json', 'wb')
+    json.dump(data, output)
+    output.close()
+    print u"done pickling"
 
     # json_zip.dump(data, title + ".json.lzma") # for a lzma file
 
@@ -1110,15 +1112,15 @@ def decompress_pickle(file):
 
     # disable garbage collector
     # gc.disable()
-    my_file = bz2.BZ2File(file + ".pbz2", "rb")
-    data = cPickle.load(my_file)
+    # my_file = bz2.BZ2File(file + ".pbz2", "rb")
+    # data = cPickle.load(my_file)
 
     # enable garbage collector again
     # gc.enable()
 
-    # output = open(file + '.json', 'rb')
-    # data = json.load(output)
-    # output.close()
+    output = open(file + '.json', 'rb')
+    data = json.load(output)
+    output.close()
 
     # output = open(file + '.json.zip', 'rb')
     # data = json_unzip.load(output)
@@ -1128,16 +1130,16 @@ def decompress_pickle(file):
 
 @memorycache
 def get_common_package_data_for_all():
+    my_timing = TimingMessages()
     # try:
     #     print u"trying to load in pickle"
     #     my_data = decompress_pickle("data/get_common_package_data_for_all")
     #     print u"found pickled, returning"
-    #     return my_data
+    #     return (my_data, my_timing)
     # except Exception as e:
     #     print u"no pickle data, so computing.  Error message: ", e
     #     pass
 
-    my_timing = TimingMessages()
     my_data = {}
 
     my_data["journal_era_subjects"] = get_journal_era_subjects()
