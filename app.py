@@ -296,10 +296,14 @@ def warm_cache():
     #     consortium.consortium_get_issns(scenario_id)
 
     import scenario
+    from consortium import consortium_get_computed_data
     scenario.get_common_package_data_for_all()
     scenario.get_common_package_data_specific(DEMO_PACKAGE_ID)
+    cached_consortium_scenario_ids = ["tGUVWRiN", "scenario-QC2kbHfUhj9W"]
+    for scenario_id in cached_consortium_scenario_ids:
+        consortium_get_computed_data(scenario_id)
 
-    print u"done get_common_package_data in {}s".format(elapsed(start_time))
+    print u"done warming the cache in {}s".format(elapsed(start_time))
 
 
 if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':

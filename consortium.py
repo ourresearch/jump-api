@@ -65,17 +65,29 @@ def get_consortium_ids():
 def consortium_get_computed_data(scenario_id):
     start_time = time()
 
-    command = """select member_package_id, scenario_id, issn_l, journals_dict from jump_scenario_computed where scenario_id='{}'""".format(scenario_id)
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
+    if scenario_id in ["tGUVWRiN", "scenario-QC2kbHfUhj9W"]:
+        import boto3
+        s3_client = boto3.client("s3")
+        print u"made s3_client in consortium_get_computed_data"
 
-    print "after db get consortium_get_computed_data", elapsed(start_time)
+        filename = u"consortium_get_computed_data_{}.json".format(scenario_id)
+        s3_clientobj = s3_client.get_object(Bucket="unsub-cache", Key=filename)
+        print u"made s3_clientobj"
+        contents_string = s3_clientobj["Body"].read().decode("utf-8")
+        rows = json.loads(contents_string)
+        print "after json loads in consortium_get_computed_data using s3 cache", elapsed(start_time)
+
+    else:
+        command = """select member_package_id, scenario_id, issn_l, journals_dict from jump_scenario_computed where scenario_id='{}'""".format(scenario_id)
+        with get_db_cursor() as cursor:
+            cursor.execute(command)
+            rows = cursor.fetchall()
+        print "after db get consortium_get_computed_data not using s3 cache", elapsed(start_time)
 
     start_time = time()
     for row in rows:
         row["journals_dict"] = json.loads(row["journals_dict"])
-    print "after json loads in consortium_get_computed_data", elapsed(start_time)
+    print "after json loads in consortium_get_computed_data ", elapsed(start_time)
     return rows
 
 
