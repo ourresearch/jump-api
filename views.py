@@ -1210,35 +1210,35 @@ def scenario_id_summary_get(scenario_id):
 
 
 
-@app.route("/scenario/tGUVWRiN/journals", methods=["GET"])
-@jwt_optional
-def scenario_id_journals_get_jisc_tGUVWRiN(scenario_id="tGUVWRiN"):
-    print u"in scenario_id_journals_get_jisc_tGUVWRiN"
-    response_dict = s3_cache_get("scenario/tGUVWRiN/journals")
-    from saved_scenario import get_latest_scenario_raw
-    my_latest_scenario_raw = get_latest_scenario_raw(scenario_id)
-    response_dict["saved"] = my_latest_scenario_raw
-    return jsonify_fast_no_sort(response_dict)
-
-@app.route("/scenario/scenario-QC2kbHfUhj9W/journals", methods=["GET"])
-@jwt_optional
-def scenario_id_journals_get_jisc_scenario_QC2kbHfUhj9W(scenario_id="scenario-QC2kbHfUhj9W"):
-    print u"in scenario_id_journals_get_jisc_scenario_QC2kbHfUhj9W"
-    response_dict = s3_cache_get("scenario/scenario-QC2kbHfUhj9W/journals")
-    from saved_scenario import get_latest_scenario_raw
-    my_latest_scenario_raw = get_latest_scenario_raw(scenario_id)
-    response_dict["saved"] = my_latest_scenario_raw
-    return jsonify_fast_no_sort(response_dict)
-
-@app.route("/scenario/CBy9gUC3/journals", methods=["GET"])
-@jwt_optional
-def scenario_id_journals_get_jisc_CBy9gUC3(scenario_id="CBy9gUC3"):
-    print u"in scenario_id_journals_get_jisc_CBy9gUC3"
-    response_dict = s3_cache_get("scenario/CBy9gUC3/journals")
-    from saved_scenario import get_latest_scenario_raw
-    my_latest_scenario_raw = get_latest_scenario_raw(scenario_id)
-    response_dict["saved"] = my_latest_scenario_raw
-    return jsonify_fast_no_sort(response_dict)
+# @app.route("/scenario/tGUVWRiN/journals", methods=["GET"])
+# @jwt_optional
+# def scenario_id_journals_get_jisc_tGUVWRiN(scenario_id="tGUVWRiN"):
+#     print u"in scenario_id_journals_get_jisc_tGUVWRiN"
+#     response_dict = s3_cache_get("scenario/tGUVWRiN/journals")
+#     from saved_scenario import get_latest_scenario_raw
+#     my_latest_scenario_raw = get_latest_scenario_raw(scenario_id)
+#     response_dict["saved"] = my_latest_scenario_raw
+#     return jsonify_fast_no_sort(response_dict)
+#
+# @app.route("/scenario/scenario-QC2kbHfUhj9W/journals", methods=["GET"])
+# @jwt_optional
+# def scenario_id_journals_get_jisc_scenario_QC2kbHfUhj9W(scenario_id="scenario-QC2kbHfUhj9W"):
+#     print u"in scenario_id_journals_get_jisc_scenario_QC2kbHfUhj9W"
+#     response_dict = s3_cache_get("scenario/scenario-QC2kbHfUhj9W/journals")
+#     from saved_scenario import get_latest_scenario_raw
+#     my_latest_scenario_raw = get_latest_scenario_raw(scenario_id)
+#     response_dict["saved"] = my_latest_scenario_raw
+#     return jsonify_fast_no_sort(response_dict)
+#
+# @app.route("/scenario/CBy9gUC3/journals", methods=["GET"])
+# @jwt_optional
+# def scenario_id_journals_get_jisc_CBy9gUC3(scenario_id="CBy9gUC3"):
+#     print u"in scenario_id_journals_get_jisc_CBy9gUC3"
+#     response_dict = s3_cache_get("scenario/CBy9gUC3/journals")
+#     from saved_scenario import get_latest_scenario_raw
+#     my_latest_scenario_raw = get_latest_scenario_raw(scenario_id)
+#     response_dict["saved"] = my_latest_scenario_raw
+#     return jsonify_fast_no_sort(response_dict)
 
 
 @app.route("/scenario/<scenario_id>/journals", methods=["GET"])
