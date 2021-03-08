@@ -65,7 +65,8 @@ def get_consortium_ids():
 def consortium_get_computed_data(scenario_id):
     start_time = time()
 
-    # if scenario_id in ["tGUVWRiN", "scenario-QC2kbHfUhj9W"]:
+    from app import cached_consortium_scenario_ids
+    # if scenario_id in cached_consortium_scenario_ids:
     if False:
         import boto3
         s3_client = boto3.client("s3")

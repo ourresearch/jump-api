@@ -275,6 +275,8 @@ def reset_cache(module_name, function_name, *args):
         cursor.execute(delete_command)
         cursor.execute(insert_command)
 
+cached_consortium_scenario_ids = ["tGUVWRiN", "scenario-QC2kbHfUhj9W", "EcUvEELe", "CBy9gUC3", "6it6ajJd"]
+
 def warm_cache():
     print u"warming cache"
 
@@ -299,7 +301,9 @@ def warm_cache():
     from consortium import consortium_get_computed_data
     scenario.get_common_package_data_for_all()
     scenario.get_common_package_data_specific(DEMO_PACKAGE_ID)
-    cached_consortium_scenario_ids = ["tGUVWRiN", "scenario-QC2kbHfUhj9W"]
+
+    global cached_consortium_scenario_ids
+    cached_consortium_scenario_ids
     for scenario_id in cached_consortium_scenario_ids:
         consortium_get_computed_data(scenario_id)
 
