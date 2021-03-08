@@ -321,13 +321,13 @@ class Consortium(object):
 
         def get_insert_rows_for_member(member_package_id):
             command_list = []
-            print "in get_insert_rows_for_member with", member_package_id
+            print "in get_insert_rows_for_member with", member_package_id, self.scenario_id
             try:
                 with app.app_context():
                     print "len(app.my_memorycache_dict)", len(app.my_memorycache_dict)
 
                     my_live_scenario = Scenario(member_package_id, self.scenario_saved_dict, my_jwt=None)
-                    print u"after my_live_scenario with {}".format(member_package_id)
+                    print u"after my_live_scenario with {} {}".format(member_package_id, self.scenario_id)
                     for my_journal in my_live_scenario.journals:
                         usage = my_journal.use_total
                         cpu = my_journal.cpu or "null"
@@ -336,7 +336,7 @@ class Consortium(object):
                             member_package_id, self.scenario_id, self.consortium_short_name, my_journal.issn_l, usage, cpu, journals_dict_json))
 
                     # save all of these in the db
-                    print "now writing to db", member_package_id
+                    print "now writing to db", member_package_id, self.scenario_id
                     start_time = time()
                     command_start = u"INSERT INTO jump_scenario_computed (member_package_id, scenario_id, consortium_name, updated, issn_l, usage, cpu, journals_dict) values "
                     with get_db_cursor() as cursor:
@@ -345,7 +345,7 @@ class Consortium(object):
                             cursor.execute(q)
                             print ".",
                     print(elapsed(start_time))
-                    print "done writing to db", member_package_id
+                    print "done writing to db", member_package_id, self.scenario_id
 
             except Exception as e:
                 print u"In get_insert_rows_for_member with Error: ", e
