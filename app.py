@@ -14,6 +14,7 @@ import warnings
 import urlparse
 from time import time
 import numpy
+from random import shuffle
 from contextlib import contextmanager
 from collections import OrderedDict
 
@@ -282,6 +283,23 @@ def warm_cache():
 
     start_time = time()
 
+    # import consortium
+    # consortium_ids = consortium.get_consortium_ids()
+    # for scenario_id in [d["scenario_id"] for d in consortium_ids]:
+    #     consortium.consortium_get_computed_data(scenario_id)
+    #     consortium.consortium_get_issns(scenario_id)
+
+    from consortium import consortium_get_computed_data
+
+    global cached_consortium_scenario_ids
+    shuffle(cached_consortium_scenario_ids)
+    for scenario_id in cached_consortium_scenario_ids:
+        consortium_get_computed_data(scenario_id)
+
+    print u"done warming cached_consortium_scenario_ids {}s".format(elapsed(start_time))
+
+    # do this second so it is a bit random when it gets here
+
     from scenario import get_ricks_journal
     from scenario import get_ricks_journal_flat
     from scenario import _load_hybrid_2019_from_db
@@ -291,21 +309,9 @@ def warm_cache():
     _load_hybrid_2019_from_db()
     _load_journal_era_subjects_from_db()
 
-    # import consortium
-    # consortium_ids = consortium.get_consortium_ids()
-    # for scenario_id in [d["scenario_id"] for d in consortium_ids]:
-    #     consortium.consortium_get_computed_data(scenario_id)
-    #     consortium.consortium_get_issns(scenario_id)
-
     import scenario
-    from consortium import consortium_get_computed_data
     scenario.get_common_package_data_for_all()
     scenario.get_common_package_data_specific(DEMO_PACKAGE_ID)
-
-    global cached_consortium_scenario_ids
-    cached_consortium_scenario_ids
-    for scenario_id in cached_consortium_scenario_ids:
-        consortium_get_computed_data(scenario_id)
 
     print u"done warming the cache in {}s".format(elapsed(start_time))
 
