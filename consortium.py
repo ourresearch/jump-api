@@ -330,7 +330,7 @@ class Consortium(object):
                     for my_journal in my_live_scenario.journals:
                         usage = my_journal.use_total
                         cpu = my_journal.cpu or "null"
-                        journals_dict_json = jsonify_fast_no_sort_simple(my_journal.to_dict_journals()).replace(u"'", u"''")
+                        journals_dict_json = jsonify_fast_no_sort_simple(my_journal.to_dict_journals_for_consortium()).replace(u"'", u"''")
                         command_list.append(u"('{}', '{}', '{}', sysdate, '{}', {}, {}, '{}')".format(
                             member_package_id, self.scenario_id, self.consortium_short_name, my_journal.issn_l, usage, cpu, journals_dict_json))
 

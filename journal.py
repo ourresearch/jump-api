@@ -1515,6 +1515,53 @@ class Journal(object):
         return table_row
 
 
+    def to_dict_journals_for_consortium(self):
+        table_row = OrderedDict()
+
+        table_row["issn_l"] = self.issn_l
+        table_row["subject"] = self.subject
+        # commenting this out for now, too verbose
+        table_row["era_subjects"] = None
+
+        table_row["is_society_journal"] = self.is_society_journal
+        table_row["institution_name"] = self.institution_name
+        table_row["institution_short_name"] = self.institution_short_name
+        table_row["package_id"] = self.package_id
+
+        # some important ones
+        table_row["usage"] = round(self.use_total)
+        table_row["subscription_cost"] = self.subscription_cost
+        table_row["ill_cost"] = self.ill_cost
+        table_row["cpu"] = display_cpu(self.cpu)
+
+        # just used for debugging, frontend calculates this itself
+        table_row["use_instant_for_debugging"] = self.use_instant
+
+        # keep this format
+        table_row["use_groups_free_instant"] = {"oa": self.use_oa_plus_social_networks, "backfile": self.use_backfile, "social_networks": 0}
+        table_row["use_groups_if_subscribed"] = {"subscription": self.use_subscription}
+        table_row["use_groups_if_not_subscribed"] = {"ill": self.use_ill, "other_delayed": self.use_other_delayed}
+
+        # these keys currently slightly different than in journal format
+        table_row["perpetual_access_years"] = self.display_perpetual_access_years
+        table_row["baseline_access"] = self.baseline_access
+
+        # oa
+        table_row["use_social_networks_percent"] = round(float(100)*self.use_social_networks/self.use_total)
+        table_row["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
+        table_row["use_hybrid_percent"] = round(float(100)*self.use_oa_hybrid/self.use_total)
+        table_row["use_bronze_percent"] = round(float(100)*self.use_oa_bronze/self.use_total)
+        table_row["use_peer_reviewed_percent"] =  round(float(100)*self.use_oa_peer_reviewed/self.use_total)
+        table_row["bronze_oa_embargo_months"] = self.bronze_oa_embargo_months
+        table_row["is_hybrid_2019"] = self.is_hybrid_2019
+
+        # impact
+        table_row["downloads"] = round(self.downloads_total)
+        table_row["citations"] = round(self.num_citations, 1)
+        table_row["authorships"] = round(self.num_authorships, 1)
+
+        return table_row
+
     def to_dict_details(self):
         response = OrderedDict()
 

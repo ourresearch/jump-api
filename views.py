@@ -624,22 +624,22 @@ def user_permissions():
 
     return jsonify_fast_no_sort(query_user.to_dict_permissions().get(institution_id, {}))
 
-@app.route("/institution/institution-Afxc4mAYXoJH", methods=["GET"])
-@jwt_optional
-def institution_jisc(institution_id="institution-Afxc4mAYXoJH"):
-    print u"in institution_jisc"
-
-    inst = Institution.query.get(institution_id)
-    if not inst:
-        return abort_json(404, u"Institution does not exist.")
-
-    if not authorize_institution(inst, Permission.view()):
-        return abort_json(403, u"Must have read permission to get institution properties.")
-
-    print "authorized"
-    response_dict = s3_cache_get("institution/institution-Afxc4mAYXoJH")
-
-    return jsonify_fast_no_sort(response_dict)
+# @app.route("/institution/institution-Afxc4mAYXoJH", methods=["GET"])
+# @jwt_optional
+# def institution_jisc(institution_id="institution-Afxc4mAYXoJH"):
+#     print u"in institution_jisc"
+#
+#     inst = Institution.query.get(institution_id)
+#     if not inst:
+#         return abort_json(404, u"Institution does not exist.")
+#
+#     if not authorize_institution(inst, Permission.view()):
+#         return abort_json(403, u"Must have read permission to get institution properties.")
+#
+#     print "authorized"
+#     response_dict = s3_cache_get("institution/institution-Afxc4mAYXoJH")
+#
+#     return jsonify_fast_no_sort(response_dict)
 
 
 
@@ -788,13 +788,13 @@ def get_jwt():
     return None
 
 
-@app.route("/publisher/package-3WkCDEZTqo6S", methods=["GET"])
-@jwt_optional
-def get_package_package_3WkCDEZTqo6S(package_id="package-3WkCDEZTqo6S"):
-    authenticate_for_publisher(package_id, Permission.view())
-    print u"in get_package_package_3WkCDEZTqo6S"
-    response_dict = s3_cache_get("publisher/package-3WkCDEZTqo6S")
-    return jsonify_fast_no_sort(response_dict)
+# @app.route("/publisher/package-3WkCDEZTqo6S", methods=["GET"])
+# @jwt_optional
+# def get_package_jisc_package_3WkCDEZTqo6S(package_id="package-3WkCDEZTqo6S"):
+#     authenticate_for_publisher(package_id, Permission.view())
+#     print u"in get_package_package_3WkCDEZTqo6S"
+#     response_dict = s3_cache_get("publisher/package-3WkCDEZTqo6S")
+#     return jsonify_fast_no_sort(response_dict)
 
 
 @app.route("/publisher/<package_id>", methods=["GET"])
