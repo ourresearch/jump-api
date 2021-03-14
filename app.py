@@ -127,6 +127,7 @@ app.config["SQLALCHEMY_BINDS"] = {
     "redshift_db": os.getenv("DATABASE_URL_REDSHIFT")
 }
 
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = { "pool_pre_ping": True, "pool_recycle": 300, }
 
 # from http://stackoverflow.com/a/12417346/596939
 # class NullPoolSQLAlchemy(SQLAlchemy):
