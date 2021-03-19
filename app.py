@@ -62,7 +62,7 @@ libraries_to_mum_warning = [
     "boto3",
     "botocore",
     "s3transfer",
-    "newrelic",
+    # "newrelic",
     "RateLimiter",
     "paramiko",
     "chardet",
@@ -179,21 +179,24 @@ def get_db_connection():
         connection.autocommit=True
         # connection.readonly = True
         yield connection
+    except as e:
+        print u"error in get_db_connection", e
     finally:
         app.config['postgreSQL_pool'].putconn(connection)
 
 @contextmanager
 def get_db_cursor(commit=False):
     with get_db_connection() as connection:
-      cursor = connection.cursor(
-                  cursor_factory=psycopg2.extras.RealDictCursor)
-      try:
-          yield cursor
-          if commit:
-              connection.commit()
-      finally:
-          cursor.close()
-          pass
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        try:
+              yield cursor
+              if commit:
+                  connection.commit()
+        except as e:
+            print u"error in get_db_cursor", e
+        finally:
+            cursor.close()
+           pass
 
 
 memcached_servers = os.environ.get('MEMCACHIER_SERVERS', '').split(',')
