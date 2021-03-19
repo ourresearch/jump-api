@@ -194,7 +194,7 @@ def get_db_cursor(commit=False):
             print u"error in get_db_cursor", e
         finally:
             cursor.close()
-           pass
+            pass
 
 
 memcached_servers = os.environ.get('MEMCACHIER_SERVERS', '').split(',')
