@@ -189,9 +189,10 @@ class PackageInput:
 
         s3.upload_file(filename, bucket_name, object_name)
 
-        RawFileUploadObject.query.filter(
-            RawFileUploadObject.package_id == package_id, RawFileUploadObject.file == cls.file_type_label()
-        ).delete()
+        # heather temporary
+        # RawFileUploadObject.query.filter(
+        #     RawFileUploadObject.package_id == package_id, RawFileUploadObject.file == cls.file_type_label()
+        # ).delete()
 
         db.session.add(RawFileUploadObject(
             package_id=package_id,
@@ -577,7 +578,9 @@ class PackageInput:
 
 
             db.session.flush()
-            rows_to_delete.delete()
+
+            # heather temporary
+            # rows_to_delete.delete()
 
             sorted_fields = sorted(normalized_rows[0].keys())
             normalized_csv_filename = tempfile.mkstemp()[1]
