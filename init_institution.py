@@ -436,3 +436,6 @@ if __name__ == "__main__":
 
 # insert into jump_user_institution_permission (user_id, institution_id, permission_id)
 # (select 'user-oG2hLFX8JGjU' as user_id, institution_id, 1 as permission_id from jump_user_institution_permission where user_id='user-oG2hLFX8JGjU' and permission_id=81)
+
+
+    print "HEATHER MAKE SURE IT WORKED WITH NO ERRORS esp with delete RoR etc"

@@ -186,7 +186,12 @@ class SavedScenario(db.Model):
         return self.live_scenario
 
 
-    def to_dict_saved(self):
+    def to_dict_saved_from_db(self):
+        my_json = get_latest_scenario_raw(self.scenario_id)
+        return my_json
+
+
+    def to_dict_saved_freshly_computed(self):
         self.set_live_scenario()  # in case not done
 
         response = {
@@ -252,7 +257,7 @@ class SavedScenario(db.Model):
     def to_dict_journals(self):
         response = OrderedDict()
         response["meta"] = self.to_dict_meta()
-        response["saved"] = self.to_dict_saved()
+        response["saved"] = self.to_dict_saved_from_db()
         response["journals"] = [j.to_dict_journals() for j in self.live_scenario.journals_sorted_cpu]
 
         # these are used by consortium

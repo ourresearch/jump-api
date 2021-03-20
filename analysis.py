@@ -77,7 +77,7 @@ for username in usernames:
 #         print command
 #         cursor.execute(command)
 #
-#         scenario_definition_dict = my_scenario.to_dict_saved()
+#         scenario_definition_dict = my_scenario.to_dict_saved_from_db()
 #         pprint(scenario_definition_dict)
 #         scenario_definition_dict["subrs"] = top_issnls
 #         scenario_json = json.dumps(scenario_definition_dict)

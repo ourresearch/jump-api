@@ -232,16 +232,13 @@ class PackageInput:
 
     @classmethod
     def delete(cls, package_id):
-        num_deleted = db.session.query(cls).filter(cls.package_id == package_id).delete()
         db.session.execute("delete from {} where package_id = '{}'".format(cls.destination_table(), package_id))
 
-        db.session.query(PackageFileErrorRow).filter(
-            PackageFileErrorRow.package_id == package_id, PackageFileErrorRow.file == cls.file_type_label()
-        ).delete()
+        db.session.execute("delete from {} where package_id = '{}' and file = '{}'".format(
+            PackageFileErrorRow.destination_table(), package_id, cls.file_type_label()))
 
-        RawFileUploadObject.query.filter(
-            RawFileUploadObject.package_id == package_id, RawFileUploadObject.file == cls.file_type_label()
-        ).delete()
+        db.session.execute("delete from {} where package_id = '{}' and file = '{}'".format(
+            RawFileUploadObject.destination_table(), package_id, cls.file_type_label()))
 
         safe_commit(db)
 
@@ -250,7 +247,7 @@ class PackageInput:
             cls.clear_caches(my_package)
 
 
-        return u"Deleted {} {} rows for package {}.".format(num_deleted, cls.__name__, package_id)
+        return u"Deleted {} rows for package {}.".format(cls.__name__, package_id)
 
     @classmethod
     def clear_caches(cls, my_package):
@@ -547,11 +544,13 @@ class PackageInput:
         # save errors
 
         # heather temporary
+
         # db.session.query(PackageFileErrorRow).filter(
         #     PackageFileErrorRow.package_id == package_id, PackageFileErrorRow.file == cls.file_type_label()
         # ).delete()
 
         cls.save_errors(package_id, error_rows)
+        db.session.flush()
 
         # save normalized rows
 
@@ -569,18 +568,11 @@ class PackageInput:
                 report_version = normalized_rows[1]["report_version"]
                 report_name = normalized_rows[1]["report_name"]
                 # delete all report_year and access_type and yop
-
-                rows_to_delete = db.session.query(cls).filter(cls.package_id == package_id,
-                                             cls.report_version == report_version,
-                                             cls.report_name == report_name)
+                db.session.execute("delete from {} where package_id = '{}' and report_version = '{}' and report_name = '{}'".format(
+                    PackageFileErrorRow.destination_table(), package_id, report_version, report_name))
             else:
-                rows_to_delete = db.session.query(cls).filter(cls.package_id == package_id)
-
-
-            db.session.flush()
-
-            # heather temporary
-            # rows_to_delete.delete()
+                db.session.execute("delete from {} where package_id = '{}'".format(
+                    cls.destination_table(), package_id))
 
             sorted_fields = sorted(normalized_rows[0].keys())
             normalized_csv_filename = tempfile.mkstemp()[1]

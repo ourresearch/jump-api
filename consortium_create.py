@@ -179,7 +179,7 @@ def consortium_create():
     # safe_commit(db)
     # print u"made consortium package {} and scenario {}".format(my_package, my_scenario)
     #
-    # dict_to_save = my_scenario.to_dict_saved()
+    # dict_to_save = my_scenario.to_dict_saved_from_db()
     # dict_to_save["name"] = my_scenario_name
     # save_raw_scenario_to_db(my_scenario_id, dict_to_save, None)
 

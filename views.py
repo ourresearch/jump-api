@@ -448,10 +448,11 @@ def register_new_user():
 
     for institution_id, permission_names in permissions_by_institution.items():
         if auth_user.has_permission(institution_id, Permission.admin()):
-            UserInstitutionPermission.query.filter(
-                UserInstitutionPermission.user_id == req_user.id,
-                UserInstitutionPermission.institution_id == institution_id
-            ).delete()
+
+            command = "delete from jump_user_institution_permission where user_id = '{}' and institution_id = '{}'".format(
+                req_user.id, institution_id)
+            with get_db_cursor() as cursor:
+                cursor.execute(command)
 
             for permission_name in permission_names:
                 permission = Permission.get(permission_name)
@@ -599,10 +600,10 @@ def user_permissions():
         if query_user.id == auth_user.id and Permission.admin().name not in permission_names:
             return abort_json(400, u"Cannot revoke own admin permission.")
 
-        UserInstitutionPermission.query.filter(
-            UserInstitutionPermission.user_id == query_user.id,
-            UserInstitutionPermission.institution_id == institution_id
-        ).delete()
+        command = "delete from jump_user_institution_permission where user_id = '{}' and institution_id = '{}'".format(
+            query_user.id, institution_id)
+        with get_db_cursor() as cursor:
+            cursor.execute(command)
 
         for permission_name in permission_names:
             permission = Permission.get(permission_name)
@@ -692,9 +693,17 @@ def institution_ror_id(institution_id, ror_id):
         for grid_id in grid_ids:
             db.session.merge(GridId(institution_id=inst.id, grid_id=grid_id))
     elif request.method == "DELETE":
-        RorId.query.filter(RorId.ror_id == ror_id, RorId.institution_id == institution_id).delete()
+
+        command = "delete from jump_ror_id where ror_id = '{}' and institution_id = '{}'".format(
+            ror_id, institution_id)
+        with get_db_cursor() as cursor:
+            cursor.execute(command)
+
         for grid_id in grid_ids:
-            GridId.query.filter(GridId.grid_id == grid_id, GridId.institution_id == institution_id).delete()
+            command = "delete from jump_grid_id where grid_id = '{}' and institution_id = '{}'".format(
+                grid_id, institution_id)
+            with get_db_cursor() as cursor:
+                cursor.execute(command)
 
     db.session.commit()
 
@@ -1421,13 +1430,12 @@ def scenario_post(package_id):
     new_saved_scenario.scenario_name = new_scenario_name
     new_saved_scenario.is_base_scenario = False
 
-
     if my_saved_scenario_to_copy_from:
-        dict_to_save = my_saved_scenario_to_copy_from.to_dict_saved()
+        dict_to_save = my_saved_scenario_to_copy_from.to_dict_saved_from_db()
         dict_to_save["id"] = new_scenario_id
         dict_to_save["name"] = new_scenario_name
     else:
-        dict_to_save = new_saved_scenario.to_dict_saved()
+        dict_to_save = new_saved_scenario.to_dict_saved_from_db()
 
     save_raw_scenario_to_db(new_scenario_id, dict_to_save, get_ip(request))
 
@@ -1477,11 +1485,11 @@ def publisher_scenario_post(publisher_id):
     safe_commit(db)
 
     if my_saved_scenario_to_copy_from:
-        dict_to_save = my_saved_scenario_to_copy_from.to_dict_saved()
+        dict_to_save = my_saved_scenario_to_copy_from.to_dict_saved_from_db()
         dict_to_save["id"] = new_scenario_id
         dict_to_save["name"] = new_scenario_name
     else:
-        dict_to_save = new_saved_scenario.to_dict_saved()
+        dict_to_save = new_saved_scenario.to_dict_saved_from_db()
 
     save_raw_scenario_to_db(new_scenario_id, dict_to_save, get_ip(request))
 
@@ -1507,8 +1515,8 @@ def scenario_delete(scenario_id):
     # just delete it out of the table, leave the saves
     # doing it this way makes sure we have permission to acces and therefore delete the scenario
     get_saved_scenario(scenario_id, required_permission=Permission.modify())
-    command = "delete from jump_package_scenario where scenario_id = '{}'".format(scenario_id)
 
+    command = "delete from jump_package_scenario where scenario_id = '{}'".format(scenario_id)
     with get_db_cursor() as cursor:
         cursor.execute(command)
 
@@ -1578,7 +1586,10 @@ def reset_password():
         return abort_json(404, u"Unrecognized user id {}.".format(reset_request.user_id))
 
     reset_user.password_hash = generate_password_hash(password)
-    password_reset.ResetRequest.query.filter(password_reset.ResetRequest.user_id == reset_user.id).delete()
+    command = "delete from jump_password_reset_request where user_id = '{}'".format(reset_user.id)
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+
     safe_commit(db)
 
     return jsonify_fast_no_sort({"message": u"password reset for user {}".format(reset_user.id)})
