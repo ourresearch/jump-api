@@ -189,10 +189,8 @@ class PackageInput:
 
         s3.upload_file(filename, bucket_name, object_name)
 
-        # heather temporary
-        # RawFileUploadObject.query.filter(
-        #     RawFileUploadObject.package_id == package_id, RawFileUploadObject.file == cls.file_type_label()
-        # ).delete()
+        db.session.execute("delete from {} where package_id = '{}' and file = '{}'".format(
+            RawFileUploadObject.destination_table(), package_id, cls.file_type_label()))
 
         db.session.add(RawFileUploadObject(
             package_id=package_id,
@@ -239,6 +237,9 @@ class PackageInput:
 
         db.session.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
             package_id, cls.file_type_label()))
+
+        db.session.execute("delete from {} where package_id = '{}' and file = '{}'".format(
+            cls.destination_table(), package_id, cls.file_type_label()))
 
         safe_commit(db)
 
@@ -542,8 +543,6 @@ class PackageInput:
             return {"success": False, "message": e.message, "warnings": []}
 
         # save errors
-
-        # heather temporary
 
         db.session.execute("delete from jump_file_import_error_rows where file = '{}'".format(
             package_id, cls.file_type_label()))

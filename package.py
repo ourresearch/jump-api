@@ -663,10 +663,8 @@ class Package(db.Model):
         else:
             num_counter_error_rows = 0
 
-        num_counter_rows = (
-            CounterInput.query.filter(CounterInput.package_id == self.package_id).count()
-            + num_counter_error_rows
-        )
+        num_counter_rows = CounterInput.query.filter(CounterInput.package_id == self.package_id).count()
+        num_counter_rows += num_counter_error_rows
 
         # perpetual access stats
 
@@ -677,10 +675,8 @@ class Package(db.Model):
         else:
             num_pa_error_rows = 0
 
-        num_pa_rows = (
-            PerpetualAccessInput.query.filter(PerpetualAccessInput.package_id == self.package_id).count()
-            + num_pa_error_rows
-        )
+        num_pa_rows = PerpetualAccessInput.query.filter(PerpetualAccessInput.package_id == self.package_id).count()
+        num_pa_rows += num_pa_error_rows
 
         # price stats
 
@@ -691,10 +687,8 @@ class Package(db.Model):
         else:
             num_price_error_rows = 0
 
-        num_price_rows = (
-            JournalPriceInput.query.filter(JournalPriceInput.package_id == self.package_id).count()
-            + num_price_error_rows
-        )
+        num_price_rows = JournalPriceInput.query.filter(JournalPriceInput.package_id == self.package_id).count()
+        num_price_rows += num_price_error_rows
 
         num_core_rows = db.session.execute(
             "select count(*) from jump_core_journals_input where package_id = '{}'".format(self.package_id)
