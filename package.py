@@ -131,10 +131,6 @@ class Package(db.Model):
         rows = get_sql_dict_rows(q)
         return rows
 
-    @property
-    def num_journals(self):
-        return len(self.get_in_scenario)
-
     @cached_property
     def get_counter_rows(self):
         return self.filter_by_core_list(self.get_unfiltered_counter_rows)
@@ -356,13 +352,15 @@ class Package(db.Model):
             package_id = DEMO_PACKAGE_ID
         return package_id
 
-    def clear_package_counter_breakdown_cache(self):
-        pass
-        # disable memcached
-        # my_memcached.delete(self.get_package_counter_breakdown_memcached_key())
+    # not used anymore
+    # def clear_package_counter_breakdown_cache(self):
+    #     pass
+    #     # disable memcached
+    #     # my_memcached.delete(self.get_package_counter_breakdown_memcached_key())
 
-    def get_package_counter_breakdown_memcached_key(self):
-        return "package.get_package_counter_breakdown.package_id_for_db.{}".format(self.package_id_for_db)
+    # not used anymore
+    # def get_package_counter_breakdown_memcached_key(self):
+    #     return "package.get_package_counter_breakdown.package_id_for_db.{}".format(self.package_id_for_db)
 
     @cached_property
     def is_owned_by_consortium(self):
@@ -383,66 +381,70 @@ class Package(db.Model):
             rows = cursor.fetchall()
         return [row["consortium_scenario_id"] for row in rows]
 
-    def get_package_counter_breakdown(self):
-        package_id = self.package_id_for_db
-
-        # temp
-        # @todo next:
-        # see if i can comment this back out
-        # see why wiley has more in scenario than it does still publishing with prices
-        # self.clear_package_counter_breakdown_cache()
-
-
-        # disable memcached
-        # memcached_key = self.get_package_counter_breakdown_memcached_key()
-        # my_memcached_results = my_memcached.get(memcached_key)
-        # if my_memcached_results:
-        #     return my_memcached_results
-
-        response = OrderedDict()
-        response["counts"] = OrderedDict()
-        response["diff_counts"] = OrderedDict()
-        # response["papers"] = OrderedDict()
-        response["package_id"] = package_id
-
-        response["counts"]["core_journal_rows"] = len(self.get_core_journal_rows)
-
-        response["counts"]["counter_rows"] = len(self.get_counter_rows)
-        response["diff_counts"]["diff_not_in_counter"] = len(self.get_diff_not_in_counter)
-
-        response["counts"]["counter_unique_rows"] = len(self.get_counter_unique_rows)
-        response["diff_counts"]["diff_non_unique"] = len(self.get_diff_non_unique)
-        # response["papers"]["diff_non_unique"] = self.get_diff_non_unique
-
-        response["counts"]["published_in_2019"] = len(self.get_published_in_2019)
-        response["diff_counts"]["diff_not_published_in_2019"] = len(self.get_diff_not_published_in_2019)
-        # response["papers"]["diff_not_published_in_2019"] = self.get_diff_not_published_in_2019
-
-        response["counts"]["toll_access_published_in_2019"] = len(self.get_published_toll_access_in_2019)
-        response["diff_counts"]["diff_open_access_journals"] =  len(self.get_diff_open_access_journals)
-        # response["papers"]["diff_open_access_journals"] =  self.get_diff_open_access_journals
-
-        response["counts"]["toll_access_published_in_2019_with_elsevier"] = len(self.get_published_toll_access_in_2019_with_publisher)
-        print "len(self.get_published_toll_access_in_2019_with_publisher)", len(self.get_published_toll_access_in_2019_with_publisher)
-        response["diff_counts"]["diff_changed_publisher"] =  len(self.get_diff_changed_publisher)
-        # response["papers"]["diff_changed_publisher"] =  self.get_diff_changed_publisher
-
-        response["counts"]["published_toll_access_in_2019_with_elsevier_have_price"] = len(self.get_published_toll_access_in_2019_with_publisher_have_price)
-        response["diff_counts"]["diff_no_price"] =  len(self.get_diff_no_price)
-        # response["papers"]["diff_no_price"] =  self.get_diff_no_price
-
-        response["counts"]["in_scenario"] = len(self.get_in_scenario)
-        response["diff_counts"]["diff_missing_from_scenario"] =  len(self.get_diff_missing_from_scenario)
-        # response["papers"]["diff_missing_from_scenario"] =  self.get_diff_missing_from_scenario
-        response["diff_counts"]["diff_extra_in_scenario"] =  len(self.get_diff_extra_in_scenario)
-        # response["papers"]["diff_extra_in_scenario"] =  self.get_diff_extra_in_scenario
-
-        # response["papers"]["good_to_use"] =  self.get_in_scenario
-
-        #disable memcached
-        # my_memcached.set(memcached_key, response)
-
-        return response
+    # not used anymore
+    # def get_package_counter_breakdown(self):
+    #     package_id = self.package_id_for_db
+    #
+    #     # temp
+    #     # @todo next:
+    #     # see if i can comment this back out
+    #     # see why wiley has more in scenario than it does still publishing with prices
+    #     # self.clear_package_counter_breakdown_cache()
+    #
+    #
+    #     # disable memcached
+    #     # memcached_key = self.get_package_counter_breakdown_memcached_key()
+    #     # my_memcached_results = my_memcached.get(memcached_key)
+    #     # if my_memcached_results:
+    #     #     return my_memcached_results
+    #
+    #     response = OrderedDict()
+    #     response["counts"] = OrderedDict()
+    #     response["diff_counts"] = OrderedDict()
+    #     # response["papers"] = OrderedDict()
+    #     response["package_id"] = package_id
+    #
+    #     response["counts"]["core_journal_rows"] = len(self.get_core_journal_rows)
+    #
+    #     response["counts"]["counter_rows"] = len(self.get_counter_rows)
+    #     response["diff_counts"]["diff_not_in_counter"] = len(self.get_diff_not_in_counter)
+    #
+    #     response["counts"]["counter_unique_rows"] = len(self.get_counter_unique_rows)
+    #     response["diff_counts"]["diff_non_unique"] = len(self.get_diff_non_unique)
+    #     # response["papers"]["diff_non_unique"] = self.get_diff_non_unique
+    #
+    #     response["counts"]["published_in_2019"] = len(self.get_published_in_2019)
+    #     response["diff_counts"]["diff_not_published_in_2019"] = len(self.get_diff_not_published_in_2019)
+    #     # response["papers"]["diff_not_published_in_2019"] = self.get_diff_not_published_in_2019
+    #
+    #     response["counts"]["toll_access_published_in_2019"] = len(self.get_published_toll_access_in_2019)
+    #     response["diff_counts"]["diff_open_access_journals"] =  len(self.get_diff_open_access_journals)
+    #     # response["papers"]["diff_open_access_journals"] =  self.get_diff_open_access_journals
+    #
+    #     response["counts"]["toll_access_published_in_2019_with_elsevier"] = len(self.get_published_toll_access_in_2019_with_publisher)
+    #     print "len(self.get_published_toll_access_in_2019_with_publisher)", len(self.get_published_toll_access_in_2019_with_publisher)
+    #     response["diff_counts"]["diff_changed_publisher"] =  len(self.get_diff_changed_publisher)
+    #     # response["papers"]["diff_changed_publisher"] =  self.get_diff_changed_publisher
+    #
+    #     response["counts"]["published_toll_access_in_2019_with_elsevier_have_price"] = len(self.get_published_toll_access_in_2019_with_publisher_have_price)
+    #     response["diff_counts"]["diff_no_price"] =  len(self.get_diff_no_price)
+    #     # response["papers"]["diff_no_price"] =  self.get_diff_no_price
+    #
+    #     # this is very time consuming so don't include unless needed
+    #
+    #     # response["counts"]["in_scenario"] = len(self.get_in_scenario)
+    #     # response["diff_counts"]["diff_missing_from_scenario"] =  len(self.get_diff_missing_from_scenario)
+    #
+    #     # response["papers"]["diff_missing_from_scenario"] =  self.get_diff_missing_from_scenario
+    #     # response["diff_counts"]["diff_extra_in_scenario"] =  len(self.get_diff_extra_in_scenario)
+    #     # response["papers"]["diff_extra_in_scenario"] =  self.get_diff_extra_in_scenario
+    #
+    #     # response["papers"]["good_to_use"] =  self.get_in_scenario
+    #
+    #     #disable memcached
+    #     # my_memcached.set(memcached_key, response)
+    #
+    #     return response
 
     def get_journal_attributes(self):
         counter_rows = dict((x["issn_l"], x) for x in self.get_unfiltered_counter_rows)
@@ -646,12 +648,11 @@ class Package(db.Model):
                 "hasCustomPrices": self.has_custom_prices,
                 "hasCoreJournalList": self.has_core_journal_list,
                 "hasCustomPerpetualAccess": self.has_custom_perpetual_access,
-                # "numJournals": self.num_journals,
         }
 
     def to_package_dict(self):
-        journal_detail = dict(self.get_package_counter_breakdown())
-        journal_detail["publisher_id"] = journal_detail.pop("package_id")
+        # journal_detail = dict(self.get_package_counter_breakdown())  # not used anymore
+        # journal_detail["publisher_id"] = journal_detail.pop("package_id") # not used anymore
 
         # counter stats
 
@@ -710,7 +711,7 @@ class Package(db.Model):
             "currency": self.currency,
             "publisher": self.publisher,
             "is_demo": self.is_demo,
-            "journal_detail": journal_detail,
+            "journal_detail": None,  #not used anymore
             "scenarios": [s.to_dict_minimal() for s in self.saved_scenarios],
             "data_files": [
                 {

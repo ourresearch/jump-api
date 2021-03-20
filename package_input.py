@@ -265,7 +265,7 @@ class PackageInput:
         else:
             print u"NO NEED TO cache clear consortium_get_computed_data for my_package {}".format(my_package)
 
-        my_package.clear_package_counter_breakdown_cache()
+        # my_package.clear_package_counter_breakdown_cache() # not used anymore
 
     @classmethod
     def update_dest_table(cls, package_id):
