@@ -12,7 +12,7 @@ import json
 from app import db
 from app import get_db_cursor
 from app import DEMO_PACKAGE_ID
-from app import my_memcached
+# from app import my_memcached # disable memcached
 from assumptions import Assumptions
 from counter import CounterInput
 from journal_price import JournalPriceInput
@@ -357,7 +357,9 @@ class Package(db.Model):
         return package_id
 
     def clear_package_counter_breakdown_cache(self):
-        my_memcached.delete(self.get_package_counter_breakdown_memcached_key())
+        pass
+        # disable memcached
+        # my_memcached.delete(self.get_package_counter_breakdown_memcached_key())
 
     def get_package_counter_breakdown_memcached_key(self):
         return "package.get_package_counter_breakdown.package_id_for_db.{}".format(self.package_id_for_db)
@@ -390,10 +392,12 @@ class Package(db.Model):
         # see why wiley has more in scenario than it does still publishing with prices
         # self.clear_package_counter_breakdown_cache()
 
-        memcached_key = self.get_package_counter_breakdown_memcached_key()
-        my_memcached_results = my_memcached.get(memcached_key)
-        if my_memcached_results:
-            return my_memcached_results
+
+        # disable memcached
+        # memcached_key = self.get_package_counter_breakdown_memcached_key()
+        # my_memcached_results = my_memcached.get(memcached_key)
+        # if my_memcached_results:
+        #     return my_memcached_results
 
         response = OrderedDict()
         response["counts"] = OrderedDict()
@@ -435,7 +439,9 @@ class Package(db.Model):
 
         # response["papers"]["good_to_use"] =  self.get_in_scenario
 
-        my_memcached.set(memcached_key, response)
+        #disable memcached
+        # my_memcached.set(memcached_key, response)
+
         return response
 
     def get_journal_attributes(self):

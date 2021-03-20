@@ -77,6 +77,9 @@ files = {
 def add_institution(institution_name, old_username, ror_id, is_consortium=False):
     logger.info(u"initializing institution {}".format(institution_name))
 
+    print "need to fix this for UK universities Heather"
+    print 1/0
+
     my_institution = db.session.query(Institution).filter(Institution.display_name == institution_name).scalar()
 
     if my_institution:

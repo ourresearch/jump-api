@@ -23,7 +23,7 @@ from app import use_groups
 from app import get_db_cursor
 from app import DEMO_PACKAGE_ID
 from app import db
-from app import my_memcached
+# from app import my_memcached # disable memcached
 from app import logger
 from app import memorycache
 
@@ -789,20 +789,34 @@ def _perpetual_access_cache_key(package_id):
 
 
 def refresh_perpetual_access_from_db(package_id):
+    pass
+
+# disable memcached
+#     command = text(
+#         u'select * from jump_perpetual_access where package_id = :package_id'
+#     ).bindparams(package_id=package_id)
+#
+#     rows = db.engine.execute(command).fetchall()
+#     package_dict = dict([(a["issn_l"], a) for a in rows])
+#
+#     my_memcached.set(_perpetual_access_cache_key(package_id), package_dict)
+#
+#     return package_dict
+
+
+def get_perpetual_access_from_cache(package_id, unused_publisher_name=None):
+    # disable memcached
+    # memcached_key = _perpetual_access_cache_key(package_id)
+    # return my_memcached.get(memcached_key) or refresh_perpetual_access_from_db(package_id)
+
     command = text(
         u'select * from jump_perpetual_access where package_id = :package_id'
     ).bindparams(package_id=package_id)
 
     rows = db.engine.execute(command).fetchall()
     package_dict = dict([(a["issn_l"], a) for a in rows])
-
-    my_memcached.set(_perpetual_access_cache_key(package_id), package_dict)
-
     return package_dict
 
-def get_perpetual_access_from_cache(package_id, unused_publisher_name=None):
-    memcached_key = _perpetual_access_cache_key(package_id)
-    return my_memcached.get(memcached_key) or refresh_perpetual_access_from_db(package_id)
 
 @cache
 def get_core_list_from_db(input_package_id):
@@ -857,11 +871,14 @@ def get_prices_from_cache(package_ids, publisher_name):
     lookup_dict = defaultdict(dict)
 
     for package_id in package_ids:
-        # temp
-        refresh_cached_prices_from_db(package_id, publisher_name)
+        package_dict = None
 
-        memcached_key = _journal_price_cache_key(package_id, publisher_name)
-        package_dict = my_memcached.get(memcached_key)
+        # temp
+        # disable memcached
+        # refresh_cached_prices_from_db(package_id, publisher_name)
+        # memcached_key = _journal_price_cache_key(package_id, publisher_name)
+        # package_dict = my_memcached.get(memcached_key)
+
         if not package_dict:
             package_dict = refresh_cached_prices_from_db(package_id, publisher_name)
         lookup_dict[package_id] = package_dict
@@ -951,7 +968,8 @@ def refresh_cached_prices_from_db(package_id, publisher_name):
     for row in rows:
         package_dict[row["issn_l"]] = row["price"]
 
-    my_memcached.set(_journal_price_cache_key(package_id, publisher_name), package_dict)
+    #disable memcached
+    # my_memcached.set(_journal_price_cache_key(package_id, publisher_name), package_dict)
 
     return package_dict
 
