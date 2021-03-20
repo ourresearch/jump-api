@@ -189,8 +189,8 @@ class PackageInput:
 
         s3.upload_file(filename, bucket_name, object_name)
 
-        db.session.execute("delete from {} where package_id = '{}' and file = '{}'".format(
-            RawFileUploadObject.destination_table(), package_id, cls.file_type_label()))
+        db.session.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
+            package_id, cls.file_type_label()))
 
         db.session.add(RawFileUploadObject(
             package_id=package_id,
