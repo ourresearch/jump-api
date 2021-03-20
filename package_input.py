@@ -230,6 +230,8 @@ class PackageInput:
 
     @classmethod
     def delete(cls, package_id):
+        db.session.execute("delete from {} where package_id = '{}'".format(cls.__tablename__, package_id))
+
         db.session.execute("delete from {} where package_id = '{}'".format(cls.destination_table(), package_id))
 
         db.session.execute("delete from jump_file_import_error_rows where package_id = '{}' and file = '{}'".format(
@@ -237,9 +239,6 @@ class PackageInput:
 
         db.session.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
             package_id, cls.file_type_label()))
-
-        db.session.execute("delete from {} where package_id = '{}' and file = '{}'".format(
-            cls.destination_table(), package_id, cls.file_type_label()))
 
         safe_commit(db)
 
