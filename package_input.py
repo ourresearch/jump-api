@@ -545,9 +545,10 @@ class PackageInput:
 
         # save errors
 
-        db.session.query(PackageFileErrorRow).filter(
-            PackageFileErrorRow.package_id == package_id, PackageFileErrorRow.file == cls.file_type_label()
-        ).delete()
+        # heather temporary
+        # db.session.query(PackageFileErrorRow).filter(
+        #     PackageFileErrorRow.package_id == package_id, PackageFileErrorRow.file == cls.file_type_label()
+        # ).delete()
 
         cls.save_errors(package_id, error_rows)
 
