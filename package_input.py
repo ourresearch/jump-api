@@ -234,11 +234,11 @@ class PackageInput:
     def delete(cls, package_id):
         db.session.execute("delete from {} where package_id = '{}'".format(cls.destination_table(), package_id))
 
-        db.session.execute("delete from {} where package_id = '{}' and file = '{}'".format(
-            PackageFileErrorRow.destination_table(), package_id, cls.file_type_label()))
+        db.session.execute("delete from jump_file_import_error_rows where package_id = '{}' and file = '{}'".format(
+            package_id, cls.file_type_label()))
 
-        db.session.execute("delete from {} where package_id = '{}' and file = '{}'".format(
-            RawFileUploadObject.destination_table(), package_id, cls.file_type_label()))
+        db.session.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
+            package_id, cls.file_type_label()))
 
         safe_commit(db)
 
@@ -545,9 +545,8 @@ class PackageInput:
 
         # heather temporary
 
-        # db.session.query(PackageFileErrorRow).filter(
-        #     PackageFileErrorRow.package_id == package_id, PackageFileErrorRow.file == cls.file_type_label()
-        # ).delete()
+        db.session.execute("delete from jump_file_import_error_rows where file = '{}'".format(
+            package_id, cls.file_type_label()))
 
         cls.save_errors(package_id, error_rows)
         db.session.flush()
@@ -569,7 +568,7 @@ class PackageInput:
                 report_name = normalized_rows[1]["report_name"]
                 # delete all report_year and access_type and yop
                 db.session.execute("delete from {} where package_id = '{}' and report_version = '{}' and report_name = '{}'".format(
-                    PackageFileErrorRow.destination_table(), package_id, report_version, report_name))
+                    cls.destination_table(), package_id, report_version, report_name))
             else:
                 db.session.execute("delete from {} where package_id = '{}'".format(
                     cls.destination_table(), package_id))
