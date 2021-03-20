@@ -187,8 +187,16 @@ class SavedScenario(db.Model):
 
 
     def to_dict_saved_from_db(self):
-        my_json = get_latest_scenario_raw(self.scenario_id)
-        return my_json
+        response = get_latest_scenario_raw(self.scenario_id)
+        if not response:
+            response = {
+                "subrs": [],
+                "customSubrs": [],
+                "configs": self.live_scenario.settings.to_dict(),
+                "name": self.scenario_name,
+                "id": self.scenario_id
+            }
+        return response
 
 
     def to_dict_saved_freshly_computed(self):
