@@ -163,9 +163,9 @@ def after_request_stuff(resp):
     resp.headers["Access-Control-Expose-Headers"] = "Authorization, Cache-Control"
     resp.headers["Access-Control-Allow-Credentials"] = "true"
 
-    # make cacheable
-    resp.cache_control.max_age = 300
-    resp.cache_control.public = True
+    # make not cacheable because the GETs change after parameter change posts!
+    resp.cache_control.max_age = 0
+    resp.cache_control.no_cache = True
 
     if app.config["PROFILE_REQUESTS"]:
         g.profiler.stop()
