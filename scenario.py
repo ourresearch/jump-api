@@ -667,12 +667,12 @@ class Scenario(object):
         return u"<{} (n={})>".format(self.__class__.__name__, len(self.journals))
 
 
-@cache
+# @cache
 def get_parent_consortium_package_id(package_id):
     q = """select consortium_package_id from jump_account_package where package_id = '{}'""".format(package_id)
     return get_sql_answer(db, q)
 
-@cache
+# @cache
 def get_consortium_package_ids(package_id):
     command = """select package_id from jump_account_package where consortium_package_id = '{}'""".format(package_id)
     rows = None
@@ -1079,7 +1079,7 @@ def get_common_package_data(package_id):
 
     return my_data
 
-@memorycache
+# @memorycache
 def get_common_package_data_specific(package_id):
     my_timing = TimingMessages()
     my_data = {}

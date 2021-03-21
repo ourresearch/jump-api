@@ -104,6 +104,8 @@ numpy.seterr(over="ignore")
 requests.packages.urllib3.disable_warnings()
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
+
+
 app = Flask(__name__)
 
 # authorization
@@ -186,6 +188,7 @@ def get_db_connection():
 def get_db_cursor(commit=False):
     with get_db_connection() as connection:
         cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        # cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         try:
               yield cursor
               if commit:
