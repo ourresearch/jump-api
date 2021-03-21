@@ -3,6 +3,7 @@ boto3==1.12.25
 cached-property==1.5.1
 chardet==3.0.4
 dateparser==0.7.2
+Dozer==0.8
 executor==18.0
 Flask==1.1.2
 Flask-Compress==1.9.0
@@ -22,6 +23,7 @@ numpy==1.16.5
 openpyxl==2.6.4
 pandas==0.24.2
 pendulum==2.0.5
+Pillow==6.2.2
 psycopg2-binary==2.8.2
 python-dateutil==2.6.0
 python-binary-memcached==0.29.0
