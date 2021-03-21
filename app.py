@@ -187,8 +187,8 @@ def get_db_connection():
 @contextmanager
 def get_db_cursor(commit=False):
     with get_db_connection() as connection:
-        cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        # cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        # cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         try:
               yield cursor
               if commit:
