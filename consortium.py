@@ -61,7 +61,7 @@ def get_consortium_ids():
     return rows
 
 
-# @memorycache
+@memorycache
 def consortium_get_computed_data(scenario_id):
     start_time = time()
 
@@ -93,7 +93,7 @@ def consortium_get_computed_data(scenario_id):
     return rows
 
 
-# @memorycache
+@memorycache
 def consortium_get_issns(scenario_id):
     start_time = time()
 
