@@ -189,6 +189,8 @@ class SavedScenario(db.Model):
     def to_dict_saved_from_db(self):
         response = get_latest_scenario_raw(self.scenario_id)
         if not response:
+            self.set_live_scenario()  # in case not done
+
             response = {
                 "subrs": [],
                 "customSubrs": [],

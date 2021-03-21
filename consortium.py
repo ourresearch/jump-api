@@ -9,7 +9,6 @@ import threading
 import weakref
 from time import time
 import simplejson as json
-from kids.cache import cache
 from simplejson import dumps
 
 from app import app
