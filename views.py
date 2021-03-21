@@ -18,7 +18,6 @@ from sqlalchemy import func as sql_func
 from werkzeug.security import safe_str_cmp
 from werkzeug.security import generate_password_hash, check_password_hash
 
-
 import os
 import sys
 import simplejson as json
@@ -1249,7 +1248,6 @@ def scenario_id_summary_get(scenario_id):
 #     response_dict["saved"] = my_latest_scenario_raw
 #     return jsonify_fast_no_sort(response_dict)
 
-
 @app.route("/scenario/<scenario_id>/journals", methods=["GET"])
 @jwt_optional
 def scenario_id_journals_get(scenario_id):
@@ -1653,11 +1651,35 @@ def start_cache_thread():
     t.start()
 
 
+def do_things():
+    # consortium
+    # scenario_id = "scenario-QC2kbHfUhj9W"
+
+    # not consortium
+    scenario_id = "scenario-VCebMrfWahSZ"
+
+    consortium_ids = get_consortium_ids()
+    if scenario_id in [d["scenario_id"] for d in consortium_ids]:
+        my_consortium = Consortium(scenario_id)
+        my_saved_scenario_dict = my_consortium.to_dict_journals()
+    else:
+        my_saved_scenario = get_saved_scenario(scenario_id)
+        my_saved_scenario_dict = my_saved_scenario.to_dict_journals()
+
+
 
 #  flask run -h 0.0.0.0 -p 5004 --with-threads --reload
 if __name__ == "__main__":
 
     # start_cache_thread()
+
+    # do_things()
+
+    # from dozer import Dozer
+    # wsgi_app1 = Dozer(app.wsgi_app)
+
+    from dozer import Dozer
+    app.wsgi_app = Dozer(app.wsgi_app, profile_path='./dozer_profiles')
 
     port = int(os.environ.get("PORT", 5004))
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True, use_reloader=True)
