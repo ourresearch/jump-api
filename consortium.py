@@ -448,7 +448,8 @@ class Consortium(object):
             s.member_package_id as package_id, 
             sum(s.usage) as usage,
             count(s.member_package_id) as num_journals,
-            max(t.tag_listagg) as tags
+            max(t.tag_listagg) as tags,
+            false as included
             from jump_scenario_computed s
             join jump_account_package p on s.member_package_id = p.package_id
             join jump_institution i on i.id = p.institution_id
@@ -463,7 +464,6 @@ class Consortium(object):
 
         if self.scenario_id is not None:
             for row in rows:
-                row["included"] = False
                 if row["package_id"] in self.member_institution_included_list:
                     row["included"] = True
 
