@@ -17,6 +17,7 @@ import numpy
 from random import shuffle
 from contextlib import contextmanager
 from collections import OrderedDict
+from dozer import Dozer
 
 warnings.filterwarnings("ignore", category=UserWarning, module='psycopg2')
 import psycopg2
@@ -107,6 +108,10 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
 app = Flask(__name__)
+
+# memory profiling
+app.wsgi_app = Dozer(app.wsgi_app, profile_path='./dozer_profiles')
+
 
 # authorization
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')

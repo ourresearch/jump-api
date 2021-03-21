@@ -1675,11 +1675,5 @@ if __name__ == "__main__":
 
     # do_things()
 
-    # from dozer import Dozer
-    # wsgi_app1 = Dozer(app.wsgi_app)
-
-    from dozer import Dozer
-    app.wsgi_app = Dozer(app.wsgi_app, profile_path='./dozer_profiles')
-
     port = int(os.environ.get("PORT", 5004))
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True, use_reloader=True)
