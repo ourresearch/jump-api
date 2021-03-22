@@ -19,8 +19,8 @@ https://unpaywall-jump-api.herokuapp.com/scenario/CBy9gUC3/journals?jwt={jwt1}
 https://unpaywall-jump-api.herokuapp.com/scenario/EcUvEELe/journals?jwt={jwt1}
 https://unpaywall-jump-api.herokuapp.com/scenario/GcAsm5CX/journals?jwt={jwt1}
 https://unpaywall-jump-api.herokuapp.com/scenario/aAFAuovt/journals?jwt={jwt1}
-
-""".format(jwt1=os.getenv("WARM_CACHE_JWT1")).split()
+https://unpaywall-jump-api.herokuapp.com/scenario/scenario-VCebMrfWahSZ/journals?jwt={jwt2}
+""".format(jwt1=os.getenv("WARM_CACHE_JWT1"), jwt2=os.getenv("WARM_CACHE_JWT2")).split()
 
 def warm_the_cache():
 
