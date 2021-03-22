@@ -28,10 +28,12 @@ def warm_the_cache():
         random.shuffle(urls)
         for url in urls:
             start_time = time.time()
-            urlpath = url.split("?")[0]
-            print "warm_cache: requesting {}".format(urlpath)
+            display_url = url.split("?")[0]
+            print "warm_cache: requesting {}".format(display_url)
             r = requests.get(url)
-            print u"warm_cache: finished {} in {}s with status {}".format(urlpath, elapsed(start_time), r.status_code)
+            if r.status_code != 200:
+                display_url = url
+            print u"warm_cache: finished {} in {}s with status {}".format(display_url, elapsed(start_time), r.status_code)
             time.sleep(3)
 
 
