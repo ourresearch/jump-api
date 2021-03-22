@@ -301,12 +301,11 @@ def warm_cache():
 
     from consortium import consortium_get_computed_data
 
-    global cached_consortium_scenario_ids
-    shuffle(cached_consortium_scenario_ids)
-    for scenario_id in cached_consortium_scenario_ids:
-        consortium_get_computed_data(scenario_id)
-
-    print u"done warming cached_consortium_scenario_ids {}s".format(elapsed(start_time))
+    # global cached_consortium_scenario_ids
+    # shuffle(cached_consortium_scenario_ids)
+    # for scenario_id in cached_consortium_scenario_ids:
+    #     consortium_get_computed_data(scenario_id)
+    # print u"done warming cached_consortium_scenario_ids {}s".format(elapsed(start_time))
 
     # do this second so it is a bit random when it gets here
 
