@@ -110,7 +110,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 app = Flask(__name__)
 
 # memory profiling
-app.wsgi_app = Dozer(app.wsgi_app, profile_path='./dozer_profiles')
+# app.wsgi_app = Dozer(app.wsgi_app, profile_path='./dozer_profiles')
 
 
 # authorization
@@ -286,7 +286,7 @@ def reset_cache(module_name, function_name, *args):
         cursor.execute(delete_command)
         cursor.execute(insert_command)
 
-cached_consortium_scenario_ids = ["tGUVWRiN", "scenario-QC2kbHfUhj9W", "EcUvEELe", "CBy9gUC3", "6it6ajJd"]
+cached_consortium_scenario_ids = ["tGUVWRiN", "scenario-QC2kbHfUhj9W", "EcUvEELe", "CBy9gUC3", "6it6ajJd", "GcAsm5CX"]
 
 def warm_cache():
     print u"warming cache"
