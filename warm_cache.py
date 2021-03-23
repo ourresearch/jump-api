@@ -19,6 +19,8 @@ https://unpaywall-jump-api.herokuapp.com/scenario/CBy9gUC3/journals?jwt={jwt1}
 https://unpaywall-jump-api.herokuapp.com/scenario/EcUvEELe/journals?jwt={jwt1}
 https://unpaywall-jump-api.herokuapp.com/scenario/GcAsm5CX/journals?jwt={jwt1}
 https://unpaywall-jump-api.herokuapp.com/scenario/aAFAuovt/journals?jwt={jwt1}
+https://unpaywall-jump-api.herokuapp.com/publisher/package-NRmCNX8HD674?jwt={jwt2}
+https://unpaywall-jump-api.herokuapp.com/publisher/package-NRmCNX8HD674/apcs?jwt={jwt2}
 https://unpaywall-jump-api.herokuapp.com/scenario/scenario-VCebMrfWahSZ/journals?jwt={jwt2}
 """.format(jwt1=os.getenv("WARM_CACHE_JWT1"), jwt2=os.getenv("WARM_CACHE_JWT2")).split()
 
@@ -32,9 +34,9 @@ def warm_the_cache():
             sleep_time = 3
             print "warm_cache: requesting {}".format(display_url)
             r = requests.get(url)
-            if r.status_code != 200:
+            if (r.status_code > 200) and (r.status_code != 404):
                 display_url = url
-                sleep_time = 240
+                sleep_time = 60
             print u"warm_cache: finished {} in {}s with status {}".format(display_url, elapsed(start_time), r.status_code)
             time.sleep(sleep_time)
 

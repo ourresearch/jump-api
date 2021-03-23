@@ -777,7 +777,7 @@ def get_apc_data_from_db(input_package_id):
 
     command = """select * from jump_apc_authorships where package_id in ({})
                     """.format(consortium_package_ids_string)
-    with get_db_cursor() as cursor:
+    with get_db_cursor(use_realdictcursor=True) as cursor:
         cursor.execute(command)
         rows = cursor.fetchall()
 

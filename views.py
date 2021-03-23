@@ -443,6 +443,8 @@ def register_new_user():
         except KeyError as e:
             return abort_json(400, u"Missing key in user_permissions object: {}".format(e.message))
 
+    safe_commit(db)
+
     old_permissions = req_user.to_dict_permissions()
 
     for institution_id, permission_names in permissions_by_institution.items():
@@ -452,6 +454,8 @@ def register_new_user():
                 req_user.id, institution_id)
             with get_db_cursor() as cursor:
                 cursor.execute(command)
+
+            safe_commit(db)
 
             for permission_name in permission_names:
                 permission = Permission.get(permission_name)
