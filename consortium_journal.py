@@ -64,16 +64,16 @@ class ConsortiumJournal(Journal):
                 response += my_member_dict[nesting_key].get(attribute_name, 0) or 0
             else:
                 response += my_member_dict.get(attribute_name, 0) or 0
-        return response
+        return float(response)
 
     def sum_attribute_multiplied_by_usage(self, attribute_name, nesting_key=None):
         response = 0
         for my_member_dict in self.member_data:
             if nesting_key:
-                response += (my_member_dict[nesting_key].get(attribute_name, 0) or 0) * my_member_dict["usage"]
+                response += (my_member_dict[nesting_key].get(attribute_name, 0) or 0) * float(my_member_dict["usage"])
             else:
-                response += (my_member_dict.get(attribute_name, 0) or 0) * my_member_dict["usage"]
-        return response
+                response += (my_member_dict.get(attribute_name, 0) or 0) * float(my_member_dict["usage"])
+        return float(response)
 
     def list_attribute(self, attribute_name):
         return [my_member_dict.get(attribute_name, None) for my_member_dict in self.member_data]
@@ -188,23 +188,28 @@ class ConsortiumJournal(Journal):
 
     @cached_property
     def use_oa_plus_social_networks(self):
-        return self.sum_attribute("oa", "use_groups_free_instant")
+        # return self.sum_attribute("oa", "use_groups_free_instant")
+        return self.sum_attribute("use_oa")
 
     @cached_property
     def use_subscription(self):
-        return self.sum_attribute("subscription", "use_groups_if_subscribed")
+        # return self.sum_attribute("subscription", "use_groups_if_subscribed")
+        return self.sum_attribute("use_subscription")
 
     @cached_property
     def use_backfile(self):
-        return self.sum_attribute("backfile", "use_groups_free_instant")
+        # return self.sum_attribute("backfile", "use_groups_free_instant")
+        return self.sum_attribute("use_backfile")
 
     @cached_property
     def use_ill(self):
-        return self.sum_attribute("ill", "use_groups_if_not_subscribed")
+        # return self.sum_attribute("ill", "use_groups_if_not_subscribed")
+        return self.sum_attribute("use_ill")
 
     @cached_property
     def use_other_delayed(self):
-        return self.sum_attribute("other_delayed", "use_groups_if_not_subscribed")
+        # return self.sum_attribute("other_delayed", "use_groups_if_not_subscribed")
+        return self.sum_attribute("use_other_delayed")
 
     @cached_property
     def use_social_networks(self):
