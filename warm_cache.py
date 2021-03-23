@@ -9,20 +9,22 @@ import argparse
 
 from util import elapsed
 
+host = "https://{}.herokuapp.com".format(os.getenv("APP_NAME"))
+
 urls = """
-https://unpaywall-jump-api.herokuapp.com/institution/institution-Afxc4mAYXoJH?jwt={jwt1}
-https://unpaywall-jump-api.herokuapp.com/publisher/package-3WkCDEZTqo6S?jwt={jwt1}
-https://unpaywall-jump-api.herokuapp.com/scenario/scenario-QC2kbHfUhj9W/journals?jwt={jwt1}
-https://unpaywall-jump-api.herokuapp.com/scenario/tGUVWRiN/journals?jwt={jwt1}
-https://unpaywall-jump-api.herokuapp.com/scenario/6it6ajJd/journals?jwt={jwt1}
-https://unpaywall-jump-api.herokuapp.com/scenario/CBy9gUC3/journals?jwt={jwt1}
-https://unpaywall-jump-api.herokuapp.com/scenario/EcUvEELe/journals?jwt={jwt1}
-https://unpaywall-jump-api.herokuapp.com/scenario/GcAsm5CX/journals?jwt={jwt1}
-https://unpaywall-jump-api.herokuapp.com/scenario/aAFAuovt/journals?jwt={jwt1}
-https://unpaywall-jump-api.herokuapp.com/publisher/package-NRmCNX8HD674?jwt={jwt2}
-https://unpaywall-jump-api.herokuapp.com/publisher/package-NRmCNX8HD674/apcs?jwt={jwt2}
-https://unpaywall-jump-api.herokuapp.com/scenario/scenario-VCebMrfWahSZ/journals?jwt={jwt2}
-""".format(jwt1=os.getenv("WARM_CACHE_JWT1"), jwt2=os.getenv("WARM_CACHE_JWT2")).split()
+{host}/institution/institution-Afxc4mAYXoJH?jwt={jwt1}
+{host}/publisher/package-3WkCDEZTqo6S?jwt={jwt1}
+{host}/scenario/scenario-QC2kbHfUhj9W/journals?jwt={jwt1}
+{host}/scenario/tGUVWRiN/journals?jwt={jwt1}
+{host}/scenario/6it6ajJd/journals?jwt={jwt1}
+{host}/scenario/CBy9gUC3/journals?jwt={jwt1}
+{host}/scenario/EcUvEELe/journals?jwt={jwt1}
+{host}/scenario/GcAsm5CX/journals?jwt={jwt1}
+{host}/scenario/aAFAuovt/journals?jwt={jwt1}
+{host}/publisher/package-NRmCNX8HD674?jwt={jwt2}
+{host}/publisher/package-NRmCNX8HD674/apcs?jwt={jwt2}
+{host}/scenario/scenario-VCebMrfWahSZ/journals?jwt={jwt2}
+""".format(host=host, jwt1=os.getenv("WARM_CACHE_JWT1"), jwt2=os.getenv("WARM_CACHE_JWT2")).split()
 
 def warm_the_cache():
 
