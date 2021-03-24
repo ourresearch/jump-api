@@ -21,6 +21,7 @@ urls = """
 {host}/scenario/EcUvEELe/journals?jwt={jwt1}
 {host}/scenario/GcAsm5CX/journals?jwt={jwt1}
 {host}/scenario/aAFAuovt/journals?jwt={jwt1}
+{host}/scenario/CBy9gUC3/member-institutions?jwt={jwt1}
 {host}/publisher/package-NRmCNX8HD674?jwt={jwt2}
 {host}/publisher/package-NRmCNX8HD674/apcs?jwt={jwt2}
 {host}/scenario/scenario-VCebMrfWahSZ/journals?jwt={jwt2}

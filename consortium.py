@@ -461,7 +461,7 @@ class Consortium(object):
             group by s.member_package_id
             order by usage desc
              """.format(scenario_id=self.scenario_id)
-        with get_db_cursor() as cursor:
+        with get_db_cursor(use_realdictcursor=True) as cursor:
             cursor.execute(command)
             rows = cursor.fetchall()
 
