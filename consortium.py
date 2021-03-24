@@ -79,12 +79,12 @@ def consortium_get_computed_data(scenario_id):
         print "after json loads in consortium_get_computed_data using s3 cache", elapsed(start_time)
 
     else:
-        command = """select member_package_id, scenario_id, issn_l, usage, cpu, subscription_cost, ill_cost, use_social_networks, use_oa, use_backfile, use_subscription, use_other_delayed, use_ill, perpetual_access_years, use_social_networks_percent, use_green_percent, use_hybrid_percent, use_bronze_percent, use_peer_reviewed_percent, bronze_oa_embargo_months, is_hybrid_2019, downloads, citations, authorships
-                        from jump_scenario_computed where scenario_id='{}'""".format(scenario_id)
-        with get_db_cursor() as cursor:
-            cursor.execute(command)
-            rows = cursor.fetchall()
-        print "TEST ALL COLUMNS after db get consortium_get_computed_data not using s3 cache", elapsed(start_time)
+        # command = """select member_package_id, scenario_id, issn_l, usage, cpu, subscription_cost, ill_cost, use_social_networks, use_oa, use_backfile, use_subscription, use_other_delayed, use_ill, perpetual_access_years, use_social_networks_percent, use_green_percent, use_hybrid_percent, use_bronze_percent, use_peer_reviewed_percent, bronze_oa_embargo_months, is_hybrid_2019, downloads, citations, authorships
+        #                 from jump_scenario_computed where scenario_id='{}'""".format(scenario_id)
+        # with get_db_cursor() as cursor:
+        #     cursor.execute(command)
+        #     rows = cursor.fetchall()
+        # print "TEST ALL COLUMNS after db get consortium_get_computed_data not using s3 cache", elapsed(start_time)
 
         start_time = time()
         command = """select member_package_id
@@ -103,7 +103,8 @@ def consortium_get_computed_data(scenario_id):
 
     start_time = time()
     for row in rows:
-        row["journals_dict"] = json.loads(row["journals_dict"])
+        row["journals_dict"] = row["journals_dict"].split(",")
+        # row["journals_dict"] = json.loads(row["journals_dict"])
     print "after json loads in consortium_get_computed_data ", elapsed(start_time)
     return rows
 
