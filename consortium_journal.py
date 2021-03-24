@@ -188,28 +188,28 @@ class ConsortiumJournal(Journal):
 
     @cached_property
     def use_oa_plus_social_networks(self):
-        # return self.sum_attribute("oa", "use_groups_free_instant")
-        return self.sum_attribute("use_oa")
+        return self.sum_attribute("oa", "use_groups_free_instant")
+        # return self.sum_attribute("use_oa")
 
     @cached_property
     def use_subscription(self):
-        # return self.sum_attribute("subscription", "use_groups_if_subscribed")
-        return self.sum_attribute("use_subscription")
+        return self.sum_attribute("subscription", "use_groups_if_subscribed")
+        # return self.sum_attribute("use_subscription")
 
     @cached_property
     def use_backfile(self):
-        # return self.sum_attribute("backfile", "use_groups_free_instant")
-        return self.sum_attribute("use_backfile")
+        return self.sum_attribute("backfile", "use_groups_free_instant")
+        # return self.sum_attribute("use_backfile")
 
     @cached_property
     def use_ill(self):
-        # return self.sum_attribute("ill", "use_groups_if_not_subscribed")
-        return self.sum_attribute("use_ill")
+        return self.sum_attribute("ill", "use_groups_if_not_subscribed")
+        # return self.sum_attribute("use_ill")
 
     @cached_property
     def use_other_delayed(self):
-        # return self.sum_attribute("other_delayed", "use_groups_if_not_subscribed")
-        return self.sum_attribute("use_other_delayed")
+        return self.sum_attribute("other_delayed", "use_groups_if_not_subscribed")
+        # return self.sum_attribute("use_other_delayed")
 
     @cached_property
     def use_social_networks(self):
