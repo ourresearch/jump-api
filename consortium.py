@@ -87,7 +87,18 @@ def consortium_get_computed_data(scenario_id):
         print "TEST ALL COLUMNS after db get consortium_get_computed_data not using s3 cache", elapsed(start_time)
 
         start_time = time()
+        command = """select member_package_id
+                        from jump_scenario_computed where scenario_id='{}'""".format(scenario_id)
+        with get_db_cursor() as cursor:
+            cursor.execute(command)
+            rows = cursor.fetchall()
+        print "TEST just one COLUMNS after db get consortium_get_computed_data not using s3 cache", elapsed(start_time)
+
+        start_time = time()
         command = """select member_package_id, scenario_id, issn_l, journals_dict from jump_scenario_computed where scenario_id='{}'""".format(scenario_id)
+        with get_db_cursor() as cursor:
+            cursor.execute(command)
+            rows = cursor.fetchall()
         print "REAL after db get consortium_get_computed_data not using s3 cache", elapsed(start_time)
 
     start_time = time()
