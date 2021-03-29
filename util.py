@@ -597,6 +597,25 @@ def get_sql_dict_rows(q):
         rows = cursor.fetchall()
     return rows
 
+# https://github.com/psycopg/psycopg2/issues/897
+def build_row_dict(columns, row):
+    index = 0
+    dict = {}
+    for key in columns:
+        value = row[index]
+        dict[key] = value
+        index += 1
+    return dict
+
+def cursor_rows_to_dicts(column_string, cursor_rows):
+    column_list = column_string.replace(" ", "").split(",")
+    response = []
+    for row in cursor_rows:
+        row_dict = build_row_dict(column_list, row)
+        response.append(row_dict)
+    return response
+
+
 def normalize_title(title):
     if not title:
         return ""
