@@ -59,8 +59,17 @@ def get_consortium_ids():
         rows = cursor.fetchall()
     return rows
 
+# https://github.com/psycopg/psycopg2/issues/897
+def build_row_dict(columns, row):
+    index = 0
+    dict = {}
+    for key in columns:
+        value = row[index]
+        dict[key] = value
+        index += 1
+    return dict
 
-@memorycache
+# @memorycache
 def consortium_get_computed_data(scenario_id):
     start_time = time()
 
@@ -81,10 +90,12 @@ def consortium_get_computed_data(scenario_id):
     else:
         # command = """select member_package_id, scenario_id, issn_l, usage, cpu, subscription_cost, ill_cost, use_social_networks, use_oa, use_backfile, use_subscription, use_other_delayed, use_ill, perpetual_access_years, use_social_networks_percent, use_green_percent, use_hybrid_percent, use_bronze_percent, use_peer_reviewed_percent, bronze_oa_embargo_months, is_hybrid_2019, downloads, citations, authorships
         #                 from jump_scenario_computed where scenario_id='{}'""".format(scenario_id)
-        # with get_db_cursor() as cursor:
-        #     cursor.execute(command)
-        #     rows = cursor.fetchall()
-        # print "TEST ALL COLUMNS after db get consortium_get_computed_data not using s3 cache", elapsed(start_time)
+        command = """select member_package_id, scenario_id, updated, issn_l, usage, cpu, package_id, consortium_name, institution_name, institution_short_name, subject, era_subjects, is_society_journal, subscription_cost, ill_cost, use_instant_for_debugging, use_social_networks, use_oa, use_backfile, use_subscription, use_other_delayed, use_ill, perpetual_access_years, baseline_access, use_social_networks_percent, use_green_percent, use_hybrid_percent, use_bronze_percent, use_peer_reviewed_percent, bronze_oa_embargo_months, is_hybrid_2019, downloads, citations, authorships
+                        from jump_scenario_computed where scenario_id='{}'""".format(scenario_id)
+        with get_db_cursor(use_defaultcursor=True) as cursor:
+            cursor.execute(command)
+            rows = cursor.fetchall()
+        print "TEST ALL COLUMNS after db get consortium_get_computed_data not using s3 cache", elapsed(start_time)
 
         # start_time = time()
         # command = """select member_package_id
@@ -94,19 +105,25 @@ def consortium_get_computed_data(scenario_id):
         #     rows = cursor.fetchall()
         # print "TEST just one COLUMNS after db get consortium_get_computed_data not using s3 cache", elapsed(start_time)
 
-        start_time = time()
-        command = """select member_package_id, scenario_id, issn_l, journals_dict from jump_scenario_computed where scenario_id='{}'""".format(scenario_id)
-        with get_db_cursor() as cursor:
-            cursor.execute(command)
-            rows = cursor.fetchall()
-        print "REAL after db get consortium_get_computed_data not using s3 cache", elapsed(start_time)
+        # start_time = time()
+        # command = """select member_package_id, scenario_id, issn_l, journals_dict from jump_scenario_computed where scenario_id='{}'""".format(scenario_id)
+        # with get_db_cursor() as cursor:
+        #     cursor.execute(command)
+        #     rows = cursor.fetchall()
+        # print "REAL after db get consortium_get_computed_data not using s3 cache", elapsed(start_time)
 
+    columns = """member_package_id, scenario_id, updated, issn_l, usage, cpu, package_id, consortium_name, institution_name, institution_short_name, subject, era_subjects, is_society_journal, subscription_cost, ill_cost, use_instant_for_debugging, use_social_networks, use_oa, use_backfile, use_subscription, use_other_delayed, use_ill, perpetual_access_years, baseline_access, use_social_networks_percent, use_green_percent, use_hybrid_percent, use_bronze_percent, use_peer_reviewed_percent, bronze_oa_embargo_months, is_hybrid_2019, downloads, citations, authorships""".replace(" ", "").split(",")
     start_time = time()
+    response = []
     for row in rows:
-        # row["journals_dict"] = row["journals_dict"].split(",")
-        row["journals_dict"] = json.loads(row["journals_dict"])
+    #     # row["journals_dict"] = row["journals_dict"].split(",")
+    #     row["journals_dict"] = json.loads(row["journals_dict"])
+        row_dict = build_row_dict(columns, row)
+        response.append(row_dict)
+
     print "after json loads in consortium_get_computed_data ", elapsed(start_time)
-    return rows
+    # return rows
+    return response
 
 
 @memorycache
@@ -425,8 +442,10 @@ class Consortium(object):
         journals_dicts_by_issn_l = defaultdict(list)
         for d in rows:
             if d["member_package_id"] in self.member_institution_included_list:
-                journals_dicts_by_issn_l[d["issn_l"]].append(d["journals_dict"])
-                # journals_dicts_by_issn_l[d["issn_l"]].append(d)
+                if "journals_dict" in d:
+                    journals_dicts_by_issn_l[d["issn_l"]].append(d["journals_dict"])
+                else:
+                    journals_dicts_by_issn_l[d["issn_l"]].append(d)
 
         print "after calculating", elapsed(start_time)
         start_time = time()

@@ -194,11 +194,13 @@ def get_db_connection():
         app.config['postgreSQL_pool'].putconn(connection)
 
 @contextmanager
-def get_db_cursor(commit=False, use_realdictcursor=False):
+def get_db_cursor(commit=False, use_realdictcursor=False, use_defaultcursor=False):
     with get_db_connection() as connection:
         if use_realdictcursor:
             # takes more memory, so default is no
             cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        elif use_defaultcursor:
+            cursor = connection.cursor()
         else:
             cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
         try:
