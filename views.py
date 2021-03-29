@@ -1670,6 +1670,56 @@ def do_things():
         my_saved_scenario = get_saved_scenario(scenario_id)
         my_saved_scenario_dict = my_saved_scenario.to_dict_journals()
 
+#
+# # https://goshippo.com/blog/measure-real-size-any-python-object/
+# def get_size(obj, seen=None):
+#     """Recursively finds size of objects"""
+#     size = sys.getsizeof(obj)
+#     if seen is None:
+#         seen = set()
+#     obj_id = id(obj)
+#     if obj_id in seen:
+#         return 0
+#     # Important mark as seen *before* entering recursion to gracefully handle
+#     # self-referential objects
+#     seen.add(obj_id)
+#     if isinstance(obj, dict):
+#         size += sum([get_size(v, seen) for v in obj.values()])
+#         size += sum([get_size(k, seen) for k in obj.keys()])
+#     elif hasattr(obj, '__dict__'):
+#         size += get_size(obj.__dict__, seen)
+#     elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes, bytearray)):
+#         size += sum([get_size(i, seen) for i in obj])
+#     return size
+#
+# # https://stackoverflow.com/questions/24455615/python-how-to-display-size-of-all-variables/51046503#51046503
+# def sizeof_fmt(num, suffix='B'):
+#     ''' by Fred Cirera,  https://stackoverflow.com/a/1094933/1870254, modified'''
+#     for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+#         if abs(num) < 1024.0:
+#             return "%3.1f %s%s" % (num, unit, suffix)
+#         num /= 1024.0
+#     return "%.1f %s%s" % (num, 'Yi', suffix)
+#
+# import gc
+# from pympler import asizeof
+# from pympler import tracker
+# memory_tracker = tracker.SummaryTracker()
+#
+# @app.route("/admin/memory", methods=["GET"])
+# def admin_memory():
+#     response = []
+#     # for name, size in sorted(((name, get_size(value)) for name, value in locals().items()),
+#     # for name, size in sorted(((name, get_size(name)) for name in gc.get_objects()),
+#     # for name, size in sorted(((name, asizeof(name)) for name in gc.get_objects()),
+#     #                          key= lambda x: -x[1])[:100]:
+#     #     response += ["{:>30}: {:>8}".format(name, sizeof_fmt(size))]
+#
+#     response = "hi heather"
+#     global memory_tracker
+#     memory_tracker.print_diff()
+#
+#     return jsonify_fast_no_sort({"response": response})
 
 
 #  flask run -h 0.0.0.0 -p 5004 --with-threads --reload
