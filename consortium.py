@@ -86,13 +86,13 @@ def consortium_get_computed_data(scenario_id):
         #     rows = cursor.fetchall()
         # print "TEST ALL COLUMNS after db get consortium_get_computed_data not using s3 cache", elapsed(start_time)
 
-        start_time = time()
-        command = """select member_package_id
-                        from jump_scenario_computed where scenario_id='{}'""".format(scenario_id)
-        with get_db_cursor() as cursor:
-            cursor.execute(command)
-            rows = cursor.fetchall()
-        print "TEST just one COLUMNS after db get consortium_get_computed_data not using s3 cache", elapsed(start_time)
+        # start_time = time()
+        # command = """select member_package_id
+        #                 from jump_scenario_computed where scenario_id='{}'""".format(scenario_id)
+        # with get_db_cursor() as cursor:
+        #     cursor.execute(command)
+        #     rows = cursor.fetchall()
+        # print "TEST just one COLUMNS after db get consortium_get_computed_data not using s3 cache", elapsed(start_time)
 
         start_time = time()
         command = """select member_package_id, scenario_id, issn_l, journals_dict from jump_scenario_computed where scenario_id='{}'""".format(scenario_id)
@@ -103,8 +103,8 @@ def consortium_get_computed_data(scenario_id):
 
     start_time = time()
     for row in rows:
-        row["journals_dict"] = row["journals_dict"].split(",")
-        # row["journals_dict"] = json.loads(row["journals_dict"])
+        # row["journals_dict"] = row["journals_dict"].split(",")
+        row["journals_dict"] = json.loads(row["journals_dict"])
     print "after json loads in consortium_get_computed_data ", elapsed(start_time)
     return rows
 
