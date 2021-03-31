@@ -1537,6 +1537,7 @@ class Journal(object):
         table_row["package_id"] = "{package_id}"
         table_row["scenario_id"] = "{scenario_id}"
         table_row["consortium_name"] = "{consortium_name}"
+        table_row["institution_name"] = table_row["institution_name"].replace("'", "''")
 
         response = """('{member_package_id}', '{scenario_id}', '{updated}'::timestamp, '{issn_l}', {usage}, {cpu}, '{package_id}', '{consortium_name}', '{institution_name}', '{institution_short_name}', '{subject}', '{era_subjects}', {is_society_journal}, {subscription_cost}, {ill_cost}, {use_instant_for_debugging}, {use_social_networks}, {use_oa}, {use_backfile}, {use_subscription}, {use_other_delayed}, {use_ill}, '{perpetual_access_years}', '{baseline_access}', {use_social_networks_percent}, {use_green_percent}, {use_hybrid_percent}, {use_bronze_percent}, {use_peer_reviewed_percent}, {bronze_oa_embargo_months}, {is_hybrid_2019}, {downloads}, {citations}, {authorships})""".format(
             **table_row
