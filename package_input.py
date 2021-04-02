@@ -331,7 +331,12 @@ class PackageInput:
         if not rows:
             return None
         else:
-            errors = json.loads(u"".join([row.errors for row in rows]))
+            try:
+                errors = json.loads(u"".join([row.errors for row in rows]))
+            except ValueError:
+                print u"ValueError in load_errors with ", package_id
+                return None
+
             if errors["rows"]:
                 return errors
             else:
