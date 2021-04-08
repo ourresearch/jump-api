@@ -261,7 +261,7 @@ class PackageInput:
 
                 my_consortium = Consortium(consortium_scenario_id)
                 email = u"heather+{}@ourresearch.org".format(my_package.package_id)
-                my_consortium.queue_for_recompute()
+                my_consortium.queue_for_recompute(email)
                 reset_cache("consortium", "consortium_get_computed_data", consortium_scenario_id)
         else:
             print u"NO NEED TO cache clear consortium_get_computed_data for my_package {}".format(my_package)
