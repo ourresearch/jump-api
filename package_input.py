@@ -258,7 +258,10 @@ class PackageInput:
 
                 # this will actually recalculate all member institutions instead of just this one
                 # which will take longer, but don't worry about it for now
+
                 my_consortium = Consortium(consortium_scenario_id)
+                email = u"heather+{}@ourresearch.org".format(my_package.package_id)
+                my_consortium.queue_for_recompute()
                 reset_cache("consortium", "consortium_get_computed_data", consortium_scenario_id)
         else:
             print u"NO NEED TO cache clear consortium_get_computed_data for my_package {}".format(my_package)
