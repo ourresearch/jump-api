@@ -405,7 +405,13 @@ class PackageInput:
             absolute_line_no = 0  # the actual file row we're parsing
             parsed_to_absolute_line_no = {}
 
-            for line in csv.reader(csv_file, dialect=dialect, **reader_params):
+            # print "getting chardet_result"
+            # import chardet
+            # with open(file_name, 'rb') as rawdata:
+            #     chardet_result = chardet.detect(rawdata.read(1000000))
+            # print chardet_result
+
+            for line in csv.reader(csv_file, dialect=dialect, encoding="ISO-8859-1", **reader_params):
                 absolute_line_no += 1
                 if not any([cell.strip() for cell in line]):
                     continue
@@ -476,7 +482,6 @@ class PackageInput:
 
             for row_no, row in enumerate(row_dicts):
                 absolute_row_no = parsed_to_absolute_line_no[row_no] + header_index + 1
-                print row_no, "",
                 normalized_row = {}
                 cell_errors = {}
 
@@ -557,6 +562,7 @@ class PackageInput:
         try:
             normalized_rows, error_rows = cls.normalize_rows(file_name, file_package=my_package)
         except (UnicodeError, csv.Error) as e:
+            print u"normalize_rows error {}".format(e)
             message = u"Error reading file: '{}'. Try opening this file, resaving as .xlsx, and uploading that.".format(
                 e.message
             )
