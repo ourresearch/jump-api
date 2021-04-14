@@ -230,7 +230,7 @@ if __name__ == "__main__":
 
                 print u"{}".format(my_package)
 
-                CounterInput.load(package_id, temp_filename, commit=True)
+                CounterInput().load(package_id, temp_filename, commit=True)
 
 
 

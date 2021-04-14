@@ -1,3 +1,6 @@
+# coding: utf-8
+
+from cached_property import cached_property
 import re
 import calendar
 
@@ -35,56 +38,54 @@ class CounterInput(db.Model, PackageInput):
     total = db.Column(db.Numeric)
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
 
-    @classmethod
-    def import_view_name(cls):
+    def import_view_name(self):
         return "jump_counter_view"
 
-    @classmethod
-    def destination_table(cls):
+    def destination_table(self):
         return Counter.__tablename__
 
-    @classmethod
-    def csv_columns(cls):
+    @cached_property
+    def csv_columns(self):
         columns = {
             "print_issn": {
-                "normalize": cls.normalize_issn,
+                "normalize": self.normalize_issn,
                 "name_snippets": [u"print issn", u"print_issn", u"issn"],
                 "excluded_name_snippets": [u"online", u"e-", u"eissn"],
                 "warn_if_blank": True,
             },
             "online_issn": {
-                "normalize": cls.normalize_issn,
+                "normalize": self.normalize_issn,
                 "name_snippets": [u"online issn", u"online_issn", u"eissn"],
                 "exact_name": True,
                 "required": False,
                 "warn_if_blank": True,
             },
             "total": {
-                "normalize": cls.normalize_int,
+                "normalize": self.normalize_int,
                 "name_snippets": [u"total"],
                 "warn_if_blank": True,
                 "required": True,
             },
             "journal_name": {
-                "normalize": cls.strip_text,
+                "normalize": self.strip_text,
                 "name_snippets": [u"title", u"journal", u"journal_name"],
                 "exact_name": True,
                 "required": False,
             },
             "metric_type": {
-                "normalize": cls.strip_text,
+                "normalize": self.strip_text,
                 "name_snippets": [u"metric_type"],
                 "exact_name": True,
                 "required": False,
             },
             "yop": {
-                "normalize": cls.normalize_int,
+                "normalize": self.normalize_int,
                 "name_snippets": [u"yop"],
                 "exact_name": True,
                 "required": False,
             },
             "access_type": {
-                "normalize": cls.strip_text,
+                "normalize": self.strip_text,
                 "name_snippets": [u"access_type"],
                 "exact_name": True,
                 "required": False,
@@ -92,7 +93,7 @@ class CounterInput(db.Model, PackageInput):
         }
         for month_idx in range(1, 13):
             month_column = {
-                "normalize": cls.normalize_int,
+                "normalize": self.normalize_int,
                 "name_snippets": [calendar.month_abbr[month_idx].lower(), u"-{:02d}".format(month_idx)],
                 "warn_if_blank": False,
                 "required": False,
@@ -101,24 +102,20 @@ class CounterInput(db.Model, PackageInput):
 
         return columns
 
-    @classmethod
-    def ignore_row(cls, row):
+    def ignore_row(self, row):
         journal_name = (row.get("journal_name", u"") or u"").lower()
         if (not journal_name or u"all journals" in journal_name) and row.get("print_issn", None) is None:
             return True
 
         return False
 
-    @classmethod
-    def file_type_label(cls):
+    def file_type_label(self):
         return u"counter"
 
-    @classmethod
-    def issn_columns(cls):
+    def issn_columns(self):
         return ["print_issn", "online_issn"]
 
-    @classmethod
-    def apply_header(cls, normalized_rows, header_rows):
+    def apply_header(self, normalized_rows, header_rows):
         # get the counter version and file format
         version_labels = {
             "Journal Report 1 (R4)": {

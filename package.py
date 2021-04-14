@@ -656,7 +656,7 @@ class Package(db.Model):
 
         # counter stats
 
-        counter_errors = CounterInput.load_errors(self.package_id)
+        counter_errors = CounterInput().load_errors(self.package_id)
 
         if counter_errors:
             num_counter_error_rows = len(counter_errors["rows"])
@@ -668,7 +668,7 @@ class Package(db.Model):
 
         # perpetual access stats
 
-        pa_errors = PerpetualAccessInput.load_errors(self.package_id)
+        pa_errors = PerpetualAccessInput().load_errors(self.package_id)
 
         if pa_errors:
             num_pa_error_rows = len(pa_errors["rows"])
@@ -680,7 +680,7 @@ class Package(db.Model):
 
         # price stats
 
-        price_errors = JournalPriceInput.load_errors(self.package_id)
+        price_errors = JournalPriceInput().load_errors(self.package_id)
 
         if price_errors:
             num_price_error_rows = len(price_errors["rows"])

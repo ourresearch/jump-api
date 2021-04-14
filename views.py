@@ -965,9 +965,10 @@ def _json_to_temp_file(req):
 
 
 def _load_package_file(package_id, req, table_class):
+    loader = table_class()
     temp_file = _json_to_temp_file(req)
     if temp_file:
-        load_result = table_class.load(package_id, temp_file, commit=True)
+        load_result = loader.load(package_id, temp_file, commit=True)
         if load_result["success"]:
             return load_result
         else:
@@ -1001,6 +1002,7 @@ def jump_counter(package_id):
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
+            print u"loading counter package {}".format(package_id)
             response = _load_package_file(package_id, request, CounterInput)
 
             # add a package scenario if there isn't already one

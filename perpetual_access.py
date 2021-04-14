@@ -1,3 +1,6 @@
+# coding: utf-8
+
+from cached_property import cached_property
 from datetime import datetime
 
 from app import db
@@ -28,37 +31,33 @@ class PerpetualAccessInput(db.Model, PackageInput):
     start_date = db.Column(db.DateTime)
     end_date = db.Column(db.DateTime)
 
-    @classmethod
-    def import_view_name(cls):
+    def import_view_name(self):
         return "jump_perpetual_access_view"
 
-    @classmethod
-    def destination_table(cls):
+    def destination_table(self):
         return PerpetualAccess.__tablename__
 
-    @classmethod
-    def file_type_label(cls):
+    def file_type_label(self):
         return u"perpetual-access"
 
-    @classmethod
-    def issn_columns(cls):
+    def issn_columns(self):
         return ["issn"]
 
-    @classmethod
-    def csv_columns(cls):
+    @cached_property
+    def csv_columns(self):
         return {
             "start_date": {
-                "normalize": lambda date, warn_if_blank=False: cls.normalize_date(date, default=datetime(1970, 1, 1), warn_if_blank=warn_if_blank),
+                "normalize": lambda date, warn_if_blank=False: self.normalize_date(date, default=datetime(1970, 1, 1), warn_if_blank=warn_if_blank),
                 "name_snippets": [u"start", u"begin"],
                 "required": True
             },
             "end_date": {
-                "normalize": lambda date, warn_if_blank=False: cls.normalize_date(date, default=datetime(1970, 12, 31), warn_if_blank=warn_if_blank),
+                "normalize": lambda date, warn_if_blank=False: self.normalize_date(date, default=datetime(1970, 12, 31), warn_if_blank=warn_if_blank),
                 "name_snippets": [u"end"],
                 "required": True
             },
             "issn": {
-                "normalize": cls.normalize_issn,
+                "normalize": self.normalize_issn,
                 "name_snippets": [u"issn"],
                 "excluded_name_snippets": [u"online", u"e-", u"eissn"],
                 "required": True,
@@ -66,7 +65,6 @@ class PerpetualAccessInput(db.Model, PackageInput):
             }
         }
 
-    @classmethod
-    def clear_caches(cls, my_package):
+    def clear_caches(self, my_package):
         super(PerpetualAccessInput, cls).clear_caches(my_package)
         refresh_perpetual_access_from_db(my_package.package_id)
