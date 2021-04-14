@@ -369,8 +369,9 @@ class PackageInput:
             file_name = sheet_csv_file_names[0]
 
         # convert to utf-8
-        file_name = convert_to_utf_8(file_name)
-        logger.info("converted file: {}".format(file_name))
+        # very slow, try not doing this for now
+        # file_name = convert_to_utf_8(file_name)
+        # logger.info("converted file: {}".format(file_name))
 
         with open(file_name, "rb") as csv_file:
             # determine the csv format
@@ -420,6 +421,8 @@ class PackageInput:
 
                 line_no += 1
 
+            print "have header row"
+
             if header_index is None:
                 # give up. can't turn rows into dicts if we don't have a header
                 raise RuntimeError(u"Couldn't identify a header row in the file.")
@@ -444,6 +447,8 @@ class PackageInput:
 
             required_keys = [k for k, v in cls.csv_columns().items() if v.get("required", True)]
 
+            print "here"
+
             if ("total" in required_keys) and ("total" not in normalized_column_names) and ("jan" in normalized_column_names):
                 for row in row_dicts:
 
@@ -455,6 +460,8 @@ class PackageInput:
 
                 normalized_column_names += ["total"]
 
+            print "after that"
+
             if set(required_keys).difference(set(normalized_column_names)):
                 explanation = u"Missing required columns. Expected [{}] but found {}.".format(
                     ", ".join(sorted(required_keys)),
@@ -465,9 +472,11 @@ class PackageInput:
                 )
                 raise RuntimeError(explanation)
 
+            print "now here"
 
             for row_no, row in enumerate(row_dicts):
                 absolute_row_no = parsed_to_absolute_line_no[row_no] + header_index + 1
+                print row_no, "",
                 normalized_row = {}
                 cell_errors = {}
 
@@ -524,14 +533,20 @@ class PackageInput:
 
                     error_rows["rows"].append(error_row)
 
+            print "before for"
+
             for normalized, raw in normalized_to_raw_map.items():
                 if normalized:
                     error_rows["headers"].append({"id": normalized, "name": raw})
+
+            print "before apply header"
 
             cls.apply_header(normalized_rows, parsed_rows[0:header_index+1])
 
             if not error_rows["rows"]:
                 error_rows = None
+
+            print "before return"
 
             return normalized_rows, error_rows
 
