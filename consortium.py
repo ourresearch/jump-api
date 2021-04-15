@@ -377,7 +377,7 @@ class Consortium(object):
             and s.issn_l = '{issn_l}'
             order by usage desc
              """.format(scenario_id=self.scenario_id, issn_l=issn_l)
-        with get_db_cursor() as cursor:
+        with get_db_cursor(use_realdictcursor=True) as cursor:
             cursor.execute(command)
             rows = cursor.fetchall()
 
