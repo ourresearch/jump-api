@@ -983,6 +983,14 @@ def _load_package_file(package_id, req, table_class):
 def jump_counter5_trj1(package_id):
     return jump_counter(package_id)
 
+@app.route("/publisher/<package_id>/counter/<file_type>", methods=["DELETE"])
+@jwt_optional
+def jump_counter_delete(package_id, file_type):
+    # DELETE to /publisher/<publisher_id>/counter/TRJ2  (or TRJ3, TRJ4)
+    # DELETE to /publisher/<publisher_id>/counter/JR1 will keep deleting everything
+    # DELETE to /publisher/<publisher_id>/counter will keep deleting everything
+    return jump_counter(package_id)
+
 @app.route("/publisher/<package_id>/counter", methods=["GET", "POST", "DELETE"])
 @jwt_optional
 # @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
