@@ -267,6 +267,9 @@ class SavedScenario(db.Model):
     def to_dict_journals(self):
         response = OrderedDict()
         response["meta"] = self.to_dict_meta()
+
+        response["_debug"] = {"summary": self.live_scenario.to_dict_summary_dict()}
+
         response["saved"] = self.to_dict_saved_from_db()
         response["journals"] = [j.to_dict_journals() for j in self.live_scenario.journals_sorted_cpu]
 
@@ -275,7 +278,6 @@ class SavedScenario(db.Model):
         response["update_notification_email"] = self.update_notification_email
         response["update_percent_complete"] = self.update_percent_complete
 
-        response["_debug"] = {"summary": self.live_scenario.to_dict_summary_dict()}
 
         try:
             self.log_timing("to dict")

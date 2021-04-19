@@ -1,3 +1,6 @@
+# coding: utf-8
+
+from cached_property import cached_property
 import json
 import os
 import re
@@ -12,6 +15,7 @@ import shortuuid
 import unicodecsv as csv
 from enum import Enum
 from sqlalchemy.sql import text
+from kids.cache import cache
 
 import package
 from app import db, logger
@@ -106,37 +110,30 @@ class PackageInput:
             return ParseWarning.blank_text if warn_if_blank else None
 
 
-    @classmethod
-    def csv_columns(cls):
+    def csv_columns(self):
         raise NotImplementedError()
 
-    @classmethod
-    def import_view_name(cls):
+    def import_view_name(self):
         raise NotImplementedError()
 
-    @classmethod
-    def destination_table(cls):
+    def destination_table(self):
         raise NotImplementedError()
 
-    @classmethod
-    def file_type_label(cls):
+    def file_type_label(self):
         raise NotImplementedError()
 
-    @classmethod
-    def translate_row(cls, row):
+    def translate_row(self, row):
         return row
 
-    @classmethod
-    def ignore_row(cls, row):
+    def ignore_row(self, row):
         return False
 
-    @classmethod
-    def apply_header(cls, normalized_rows, header_rows):
+    def apply_header(self, normalized_rows, header_rows):
         return normalized_rows
 
-    @classmethod
-    def normalize_column_name(cls, raw_column_name):
-        for canonical_name, spec in cls.csv_columns().items():
+    @cache
+    def normalize_column_name(self, raw_column_name):
+        for canonical_name, spec in self.csv_columns.items():
             name_snippets = spec["name_snippets"]
             excluded_name_snippets = spec.get("excluded_name_snippets", [])
 
@@ -157,26 +154,23 @@ class PackageInput:
 
         return None
 
-    @classmethod
-    def normalize_cell(cls, normalized_column_name, raw_column_value):
-        spec = cls.csv_columns()[normalized_column_name]
+    @cache
+    def normalize_cell(self, normalized_column_name, raw_column_value):
+        spec = self.csv_columns[normalized_column_name]
         return spec["normalize"](raw_column_value, spec.get("warn_if_blank", False))
 
 
-    @classmethod
-    def _copy_staging_csv_to_s3(cls, filename, package_id):
+    def _copy_staging_csv_to_s3(self, filename, package_id):
         s3 = boto3.client("s3")
         bucket_name = "jump-redshift-staging"
-        object_name = "{}_{}_{}".format(package_id, cls.__name__, shortuuid.uuid())
+        object_name = "{}_{}_{}".format(package_id, self.__class__.__name__, shortuuid.uuid())
         s3.upload_file(filename, bucket_name, object_name)
         return "s3://{}/{}".format(bucket_name, object_name)
 
-    @classmethod
-    def _raw_s3_bucket(cls):
+    def _raw_s3_bucket(self):
         return u"unsub-file-uploads"
 
-    @classmethod
-    def _copy_raw_to_s3(cls, filename, package_id):
+    def _copy_raw_to_s3(self, filename, package_id):
         s3 = boto3.client("s3")
 
         if u"." in filename:
@@ -184,27 +178,26 @@ class PackageInput:
         else:
             suffix = u""
 
-        object_name = "{}_{}{}".format(package_id, cls.file_type_label(), suffix)
-        bucket_name = cls._raw_s3_bucket()
+        object_name = "{}_{}{}".format(package_id, self.file_type_label(), suffix)
+        bucket_name = self._raw_s3_bucket()
 
         s3.upload_file(filename, bucket_name, object_name)
 
         db.session.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
-            package_id, cls.file_type_label()))
+            package_id, self.file_type_label()))
 
         db.session.add(RawFileUploadObject(
             package_id=package_id,
-            file=cls.file_type_label(),
+            file=self.file_type_label(),
             bucket_name=bucket_name,
             object_name=object_name
         ))
 
         return "s3://{}/{}".format(bucket_name, object_name)
 
-    @classmethod
-    def get_raw_upload_object(cls, package_id):
+    def get_raw_upload_object(self, package_id):
         object_details = RawFileUploadObject.query.filter(
-            RawFileUploadObject.package_id == package_id, RawFileUploadObject.file == cls.file_type_label()
+            RawFileUploadObject.package_id == package_id, RawFileUploadObject.file == self.file_type_label()
         ).scalar()
 
         if not object_details:
@@ -228,29 +221,28 @@ class PackageInput:
         except s3.exceptions.NoSuchKey:
             return None
 
-    @classmethod
-    def delete(cls, package_id):
-        db.session.execute("delete from {} where package_id = '{}'".format(cls.__tablename__, package_id))
+    def delete(self, package_id, file_type=None):
 
-        db.session.execute("delete from {} where package_id = '{}'".format(cls.destination_table(), package_id))
+        db.session.execute("delete from {} where package_id = '{}'".format(self.__tablename__, package_id))
+
+        db.session.execute("delete from {} where package_id = '{}'".format(self.destination_table(), package_id))
 
         db.session.execute("delete from jump_file_import_error_rows where package_id = '{}' and file = '{}'".format(
-            package_id, cls.file_type_label()))
+            package_id, self.file_type_label()))
 
         db.session.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
-            package_id, cls.file_type_label()))
+            package_id, self.file_type_label()))
 
         safe_commit(db)
 
         my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
         if my_package:
-            cls.clear_caches(my_package)
+            self.clear_caches(my_package)
+
+        return u"Deleted {} rows for package {}.".format(self.__class__.__name__, package_id)
 
 
-        return u"Deleted {} rows for package {}.".format(cls.__name__, package_id)
-
-    @classmethod
-    def clear_caches(cls, my_package):
+    def clear_caches(self, my_package):
         # print "clearing cache"
         if my_package.is_owned_by_consortium:
             print u"clearing consortium cache for my_package.is_owned_by_consortium: {}".format(my_package)
@@ -268,14 +260,13 @@ class PackageInput:
 
         # my_package.clear_package_counter_breakdown_cache() # not used anymore
 
-    @classmethod
-    def update_dest_table(cls, package_id):
+    def update_dest_table(self, package_id):
         # unload_cmd = text("""
         #     unload
         #     ('select * from {view} where package_id = \\'{package_id}\\'')
         #     to 's3://jump-redshift-staging/{package_id}_{view}_{uuid}/'
         #     with credentials :creds csv""".format(
-        #         view=cls.import_view_name(),
+        #         view=self.import_view_name(),
         #         package_id=package_id,
         #         uuid=shortuuid.uuid(),
         #     )
@@ -288,16 +279,15 @@ class PackageInput:
         #
         # db.session.execute(unload_cmd.bindparams(creds=aws_creds))
 
-        db.session.execute("delete from {} where package_id = '{}'".format(cls.destination_table(), package_id))
+        db.session.execute("delete from {} where package_id = '{}'".format(self.destination_table(), package_id))
 
         db.session.execute(
             "insert into {} (select * from {} where package_id = '{}')".format(
-                cls.destination_table(), cls.import_view_name(), package_id
+                self.destination_table(), self.import_view_name(), package_id
             )
         )
 
-    @classmethod
-    def make_package_file_warning(cls, parse_warning, additional_msg=None):
+    def make_package_file_warning(self, parse_warning, additional_msg=None):
         return {
             "label": parse_warning.value["label"],
             "message": u"{}{}".format(
@@ -306,8 +296,7 @@ class PackageInput:
             )
         }
 
-    @classmethod
-    def save_errors(cls, package_id, errors):
+    def save_errors(self, package_id, errors):
         if errors is None:
             return
 
@@ -318,17 +307,16 @@ class PackageInput:
         rows = []
         for i, chunk in enumerate(error_chunks):
             rows.append(
-                PackageFileErrorRow(package_id=package_id, file=cls.file_type_label(), sequence=i, errors=chunk)
+                PackageFileErrorRow(package_id=package_id, file=self.file_type_label(), sequence=i, errors=chunk)
             )
 
         for row in rows:
             db.session.add(row)
 
-    @classmethod
-    def load_errors(cls, package_id):
+    def load_errors(self, package_id):
         rows = PackageFileErrorRow.query.filter(
             PackageFileErrorRow.package_id == package_id,
-            PackageFileErrorRow.file == cls.file_type_label()
+            PackageFileErrorRow.file == self.file_type_label()
         ).order_by(PackageFileErrorRow.sequence).all()
 
         if not rows:
@@ -345,16 +333,13 @@ class PackageInput:
             else:
                 return None
 
-    @classmethod
-    def issn_columns(cls):
+    def issn_columns(self):
         return []
 
-    @classmethod
-    def validate_publisher(cls):
+    def validate_publisher(self):
         return False
 
-    @classmethod
-    def normalize_rows(cls, file_name, file_package=None):
+    def normalize_rows(self, file_name, file_package=None):
         from scenario import get_ricks_journal_flat
 
         # convert to csv if needed
@@ -369,8 +354,9 @@ class PackageInput:
             file_name = sheet_csv_file_names[0]
 
         # convert to utf-8
-        file_name = convert_to_utf_8(file_name)
-        logger.info("converted file: {}".format(file_name))
+        # very slow, try not doing this for now
+        # file_name = convert_to_utf_8(file_name)
+        # logger.info("converted file: {}".format(file_name))
 
         with open(file_name, "rb") as csv_file:
             # determine the csv format
@@ -404,7 +390,13 @@ class PackageInput:
             absolute_line_no = 0  # the actual file row we're parsing
             parsed_to_absolute_line_no = {}
 
-            for line in csv.reader(csv_file, dialect=dialect, **reader_params):
+            # print "getting chardet_result"
+            # import chardet
+            # with open(file_name, 'rb') as rawdata:
+            #     chardet_result = chardet.detect(rawdata.read(1000000))
+            # print chardet_result
+
+            for line in csv.reader(csv_file, dialect=dialect, encoding="ISO-8859-1", **reader_params):
                 absolute_line_no += 1
                 if not any([cell.strip() for cell in line]):
                     continue
@@ -420,6 +412,8 @@ class PackageInput:
 
                 line_no += 1
 
+            print "have header row"
+
             if header_index is None:
                 # give up. can't turn rows into dicts if we don't have a header
                 raise RuntimeError(u"Couldn't identify a header row in the file.")
@@ -433,7 +427,7 @@ class PackageInput:
 
             # make sure we have all the required columns
             raw_column_names = parsed_rows[header_index]
-            normalized_column_names = [cls.normalize_column_name(cn) for cn in raw_column_names]
+            normalized_column_names = [self.normalize_column_name(cn) for cn in raw_column_names]
             raw_to_normalized_map = dict(zip(raw_column_names, normalized_column_names))
             normalized_to_raw_map = {}
             for k, v in raw_to_normalized_map.items():
@@ -442,7 +436,9 @@ class PackageInput:
             # combine the header and data rows into dicts
             row_dicts = [dict(zip(parsed_rows[header_index], x)) for x in parsed_rows[header_index+1:]]
 
-            required_keys = [k for k, v in cls.csv_columns().items() if v.get("required", True)]
+            required_keys = [k for k, v in self.csv_columns.items() if v.get("required", True)]
+
+            print "here"
 
             if ("total" in required_keys) and ("total" not in normalized_column_names) and ("jan" in normalized_column_names):
                 for row in row_dicts:
@@ -450,10 +446,12 @@ class PackageInput:
                     row["total"] = 0
                     for month_idx in range(1, 13):
                         month_name = calendar.month_abbr[month_idx].lower()
-                        new_value = cls.normalize_cell(month_name, row[normalized_to_raw_map[month_name]])
+                        new_value = self.normalize_cell(month_name, row[normalized_to_raw_map[month_name]])
                         row["total"] += new_value
 
                 normalized_column_names += ["total"]
+
+            print "after that"
 
             if set(required_keys).difference(set(normalized_column_names)):
                 explanation = u"Missing required columns. Expected [{}] but found {}.".format(
@@ -465,6 +463,7 @@ class PackageInput:
                 )
                 raise RuntimeError(explanation)
 
+            print "now here"
 
             for row_no, row in enumerate(row_dicts):
                 absolute_row_no = parsed_to_absolute_line_no[row_no] + header_index + 1
@@ -473,33 +472,33 @@ class PackageInput:
 
                 for raw_column_name in row.keys():
                     raw_value = row[raw_column_name]
-                    normalized_name = cls.normalize_column_name(raw_column_name)
+                    normalized_name = self.normalize_column_name(raw_column_name)
                     if normalized_name:
                         try:
-                            normalized_value = cls.normalize_cell(normalized_name, raw_value)
+                            normalized_value = self.normalize_cell(normalized_name, raw_value)
                             if isinstance(normalized_value, ParseWarning):
                                 parse_warning = normalized_value
                                 # logger.info("parse warning: {} for data {},  {}".format(parse_warning, raw_column_name, row))
-                                cell_errors[normalized_name] = cls.make_package_file_warning(parse_warning)
+                                cell_errors[normalized_name] = self.make_package_file_warning(parse_warning)
                                 normalized_row.setdefault(normalized_name, None)
                             else:
                                 normalized_row.setdefault(normalized_name, normalized_value)
                         except Exception as e:
-                            cell_errors[normalized_name] = cls.make_package_file_warning(
+                            cell_errors[normalized_name] = self.make_package_file_warning(
                                 ParseWarning.unknown, additional_msg=u"message: {}".format(e.message)
                             )
 
-                if cls.ignore_row(normalized_row):
+                if self.ignore_row(normalized_row):
                     continue
 
-                normalized_row = cls.translate_row(normalized_row)
+                normalized_row = self.translate_row(normalized_row)
 
                 # keep the first issn in this row
-                for issn_col in cls.issn_columns():
+                for issn_col in self.issn_columns():
                     if normalized_row.get(issn_col, None):
                         row_issn = normalized_row[issn_col]
-                        [cell_errors.pop(c, None) for c in cls.issn_columns()]  # delete errors for all issn columns
-                        [normalized_row.pop(c, None) for c in cls.issn_columns()] # delete issn columns
+                        [cell_errors.pop(c, None) for c in self.issn_columns()]  # delete errors for all issn columns
+                        [normalized_row.pop(c, None) for c in self.issn_columns()] # delete issn columns
                         normalized_row["issn"] = row_issn
                         break
 
@@ -524,38 +523,36 @@ class PackageInput:
 
                     error_rows["rows"].append(error_row)
 
+            print "before for"
+
             for normalized, raw in normalized_to_raw_map.items():
                 if normalized:
                     error_rows["headers"].append({"id": normalized, "name": raw})
 
-            cls.apply_header(normalized_rows, parsed_rows[0:header_index+1])
+            print "before apply header"
+
+            self.apply_header(normalized_rows, parsed_rows[0:header_index+1])
 
             if not error_rows["rows"]:
                 error_rows = None
 
+            print "before return"
+
             return normalized_rows, error_rows
 
-    @classmethod
-    def load(cls, package_id, file_name, commit=False):
+    def load(self, package_id, file_name, commit=False):
         my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
 
         try:
-            normalized_rows, error_rows = cls.normalize_rows(file_name, file_package=my_package)
+            normalized_rows, error_rows = self.normalize_rows(file_name, file_package=my_package)
         except (UnicodeError, csv.Error) as e:
+            print u"normalize_rows error {}".format(e)
             message = u"Error reading file: '{}'. Try opening this file, resaving as .xlsx, and uploading that.".format(
                 e.message
             )
             return {"success": False, "message": message, "warnings": []}
         except RuntimeError as e:
             return {"success": False, "message": e.message, "warnings": []}
-
-        # save errors
-
-        db.session.execute("delete from jump_file_import_error_rows where file = '{}'".format(
-            package_id, cls.file_type_label()))
-
-        cls.save_errors(package_id, error_rows)
-        db.session.flush()
 
         # save normalized rows
 
@@ -569,15 +566,22 @@ class PackageInput:
                 row.update({"package_id": package_id})
                 # logger.info(u"normalized row: {}".format(json.dumps(row)))
 
-            if cls.file_type_label() == "counter":
-                report_version = normalized_rows[1]["report_version"]
+            # delete what we've got
+            if self.file_type_label() == "counter":
                 report_name = normalized_rows[1]["report_name"]
-                # delete all report_year and access_type and yop
-                db.session.execute("delete from {} where package_id = '{}' and report_version = '{}' and report_name = '{}'".format(
-                    cls.destination_table(), package_id, report_version, report_name))
+                report_version = normalized_rows[1]["report_version"]
+                # make sure to delete counter 4 if loading counter 5, or vice versa
+                if report_version == "4":
+                    self.delete(package_id, "trj2")
+                    self.delete(package_id, "trj3")
+                    self.delete(package_id, "trj4")
+                elif report_version == "5":
+                    self.delete(package_id, "jr1")
+
+                # and now delete the thing you are currently loading
+                self.delete(package_id, report_name)
             else:
-                db.session.execute("delete from {} where package_id = '{}'".format(
-                    cls.destination_table(), package_id))
+                self.delete(package_id)
 
             sorted_fields = sorted(normalized_rows[0].keys())
             normalized_csv_filename = tempfile.mkstemp()[1]
@@ -586,32 +590,36 @@ class PackageInput:
                 for row in normalized_rows:
                     writer.writerow(row)
 
-            s3_object = cls._copy_staging_csv_to_s3(normalized_csv_filename, package_id)
+            s3_object = self._copy_staging_csv_to_s3(normalized_csv_filename, package_id)
 
             copy_cmd = text("""
                 copy {table} ({fields}) from '{s3_object}'
                 credentials :creds format as csv
                 timeformat 'auto';
             """.format(
-                table=cls.__tablename__,
+                table=self.__tablename__,
                 fields=", ".join(sorted_fields),
                 s3_object=s3_object,
             ))
 
             db.session.execute(copy_cmd.bindparams(creds=aws_creds))
-            cls.update_dest_table(package_id)
-            cls._copy_raw_to_s3(file_name, package_id)
+            self.update_dest_table(package_id)
+            self._copy_raw_to_s3(file_name, package_id)
+
+        # delete the current errors, save new errors
+        self.save_errors(package_id, error_rows)
+        db.session.flush()
 
         if commit:
             db.session.flush()  # see if this fixes Serializable isolation violation
             db.session.commit()
             if my_package:
-                cls.clear_caches(my_package)
+                self.clear_caches(my_package)
 
         if normalized_rows:
             return {
                 "success": True,
-                "message": u"Inserted {} {} rows for package {}.".format(len(normalized_rows), cls.__name__, package_id),
+                "message": u"Inserted {} {} rows for package {}.".format(len(normalized_rows), self.__class__.__name__, package_id),
                 "warnings": error_rows
             }
         else:

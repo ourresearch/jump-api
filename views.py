@@ -965,9 +965,10 @@ def _json_to_temp_file(req):
 
 
 def _load_package_file(package_id, req, table_class):
+    loader = table_class()
     temp_file = _json_to_temp_file(req)
     if temp_file:
-        load_result = table_class.load(package_id, temp_file, commit=True)
+        load_result = loader.load(package_id, temp_file, commit=True)
         if load_result["success"]:
             return load_result
         else:
@@ -978,10 +979,17 @@ def _load_package_file(package_id, req, table_class):
         )
 
 
-@app.route("/publisher/<package_id>/counter5_trj1", methods=["GET", "POST", "DELETE"])
+@app.route("/publisher/<package_id>/counter/<report_name>", methods=["DELETE"])
 @jwt_optional
-def jump_counter5_trj1(package_id):
-    return jump_counter(package_id)
+def jump_counter_delete(package_id, report_name):
+    # DELETE to /publisher/<publisher_id>/counter/trj2  (or trj3, trj4)
+    # DELETE to /publisher/<publisher_id>/counter/jr1 will keep deleting everything
+    # DELETE to /publisher/<publisher_id>/counter will keep deleting everything
+
+    authenticate_for_publisher(package_id, Permission.modify())
+    response = CounterInput().delete(package_id, report_name)
+    return jsonify_fast_no_sort({"message": response})
+
 
 @app.route("/publisher/<package_id>/counter/<file_type>", methods=["DELETE"])
 @jwt_optional
@@ -1004,11 +1012,12 @@ def jump_counter(package_id):
         else:
             return abort_json(404, u"no counter file for package {}".format(package_id))
     elif request.method == "DELETE":
-        return jsonify_fast_no_sort({"message": CounterInput.delete(package_id)})
+        return jump_counter_delete(package_id, None)
     else:
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
+            print u"loading counter package {}".format(package_id)
             response = _load_package_file(package_id, request, CounterInput)
 
             # add a package scenario if there isn't already one

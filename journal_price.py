@@ -1,3 +1,6 @@
+# coding: utf-8
+
+from cached_property import cached_property
 from app import db
 from package_input import PackageInput
 from scenario import refresh_cached_prices_from_db
@@ -36,58 +39,51 @@ class JournalPriceInput(db.Model, PackageInput):
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
     year = db.Column(db.Numeric)
 
-    @classmethod
-    def import_view_name(cls):
+    def import_view_name(self):
         return "jump_journal_prices_view"
 
-    @classmethod
-    def destination_table(cls):
+    def destination_table(self):
         return JournalPrice.__tablename__
 
-    @classmethod
-    def issn_columns(cls):
+    def issn_columns(self):
         return ["issn"]
 
-    @classmethod
-    def csv_columns(cls):
+    def csv_columns(self):
         return {
             "publisher": {
-                "normalize": cls.strip_text,
+                "normalize": self.strip_text,
                 "name_snippets": [u"publisher"],
                 "required": False,
             },
             "issn": {
-                "normalize": cls.normalize_issn,
+                "normalize": self.normalize_issn,
                 "name_snippets": [u"issn"],
                 "required": True,
                 "warn_if_blank": True,
             },
             "subject": {
-                "normalize": cls.strip_text,
+                "normalize": self.strip_text,
                 "name_snippets": [u"subj"],
                 "required": False,
             },
             "price": {
-                "normalize": cls.normalize_price,
+                "normalize": self.normalize_price,
                 "name_snippets": [u"price", u"usd", u"cost"],
                 "warn_if_blank": True,
             },
             "year": {
-                "normalize": cls.normalize_year,
+                "normalize": self.normalize_year,
                 "name_snippets": [u"year", u"date"],
                 "required": False,
             }
         }
 
-    @classmethod
-    def file_type_label(cls):
+    def file_type_label(self):
         return u"price"
 
-    @classmethod
-    def clear_caches(cls, my_package):
-        super(JournalPriceInput, cls).clear_caches(my_package)
+    def clear_caches(self, my_package):
+        super(JournalPriceInput, self).clear_caches(my_package)
         refresh_cached_prices_from_db(my_package.package_id, my_package.publisher)
 
-    @classmethod
-    def validate_publisher(cls):
+    def validate_publisher(self):
         return True

@@ -37,11 +37,11 @@ for filename in filenames:
     input_dict["report_year"] = 2020
     input_dict["report_version"] = "5"
     if "tr_j2" in filename:
-        input_dict["report_name"] = "TRJ2"
+        input_dict["report_name"] = "trj2"
     elif "tr_j3" in filename:
-        input_dict["report_name"] = "TRJ3"
+        input_dict["report_name"] = "trj3"
     elif "tr_j4" in filename:
-        input_dict["report_name"] = "TRJ4"
+        input_dict["report_name"] = "trj4"
 
     for item in report_items:
         title = item["Title"]
