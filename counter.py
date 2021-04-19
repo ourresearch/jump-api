@@ -39,11 +39,14 @@ class CounterInput(db.Model, PackageInput):
     total = db.Column(db.Numeric)
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
 
-    def set_file_type_label(self, report_name):
+    def calculate_file_type_label(report_name):
         if not report_name or (report_name == "jr1"):
-            self.stored_file_type_label = u"counter"
+            return u"counter"
         else:
-            self.stored_file_type_label = u"counter-{}".format(report_name.lower())
+            return u"counter-{}".format(report_name.lower())
+
+    def set_file_type_label(self, report_name):
+        self.stored_file_type_label = self.calculate_file_type_label(report_name)
 
     def file_type_label(self):
         if hasattr(self, "stored_file_type_label"):
@@ -235,10 +238,10 @@ class CounterInput(db.Model, PackageInput):
                 self.destination_table(), package_id, report_name))
 
             db.session.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
-                package_id, self.file_type_label()))
+                package_id, self.calculate_file_type_label(report_name)))
 
             db.session.execute("delete from jump_file_import_error_rows where package_id = '{}' and file = '{}'".format(
-                package_id, self.file_type_label()))
+                package_id, self.calculate_file_type_label(report_name)))
 
         else:
             db.session.execute("delete from {} where package_id = '{}' and report_name = '{}'".format(
@@ -248,11 +251,11 @@ class CounterInput(db.Model, PackageInput):
                 self.destination_table(), package_id, report_name))
 
             db.session.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
-                package_id, self.file_type_label(), report_name))
+                package_id, self.calculate_file_type_label(report_name), report_name))
 
             if report_name == "trj2":
                 db.session.execute("delete from jump_file_import_error_rows where package_id = '{}' and file = '{}'".format(
-                    package_id, self.file_type_label(), report_name))
+                    package_id, self.calculate_file_type_label(report_name), report_name))
 
         safe_commit(db)
 

@@ -726,13 +726,6 @@ class Package(db.Model):
                     "rows_count": num_price_rows,
                     "error_rows": price_errors,
                 },
-                # TODO: remove prices when not used by frontend
-                {
-                    "name": "prices",
-                    "uploaded": False if self.is_demo else num_price_rows > 0,
-                    "rows_count": num_price_rows,
-                    "error_rows": price_errors,
-                },
                 {
                     "name": "core-journals",
                     "uploaded": False if self.is_demo else num_core_rows > 0,

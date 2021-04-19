@@ -43,7 +43,6 @@ class PerpetualAccessInput(db.Model, PackageInput):
     def issn_columns(self):
         return ["issn"]
 
-    @cached_property
     def csv_columns(self):
         return {
             "start_date": {

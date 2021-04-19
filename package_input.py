@@ -133,7 +133,7 @@ class PackageInput:
 
     @cache
     def normalize_column_name(self, raw_column_name):
-        for canonical_name, spec in self.csv_columns.items():
+        for canonical_name, spec in self.csv_columns().items():
             name_snippets = spec["name_snippets"]
             excluded_name_snippets = spec.get("excluded_name_snippets", [])
 
@@ -156,7 +156,7 @@ class PackageInput:
 
     @cache
     def normalize_cell(self, normalized_column_name, raw_column_value):
-        spec = self.csv_columns[normalized_column_name]
+        spec = self.csv_columns()[normalized_column_name]
         return spec["normalize"](raw_column_value, spec.get("warn_if_blank", False))
 
 
@@ -436,7 +436,7 @@ class PackageInput:
             # combine the header and data rows into dicts
             row_dicts = [dict(zip(parsed_rows[header_index], x)) for x in parsed_rows[header_index+1:]]
 
-            required_keys = [k for k, v in self.csv_columns.items() if v.get("required", True)]
+            required_keys = [k for k, v in self.csv_columns().items() if v.get("required", True)]
 
             print "here"
 
@@ -567,7 +567,9 @@ class PackageInput:
                 # logger.info(u"normalized row: {}".format(json.dumps(row)))
 
             # delete what we've got
-            if self.file_type_label() == "counter":
+            from counter import CounterInput
+
+            if isinstance(CounterInput, self):
                 report_name = normalized_rows[1]["report_name"]
                 report_version = normalized_rows[1]["report_version"]
                 # make sure to delete counter 4 if loading counter 5, or vice versa
@@ -580,6 +582,9 @@ class PackageInput:
 
                 # and now delete the thing you are currently loading
                 self.delete(package_id, report_name)
+
+                # then set this for use further in the function
+                self.set_file_type_label(report_name)
             else:
                 self.delete(package_id)
 
