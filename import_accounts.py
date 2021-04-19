@@ -164,17 +164,17 @@ if __name__ == "__main__":
     crkn_ids = read_csv_file(u"/Users/hpiwowar/Documents/Projects/tiv2/jump-api/data/crkn_lookup.csv")
     institution_for_all_these_packages = "institution-fVnPvXK9iBYA"
 
-    # report_name = "TRJ2"
+    # report_name = "trj2"
     # all_in_one_data_rows = read_csv_file(u"/Users/hpiwowar/Documents/Projects/tiv2/jump-api/data/counter5_crkn/TR_J2 SUSHI Harvester CRKN_Wiley-2019_incl-non-participants.csv")
 
-    # report_name = "TRJ3"
+    # report_name = "trj3"
     # all_in_one_data_rows = read_csv_file(u"/Users/hpiwowar/Documents/Projects/tiv2/jump-api/data/counter5_crkn/TR_J3 SUSHI Harvester CRKN_Wiley-2019.csv")
 
-    # report_name = "TRJ4"
+    # report_name = "trj4"
     # all_in_one_data_rows = read_csv_file(u"/Users/hpiwowar/Documents/Projects/tiv2/jump-api/data/counter5_crkn/1 TR_J4 SUSHI Harvester CRKN_Wiley-2019.csv")
     # all_in_one_data_rows = read_csv_file(u"/Users/hpiwowar/Documents/Projects/tiv2/jump-api/data/counter5_crkn/2 TR_J4 SUSHI Harvester CRKN_Wiley-2019.csv")
 
-    report_name = "TRJ4"
+    report_name = "trj4"
     all_in_one_data_rows = read_csv_file(u" /Users/hpiwowar/Dropbox/companywide/unsub_customer_data/learn_counter5/raw_from_unis/crkn/elsevier/COP5_TR_J4_2019_UIR.xlsx")
 
     for row in crkn_ids:

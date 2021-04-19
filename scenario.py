@@ -536,7 +536,7 @@ class Scenario(object):
 
     @cached_property
     def use_oa(self):
-        return round(np.sum([j.use_actual["oa"] for j in self.journals]))
+        return round(np.sum([j.use_actual["oa_plus_social_networks"] for j in self.journals]))
 
     @cached_property
     def use_backfile(self):
@@ -635,21 +635,31 @@ class Scenario(object):
         return response
 
     def to_dict_summary_dict(self):
-        response = {
-                    "cost_scenario": self.cost,
-                    "cost_scenario_ill": self.cost_actual_ill,
-                    "cost_scenario_subscription": self.cost_actual_subscription,
-                    "cost_bigdeal_projected": self.cost_bigdeal_projected,
-                    "cost_percent": self.cost_spent_percent,
-                    "num_journals_subscribed": len(self.subscribed),
-                    "num_journals_total": len(self.journals),
-                    "use_instant_percent": self.use_instant_percent,
-                    "use_free_instant_percent": self.use_free_instant_percent,
-                    "use_subscription_percent": self.use_subscription_percent,
-                    "use_ill_percent": self.use_ill_percent
+        response = OrderedDict()
+        response["num_journals_subscribed"] =  len(self.subscribed)
 
+        response["cost_scenario_subscription"] = self.cost_actual_subscription
 
-        }
+        response["downloads_total"] = self.downloads_total
+        response["usage"] = self.use_total
+        response["use_oa"] = self.use_oa
+        response["use_backfile"] = self.use_backfile
+        response["use_subscription"] = self.use_subscription
+        response["use_turnaway_and_ill"] = self.use_ill + self.use_other_delayed
+
+        response["use_oa_percent"] = round(float(100)*self.use_oa/self.use_total, 1)
+        response["use_backfile_percent"] = round(float(100)*self.use_backfile/self.use_total, 1)
+        response["use_subscription_percent"] = self.use_subscription_percent
+        response["use_ill_percent"] = self.use_ill_percent
+
+        response["cost_scenario"] = self.cost
+        response["cost_bigdeal_projected"] = self.cost_bigdeal_projected
+        response["cost_percent"] = self.cost_spent_percent
+        response["cost_scenario_ill"] = self.cost_actual_ill
+        response["num_journals_total"] = len(self.journals)
+        response["use_instant_percent"] = self.use_instant_percent
+        response["use_free_instant_percent"] = self.use_free_instant_percent
+
         return response
 
     def to_dict(self):
@@ -698,7 +708,7 @@ def get_package_specific_scenario_data_from_db(input_package_id):
         command = """select issn_l, total, report_version, report_name, metric_type 
             from jump_counter 
             where package_id='{}'
-            and (report_name is null or report_name != 'TRJ4')
+            and (report_name is null or report_name != 'trj4')
             """.format(package_id)
         rows = None
         with get_db_cursor() as cursor:
@@ -708,7 +718,7 @@ def get_package_specific_scenario_data_from_db(input_package_id):
             is_counter5 = (rows[0]["report_version"] == "5")
             for row in rows:
                 if is_counter5:
-                    if row["report_name"] in ["TRJ2", "TRJ3"]:
+                    if row["report_name"] in ["trj2", "trj3"]:
                         if row["metric_type"] in ["Unique_Item_Requests", "No_License"]:
                             counter_dict[row["issn_l"]] += row.get("total", 0)
                     # else don't do anything with it for now

@@ -4,6 +4,7 @@ from cached_property import cached_property
 import re
 import calendar
 
+from util import safe_commit
 from app import db, logger
 from package_input import PackageInput
 
@@ -37,6 +38,17 @@ class CounterInput(db.Model, PackageInput):
     journal_name = db.Column(db.Text)
     total = db.Column(db.Numeric)
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
+
+    def set_file_type_label(self, report_name):
+        if not report_name or (report_name == "jr1"):
+            self.stored_file_type_label = u"counter"
+        else:
+            self.stored_file_type_label = u"counter-{}".format(report_name.lower())
+
+    def file_type_label(self):
+        if hasattr(self, "stored_file_type_label"):
+            return self.stored_file_type_label
+        return u"counter"
 
     def import_view_name(self):
         return "jump_counter_view"
@@ -109,9 +121,6 @@ class CounterInput(db.Model, PackageInput):
 
         return False
 
-    def file_type_label(self):
-        return u"counter"
-
     def issn_columns(self):
         return ["print_issn", "online_issn"]
 
@@ -120,23 +129,23 @@ class CounterInput(db.Model, PackageInput):
         version_labels = {
             "Journal Report 1 (R4)": {
                 "report_version": "4",
-                "report_name": "JR1"
+                "report_name": "jr1"
             },
             "TR_J1": {
                 "report_version": "5",
-                "report_name": "TRJ1",
+                "report_name": "trj1",
             },
             "TR_J2": {
                 "report_version": "5",
-                "report_name": "TRJ2",
+                "report_name": "trj2",
             },
             "TR_J3": {
                 "report_version": "5",
-                "report_name": "TRJ3",
+                "report_name": "trj3",
             },
             "TR_J4": {
                 "report_version": "5",
-                "report_name": "TRJ4",
+                "report_name": "trj4",
             },
         }
 
@@ -204,3 +213,53 @@ class CounterInput(db.Model, PackageInput):
             row["report_name"] = report_name
 
         return normalized_rows
+
+
+    def delete(self, package_id, report_name=None):
+        # DELETE to /publisher/<publisher_id>/counter/trj2  (or trj3, trj4)
+        # DELETE to /publisher/<publisher_id>/counter/jr1 will keep deleting everything
+        # DELETE to /publisher/<publisher_id>/counter will keep deleting everything
+
+        if report_name:
+            report_name = report_name.lower()
+
+        if report_name == None:
+            report_name = "jr1"
+
+        # delete select files if counter 5, else delete all counter data of all report names, including null
+        if report_name == "jr1":
+            db.session.execute("delete from {} where package_id = '{}' and ((report_name is null) or (report_name = '{}'))".format(
+                self.__tablename__, package_id, report_name))
+
+            db.session.execute("delete from {} where package_id = '{}' and ((report_name is null) or (report_name = '{}'))".format(
+                self.destination_table(), package_id, report_name))
+
+            db.session.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
+                package_id, self.file_type_label()))
+
+            db.session.execute("delete from jump_file_import_error_rows where package_id = '{}' and file = '{}'".format(
+                package_id, self.file_type_label()))
+
+        else:
+            db.session.execute("delete from {} where package_id = '{}' and report_name = '{}'".format(
+                self.__tablename__, package_id, report_name))
+
+            db.session.execute("delete from {} where package_id = '{}' and report_name = '{}'".format(
+                self.destination_table(), package_id, report_name))
+
+            db.session.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
+                package_id, self.file_type_label(), report_name))
+
+            if report_name == "trj2":
+                db.session.execute("delete from jump_file_import_error_rows where package_id = '{}' and file = '{}'".format(
+                    package_id, self.file_type_label(), report_name))
+
+        safe_commit(db)
+
+        from package import Package
+        my_package = db.session.query(Package).filter(Package.package_id == package_id).scalar()
+        if my_package:
+            self.clear_caches(my_package)
+
+
+        return u"Deleted {} rows for package {}.".format(self.__class__.__name__, package_id)

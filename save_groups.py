@@ -256,7 +256,7 @@ if __name__ == "__main__":
         consortium_ids = consortium.get_consortium_ids()
         # print consortium_ids
 
-        for scenario_id in [d["scenario_id"] for d in consortium_ids if d["consortium_short_name"]=="jisc"]:
+        for scenario_id in [d["scenario_id"] for d in consortium_ids if d["consortium_short_name"]=="julac"]:
             # consortium.consortium_get_computed_data(scenario_id)
             # consortium.consortium_get_issns(scenario_id)
 

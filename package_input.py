@@ -221,7 +221,8 @@ class PackageInput:
         except s3.exceptions.NoSuchKey:
             return None
 
-    def delete(self, package_id):
+    def delete(self, package_id, file_type=None):
+
         db.session.execute("delete from {} where package_id = '{}'".format(self.__tablename__, package_id))
 
         db.session.execute("delete from {} where package_id = '{}'".format(self.destination_table(), package_id))
@@ -238,8 +239,8 @@ class PackageInput:
         if my_package:
             self.clear_caches(my_package)
 
-
         return u"Deleted {} rows for package {}.".format(self.__class__.__name__, package_id)
+
 
     def clear_caches(self, my_package):
         # print "clearing cache"
@@ -553,14 +554,6 @@ class PackageInput:
         except RuntimeError as e:
             return {"success": False, "message": e.message, "warnings": []}
 
-        # save errors
-
-        db.session.execute("delete from jump_file_import_error_rows where file = '{}'".format(
-            package_id, self.file_type_label()))
-
-        self.save_errors(package_id, error_rows)
-        db.session.flush()
-
         # save normalized rows
 
         aws_creds = "aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}".format(
@@ -573,15 +566,22 @@ class PackageInput:
                 row.update({"package_id": package_id})
                 # logger.info(u"normalized row: {}".format(json.dumps(row)))
 
+            # delete what we've got
             if self.file_type_label() == "counter":
-                report_version = normalized_rows[1]["report_version"]
                 report_name = normalized_rows[1]["report_name"]
-                # delete all report_year and access_type and yop
-                db.session.execute("delete from {} where package_id = '{}' and report_version = '{}' and report_name = '{}'".format(
-                    self.destination_table(), package_id, report_version, report_name))
+                report_version = normalized_rows[1]["report_version"]
+                # make sure to delete counter 4 if loading counter 5, or vice versa
+                if report_version == "4":
+                    self.delete(package_id, "trj2")
+                    self.delete(package_id, "trj3")
+                    self.delete(package_id, "trj4")
+                elif report_version == "5":
+                    self.delete(package_id, "jr1")
+
+                # and now delete the thing you are currently loading
+                self.delete(package_id, report_name)
             else:
-                db.session.execute("delete from {} where package_id = '{}'".format(
-                    self.destination_table(), package_id))
+                self.delete(package_id)
 
             sorted_fields = sorted(normalized_rows[0].keys())
             normalized_csv_filename = tempfile.mkstemp()[1]
@@ -605,6 +605,10 @@ class PackageInput:
             db.session.execute(copy_cmd.bindparams(creds=aws_creds))
             self.update_dest_table(package_id)
             self._copy_raw_to_s3(file_name, package_id)
+
+        # delete the current errors, save new errors
+        self.save_errors(package_id, error_rows)
+        db.session.flush()
 
         if commit:
             db.session.flush()  # see if this fixes Serializable isolation violation

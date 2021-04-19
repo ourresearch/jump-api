@@ -77,12 +77,12 @@ files = {
 def add_institution(institution_name, old_username, ror_id, is_consortium=False):
     logger.info(u"initializing institution {}".format(institution_name))
 
-    print "need to fix this for UK universities Heather"
-    print 1/0
 
-    my_institution = db.session.query(Institution).filter(Institution.display_name == institution_name).scalar()
+    my_institutions = db.session.query(Institution).filter(Institution.display_name == institution_name,
+                                                           Institution.id.notlike('%jisc%')).all()
 
-    if my_institution:
+    if my_institutions:
+        my_institution = my_institutions[0]
         logger.info(u"  *** using existing institution {} ***".format(my_institution))
 
     else:
@@ -181,9 +181,12 @@ def add_user(user_info):
 
     logger.info(u"\ninitializing user {}".format(email))
 
-    my_institution = db.session.query(Institution).filter(Institution.display_name == user_info["institution_name"]).scalar()
+    # don't use a jisc institution in this script
+    my_institutions = db.session.query(Institution).filter(Institution.display_name == user_info["institution_name"],
+                                                           Institution.id.notlike('%jisc%')).all()
 
-    if my_institution:
+    if my_institutions:
+        my_institution = my_institutions[0]
         logger.info(u"  *** using existing institution {} ***".format(my_institution))
     else:
         logger.info(u"  *** FAILED: institution {} doesn't exist, exiting ***".format(user_info["institution_name"]))
@@ -248,9 +251,10 @@ def add_package(institution_username, counter_filename):
 
     now = datetime.utcnow().isoformat()
 
-    my_institution = db.session.query(Institution).filter(Institution.old_username == institution_username).first()
-    print u"my_institution: {}".format(my_institution)
-
+    my_institutions = db.session.query(Institution).filter(Institution.old_username == institution_username,
+                                                           Institution.id.notlike('%jisc%')).all()
+    if my_institutions:
+        my_institution = my_institutions[0]
 
     my_package = Package(
         package_id=u"package-{}".format(shortuuid.uuid()[0:12]),
@@ -314,7 +318,7 @@ def add_package(institution_username, counter_filename):
     )
     logging.getLogger("").setLevel(logging.WARNING)
     from counter import CounterInput
-    load_result = CounterInput.load(my_package.package_id, counter_filename, commit=False)
+    load_result = CounterInput().load(my_package.package_id, counter_filename, commit=False)
     logging.getLogger("").setLevel(log_level)
     if load_result["success"]:
         logger.info(load_result["message"])
@@ -381,7 +385,7 @@ if __name__ == "__main__":
             user_rows = read_csv_file(parsed_args.file)
 
         for row in user_rows:
-            my_institution = add_user(row)
+            my_user = add_user(row)
 
             if commit:
                 logger.info("commit")
@@ -438,4 +442,3 @@ if __name__ == "__main__":
 # (select 'user-oG2hLFX8JGjU' as user_id, institution_id, 1 as permission_id from jump_user_institution_permission where user_id='user-oG2hLFX8JGjU' and permission_id=81)
 
 
-    print "HEATHER MAKE SURE IT WORKED WITH NO ERRORS esp with delete RoR etc"
