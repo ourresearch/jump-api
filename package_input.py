@@ -569,7 +569,7 @@ class PackageInput:
             # delete what we've got
             from counter import CounterInput
 
-            if isinstance(CounterInput, self):
+            if isinstance(self, CounterInput):
                 report_name = normalized_rows[1]["report_name"]
                 report_version = normalized_rows[1]["report_version"]
                 # make sure to delete counter 4 if loading counter 5, or vice versa
