@@ -994,8 +994,8 @@ def jump_counter_delete(package_id, report_name):
 @app.route("/publisher/<package_id>/counter/<file_type>", methods=["DELETE"])
 @jwt_optional
 def jump_counter_delete(package_id, file_type):
-    # DELETE to /publisher/<publisher_id>/counter/TRJ2  (or TRJ3, TRJ4)
-    # DELETE to /publisher/<publisher_id>/counter/JR1 will keep deleting everything
+    # DELETE to /publisher/<publisher_id>/counter/trj2  (or trj3, trj4)
+    # DELETE to /publisher/<publisher_id>/counter/jr1 will keep deleting everything
     # DELETE to /publisher/<publisher_id>/counter will keep deleting everything
     return jump_counter(package_id)
 
