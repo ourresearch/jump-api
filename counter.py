@@ -59,7 +59,6 @@ class CounterInput(db.Model, PackageInput):
     def destination_table(self):
         return Counter.__tablename__
 
-    @cached_property
     def csv_columns(self):
         columns = {
             "print_issn": {
