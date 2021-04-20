@@ -24,7 +24,7 @@ from scenario import get_ricks_journal
 from scenario import get_prices_from_cache
 from scenario import get_core_list_from_db
 from scenario import get_perpetual_access_from_cache
-from util import get_sql_answer
+from util import get_sql_answers
 from util import get_sql_rows
 from util import get_sql_dict_rows, safe_commit
 
@@ -663,7 +663,8 @@ class Package(db.Model):
         else:
             num_counter_error_rows = 0
 
-        num_counter_rows = CounterInput.query.filter(CounterInput.package_id == self.package_id).count()
+        num_counter_rows = CounterInput.query.filter(CounterInput.package_id == self.package_id,
+                                                    CounterInput.report_version != "5").count()
         num_counter_rows += num_counter_error_rows
 
         # perpetual access stats
@@ -699,6 +700,57 @@ class Package(db.Model):
         else:
             counter_uploaded = num_counter_rows > 0
 
+
+        data_files_list = [
+                {
+                    "name": "counter",
+                    "uploaded": counter_uploaded,
+                    "rows_count": num_counter_rows,
+                    "created": None,
+                    "error_rows": counter_errors,
+                },
+                {
+                    "name": "perpetual-access",
+                    "uploaded": False if self.is_demo else num_pa_rows > 0,
+                    "rows_count": num_pa_rows,
+                    "created": None,
+                    "error_rows": pa_errors,
+                },
+                {
+                    "name": "price",
+                    "uploaded": False if self.is_demo else num_price_rows > 0,
+                    "rows_count": num_price_rows,
+                    "created": None,
+                    "error_rows": price_errors,
+                },
+                {
+                    "name": "core-journals",
+                    "uploaded": False if self.is_demo else num_core_rows > 0,
+                    "rows_count": num_core_rows,
+                    "created": None,
+                    "error_rows": None,
+                }]
+        for filename in ["counter-trj2", "counter-trj3", "counter-trj4"]:
+            data_files_list += [{
+                "name": filename,
+                "uploaded": False,
+                "created": None,
+                "rows_count": None,
+                "error_rows": None}]
+
+        command = u"""select file, created, num_rows from jump_raw_file_upload_object where package_id = '{}'""".format(self.package_id)
+        with get_db_cursor() as cursor:
+            cursor.execute(command)
+            rows = cursor.fetchall()
+
+        for row in rows:
+            for my_dict in data_files_list:
+                if my_dict["name"] == row["file"]:
+                    my_dict["uploaded"] = True
+                    my_dict["created"] = row["created"]
+                    if row["num_rows"]:
+                        my_dict["rows_count"] = row["num_rows"]
+
         return {
             "id": self.package_id,
             "name": self.package_name,
@@ -707,32 +759,7 @@ class Package(db.Model):
             "is_demo": self.is_demo,
             "journal_detail": None,  #not used anymore
             "scenarios": [s.to_dict_minimal() for s in self.saved_scenarios],
-            "data_files": [
-                {
-                    "name": "counter",
-                    "uploaded": counter_uploaded,
-                    "rows_count": num_counter_rows,
-                    "error_rows": counter_errors,
-                },
-                {
-                    "name": "perpetual-access",
-                    "uploaded": False if self.is_demo else num_pa_rows > 0,
-                    "rows_count": num_pa_rows,
-                    "error_rows": pa_errors,
-                },
-                {
-                    "name": "price",
-                    "uploaded": False if self.is_demo else num_price_rows > 0,
-                    "rows_count": num_price_rows,
-                    "error_rows": price_errors,
-                },
-                {
-                    "name": "core-journals",
-                    "uploaded": False if self.is_demo else num_core_rows > 0,
-                    "rows_count": num_core_rows,
-                    "error_rows": None,
-                },
-            ],
+            "data_files": data_files_list,
             "journals": self.get_journal_attributes(),
             "is_owned_by_consortium": self.is_owned_by_consortium,
             "is_deleted": self.is_deleted is not None and self.is_deleted

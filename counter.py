@@ -39,7 +39,7 @@ class CounterInput(db.Model, PackageInput):
     total = db.Column(db.Numeric)
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
 
-    def calculate_file_type_label(report_name):
+    def calculate_file_type_label(self, report_name):
         if not report_name or (report_name == "jr1"):
             return u"counter"
         else:
@@ -167,7 +167,7 @@ class CounterInput(db.Model, PackageInput):
                 assigned_label = "TR_J4"
             elif first_row["metric_type"] == "No_License":
                 assigned_label = "TR_J2"
-            elif "OA_Gold" in [row["access_type"] for row in normalized_rows]:
+            elif "OA_Gold" in [row.get("access_type", "") for row in normalized_rows]:
                 assigned_label = "TR_J3"
 
         if assigned_label:

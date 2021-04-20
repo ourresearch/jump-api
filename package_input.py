@@ -170,7 +170,7 @@ class PackageInput:
     def _raw_s3_bucket(self):
         return u"unsub-file-uploads"
 
-    def _copy_raw_to_s3(self, filename, package_id):
+    def _copy_raw_to_s3(self, filename, package_id, num_rows=None):
         s3 = boto3.client("s3")
 
         if u"." in filename:
@@ -190,7 +190,8 @@ class PackageInput:
             package_id=package_id,
             file=self.file_type_label(),
             bucket_name=bucket_name,
-            object_name=object_name
+            object_name=object_name,
+            num_rows=num_rows
         ))
 
         return "s3://{}/{}".format(bucket_name, object_name)
@@ -590,9 +591,11 @@ class PackageInput:
 
             sorted_fields = sorted(normalized_rows[0].keys())
             normalized_csv_filename = tempfile.mkstemp()[1]
+            num_rows = 0
             with open(normalized_csv_filename, "w") as normalized_csv_file:
                 writer = csv.DictWriter(normalized_csv_file, delimiter=",", encoding="utf-8", fieldnames=sorted_fields)
                 for row in normalized_rows:
+                    num_rows += 1
                     writer.writerow(row)
 
             s3_object = self._copy_staging_csv_to_s3(normalized_csv_filename, package_id)
@@ -609,7 +612,7 @@ class PackageInput:
 
             db.session.execute(copy_cmd.bindparams(creds=aws_creds))
             self.update_dest_table(package_id)
-            self._copy_raw_to_s3(file_name, package_id)
+            self._copy_raw_to_s3(file_name, package_id, num_rows)
 
         # delete the current errors, save new errors
         self.save_errors(package_id, error_rows)
