@@ -65,5 +65,5 @@ class PerpetualAccessInput(db.Model, PackageInput):
         }
 
     def clear_caches(self, my_package):
-        super(PerpetualAccessInput, cls).clear_caches(my_package)
+        super(PerpetualAccessInput, self).clear_caches(my_package)
         refresh_perpetual_access_from_db(my_package.package_id)
