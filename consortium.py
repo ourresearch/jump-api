@@ -159,7 +159,7 @@ class Consortium(object):
     def member_institution_included_list(self):
         start_time = time()
         member_institutions_status = get_latest_member_institutions_raw(self.scenario_id)
-        if member_institutions_status:
+        if member_institutions_status is not None:
             return member_institutions_status
         return self.all_member_package_ids
 
