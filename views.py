@@ -834,6 +834,16 @@ def update_publisher(publisher_id):
     if "name" in request.json:
         publisher.package_name = request.json["name"]
 
+    if "warnings" in request.json:
+        for warning_dict in request.json["warnings"]:
+            if warning_dict["id"] == "missing_perpetual_access":
+                publisher.is_dismissed_warning_missing_perpetual_access = warning_dict["is_dismissed"]
+            if warning_dict["id"] == "missing_prices":
+                publisher.is_dismissed_warning_missing_prices = warning_dict["is_dismissed"]
+
+    if "is_deleted" in request.json:
+        publisher.is_deleted = request.json["is_deleted"]
+
     if "cost_bigdeal" in request.json:
         try:
             cost = float(request.json["cost_bigdeal"]) if request.json["cost_bigdeal"] is not None else None
@@ -841,12 +851,6 @@ def update_publisher(publisher_id):
             return abort_json(400, u"Couln't parse cost_bigdeal '{}' as a number.".format(request.json["cost_bigdeal"]))
 
         publisher.big_deal_cost = cost
-
-    if "is_deleted" in request.json:
-        if not isinstance(request.json["is_deleted"], bool):
-            return abort_json(400, u"is_deleted must be a boolean. got {}.".format(request.json["is_deleted"]))
-
-        publisher.is_deleted = request.json["is_deleted"]
 
     db.session.merge(publisher)
     safe_commit(db)
@@ -974,28 +978,24 @@ def _load_package_file(package_id, req, table_class):
         else:
             return abort_json(400, load_result)
     else:
-        return abort_json(
-            400, u"expected a JSON object like {file: <base64-encoded file>, name: <file name>}"
-        )
+        return abort_json(400, u"expected a JSON object like {file: <base64-encoded file>, name: <file name>}")
 
 
-@app.route("/publisher/<package_id>/counter/<report_name>", methods=["DELETE"])
-@jwt_optional
-def jump_counter_delete(package_id, report_name):
-    # DELETE to /publisher/<publisher_id>/counter/trj2  (or trj3, trj4)
-    # DELETE to /publisher/<publisher_id>/counter/jr1 will keep deleting everything
-    # DELETE to /publisher/<publisher_id>/counter will keep deleting everything
 
-    authenticate_for_publisher(package_id, Permission.modify())
-    response = CounterInput().delete(package_id, report_name)
-    return jsonify_fast_no_sort({"message": response})
-
-
+@app.route("/publisher/<package_id>/counter-jr1", methods=["GET", "POST", "DELETE"])
+@app.route("/publisher/<package_id>/counter-tr2", methods=["GET", "POST", "DELETE"])
+@app.route("/publisher/<package_id>/counter-tr3", methods=["GET", "POST", "DELETE"])
+@app.route("/publisher/<package_id>/counter-tr4", methods=["GET", "POST", "DELETE"])
 @app.route("/publisher/<package_id>/counter", methods=["GET", "POST", "DELETE"])
 @jwt_optional
 # @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 def jump_counter(package_id):
     authenticate_for_publisher(package_id, Permission.view() if request.method == "GET" else Permission.modify())
+    url_end = request.base_url.rsplit("/", 1)[1]
+    if url_end == "counter":
+        url_end = "counter-jr1"
+    report_name = url_end.split("-")[1]
+    print "report_name", report_name
 
     if request.method == "GET":
         rows = Counter.query.filter(Counter.package_id == package_id).all()
@@ -1004,7 +1004,8 @@ def jump_counter(package_id):
         else:
             return abort_json(404, u"no counter file for package {}".format(package_id))
     elif request.method == "DELETE":
-        return jump_counter_delete(package_id, None)
+        response = CounterInput().delete(package_id, report_name)
+        return jsonify_fast_no_sort({"message": response})
     else:
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())

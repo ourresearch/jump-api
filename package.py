@@ -45,6 +45,8 @@ class Package(db.Model):
     big_deal_cost = db.Column(db.Numeric)
     is_deleted = db.Column(db.Boolean)
     currency = db.Column(db.Text)
+    is_dismissed_warning_missing_perpetual_access = db.Column(db.Boolean)
+    is_dismissed_warning_missing_prices = db.Column(db.Boolean)
 
     saved_scenarios = db.relationship("SavedScenario", lazy="subquery", backref=db.backref("package", lazy="subquery"))
     institution = db.relationship("Institution", lazy="subquery", uselist=False)
@@ -538,6 +540,44 @@ class Package(db.Model):
             "issns": journal_rows.get(issn_l, {}).get("issns", [])
         } for issn_l in distinct_issnls]
 
+    @cached_property
+    def journals_missing_prices(self):
+        counter_rows = dict((x["issn_l"], x) for x in self.get_unfiltered_counter_rows)
+
+        price_packages = [self.package_id]
+        if self.currency == "USD":
+            price_packages += [DEMO_PACKAGE_ID]
+        has_a_prices = get_prices_from_cache(price_packages, self.publisher)
+
+        open_access = [x["issn_l"] for x in self.get_diff_open_access_journals]
+        not_published_2019 = [x["issn_l"] for x in self.get_diff_not_published_in_2019]
+        changed_publisher = [x["issn_l"] for x in self.get_diff_changed_publisher]
+
+        journals_missing_prices = []
+        for issn_l in counter_rows:
+            if issn_l in has_a_prices:
+                continue
+            if issn_l in open_access:
+                continue
+            if issn_l in not_published_2019:
+                continue
+            if issn_l in changed_publisher:
+                continue
+            if issn_l in changed_publisher:
+                continue
+            my_dict = {
+                "issn_l": issn_l,
+                "name": get_ricks_journal()[issn_l]["title"],
+                "issns": get_ricks_journal()[issn_l]["issns"],
+                # "counter_sum": counter_rows[issn_l]
+                "counter_total": 42
+            }
+            journals_missing_prices.append(my_dict)
+
+        return journals_missing_prices
+
+
+
     # def get_unexpectedly_no_price(self):
     #     package_id = self.package_id_for_db
     #
@@ -637,6 +677,27 @@ class Package(db.Model):
     #         rows = cursor.fetchall()
     #     return rows
 
+
+    @cached_property
+    def warnings(self):
+        from scenario import get_package_specific_scenario_data_from_db
+
+        response = []
+        if not self.has_custom_perpetual_access:
+            response += [{
+                "id": "missing_perpetual_access",
+                "is_dismissed": (True == self.is_dismissed_warning_missing_perpetual_access),
+                "journals": None
+            }]
+
+        if self.journals_missing_prices:
+            response += [{
+                "id": "missing_prices",
+                "is_dismissed": (True == self.is_dismissed_warning_missing_prices),
+                "journals": self.journals_missing_prices
+            }]
+
+        return response
 
     def to_dict_summary(self):
 
@@ -762,7 +823,8 @@ class Package(db.Model):
             "data_files": data_files_list,
             "journals": self.get_journal_attributes(),
             "is_owned_by_consortium": self.is_owned_by_consortium,
-            "is_deleted": self.is_deleted is not None and self.is_deleted
+            "is_deleted": self.is_deleted is not None and self.is_deleted,
+            "warnings": self.warnings
         }
 
     def to_dict_minimal(self):

@@ -3,6 +3,7 @@
 from cached_property import cached_property
 import re
 import calendar
+from kids.cache import cache
 
 from util import safe_commit
 from app import db, logger
@@ -59,6 +60,7 @@ class CounterInput(db.Model, PackageInput):
     def destination_table(self):
         return Counter.__tablename__
 
+    @cache
     def csv_columns(self):
         columns = {
             "print_issn": {

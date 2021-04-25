@@ -249,6 +249,8 @@ class Consortium(object):
         my_response["update_notification_email"] = self.update_notification_email
         my_response["update_percent_complete"] = self.update_percent_complete
 
+        my_response["warnings"] = []  # not applicable for consortia dashboards
+
         return my_response
 
     def copy_computed_journal_dicts(self, new_scenario_id):

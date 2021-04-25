@@ -278,6 +278,7 @@ class SavedScenario(db.Model):
         response["update_notification_email"] = self.update_notification_email
         response["update_percent_complete"] = self.update_percent_complete
 
+        response["warnings"] = self.package_real.warnings
 
         try:
             self.log_timing("to dict")

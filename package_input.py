@@ -347,7 +347,7 @@ class PackageInput:
         if file_name.endswith(u".xls") or file_name.endswith(u".xlsx"):
             sheet_csv_file_names = convert_spreadsheet_to_csv(file_name, parsed=False)
             if not sheet_csv_file_names:
-                raise RuntimeError(u"{} could not be opened as a spreadsheet".format(file_name))
+                raise RuntimeError(u"Could not be opened as a spreadsheet.")
 
             if len(sheet_csv_file_names) > 1:
                 raise RuntimeError(u"Workbook contains multiple sheets.")
@@ -401,6 +401,8 @@ class PackageInput:
                 absolute_line_no += 1
                 if not any([cell.strip() for cell in line]):
                     continue
+                # if line_no >= 20:
+                #     break
 
                 parsed_rows.append(line)
                 parsed_to_absolute_line_no[line_no] = absolute_line_no
@@ -434,37 +436,55 @@ class PackageInput:
             for k, v in raw_to_normalized_map.items():
                 normalized_to_raw_map[v] = k
 
+            required_keys = [k for k, v in self.csv_columns().items() if v.get("required", True)]
+
+
             # combine the header and data rows into dicts
             row_dicts = [dict(zip(parsed_rows[header_index], x)) for x in parsed_rows[header_index+1:]]
 
-            required_keys = [k for k, v in self.csv_columns().items() if v.get("required", True)]
 
             print "here"
 
-            if ("total" in required_keys) and ("total" not in normalized_column_names) and ("jan" in normalized_column_names):
-                for row in row_dicts:
-
-                    row["total"] = 0
-                    for month_idx in range(1, 13):
-                        month_name = calendar.month_abbr[month_idx].lower()
-                        new_value = self.normalize_cell(month_name, row[normalized_to_raw_map[month_name]])
-                        row["total"] += new_value
-
-                normalized_column_names += ["total"]
+            # if ("total" in required_keys) and ("total" not in normalized_column_names) and ("jan" in normalized_column_names):
+            #     for row in row_dicts:
+            #
+            #         row["total"] = 0
+            #         for month_idx in range(1, 13):
+            #             month_name = calendar.month_abbr[month_idx].lower()
+            #             new_value = self.normalize_cell(month_name, row[normalized_to_raw_map[month_name]])
+            #             row["total"] += new_value
+            #
+            #     normalized_column_names += ["total"]
 
             print "after that"
 
             if set(required_keys).difference(set(normalized_column_names)):
-                explanation = u"Missing required columns. Expected [{}] but found {}.".format(
-                    ", ".join(sorted(required_keys)),
-                    ", ".join([
-                        u"{} (from input column {})".format(raw_to_normalized_map[raw], raw)
-                        for raw in sorted(raw_to_normalized_map.keys()) if raw_to_normalized_map[raw]
-                    ])
-                )
-                raise RuntimeError(explanation)
+                raise RuntimeError(u"Missing required columns.")
 
             print "now here"
+            print "row_dicts"
+            print row_dicts[0:3]
+            print
+            print row_dicts[0].keys()
+
+            # try this https://pandas.pydata.org/docs/reference/api/pandas.read_csv.html
+            # with header as offset
+            # pass "names"
+            # use usecols
+            # use dtype
+            # use engine=c
+            # use skiprows
+
+            # import chardet
+            #
+            # import pandas as pd
+            #
+            # with open(r'C:\Users\indreshb\Downloads\Pokemon.csv', 'rb') as f:
+            #
+            # result = chardet.detect(f.read()) # or readline if the file is large
+            #
+            # df=pd.read_csv(r'C:\Users\indreshb\Downloads\Pokemon.csv',encoding=result['encoding'])
+
 
             for row_no, row in enumerate(row_dicts):
                 absolute_row_no = parsed_to_absolute_line_no[row_no] + header_index + 1
@@ -524,6 +544,10 @@ class PackageInput:
 
                     error_rows["rows"].append(error_row)
 
+            print "normalized_rows"
+            print normalized_rows[0:3]
+            print
+            print normalized_rows[0].keys()
             print "before for"
 
             for normalized, raw in normalized_to_raw_map.items():
@@ -541,6 +565,8 @@ class PackageInput:
 
             return normalized_rows, error_rows
 
+
+
     def load(self, package_id, file_name, commit=False):
         my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
 
@@ -548,7 +574,7 @@ class PackageInput:
             normalized_rows, error_rows = self.normalize_rows(file_name, file_package=my_package)
         except (UnicodeError, csv.Error) as e:
             print u"normalize_rows error {}".format(e)
-            message = u"Error reading file: '{}'. Try opening this file, resaving as .xlsx, and uploading that.".format(
+            message = u"Error reading this file. Try opening this file, save in .xlsx format, and upload that.".format(
                 e.message
             )
             return {"success": False, "message": message, "warnings": []}
