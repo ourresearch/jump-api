@@ -155,6 +155,13 @@ class SavedScenario(db.Model):
     def institution_name(self):
         return self.set_live_scenario().institution_name
 
+    @property
+    def description(self):
+        return self.set_live_scenario().settings.description
+
+    @property
+    def notes(self):
+        return self.set_live_scenario().settings.notes
 
     @cached_property
     def is_locked_pending_update(self):
@@ -179,7 +186,22 @@ class SavedScenario(db.Model):
         return self.live_scenario
 
 
-    def to_dict_saved(self):
+    def to_dict_saved_from_db(self):
+        response = get_latest_scenario_raw(self.scenario_id)
+        if not response:
+            self.set_live_scenario()  # in case not done
+
+            response = {
+                "subrs": [],
+                "customSubrs": [],
+                "configs": self.live_scenario.settings.to_dict(),
+                "name": self.scenario_name,
+                "id": self.scenario_id
+            }
+        return response
+
+
+    def to_dict_saved_freshly_computed(self):
         self.set_live_scenario()  # in case not done
 
         response = {
@@ -214,6 +236,8 @@ class SavedScenario(db.Model):
         response = {
             "id": self.scenario_id,
             "name": self.scenario_name,
+            "description": self.description,
+            "notes": self.notes,
 
             # these are used by consortium
             "is_locked_pending_update": self.is_locked_pending_update,
@@ -227,6 +251,8 @@ class SavedScenario(db.Model):
         response = OrderedDict()
         response["scenario_id"] = self.scenario_id
         response["scenario_name"] = self.scenario_name
+        response["scenario_description"] = self.description
+        response["scenario_notes"] = self.notes
 
         if self.package.institution_id:
             response["publisher_id"] = self.package_id
@@ -241,15 +267,18 @@ class SavedScenario(db.Model):
     def to_dict_journals(self):
         response = OrderedDict()
         response["meta"] = self.to_dict_meta()
-        response["saved"] = self.to_dict_saved()
-        response["journals"] = [j.to_dict_journals() for j in self.live_scenario.journals_sorted_ncppu]
+
+        response["_debug"] = {"summary": self.live_scenario.to_dict_summary_dict()}
+
+        response["saved"] = self.to_dict_saved_from_db()
+        response["journals"] = [j.to_dict_journals() for j in self.live_scenario.journals_sorted_cpu]
 
         # these are used by consortium
         response["is_locked_pending_update"] = self.is_locked_pending_update
         response["update_notification_email"] = self.update_notification_email
         response["update_percent_complete"] = self.update_percent_complete
 
-        response["_debug"] = {"summary": self.live_scenario.to_dict_summary_dict()}
+        response["warnings"] = self.package_real.warnings
 
         try:
             self.log_timing("to dict")

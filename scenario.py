@@ -13,12 +13,17 @@ import os
 from sqlalchemy.sql import text
 from random import random
 from time import sleep
+import bz2
+import pickle
+import cPickle
+import gc
+import simplejson as json
 
 from app import use_groups
 from app import get_db_cursor
 from app import DEMO_PACKAGE_ID
 from app import db
-from app import my_memcached
+# from app import my_memcached # disable memcached
 from app import logger
 from app import memorycache
 
@@ -98,9 +103,8 @@ class Scenario(object):
         my_institution = my_package.institution
         self.institution_name = my_institution.display_name
         self.institution_short_name = my_institution.old_username
-
-        if my_package and my_package.big_deal_cost:
-            self.settings.cost_bigdeal = float(my_package.big_deal_cost)
+        self.institution_id = my_institution.id
+        self.my_package = my_package
 
         # from app import USE_PAPER_GROWTH
         # if USE_PAPER_GROWTH:
@@ -142,9 +146,14 @@ class Scenario(object):
         prices_dict = {}
         self.data["prices"] = {}
 
-        prices_to_consider = [self.package_id, DEMO_PACKAGE_ID]
-        from app import suny_consortium_package_ids
+        prices_to_consider = [self.package_id]
 
+        # use defaults if USD
+        if self.my_package and self.my_package.currency == "USD":
+            prices_to_consider += [DEMO_PACKAGE_ID]
+
+        # special workaround for SUNY
+        from app import suny_consortium_package_ids
         # print "package_id", self.package_id_for_db, get_parent_consortium_package_id(self.package_id_for_db)
         if get_parent_consortium_package_id(self.package_id) in suny_consortium_package_ids or self.package_id in suny_consortium_package_ids:
             prices_to_consider += ["68f1af1d", "93YfzkaA"]
@@ -154,12 +163,10 @@ class Scenario(object):
             # print "package_id_for_prices", package_id_for_prices
             if package_id_for_prices in prices_raw:
                 for my_issnl, price in prices_raw[package_id_for_prices].iteritems():
-                    if price != 0 and price is not None:
-                        if not prices_dict.get(my_issnl, 0):
-                            prices_dict[my_issnl] = price
+                    if price is not None:
+                        prices_dict[my_issnl] = price
 
                         # print package_id_for_prices, my_issnl, price, "prices_dict[my_issnl]", prices_dict[my_issnl]
-
         self.data["prices"] = prices_dict
 
         clean_dict = {}
@@ -209,8 +216,8 @@ class Scenario(object):
         return []
 
     @cached_property
-    def journals_sorted_ncppu(self):
-        self.journals.sort(key=lambda k: for_sorting(k.ncppu), reverse=False)
+    def journals_sorted_cpu(self):
+        self.journals.sort(key=lambda k: for_sorting(k.cpu), reverse=False)
         return self.journals
 
     @cached_property
@@ -225,68 +232,68 @@ class Scenario(object):
 
     @cached_property
     def subscribed(self):
-        return [j for j in self.journals_sorted_ncppu if j.subscribed]
+        return [j for j in self.journals_sorted_cpu if j.subscribed]
 
     @cached_property
     def subscribed_bulk(self):
-        return [j for j in self.journals_sorted_ncppu if j.subscribed_bulk]
+        return [j for j in self.journals_sorted_cpu if j.subscribed_bulk]
 
     @cached_property
     def subscribed_custom(self):
-        return [j for j in self.journals_sorted_ncppu if j.subscribed_custom]
+        return [j for j in self.journals_sorted_cpu if j.subscribed_custom]
 
     @cached_property
     def cost_subscription_fuzzed_lookup(self):
-        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.cost_subscription for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first')
+        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.subscription_cost for j in self.journals]})
+        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
     @cached_property
     def cost_subscription_minus_ill_fuzzed_lookup(self):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.cost_subscription_minus_ill for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first')
+        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
     @cached_property
     def num_citations_fuzzed_lookup(self):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.num_citations for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first')
+        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
     @cached_property
     def num_authorships_fuzzed_lookup(self):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.num_authorships for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first')
+        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
     @cached_property
     def use_total_fuzzed_lookup(self):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.use_total for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first')
+        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
     @cached_property
     def downloads_fuzzed_lookup(self):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.downloads_total for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first')
+        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
     @cached_property
-    def ncppu_fuzzed_lookup(self):
-        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.ncppu for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first')
+    def cpu_fuzzed_lookup(self):
+        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.cpu for j in self.journals]})
+        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
         return dict(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"])))
 
     @cached_property
-    def ncppu_rank_lookup(self):
-        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.ncppu for j in self.journals]})
-        df["rank"] = df.lookup_value.rank(method='first')
+    def cpu_rank_lookup(self):
+        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.cpu for j in self.journals]})
+        df["rank"] = df.lookup_value.rank(method='first', na_option="keep")
         return dict(zip(df.issn_l, df["rank"]))
 
     @cached_property
     def old_school_cpu_rank_lookup(self):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.old_school_cpu for j in self.journals]})
-        df["rank"] = df.lookup_value.rank(method='first')
+        df["rank"] = df.lookup_value.rank(method='first', na_option="keep")
         return dict(zip(df.issn_l, df["rank"]))
 
 
@@ -342,18 +349,18 @@ class Scenario(object):
         return response
 
     @cached_property
-    def ncppu(self):
+    def cpu(self):
         if self.use_paywalled:
             return round(self.cost_subscription_minus_ill / self.use_paywalled, 2)
         return None
 
     @cached_property
-    def cost_ill(self):
-        return round(sum([j.cost_ill for j in self.journals]))
+    def ill_cost(self):
+        return round(sum([j.ill_cost for j in self.journals]))
 
     @cached_property
-    def cost_subscription(self):
-        return round(sum([j.cost_subscription for j in self.journals]))
+    def subscription_cost(self):
+        return round(sum([j.subscription_cost for j in self.journals]))
 
     @cached_property
     def cost_subscription_minus_ill(self):
@@ -373,12 +380,23 @@ class Scenario(object):
 
 
     @cached_property
-    def cost_bigdeal_projected_by_year(self):
+    def cost_bigdeal_raw(self):
         big_deal_cost = self.settings.cost_bigdeal
         if isinstance(big_deal_cost, str):
             big_deal_cost = big_deal_cost.replace(",", "")
             big_deal_cost = float(big_deal_cost)
-        return [round(((1+self.settings.cost_bigdeal_increase/float(100))**year) * big_deal_cost )
+
+        from assumptions import DEFAULT_COST_BIGDEAL
+        if big_deal_cost != float(DEFAULT_COST_BIGDEAL):
+            if self.my_package and self.my_package.big_deal_cost:
+                return float(self.my_package.big_deal_cost)
+
+        return float(big_deal_cost)
+
+
+    @cached_property
+    def cost_bigdeal_projected_by_year(self):
+        return [round(((1+self.settings.cost_bigdeal_increase/float(100))**year) * self.cost_bigdeal_raw )
                                             for year in self.years]
 
     @cached_property
@@ -430,14 +448,14 @@ class Scenario(object):
     def do_wizardly_things(self, spend):
         my_max = spend/100.0 * self.cost_bigdeal_projected
 
-        my_spend_so_far = np.sum([j.cost_ill for j in self.journals])
+        my_spend_so_far = np.sum([j.ill_cost for j in self.journals])
 
-        for journal in self.journals_sorted_ncppu:
+        for journal in self.journals_sorted_cpu:
             if journal.cost_subscription_minus_ill < 0:
                 my_spend_so_far += journal.cost_subscription_minus_ill
                 journal.set_subscribe_bulk()
 
-        for journal in self.journals_sorted_ncppu:
+        for journal in self.journals_sorted_cpu:
             my_spend_so_far += journal.cost_subscription_minus_ill
             if my_spend_so_far > my_max:
                 return
@@ -518,7 +536,7 @@ class Scenario(object):
 
     @cached_property
     def use_oa(self):
-        return round(np.sum([j.use_actual["oa"] for j in self.journals]))
+        return round(np.sum([j.use_actual["oa_plus_social_networks"] for j in self.journals]))
 
     @cached_property
     def use_backfile(self):
@@ -575,17 +593,11 @@ class Scenario(object):
     def use_free_instant_percent(self):
         return round(self.use_instant_percent - self.use_subscription_percent, 1)
 
-    def to_dict_export(self):
-        response = {}
-        response["journals"] = [j.to_dict_export() for j in self.journals_sorted_ncppu]
-        return response
-
-
     def to_dict_details(self):
         response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": self.to_dict_summary_dict(),
-                "journals": [j.to_dict_details() for j in self.journals_sorted_ncppu],
+                "journals": [j.to_dict_details() for j in self.journals_sorted_cpu],
             }
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
@@ -623,28 +635,38 @@ class Scenario(object):
         return response
 
     def to_dict_summary_dict(self):
-        response = {
-                    "cost_scenario": self.cost,
-                    "cost_scenario_ill": self.cost_actual_ill,
-                    "cost_scenario_subscription": self.cost_actual_subscription,
-                    "cost_bigdeal_projected": self.cost_bigdeal_projected,
-                    "cost_percent": self.cost_spent_percent,
-                    "num_journals_subscribed": len(self.subscribed),
-                    "num_journals_total": len(self.journals),
-                    "use_instant_percent": self.use_instant_percent,
-                    "use_free_instant_percent": self.use_free_instant_percent,
-                    "use_subscription_percent": self.use_subscription_percent,
-                    "use_ill_percent": self.use_ill_percent
+        response = OrderedDict()
+        response["num_journals_subscribed"] =  len(self.subscribed)
 
+        response["cost_scenario_subscription"] = self.cost_actual_subscription
 
-        }
+        response["downloads_total"] = self.downloads_total
+        response["usage"] = self.use_total
+        response["use_oa"] = self.use_oa
+        response["use_backfile"] = self.use_backfile
+        response["use_subscription"] = self.use_subscription
+        response["use_turnaway_and_ill"] = self.use_ill + self.use_other_delayed
+
+        response["use_oa_percent"] = round(float(100)*self.use_oa/self.use_total, 1)
+        response["use_backfile_percent"] = round(float(100)*self.use_backfile/self.use_total, 1)
+        response["use_subscription_percent"] = self.use_subscription_percent
+        response["use_ill_percent"] = self.use_ill_percent
+
+        response["cost_scenario"] = self.cost
+        response["cost_bigdeal_projected"] = self.cost_bigdeal_projected
+        response["cost_percent"] = self.cost_spent_percent
+        response["cost_scenario_ill"] = self.cost_actual_ill
+        response["num_journals_total"] = len(self.journals)
+        response["use_instant_percent"] = self.use_instant_percent
+        response["use_free_instant_percent"] = self.use_free_instant_percent
+
         return response
 
     def to_dict(self):
         response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": self.to_dict_summary_dict(),
-                "journals": [j.to_dict() for j in self.journals_sorted_ncppu],
+                "journals": [j.to_dict() for j in self.journals_sorted_cpu],
                 "journals_count": len(self.journals),
             }
         self.log_timing("to dict")
@@ -683,14 +705,25 @@ def get_package_specific_scenario_data_from_db(input_package_id):
 
     counter_dict = defaultdict(int)
     for package_id in consortium_package_ids:
-
-        command = "select issn_l, total from jump_counter where package_id='{}'".format(package_id)
+        command = """select issn_l, total, report_version, report_name, metric_type 
+            from jump_counter 
+            where package_id='{}'
+            and (report_name is null or report_name != 'trj4')
+            """.format(package_id)
         rows = None
         with get_db_cursor() as cursor:
             cursor.execute(command)
             rows = cursor.fetchall()
-        for row in rows:
-            counter_dict[row["issn_l"]] += row["total"]
+        if rows:
+            is_counter5 = (rows[0]["report_version"] == "5")
+            for row in rows:
+                if is_counter5:
+                    if row["report_name"] in ["trj2", "trj3"]:
+                        if row["metric_type"] in ["Unique_Item_Requests", "No_License"]:
+                            counter_dict[row["issn_l"]] += row.get("total", 0)
+                    # else don't do anything with it for now
+                else:
+                    counter_dict[row["issn_l"]] += row.get("total")
 
     timing.append(("time from db: counter", elapsed(section_time, 2)))
     section_time = time()
@@ -754,7 +787,7 @@ def get_apc_data_from_db(input_package_id):
 
     command = """select * from jump_apc_authorships where package_id in ({})
                     """.format(consortium_package_ids_string)
-    with get_db_cursor() as cursor:
+    with get_db_cursor(use_realdictcursor=True) as cursor:
         cursor.execute(command)
         rows = cursor.fetchall()
 
@@ -766,20 +799,34 @@ def _perpetual_access_cache_key(package_id):
 
 
 def refresh_perpetual_access_from_db(package_id):
+    pass
+
+# disable memcached
+#     command = text(
+#         u'select * from jump_perpetual_access where package_id = :package_id'
+#     ).bindparams(package_id=package_id)
+#
+#     rows = db.engine.execute(command).fetchall()
+#     package_dict = dict([(a["issn_l"], a) for a in rows])
+#
+#     my_memcached.set(_perpetual_access_cache_key(package_id), package_dict)
+#
+#     return package_dict
+
+
+def get_perpetual_access_from_cache(package_id, unused_publisher_name=None):
+    # disable memcached
+    # memcached_key = _perpetual_access_cache_key(package_id)
+    # return my_memcached.get(memcached_key) or refresh_perpetual_access_from_db(package_id)
+
     command = text(
         u'select * from jump_perpetual_access where package_id = :package_id'
     ).bindparams(package_id=package_id)
 
     rows = db.engine.execute(command).fetchall()
     package_dict = dict([(a["issn_l"], a) for a in rows])
-
-    my_memcached.set(_perpetual_access_cache_key(package_id), package_dict)
-
     return package_dict
 
-def get_perpetual_access_from_cache(package_id, unused_publisher_name=None):
-    memcached_key = _perpetual_access_cache_key(package_id)
-    return my_memcached.get(memcached_key) or refresh_perpetual_access_from_db(package_id)
 
 @cache
 def get_core_list_from_db(input_package_id):
@@ -800,7 +847,6 @@ def get_embargo_data_from_db():
         embargo_rows = cursor.fetchall()
     embargo_dict = dict((a["issn_l"], round(a["embargo"])) for a in embargo_rows)
     return embargo_dict
-
 
 @cache
 def get_unpaywall_downloads_from_db():
@@ -828,41 +874,23 @@ def _journal_price_cache_key(package_id, publisher_name):
     return u'scenario.get_journal_prices.{}.{}'.format(package_id, publisher_name)
 
 
-def refresh_cached_prices_from_db(package_id, publisher_name):
-    package_dict = {}
-    publisher_where = ""
-    if publisher_name == "Elsevier":
-        publisher_where = "(publisher ilike '%elsevier%')"
-    elif publisher_name == "Wiley":
-        publisher_where = "(publisher ilike '%wiley%')"
-    elif publisher_name == "SpringerNature":
-        publisher_where = "((publisher ilike '%springer%') or (publisher ilike '%nature%'))"
-    else:
-        return 'false'
-
-    command = u"select issn_l, usa_usd from jump_journal_prices where package_id = '{}' and {}".format(package_id, publisher_where)
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
-
-    for row in rows:
-        package_dict[row["issn_l"]] = row["usa_usd"]
-
-    my_memcached.set(_journal_price_cache_key(package_id, publisher_name), package_dict)
-
-    return package_dict
 
 
-def get_prices_from_cache(package_ids, publisher_name=None):
+def get_prices_from_cache(package_ids, publisher_name):
 
     lookup_dict = defaultdict(dict)
 
     for package_id in package_ids:
-        # temp
-        refresh_cached_prices_from_db(package_id, publisher_name)
+        package_dict = None
 
-        memcached_key = _journal_price_cache_key(package_id, publisher_name)
-        package_dict = my_memcached.get(memcached_key) or refresh_cached_prices_from_db(package_id, publisher_name)
+        # temp
+        # disable memcached
+        # refresh_cached_prices_from_db(package_id, publisher_name)
+        # memcached_key = _journal_price_cache_key(package_id, publisher_name)
+        # package_dict = my_memcached.get(memcached_key)
+
+        if not package_dict:
+            package_dict = refresh_cached_prices_from_db(package_id, publisher_name)
         lookup_dict[package_id] = package_dict
 
     return lookup_dict
@@ -887,8 +915,8 @@ def get_ricks_journal_flat():
         issns[row['issn']] = {'issn_l': row['issn_l'], 'publisher': row['publisher']}
     return issns
 
-_hybrid_2019 = None
 
+_hybrid_2019 = None
 
 def _load_hybrid_2019_from_db():
     global _hybrid_2019
@@ -906,7 +934,6 @@ def get_hybrid_2019():
 
 
 _journal_era_subjects = None
-
 
 def _load_journal_era_subjects_from_db():
     global _journal_era_subjects
@@ -926,6 +953,37 @@ def get_journal_era_subjects():
     return _journal_era_subjects
 
 
+def refresh_cached_prices_from_db(package_id, publisher_name):
+    package_dict = {}
+    publisher_where = ""
+    if publisher_name == "Elsevier":
+        publisher_where = "(publisher ilike '%elsevier%')"
+    elif publisher_name == "Wiley":
+        publisher_where = "(publisher ilike '%wiley%')"
+    elif publisher_name == "SpringerNature":
+        publisher_where = "((publisher ilike '%springer%') or (publisher ilike '%nature%'))"
+    elif publisher_name == "Sage":
+        publisher_where = "(publisher ilike '%sage%')"
+    elif publisher_name == "TaylorFrancis":
+        publisher_where = "((publisher ilike '%informa uk%') or (publisher ilike '%taylorfrancis%'))"
+    else:
+        return 'false'
+
+    command = u"select issn_l, price from jump_journal_prices where package_id = '{}' and {}".format(package_id, publisher_where)
+    # print "command", command
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+
+    for row in rows:
+        package_dict[row["issn_l"]] = row["price"]
+
+    #disable memcached
+    # my_memcached.set(_journal_price_cache_key(package_id, publisher_name), package_dict)
+
+    return package_dict
+
+
 @cache
 def get_oa_recent_data_from_db():
     oa_dict = {}
@@ -933,7 +991,6 @@ def get_oa_recent_data_from_db():
         for bronze in ["with_bronze", "no_bronze"]:
             key = "{}_{}".format(submitted, bronze)
             command = """select * from jump_oa_recent_{}_precovid
-                        where (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')
                             """.format(key)
 
             with get_db_cursor() as cursor:
@@ -953,9 +1010,8 @@ def get_oa_data_from_db():
         for bronze in ["with_bronze", "no_bronze"]:
             key = "{}_{}".format(submitted, bronze)
 
-            command = """select * from jump_oa_{}_precovid
-                        where year_int >= 2015
-                        and  (publisher ilike '%springer%' or publisher ilike '%elsevier%' or publisher ilike '%nature%' or publisher ilike '%wiley%')
+            command = """select * from jump_oa_{}_precovid	
+                        where year_int >= 2015	
                             """.format(key)
 
             with get_db_cursor() as cursor:
@@ -992,19 +1048,20 @@ def get_social_networks_data_from_db():
         lookup_dict[row["issn_l"]] = row["asn_only_rate"]
     return lookup_dict
 
-
+#
 # @cache
 # def get_oa_adjustment_data_from_db():
-#     command = """select issn_l,
+#     command = """select rj.issn_l,
 #             max(mturk.max_oa_rate::float) as mturk_max_oa_rate,
 #             count(*) as num_papers_3_years,
 #             sum(case when u.oa_status = 'closed' then 0 else 1 end) as num_papers_3_years_oa,
 #             round(sum(case when u.oa_status = 'closed' then 0 else 1 end)/count(*)::float, 3) as unpaywall_measured_fraction_3_years_oa
 #             from jump_mturk_oa_rates mturk
 #             join unpaywall u on mturk.issn_l = u.journal_issn_l
+# 	        join ricks_journal_flat rj on u.journal_issn_l=rj.issn
 #             where year >= 2016 and year <= 2018
 #             and genre='journal-article'
-#             group by issn_l
+#             group by rj.issn_l
 #                     """
 #     with get_db_cursor() as cursor:
 #         cursor.execute(command)
@@ -1013,28 +1070,6 @@ def get_social_networks_data_from_db():
 #     for row in rows:
 #         lookup_dict[row["issn_l"]] = row
 #     return lookup_dict
-
-@cache
-def get_oa_adjustment_data_from_db():
-    command = """select rj.issn_l,
-            max(mturk.max_oa_rate::float) as mturk_max_oa_rate,
-            count(*) as num_papers_3_years,
-            sum(case when u.oa_status = 'closed' then 0 else 1 end) as num_papers_3_years_oa,
-            round(sum(case when u.oa_status = 'closed' then 0 else 1 end)/count(*)::float, 3) as unpaywall_measured_fraction_3_years_oa
-            from jump_mturk_oa_rates mturk
-            join unpaywall u on mturk.issn_l = u.journal_issn_l
-	        join ricks_journal_flat rj on u.journal_issn_l=rj.issn            
-            where year >= 2016 and year <= 2018
-            and genre='journal-article'
-            group by rj.issn_l
-                    """
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
-    lookup_dict = {}
-    for row in rows:
-        lookup_dict[row["issn_l"]] = row
-    return lookup_dict
 
 
 # not cached on purpose, because components are cached to save space
@@ -1053,7 +1088,6 @@ def get_common_package_data(package_id):
     # my_timing.messages += timing_common.messages
 
     return my_data
-
 
 @memorycache
 def get_common_package_data_specific(package_id):
@@ -1080,9 +1114,72 @@ def get_common_package_data_specific(package_id):
 
     return (my_data, my_timing)
 
+
+
+# from https://medium.com/better-programming/load-fast-load-big-with-compressed-pickles-5f311584507e
+# Pickle a file and then compress it into a file with extension
+# compressed_pickle('example_cp', data)
+def compressed_pickle(title, data):
+    # with bz2.BZ2File(title + ".pbz2", "wb") as f:
+    #     cPickle.dump(data, f)
+
+    print u"pickling"
+    output = open(title + '.json', 'wb')
+    json.dump(data, output)
+    output.close()
+    print u"done pickling"
+
+    # json_zip.dump(data, title + ".json.lzma") # for a lzma file
+
+
+# from https://medium.com/better-programming/load-fast-load-big-with-compressed-pickles-5f311584507e
+# data = decompress_pickle('example_cp')
+def decompress_pickle(file):
+    # data = bz2.BZ2File(file + ".pbz2", "rb")
+    # data = cPickle.load(data)
+
+    # disable garbage collector
+    # gc.disable()
+    # my_file = bz2.BZ2File(file + ".pbz2", "rb")
+    # data = cPickle.load(my_file)
+
+    # enable garbage collector again
+    # gc.enable()
+
+    output = open(file + '.json', 'rb')
+    data = json.load(output)
+    output.close()
+
+    # output = open(file + '.json.zip', 'rb')
+    # data = json_unzip.load(output)
+    # output.close()
+
+    return data
+
 @memorycache
 def get_common_package_data_for_all():
     my_timing = TimingMessages()
+    try:
+        # print u"trying to load in pickle"
+        # my_data = decompress_pickle("data/get_common_package_data_for_all")
+        # print u"found pickled, returning"
+        # return (my_data, my_timing)
+
+        import boto3
+        s3_client = boto3.client("s3")
+        print u"made s3_client"
+
+        s3_clientobj = s3_client.get_object(Bucket="unsub-cache", Key="get_common_package_data_for_all.json")
+        print u"made s3_clientobj"
+        contents_string = s3_clientobj["Body"].read().decode("utf-8")
+        contents_json = json.loads(contents_string)
+        print u"got contents_json"
+        return (contents_json, my_timing)
+
+    except Exception as e:
+        print u"no pickle data, so computing.  Error message: ", e
+        pass
+
     my_data = {}
 
     my_data["journal_era_subjects"] = get_journal_era_subjects()
@@ -1094,14 +1191,15 @@ def get_common_package_data_for_all():
     my_data["unpaywall_downloads_dict_raw"] = get_unpaywall_downloads_from_db()
     my_timing.log_timing("get_unpaywall_downloads_from_db")
 
-    my_data["oa"] = get_oa_data_from_db()
-    my_timing.log_timing("get_oa_data_from_db")
+    my_data["social_networks"] = get_social_networks_data_from_db()
+    my_timing.log_timing("get_social_networks_data_from_db")
 
     my_data["oa_recent"] = get_oa_recent_data_from_db()
     my_timing.log_timing("get_oa_recent_data_from_db")
 
-    my_data["social_networks"] = get_social_networks_data_from_db()
-    my_timing.log_timing("get_social_networks_data_from_db")
+    my_data["oa"] = get_oa_data_from_db()
+    my_timing.log_timing("get_oa_data_from_db")
+
 
     # add this in later
     # my_data["oa_adjustment"] = get_oa_adjustment_data_from_db()
@@ -1113,7 +1211,13 @@ def get_common_package_data_for_all():
     my_data["num_papers"] = get_num_papers_from_db()
     my_timing.log_timing("get_num_papers_from_db")
 
+    # compressed_pickle("data/get_common_package_data_for_all", my_data)
+    # my_timing.log_timing("pickling")
+
     my_data["_timing_common"] = my_timing.to_dict()
+    print "my timing"
+    print my_timing.to_dict()
 
     return (my_data, my_timing)
+
 

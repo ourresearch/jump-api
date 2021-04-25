@@ -14,8 +14,10 @@ import warnings
 import urlparse
 from time import time
 import numpy
+from random import shuffle
 from contextlib import contextmanager
 from collections import OrderedDict
+from dozer import Dozer
 
 warnings.filterwarnings("ignore", category=UserWarning, module='psycopg2')
 import psycopg2
@@ -54,16 +56,20 @@ libraries_to_mum_warning = [
     "requests",
     "urllib3",
     "requests.packages.urllib3",
-    "requests_oauthlib",
     "stripe",
-    "oauthlib",
     "boto",
-    "newrelic",
+    "boto3",
+    "botocore",
+    "s3transfer",
+    # "newrelic",
     "RateLimiter",
     "paramiko",
     "chardet",
     "cryptography",
-    "bmemcached"
+    "bmemcached",
+    "pyexcel",
+    "lml",
+    "pyexcel_io"
 ]
 
 
@@ -86,9 +92,9 @@ for a_library in libraries_to_mum_error:
     the_logger.propagate = True
     warnings.filterwarnings("ignore", category=UserWarning, module=a_library)
 
-logging.getLogger('pyexcel').setLevel(logging.WARNING)
-logging.getLogger('lml').setLevel(logging.WARNING)
-logging.getLogger('pyexcel_io').setLevel(logging.WARNING)
+for name in logging.Logger.manager.loggerDict.keys():
+    if ('boto' in name) or ('urllib3' in name) or ('s3transfer' in name) or ('boto3' in name) or ('botocore' in name):
+        logging.getLogger(name).setLevel(logging.ERROR)
 
 with warnings.catch_warnings():
     warnings.filterwarnings('ignore', r'RuntimeWarning: overflow encountered in exp')
@@ -99,7 +105,13 @@ numpy.seterr(over="ignore")
 requests.packages.urllib3.disable_warnings()
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
+
+
 app = Flask(__name__)
+
+# memory profiling
+# app.wsgi_app = Dozer(app.wsgi_app, profile_path='./dozer_profiles')
+
 
 # authorization
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
@@ -120,6 +132,11 @@ app.config["SQLALCHEMY_BINDS"] = {
     "redshift_db": os.getenv("DATABASE_URL_REDSHIFT")
 }
 
+# see https://stackoverflow.com/questions/43594310/redshift-sqlalchemy-long-query-hangs
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = { "pool_pre_ping": True,
+                                            "pool_recycle": 300,
+                                            "connect_args": {"keepalives": 1, "keepalives_idle": 60, "keepalives_interval": 60}
+            }
 
 # from http://stackoverflow.com/a/12417346/596939
 # class NullPoolSQLAlchemy(SQLAlchemy):
@@ -171,29 +188,38 @@ def get_db_connection():
         connection.autocommit=True
         # connection.readonly = True
         yield connection
+    except Exception as e:
+        print u"error in get_db_connection", e
     finally:
         app.config['postgreSQL_pool'].putconn(connection)
 
 @contextmanager
-def get_db_cursor(commit=False):
+def get_db_cursor(commit=False, use_realdictcursor=False, use_defaultcursor=False):
     with get_db_connection() as connection:
-      cursor = connection.cursor(
-                  cursor_factory=psycopg2.extras.RealDictCursor)
-      try:
-          yield cursor
-          if commit:
-              connection.commit()
-      finally:
-          cursor.close()
-          pass
+        if use_realdictcursor:
+            # takes more memory, so default is no
+            cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        elif use_defaultcursor:
+            cursor = connection.cursor()
+        else:
+            cursor = connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        try:
+              yield cursor
+              if commit:
+                  connection.commit()
+        except Exception as e:
+            print u"error in get_db_cursor", e
+        finally:
+            cursor.close()
+            pass
 
-
-memcached_servers = os.environ.get('MEMCACHIER_SERVERS', '').split(',')
-memcached_user = os.environ.get('MEMCACHIER_USERNAME', '')
-memcached_password = os.environ.get('MEMCACHIER_PASSWORD', '')
-my_memcached = bmemcached.Client(memcached_servers, username=memcached_user, password=memcached_password)
-my_memcached.enable_retry_delay(True)  # Enabled by default. Sets retry delay to 5s.
-# my_memcached.flush_all()
+# disable memcached
+# memcached_servers = os.environ.get('MEMCACHIER_SERVERS', '').split(',')
+# memcached_user = os.environ.get('MEMCACHIER_USERNAME', '')
+# memcached_password = os.environ.get('MEMCACHIER_PASSWORD', '')
+# my_memcached = bmemcached.Client(memcached_servers, username=memcached_user, password=memcached_password)
+# my_memcached.enable_retry_delay(True)  # Enabled by default. Sets retry delay to 5s.
+## my_memcached.flush_all()
 
 use_groups_lookup = OrderedDict()
 use_groups_lookup["oa_plus_social_networks"] = {"display": "OA", "free_instant": True}
@@ -269,11 +295,28 @@ def reset_cache(module_name, function_name, *args):
         cursor.execute(delete_command)
         cursor.execute(insert_command)
 
+cached_consortium_scenario_ids = ["tGUVWRiN", "scenario-QC2kbHfUhj9W", "EcUvEELe", "CBy9gUC3", "6it6ajJd", "GcAsm5CX", "aAFAuovt"]
 
-if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
-    print u"loading cache"
+def warm_cache():
+    print u"warming cache"
 
     start_time = time()
+
+    # import consortium
+    # consortium_ids = consortium.get_consortium_ids()
+    # for scenario_id in [d["scenario_id"] for d in consortium_ids]:
+    #     consortium.consortium_get_computed_data(scenario_id)
+    #     consortium.consortium_get_issns(scenario_id)
+
+    from consortium import consortium_get_computed_data
+
+    # global cached_consortium_scenario_ids
+    # shuffle(cached_consortium_scenario_ids)
+    # for scenario_id in cached_consortium_scenario_ids:
+    #     consortium_get_computed_data(scenario_id)
+    # print u"done warming cached_consortium_scenario_ids {}s".format(elapsed(start_time))
+
+    # do this second so it is a bit random when it gets here
 
     from scenario import get_ricks_journal
     from scenario import get_ricks_journal_flat
@@ -284,17 +327,32 @@ if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
     _load_hybrid_2019_from_db()
     _load_journal_era_subjects_from_db()
 
-    # import consortium
-    # consortium_ids = consortium.get_consortium_ids()
-    # for scenario_id in [d["scenario_id"] for d in consortium_ids]:
-    #     consortium.consortium_get_computed_data(scenario_id)
-    #     consortium.consortium_get_issns(scenario_id)
-
     import scenario
     scenario.get_common_package_data_for_all()
     scenario.get_common_package_data_specific(DEMO_PACKAGE_ID)
 
+    print u"done warming the cache in {}s".format(elapsed(start_time))
+
+
+if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
+    print u"warming caches"
+    start_time = time()
+
+    import threading
+
+    data = None
+    t = threading.Thread(target=warm_cache)
+    t.daemon = True  # so it doesn't block
+    t.start()
+    print u"done start warm_cache"
+
+    # from views import start_cache_thread
+    # start_cache_thread()
+    # print u"done start_cache_thread"
+
     print u"done loading to cache in {}s".format(elapsed(start_time))
+else:
+    print u"not warming caches"
 
 #
 # print "clearing cache"

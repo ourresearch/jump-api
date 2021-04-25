@@ -30,11 +30,19 @@ class Institution(db.Model):
             UserInstitutionPermission.institution_id == self.id).distinct()
         users = User.query.filter(User.id.in_(user_ids)).all()
 
-        permission_dicts = [u.to_dict_permissions()[self.id] for u in users]
+        permission_dicts = [u.to_dict_permissions()[self.id] for u in users if (u.email and (not u.email.startswith("team+")))]
         if is_consortium is not None:
             permission_dicts = [d for d in permission_dicts if d["is_consortium"]==is_consortium]
 
         return permission_dicts
+
+    @cached_property
+    def packages_sorted(self):
+        response = self.packages
+        response.sort(key=lambda k: k.package_name, reverse=False)
+        response.sort(key=lambda k: k.is_owned_by_consortium, reverse=False) #minor
+        response.sort(key=lambda k: k.publisher, reverse=False)  #main sorting key is last
+        return response
 
     @cached_property
     def is_consortium_member(self):
@@ -55,7 +63,7 @@ class Institution(db.Model):
             'user_permissions': self.user_permissions(),
             'institutions': self.user_permissions(is_consortium=False),
             'consortia': self.user_permissions(is_consortium=True),
-            'publishers': [p.to_dict_minimal() for p in self.packages],
+            'publishers': [p.to_dict_minimal() for p in self.packages_sorted],
         }
 
     def __init__(self, **kwargs):

@@ -235,82 +235,6 @@ def jsonify_fast_no_sort_simple(*args, **kwargs):
               sort_keys=sort_keys)
 
 
-def refresh_data_for_consortium(consortium_name):
-    print "consortium_name", consortium_name
-    scenario_id = consortium_name
-
-    # q = u"delete from jump_scenario_computed where scenario_id='{}'".format(scenario_id)
-    # with get_db_cursor() as cursor:
-    #     print q
-    #     cursor.execute(q)
-
-    settings = {"id": scenario_id,
-                "configs": {"cost_bigdeal_increase": 5.0,
-                            "include_submitted_version": True,
-                            "include_social_networks": True,
-                            "package": "658349d9",
-                            "include_backfile": True,
-                            "backfile_contribution": 100.0,
-                            "ill_request_percent_of_delayed": 5.0,
-                            "weight_authorship": 100.0,
-                            "cost_content_fee_percent": 5.7,
-                            "cost_ill": 17.0,
-                            "cost_bigdeal": 10000000.0,
-                            "include_bronze": True,
-                            "weight_citation": 10.0,
-                            "cost_alacart_increase": 8.0},
-                "name": "{} Elsevier Consortium Scenario".format(scenario_id),
-                "subrs": [],
-                "customSubrs": []}
-    my_dict = {}
-    my_dict["meta"] =  {
-        "scenario_id": scenario_id,
-        "scenario_name": "{} Elsevier Consortium Scenario".format(scenario_id),
-        "publisher_id": "consortium-{}".format(scenario_id),
-        "publisher_name": "Elsevier",
-        "institution_id": scenario_id,
-        "institution_name": scenario_id,
-        "scenario_created": datetime.datetime.utcnow().isoformat(),
-        "is_base_scenario": True
-        }
-    my_dict["saved"] = settings
-    my_dict["journals"] = []
-
-    all_journal_dicts = []
-
-    print "building from db"
-    start_time = time()
-
-    command_list = []
-    for package_id in package_id_lists[scenario_id]:
-        my_live_scenario = Scenario(package_id, settings, my_jwt=None)
-        for my_journal in my_live_scenario.journals:
-            all_journal_dicts.append(my_journal.to_dict_journals())
-            usage = my_journal.use_total
-            cpu = my_journal.ncppu
-            if not cpu:
-                cpu = "null"
-
-            journals_dict_json = jsonify_fast_no_sort_simple(my_journal.to_dict_journals()).replace(u"'", u"''")
-            command_list.append(u"('{}', '{}', sysdate, '{}', {}, {}, '{}')".format(
-                package_id, scenario_id, my_journal.issn_l, usage, cpu, journals_dict_json))
-
-    print(elapsed(start_time))
-
-
-    print "now writing to db"
-    start_time = time()
-    command_start = u"INSERT INTO jump_scenario_computed (member_package_id, consortium_name, updated, issn_l, usage, cpu, journals_dict) values "
-    with get_db_cursor() as cursor:
-        for short_command_list in chunks(command_list, 1000):
-            q = u"{} {};".format(command_start, u",".join(short_command_list))
-            # print q, q
-            cursor.execute(q)
-            print ".",
-    print(elapsed(start_time))
-
-    print "done"
-
 
 
 def refresh_data_for_consortium_scenario(scenario_id):
@@ -325,34 +249,28 @@ def refresh_data_for_consortium_scenario(scenario_id):
 # for consortium_name in ["colorado", "suny"]:  #crkn, purdue
 
 if __name__ == "__main__":
-    # for consortium_name in ["purdue", "colorado", "suny"]:  #crkn, purdue
-    # for consortium_name in ["crkn"]:  #crkn, purdue
-    #     refresh_data_for_consortium(consortium_name)
 
-    import consortium
+    if True:
+        import consortium
 
-    consortium_ids = consortium.get_consortium_ids()
-    # print consortium_ids
+        consortium_ids = consortium.get_consortium_ids()
+        # print consortium_ids
 
-    for scenario_id in [d["scenario_id"] for d in consortium_ids if d["consortium_short_name"]=="crkn_test"]:
+        for scenario_id in [d["scenario_id"] for d in consortium_ids if d["consortium_short_name"]=="julac"]:
+            # consortium.consortium_get_computed_data(scenario_id)
+            # consortium.consortium_get_issns(scenario_id)
 
-        consortium.consortium_get_computed_data(scenario_id)
-        consortium.consortium_get_issns(scenario_id)
+            # # warm cache before we start the threads
+            # consortium.get_consortium_ids()
+            # consortium.big_deal_costs_for_members()
+            # # consortium.consortium_get_computed_data(scenario_id)
+            # consortium.consortium_get_issns(scenario_id)
+            # consortium.get_latest_member_institutions_raw(scenario_id)
+            #
+            # import scenario
+            # scenario.get_common_package_data_for_all()
 
-        # warm cache before we start the threads
-        consortium.get_consortium_ids()
-        consortium.big_deal_costs_for_members()
-        # consortium.consortium_get_computed_data(scenario_id)
-        consortium.consortium_get_issns(scenario_id)
-        consortium.get_latest_member_institutions_raw(scenario_id)
+            start_time = time()
+            refresh_data_for_consortium_scenario(scenario_id)
+            print u"done refresh_data_for_consortium_scenario for {} in {}s".format(scenario_id, elapsed(start_time))
 
-        import scenario
-        scenario.get_common_package_data_for_all()
-
-        start_time = time()
-        refresh_data_for_consortium_scenario(scenario_id)
-        print u"done refresh_data_for_consortium_scenario for {} in {}s".format(scenario_id, elapsed(start_time))
-
-# for consortium_short_name, member_package_ids in package_id_lists.iteritems():
-#     for member_package_id in member_package_ids:
-#         print "('{}', '{}'),".format(consortium_short_name, member_package_id.replace("-", "-cmp"))

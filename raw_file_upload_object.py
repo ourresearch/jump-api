@@ -1,3 +1,4 @@
+import datetime
 from app import db
 
 
@@ -7,3 +8,9 @@ class RawFileUploadObject(db.Model):
     file = db.Column(db.Text, primary_key=True)
     bucket_name = db.Column(db.Text)
     object_name = db.Column(db.Text)
+    created = db.Column(db.DateTime)
+    num_rows = db.Column(db.Numeric)
+
+    def __init__(self, **kwargs):
+        self.created = datetime.datetime.utcnow().isoformat()
+        super(RawFileUploadObject, self).__init__(**kwargs)

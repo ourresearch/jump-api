@@ -9,7 +9,6 @@ import threading
 import weakref
 from time import time
 import simplejson as json
-from kids.cache import cache
 from simplejson import dumps
 
 from app import app
@@ -21,6 +20,7 @@ from util import chunks
 from util import uniquify_list
 from util import myconverter
 from util import for_sorting
+from util import cursor_rows_to_dicts
 
 
 # team+dev@ourresearch.org
@@ -61,22 +61,24 @@ def get_consortium_ids():
     return rows
 
 
-@memorycache
 def consortium_get_computed_data(scenario_id):
     start_time = time()
-
-    command = """select member_package_id, scenario_id, issn_l, journals_dict from jump_scenario_computed where scenario_id='{}'""".format(scenario_id)
-    with get_db_cursor() as cursor:
+    # command = """select member_package_id, scenario_id, issn_l, usage, cpu, subscription_cost, ill_cost, use_social_networks, use_oa, use_backfile, use_subscription, use_other_delayed, use_ill, perpetual_access_years, use_social_networks_percent, use_green_percent, use_hybrid_percent, use_bronze_percent, use_peer_reviewed_percent, bronze_oa_embargo_months, is_hybrid_2019, downloads, citations, authorships
+    #                 from jump_scenario_computed where scenario_id='{}'""".format(scenario_id)
+    command = """select 
+                    member_package_id, scenario_id, updated, issn_l, usage, cpu, package_id, consortium_name, institution_name, institution_short_name, subject, era_subjects, is_society_journal, subscription_cost, ill_cost, use_instant_for_debugging, use_social_networks, use_oa, use_backfile, use_subscription, use_other_delayed, use_ill, perpetual_access_years, baseline_access, use_social_networks_percent, use_green_percent, use_hybrid_percent, use_bronze_percent, use_peer_reviewed_percent, bronze_oa_embargo_months, is_hybrid_2019, downloads, citations, authorships
+                    from jump_scenario_computed where scenario_id='{}'""".format(scenario_id)
+    with get_db_cursor(use_defaultcursor=True) as cursor:
         cursor.execute(command)
         rows = cursor.fetchall()
+    print "get with default cursor in consortium_get_computed_data", elapsed(start_time)
 
-    print "after db get consortium_get_computed_data", elapsed(start_time)
-
+    column_string = """member_package_id, scenario_id, updated, issn_l, usage, cpu, package_id, consortium_name, institution_name, institution_short_name, subject, era_subjects, is_society_journal, subscription_cost, ill_cost, use_instant_for_debugging, use_social_networks, use_oa, use_backfile, use_subscription, use_other_delayed, use_ill, perpetual_access_years, baseline_access, use_social_networks_percent, use_green_percent, use_hybrid_percent, use_bronze_percent, use_peer_reviewed_percent, bronze_oa_embargo_months, is_hybrid_2019, downloads, citations, authorships"""
     start_time = time()
-    for row in rows:
-        row["journals_dict"] = json.loads(row["journals_dict"])
-    print "after json loads in consortium_get_computed_data", elapsed(start_time)
-    return rows
+    response = cursor_rows_to_dicts(column_string, rows)
+    print "after dict build in consortium_get_computed_data ", elapsed(start_time)
+
+    return response
 
 
 @memorycache
@@ -147,6 +149,7 @@ class Consortium(object):
         self.publisher = my_row["publisher"]
         self.institution_id = my_row["institution_id"]
 
+
     @cached_property
     def journal_member_data(self):
         response = consortium_get_computed_data(self.scenario_id)
@@ -156,7 +159,7 @@ class Consortium(object):
     def member_institution_included_list(self):
         start_time = time()
         member_institutions_status = get_latest_member_institutions_raw(self.scenario_id)
-        if member_institutions_status:
+        if member_institutions_status is not None:
             return member_institutions_status
         return self.all_member_package_ids
 
@@ -205,9 +208,14 @@ class Consortium(object):
         return None
 
     @cached_property
-    def journals_sorted_ncppu(self):
-        self.journals.sort(key=lambda k: for_sorting(k.ncppu), reverse=False)
-        return self.journals
+    def journals_sorted_cpu(self):
+        my_journals = []
+        try:
+            my_journals = self.journals
+            my_journals.sort(key=lambda k: for_sorting(k.cpu), reverse=False)
+        except KeyError as e:
+            print u"error", e
+        return my_journals
 
     @cached_property
     def journals_sorted_use_total(self):
@@ -232,7 +240,7 @@ class Consortium(object):
         my_response["saved"] = self.scenario_saved_dict
 
         start_time = time()
-        response_list = [j.to_dict_journals() for j in self.journals_sorted_ncppu]
+        response_list = [j.to_dict_journals() for j in self.journals_sorted_cpu]
         print "after to_dict_journals on each journal", elapsed(start_time)
 
         my_response["journals"] = response_list
@@ -241,17 +249,25 @@ class Consortium(object):
         my_response["update_notification_email"] = self.update_notification_email
         my_response["update_percent_complete"] = self.update_percent_complete
 
+        my_response["warnings"] = []  # not applicable for consortia dashboards
+
         return my_response
 
     def copy_computed_journal_dicts(self, new_scenario_id):
+        values_column_names = """member_package_id, scenario_id, updated, issn_l, usage, cpu, package_id, consortium_name, institution_name, institution_short_name, subject, era_subjects, is_society_journal, subscription_cost, ill_cost, use_instant_for_debugging, use_social_networks, use_oa, use_backfile, use_subscription, use_other_delayed, use_ill, perpetual_access_years, baseline_access, use_social_networks_percent, use_green_percent, use_hybrid_percent, use_bronze_percent, use_peer_reviewed_percent, bronze_oa_embargo_months, is_hybrid_2019, downloads, citations, authorships"""
+        values_column_names_with_sub = values_column_names.replace("scenario_id", u"'{}'".format(self.scenario_id))
+
         q = """
-                insert into jump_scenario_computed (scenario_id, member_package_id, updated, issn_l, journals_dict, usage, cpu, consortium_name) 
+                insert into jump_scenario_computed 
+                ({values_column_names}) 
                 (
-                    select '{}', member_package_id, updated, issn_l, journals_dict, usage, cpu, consortium_name
+                    select {values_column_names_with_sub}
                     from jump_scenario_computed
-                    where scenario_id = '{}'
+                    where scenario_id = '{old_scenario_id}'
                 )
-            """.format(new_scenario_id, self.scenario_id)
+            """.format(old_scenario_id=self.scenario_id,
+                       values_column_names=values_column_names,
+                       values_column_names_with_sub=values_column_names_with_sub)
         with get_db_cursor() as cursor:
             print q
             cursor.execute(q)
@@ -301,34 +317,39 @@ class Consortium(object):
 
         def get_insert_rows_for_member(member_package_id):
             command_list = []
-            print "in get_insert_rows_for_member with", member_package_id
+            print "in get_insert_rows_for_member with", member_package_id, self.scenario_id
             try:
                 with app.app_context():
                     print "len(app.my_memorycache_dict)", len(app.my_memorycache_dict)
 
                     my_live_scenario = Scenario(member_package_id, self.scenario_saved_dict, my_jwt=None)
-                    print u"after my_live_scenario with {}".format(member_package_id)
-                    for my_journal in my_live_scenario.journals:
-                        usage = my_journal.use_total
-                        cpu = my_journal.ncppu or "null"
-                        journals_dict_json = jsonify_fast_no_sort_simple(my_journal.to_dict_journals()).replace(u"'", u"''")
-                        command_list.append(u"('{}', '{}', '{}', sysdate, '{}', {}, {}, '{}')".format(
-                            member_package_id, self.scenario_id, self.consortium_short_name, my_journal.issn_l, usage, cpu, journals_dict_json))
+                    print u"after my_live_scenario with {} {}".format(member_package_id, self.scenario_id)
+                    command_list = [my_journal.to_values_journals_for_consortium() for my_journal in my_live_scenario.journals]
 
                     # save all of these in the db
-                    print "now writing to db", member_package_id
+                    print "now writing to db", member_package_id, self.scenario_id
+
                     start_time = time()
-                    command_start = u"INSERT INTO jump_scenario_computed (member_package_id, scenario_id, consortium_name, updated, issn_l, usage, cpu, journals_dict) values "
+
+                    values_column_names = """member_package_id, scenario_id, updated, issn_l, usage, cpu, package_id, consortium_name, institution_name, institution_short_name, subject, era_subjects, is_society_journal, subscription_cost, ill_cost, use_instant_for_debugging, use_social_networks, use_oa, use_backfile, use_subscription, use_other_delayed, use_ill, perpetual_access_years, baseline_access, use_social_networks_percent, use_green_percent, use_hybrid_percent, use_bronze_percent, use_peer_reviewed_percent, bronze_oa_embargo_months, is_hybrid_2019, downloads, citations, authorships"""
+
+                    command_start = u"""INSERT INTO jump_scenario_computed 
+                        ({values_column_names}) 
+                        values """.format(values_column_names=values_column_names)
                     with get_db_cursor() as cursor:
                         for short_command_list in chunks(command_list, 1000):
-                            q = u"{} {};".format(command_start, u",".join(short_command_list))
+                            command_list_string = u",".join(short_command_list)
+                            command_list_string = command_list_string.replace("{package_id}", self.package_id)
+                            command_list_string = command_list_string.replace("{scenario_id}", self.scenario_id)
+                            command_list_string = command_list_string.replace("{consortium_name}", self.consortium_name)
+                            q = u"{} {};".format(command_start, command_list_string)
                             cursor.execute(q)
                             print ".",
                     print(elapsed(start_time))
-                    print "done writing to db", member_package_id
+                    print "done writing to db", member_package_id, self.scenario_id
 
             except Exception as e:
-                print "In get_insert_rows_for_member with Error: ", e
+                print u"In get_insert_rows_for_member with Error: ", e
                 raise
             return command_list
 
@@ -358,7 +379,7 @@ class Consortium(object):
             and s.issn_l = '{issn_l}'
             order by usage desc
              """.format(scenario_id=self.scenario_id, issn_l=issn_l)
-        with get_db_cursor() as cursor:
+        with get_db_cursor(use_realdictcursor=True) as cursor:
             cursor.execute(command)
             rows = cursor.fetchall()
 
@@ -373,7 +394,7 @@ class Consortium(object):
 
     def to_dict_export(self):
         response = {}
-        response["journals"] = [j.to_dict_export() for j in self.journals_sorted_ncppu]
+        response["journals"] = [j.to_dict_export() for j in self.journals_sorted_cpu]
         return response
 
     @cached_property
@@ -389,47 +410,62 @@ class Consortium(object):
         journals_dicts_by_issn_l = defaultdict(list)
         for d in rows:
             if d["member_package_id"] in self.member_institution_included_list:
-                journals_dicts_by_issn_l[d["issn_l"]].append(d["journals_dict"])
+                journals_dicts_by_issn_l[d["issn_l"]].append(d)
 
         print "after calculating", elapsed(start_time)
         start_time = time()
-        response = []
+        journal_list = []
         for issn_l in issn_ls:
             if len(journals_dicts_by_issn_l[issn_l]) > 0:
-                response.append(ConsortiumJournal(issn_l, self.member_institution_included_list, journals_dicts_by_issn_l[issn_l]))
+                journal_list.append(ConsortiumJournal(issn_l, self.member_institution_included_list, journals_dicts_by_issn_l[issn_l]))
 
-        response = sorted(response, key=lambda x: float('inf') if x.ncppu==None else x.ncppu, reverse=False)
-        for rank, my_journal_dict in enumerate(response):
-            my_journal_dict.ncppu_rank = rank + 1
+        for my_journal in journal_list:
+            if my_journal.issn_l in self.scenario_saved_dict.get("subrs", []):
+                my_journal.set_subscribe_bulk()
+            if my_journal.issn_l in self.scenario_saved_dict.get("customSubrs", []):
+                my_journal.set_subscribe_custom()
+
+        try:
+            journal_list = sorted(journal_list, key=lambda x: float('inf') if x.cpu==None else x.cpu, reverse=False)
+        except KeyError as e:
+            # happens when I change keys, before reset in consortium
+            print u"KeyError in journal_list", e
+            pass
+
+        for rank, my_journal in enumerate(journal_list):
+            my_journal.cpu_rank = rank + 1
 
         print "after journals", elapsed(start_time)
 
-        return response
+        return journal_list
 
 
     def to_dict_institutions(self):
         start_time = time()
 
-        command = """select max(i.id) as institution_id, 
+        command = """with tags as (select institution_id, listagg(tag_string, ', ') as tag_listagg from jump_tag_institution group by institution_id)
+            select max(i.id) as institution_id, 
             max(i.old_username) as institution_short_name, 
             max(i.display_name) as institution_name, 
             s.member_package_id as package_id, 
             sum(s.usage) as usage,
-            count(s.member_package_id) as num_journals
+            count(s.member_package_id) as num_journals,
+            max(t.tag_listagg) as tags,
+            false as included
             from jump_scenario_computed s
             join jump_account_package p on s.member_package_id = p.package_id
             join jump_institution i on i.id = p.institution_id
+            left join tags t on t.institution_id=p.institution_id
             where s.scenario_id='{scenario_id}' 
             group by s.member_package_id
             order by usage desc
              """.format(scenario_id=self.scenario_id)
-        with get_db_cursor() as cursor:
+        with get_db_cursor(use_realdictcursor=True) as cursor:
             cursor.execute(command)
             rows = cursor.fetchall()
 
         if self.scenario_id is not None:
             for row in rows:
-                row["included"] = False
                 if row["package_id"] in self.member_institution_included_list:
                     row["included"] = True
 

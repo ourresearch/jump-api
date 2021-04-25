@@ -18,18 +18,18 @@ from journal import Journal
 # for issn_l, list_this_long in journal_dicts_by_issn_l.iteritems():
 #     sum_of_usage = float(sum(j["usage"] for j in list_this_long))
 #     for j in list_this_long:
-#         if j["ncppu"] and j["usage"] and (isinstance(j["ncppu"], int) or isinstance(j["ncppu"], float)):
-#             j["ncppu_combo_by_usage"] = j["ncppu"] * j["usage"] / sum_of_usage
-#         elif (isinstance(j["ncppu"], int) or isinstance(j["ncppu"], float)):
-#             j["ncppu_combo_by_usage"] = j["ncppu"]
+#         if j["cpu"] and j["usage"] and (isinstance(j["cpu"], int) or isinstance(j["cpu"], float)):
+#             j["cpu_combo_by_usage"] = j["cpu"] * j["usage"] / sum_of_usage
+#         elif (isinstance(j["cpu"], int) or isinstance(j["cpu"], float)):
+#             j["cpu_combo_by_usage"] = j["cpu"]
 #         else:
-#             j["ncppu_combo_by_usage"] = "-"
+#             j["cpu_combo_by_usage"] = "-"
 #     if sum_of_usage < 10:
-#         j["ncppu_combo_by_usage"] = "-"
+#         j["cpu_combo_by_usage"] = "-"
 #
-#     normalized_cpu = sum(j["ncppu_combo_by_usage"] for j in list_this_long if j["ncppu_combo_by_usage"] != "-")
+#     normalized_cpu = sum(j["cpu_combo_by_usage"] for j in list_this_long if j["cpu_combo_by_usage"] != "-")
 #     my_journal_dict = list_this_long[0]
-#     my_journal_dict["ncppu"] = normalized_cpu
+#     my_journal_dict["cpu"] = normalized_cpu
 #     my_journal_dict["institution_names"] = [j.get("institution_name") for j in list_this_long]
 #     response_list.append(my_journal_dict)
 
@@ -64,16 +64,16 @@ class ConsortiumJournal(Journal):
                 response += my_member_dict[nesting_key].get(attribute_name, 0) or 0
             else:
                 response += my_member_dict.get(attribute_name, 0) or 0
-        return response
+        return float(response)
 
     def sum_attribute_multiplied_by_usage(self, attribute_name, nesting_key=None):
         response = 0
         for my_member_dict in self.member_data:
             if nesting_key:
-                response += (my_member_dict[nesting_key].get(attribute_name, 0) or 0) * my_member_dict["usage"]
+                response += (my_member_dict[nesting_key].get(attribute_name, 0) or 0) * float(my_member_dict["usage"])
             else:
-                response += (my_member_dict.get(attribute_name, 0) or 0) * my_member_dict["usage"]
-        return response
+                response += (my_member_dict.get(attribute_name, 0) or 0) * float(my_member_dict["usage"])
+        return float(response)
 
     def list_attribute(self, attribute_name):
         return [my_member_dict.get(attribute_name, None) for my_member_dict in self.member_data]
@@ -125,8 +125,8 @@ class ConsortiumJournal(Journal):
         return self.meta_data["is_society_journal"]
 
     @cached_property
-    def oa_embargo_months(self):
-        return self.meta_data["oa_embargo_months"]
+    def bronze_oa_embargo_months(self):
+        return self.meta_data["bronze_oa_embargo_months"]
 
     @cached_property
     def is_hybrid_2019(self):
@@ -154,61 +154,66 @@ class ConsortiumJournal(Journal):
     @cached_property
     def cost_actual(self):
         if self.subscribed:
-            return self.cost_subscription
-        return self.cost_ill
+            return self.subscription_cost
+        return self.ill_cost
 
     @cached_property
     def use_paywalled(self):
         return self.use_total - self.use_free_instant
 
     # @cached_property
-    # def ncppu(self):
+    # def cpu(self):
     #     if self.use_total < 10:
     #         return None
-    #     ncppu = 0
+    #     cpu = 0
     #     for j in self.member_data:
-    #         if j["ncppu"] and j["usage"] and self.use_total:
-    #             ncppu += j["ncppu"] * j["usage"] / self.use_total
-    #     if ncppu:
-    #         return ncppu
+    #         if j["cpu"] and j["usage"] and self.use_total:
+    #             cpu += j["cpu"] * j["usage"] / self.use_total
+    #     if cpu:
+    #         return cpu
     #     return None
 
 
     @cached_property
-    def cost_subscription(self):
-        return self.meta_data["cost_subscription"] * len(self.included_package_ids)
+    def subscription_cost(self):
+        return self.meta_data["subscription_cost"] * len(self.included_package_ids)
 
     @cached_property
-    def cost_ill(self):
-        return self.sum_attribute("cost_ill")
+    def ill_cost(self):
+        return self.sum_attribute("ill_cost")
 
     @cached_property
     def cost_subscription_minus_ill(self):
-        return self.cost_subscription - self.cost_ill
+        return self.subscription_cost - self.ill_cost
 
     @cached_property
     def use_oa_plus_social_networks(self):
-        return self.sum_attribute("oa", "use_groups_free_instant")
+        # return self.sum_attribute("oa", "use_groups_free_instant")
+        return self.sum_attribute("use_oa")
 
     @cached_property
     def use_subscription(self):
-        return self.sum_attribute("subscription", "use_groups_if_subscribed")
+        # return self.sum_attribute("subscription", "use_groups_if_subscribed")
+        return self.sum_attribute("use_subscription")
 
     @cached_property
     def use_backfile(self):
-        return self.sum_attribute("backfile", "use_groups_free_instant")
+        # return self.sum_attribute("backfile", "use_groups_free_instant")
+        return self.sum_attribute("use_backfile")
 
     @cached_property
     def use_ill(self):
-        return self.sum_attribute("ill", "use_groups_if_not_subscribed")
+        # return self.sum_attribute("ill", "use_groups_if_not_subscribed")
+        return self.sum_attribute("use_ill")
 
     @cached_property
     def use_other_delayed(self):
-        return self.sum_attribute("other_delayed", "use_groups_if_not_subscribed")
+        # return self.sum_attribute("other_delayed", "use_groups_if_not_subscribed")
+        return self.sum_attribute("use_other_delayed")
 
     @cached_property
     def use_social_networks(self):
-        return self.sum_attribute_multiplied_by_usage("use_asns_percent")/100.0
+        return self.sum_attribute_multiplied_by_usage("use_social_networks_percent")/100.0
 
     @cached_property
     def use_oa_green(self):
@@ -262,7 +267,7 @@ class ConsortiumJournal(Journal):
         return None
 
     @cached_property
-    def ncppu_fuzzed(self):
+    def cpu_fuzzed(self):
         return None
 
     @cached_property

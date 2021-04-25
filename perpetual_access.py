@@ -1,3 +1,6 @@
+# coding: utf-8
+
+from cached_property import cached_property
 from datetime import datetime
 
 from app import db
@@ -6,7 +9,7 @@ from scenario import refresh_perpetual_access_from_db
 
 
 class PerpetualAccess(db.Model):
-    __tablename__ = 'jump_perpetual_access'
+    __tablename__ = "jump_perpetual_access"
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
     issn_l = db.Column(db.Text, primary_key=True)
     start_date = db.Column(db.DateTime)
@@ -14,59 +17,53 @@ class PerpetualAccess(db.Model):
 
     def to_dict(self):
         return {
-            'package_id': self.package_id,
-            'issn_l': self.issn_l,
-            'start_date': self.start_date and self.start_date.isoformat(),
-            'end_date': self.end_date and self.end_date.isoformat(),
+            "package_id": self.package_id,
+            "issn_l": self.issn_l,
+            "start_date": self.start_date and self.start_date.isoformat(),
+            "end_date": self.end_date and self.end_date.isoformat(),
         }
 
 
 class PerpetualAccessInput(db.Model, PackageInput):
-    __tablename__ = 'jump_perpetual_access_input'
+    __tablename__ = "jump_perpetual_access_input"
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
     issn = db.Column(db.Text, primary_key=True)
     start_date = db.Column(db.DateTime)
     end_date = db.Column(db.DateTime)
 
-    @classmethod
-    def import_view_name(cls):
-        return 'jump_perpetual_access_view'
+    def import_view_name(self):
+        return "jump_perpetual_access_view"
 
-    @classmethod
-    def destination_table(cls):
+    def destination_table(self):
         return PerpetualAccess.__tablename__
 
-    @classmethod
-    def file_type_label(cls):
-        return u'perpetual-access'
+    def file_type_label(self):
+        return u"perpetual-access"
 
-    @classmethod
-    def issn_columns(cls):
-        return ['issn']
+    def issn_columns(self):
+        return ["issn"]
 
-    @classmethod
-    def csv_columns(cls):
+    def csv_columns(self):
         return {
-            'start_date': {
-                'normalize': lambda date, warn_if_blank=False: cls.normalize_date(date, default=datetime(1970, 1, 1), warn_if_blank=warn_if_blank),
-                'name_snippets': [u'start', u'begin'],
-                'required': True
+            "start_date": {
+                "normalize": lambda date, warn_if_blank=False: self.normalize_date(date, default=datetime(1970, 1, 1), warn_if_blank=warn_if_blank),
+                "name_snippets": [u"start", u"begin"],
+                "required": True
             },
-            'end_date': {
-                'normalize': lambda date, warn_if_blank=False: cls.normalize_date(date, default=datetime(1970, 12, 31), warn_if_blank=warn_if_blank),
-                'name_snippets': [u'end'],
-                'required': True
+            "end_date": {
+                "normalize": lambda date, warn_if_blank=False: self.normalize_date(date, default=datetime(1970, 12, 31), warn_if_blank=warn_if_blank),
+                "name_snippets": [u"end"],
+                "required": True
             },
-            'issn': {
-                'normalize': cls.normalize_issn,
-                'name_snippets': [u'issn'],
-                'excluded_name_snippets': [u'online', u'e-', u'eissn'],
-                'required': True,
-                'warn_if_blank': True,
+            "issn": {
+                "normalize": self.normalize_issn,
+                "name_snippets": [u"issn"],
+                "excluded_name_snippets": [u"online", u"e-", u"eissn"],
+                "required": True,
+                "warn_if_blank": True,
             }
         }
 
-    @classmethod
-    def clear_caches(cls, my_package):
-        super(PerpetualAccessInput, cls).clear_caches(my_package)
+    def clear_caches(self, my_package):
+        super(PerpetualAccessInput, self).clear_caches(my_package)
         refresh_perpetual_access_from_db(my_package.package_id)
