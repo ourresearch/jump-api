@@ -983,9 +983,9 @@ def _load_package_file(package_id, req, table_class):
 
 
 @app.route("/publisher/<package_id>/counter-jr1", methods=["GET", "POST", "DELETE"])
-@app.route("/publisher/<package_id>/counter-tr2", methods=["GET", "POST", "DELETE"])
-@app.route("/publisher/<package_id>/counter-tr3", methods=["GET", "POST", "DELETE"])
-@app.route("/publisher/<package_id>/counter-tr4", methods=["GET", "POST", "DELETE"])
+@app.route("/publisher/<package_id>/counter-trj2", methods=["GET", "POST", "DELETE"])
+@app.route("/publisher/<package_id>/counter-trj3", methods=["GET", "POST", "DELETE"])
+@app.route("/publisher/<package_id>/counter-trj4", methods=["GET", "POST", "DELETE"])
 @app.route("/publisher/<package_id>/counter", methods=["GET", "POST", "DELETE"])
 @jwt_optional
 # @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
@@ -995,6 +995,10 @@ def jump_counter(package_id):
     if url_end == "counter":
         url_end = "counter-jr1"
     report_name = url_end.split("-")[1]
+
+    if report_name in ["trj2", "trj3", "trj4"]:
+        report_name = report_name.replace("j", "")
+
     print "report_name", report_name
 
     if request.method == "GET":
