@@ -995,6 +995,10 @@ def jump_counter(package_id):
     if url_end == "counter":
         url_end = "counter-jr1"
     report_name = url_end.split("-")[1]
+
+    if report_name in ["trj2", "trj3", "trj4"]:
+        report_name = report_name.replace("j", "")
+
     print "report_name", report_name
 
     if request.method == "GET":
