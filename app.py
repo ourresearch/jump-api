@@ -135,7 +135,7 @@ app.config["SQLALCHEMY_BINDS"] = {
 # see https://stackoverflow.com/questions/43594310/redshift-sqlalchemy-long-query-hangs
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = { "pool_pre_ping": True,
                                             "pool_recycle": 300,
-                                            "connect_args": {"keepalives": 1, "keepalives_idle": 60, "keepalives_interval": 60}
+                                            "connect_args": {"keepalives": 1, "keepalives_idle": 10, "keepalives_interval": 2, "keepalives_count": 5,}
             }
 
 # from http://stackoverflow.com/a/12417346/596939
@@ -175,7 +175,11 @@ app.config['postgreSQL_pool'] = ThreadedConnectionPool(2, 200,
                                   user=redshift_url.username,
                                   password=redshift_url.password,
                                   host=redshift_url.hostname,
-                                  port=redshift_url.port)
+                                  port=redshift_url.port,
+                                  keepalives=1,
+                                  keepalives_idle=10,
+                                  keepalives_interval=2,
+                                  keepalives_count=5)
 
 app.config['PROFILE_REQUESTS'] = (os.getenv("PROFILE_REQUESTS", False) == "True")
 
