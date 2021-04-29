@@ -802,15 +802,15 @@ class Package(db.Model):
         command = u"""select file, created, num_rows from jump_raw_file_upload_object where package_id = '{}'""".format(self.package_id)
         with get_db_cursor() as cursor:
             cursor.execute(command)
-            rows = cursor.fetchall()
+            counter_data_rows = cursor.fetchall()
 
-        for row in rows:
+        for counter_data_row in counter_data_rows:
             for my_dict in data_files_list:
-                if my_dict["name"] == row["file"]:
+                if (my_dict["name"] == counter_data_row["file"]) or (my_dict["name"] == "counter"):
                     my_dict["uploaded"] = True
-                    my_dict["created"] = row["created"]
-                    if row["num_rows"]:
-                        my_dict["rows_count"] = row["num_rows"]
+                    my_dict["created"] = counter_data_row["created"]
+                    if counter_data_row["num_rows"]:
+                        my_dict["rows_count"] = counter_data_row["num_rows"]
 
         return {
             "id": self.package_id,
