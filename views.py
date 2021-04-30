@@ -1586,6 +1586,26 @@ def admin_change_password():
 def admin_register_user():
     return abort_json(404, "Removed. Use /user/new or /user/demo.")
 
+@app.route("/sign-s3")
+def sign_s3():
+    upload_bucket = "unsub-file-uploads-preprocess"
+    file_name = request.args.get("filename")
+    file_type = request.args.get("filetype")
+
+    presigned_post = s3_client.generate_presigned_post(
+        Bucket = upload_bucket,
+        Key = file_name,
+        Fields = {"acl": "public-read", "Content-Type": file_type},
+        Conditions = [
+          {"acl": "public-read"},
+          {"Content-Type": file_type}
+        ],
+        ExpiresIn = 60*60 # one hour
+    )
+    return json.dumps({
+    "data": presigned_post,
+    "url": u"https://{}.s3.amazonaws.com/{}".format(upload_bucket, file_name)
+    })
 
 
 cache_last_updated = "1999-01-01"
