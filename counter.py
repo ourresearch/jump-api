@@ -107,14 +107,14 @@ class CounterInput(db.Model, PackageInput):
                 "required": False,
             },
         }
-        for month_idx in range(1, 13):
-            month_column = {
-                "normalize": self.normalize_int,
-                "name_snippets": [calendar.month_abbr[month_idx].lower(), u"-{:02d}".format(month_idx)],
-                "warn_if_blank": False,
-                "required": False,
-            }
-            columns[calendar.month_abbr[month_idx].lower()] = month_column
+        # for month_idx in range(1, 13):
+        #     month_column = {
+        #         "normalize": self.normalize_int,
+        #         "name_snippets": [calendar.month_abbr[month_idx].lower(), u"-{:02d}".format(month_idx)],
+        #         "warn_if_blank": False,
+        #         "required": False,
+        #     }
+        #     columns[calendar.month_abbr[month_idx].lower()] = month_column
 
         return columns
 

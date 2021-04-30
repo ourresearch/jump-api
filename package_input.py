@@ -463,7 +463,7 @@ class PackageInput:
 
             print "now here"
             print "row_dicts"
-            print row_dicts[0:3]
+            print row_dicts[0:1]
             print
             print row_dicts[0].keys()
 
@@ -545,7 +545,7 @@ class PackageInput:
                     error_rows["rows"].append(error_row)
 
             print "normalized_rows"
-            print normalized_rows[0:3]
+            print normalized_rows[0:1]
             print
             print normalized_rows[0].keys()
             print "before for"
