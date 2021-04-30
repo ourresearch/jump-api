@@ -131,7 +131,7 @@ class PackageInput:
     def apply_header(self, normalized_rows, header_rows):
         return normalized_rows
 
-    @cache
+    # @cache
     def normalize_column_name(self, raw_column_name):
         for canonical_name, spec in self.csv_columns().items():
             name_snippets = spec["name_snippets"]
@@ -154,7 +154,7 @@ class PackageInput:
 
         return None
 
-    @cache
+    # @cache
     def normalize_cell(self, normalized_column_name, raw_column_value):
         spec = self.csv_columns()[normalized_column_name]
         return spec["normalize"](raw_column_value, spec.get("warn_if_blank", False))
