@@ -767,35 +767,35 @@ class Package(db.Model):
                     "name": "counter",
                     "uploaded": counter_uploaded,
                     "rows_count": num_counter_rows,
-                    "created": None,
+                    "created_date": None,
                     "error_rows": counter_errors,
                 },
                 {
                     "name": "perpetual-access",
                     "uploaded": False if self.is_demo else num_pa_rows > 0,
                     "rows_count": num_pa_rows,
-                    "created": None,
+                    "created_date": None,
                     "error_rows": pa_errors,
                 },
                 {
                     "name": "price",
                     "uploaded": False if self.is_demo else num_price_rows > 0,
                     "rows_count": num_price_rows,
-                    "created": None,
+                    "created_date": None,
                     "error_rows": price_errors,
                 },
                 {
                     "name": "core-journals",
                     "uploaded": False if self.is_demo else num_core_rows > 0,
                     "rows_count": num_core_rows,
-                    "created": None,
+                    "created_date": None,
                     "error_rows": None,
                 }]
         for filename in ["counter-trj2", "counter-trj3", "counter-trj4"]:
             data_files_list += [{
                 "name": filename,
                 "uploaded": False,
-                "created": None,
+                "created_date": None,
                 "rows_count": None,
                 "error_rows": None}]
 
@@ -808,9 +808,16 @@ class Package(db.Model):
             for my_dict in data_files_list:
                 if (my_dict["name"] == counter_data_row["file"]) or (my_dict["name"] == "counter"):
                     my_dict["uploaded"] = True
-                    my_dict["created"] = counter_data_row["created"]
+                    my_dict["created_date"] = counter_data_row["created"]
                     if counter_data_row["num_rows"]:
                         my_dict["rows_count"] = counter_data_row["num_rows"]
+
+        for data_file in data_files_list:
+            data_file["is_uploaded"] = data_file["uploaded"] #temporary during rename
+            data_file["is_loaded"] = data_file["is_uploaded"]  # fix this later, when polling
+            data_file["percent_loaded"] = 0
+            if data_file["is_loaded"]:
+                data_file["percent_loaded"] = 100
 
         return {
             "id": self.package_id,
