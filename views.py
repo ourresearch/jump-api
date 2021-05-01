@@ -980,6 +980,17 @@ def _load_package_file(package_id, req, table_class):
     else:
         return abort_json(400, u"expected a JSON object like {file: <base64-encoded file>, name: <file name>}")
 
+@app.route("/publisher/<package_id>/<data_file_name>/status", methods=["GET"])
+@jwt_required
+def jump_data_file_status(package_id, data_file_name):
+    authenticate_for_publisher(package_id, Permission.view())
+    package = Package.query.filter(Package.package_id == package_id).scalar()
+    package_dict = package.to_package_dict()
+    data_files_list = package_dict["data_files"]
+    for data_file_dict in data_files_list:
+        if data_file_dict["name"] == data_file_name:
+            return jsonify_fast_no_sort(data_file_dict)
+    return abort_json(400, "Unknown data file type {}".format(data_file_name))
 
 
 @app.route("/publisher/<package_id>/counter-jr1", methods=["GET", "POST", "DELETE"])
@@ -1586,8 +1597,11 @@ def admin_change_password():
 def admin_register_user():
     return abort_json(404, "Removed. Use /user/new or /user/demo.")
 
-@app.route("/sign-s3")
-def sign_s3():
+@app.route("/publisher/<package_id>/sign-s3")
+@jwt_required
+def sign_s3(package_id):
+    authenticate_for_publisher(package_id, Permission.modify())
+
     upload_bucket = "unsub-file-uploads-preprocess"
     file_name = request.args.get("filename")
     file_type = request.args.get("filetype")
