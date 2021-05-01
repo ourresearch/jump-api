@@ -9,7 +9,6 @@ import calendar
 from re import sub
 
 import babel.numbers
-import boto3
 import dateutil.parser
 import shortuuid
 import unicodecsv as csv
@@ -22,6 +21,7 @@ from app import db, logger
 from app import get_db_cursor
 from app import reset_cache
 from consortium import Consortium
+from app import s3_client
 from excel import convert_spreadsheet_to_csv
 from package_file_error_rows import PackageFileErrorRow
 from raw_file_upload_object import RawFileUploadObject
@@ -161,18 +161,15 @@ class PackageInput:
 
 
     def _copy_staging_csv_to_s3(self, filename, package_id):
-        s3 = boto3.client("s3")
         bucket_name = "jump-redshift-staging"
         object_name = "{}_{}_{}".format(package_id, self.__class__.__name__, shortuuid.uuid())
-        s3.upload_file(filename, bucket_name, object_name)
+        s3_client.upload_file(filename, bucket_name, object_name)
         return "s3://{}/{}".format(bucket_name, object_name)
 
     def _raw_s3_bucket(self):
         return u"unsub-file-uploads"
 
     def _copy_raw_to_s3(self, filename, package_id, num_rows=None):
-        s3 = boto3.client("s3")
-
         if u"." in filename:
             suffix = u".{}".format(filename.split(u".")[-1])
         else:
@@ -181,7 +178,7 @@ class PackageInput:
         object_name = "{}_{}{}".format(package_id, self.file_type_label(), suffix)
         bucket_name = self._raw_s3_bucket()
 
-        s3.upload_file(filename, bucket_name, object_name)
+        s3_client.upload_file(filename, bucket_name, object_name)
 
         db.session.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
             package_id, self.file_type_label()))
@@ -204,10 +201,8 @@ class PackageInput:
         if not object_details:
             return None
 
-        s3 = boto3.client("s3")
-
         try:
-            raw_object = s3.get_object(Bucket=object_details.bucket_name, Key=object_details.object_name)
+            raw_object = s3_client.get_object(Bucket=object_details.bucket_name, Key=object_details.object_name)
 
             headers = {
                 "Content-Length": raw_object["ContentLength"],
@@ -219,7 +214,7 @@ class PackageInput:
                 "content_type": raw_object["ContentType"],
                 "headers": headers
             }
-        except s3.exceptions.NoSuchKey:
+        except s3_client.exceptions.NoSuchKey:
             return None
 
     def delete(self, package_id, file_type=None):

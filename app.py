@@ -18,6 +18,7 @@ from random import shuffle
 from contextlib import contextmanager
 from collections import OrderedDict
 from dozer import Dozer
+import boto3
 
 warnings.filterwarnings("ignore", category=UserWarning, module='psycopg2')
 import psycopg2
@@ -224,6 +225,9 @@ def get_db_cursor(commit=False, use_realdictcursor=False, use_defaultcursor=Fals
 # my_memcached = bmemcached.Client(memcached_servers, username=memcached_user, password=memcached_password)
 # my_memcached.enable_retry_delay(True)  # Enabled by default. Sets retry delay to 5s.
 ## my_memcached.flush_all()
+
+s3_client = boto3.client("s3")
+print "made s3_client"
 
 use_groups_lookup = OrderedDict()
 use_groups_lookup["oa_plus_social_networks"] = {"display": "OA", "free_instant": True}

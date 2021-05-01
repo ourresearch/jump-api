@@ -26,6 +26,7 @@ from app import db
 # from app import my_memcached # disable memcached
 from app import logger
 from app import memorycache
+from app import s3_client
 
 from time import time
 from util import elapsed
@@ -1164,10 +1165,6 @@ def get_common_package_data_for_all():
         # my_data = decompress_pickle("data/get_common_package_data_for_all")
         # print u"found pickled, returning"
         # return (my_data, my_timing)
-
-        import boto3
-        s3_client = boto3.client("s3")
-        print u"made s3_client"
 
         s3_clientobj = s3_client.get_object(Bucket="unsub-cache", Key="get_common_package_data_for_all.json")
         print u"made s3_clientobj"

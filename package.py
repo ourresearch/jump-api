@@ -8,10 +8,13 @@ from collections import OrderedDict
 import datetime
 import shortuuid
 import json
+from time import time
 
 from app import db
 from app import get_db_cursor
 from app import DEMO_PACKAGE_ID
+from app import s3_client
+
 # from app import my_memcached # disable memcached
 from assumptions import Assumptions
 from counter import CounterInput
@@ -818,6 +821,24 @@ class Package(db.Model):
             data_file["percent_loaded"] = 0
             if data_file["is_loaded"]:
                 data_file["percent_loaded"] = 100
+
+        preprocess_file_list = s3_client.list_objects(Bucket="unsub-file-uploads-preprocess")
+        for preprocess_file in preprocess_file_list["Contents"]:
+            filename = preprocess_file["Key"]
+            filename_base = filename.split(".")[0]
+            package_id, filetype = filename_base.split("_")
+            size = preprocess_file["Size"]
+            age_seconds = (datetime.datetime.utcnow() - preprocess_file["LastModified"].replace(tzinfo=None)).total_seconds()
+            for my_dict in data_files_list:
+                if my_dict["name"] == filetype:
+                    if age_seconds < 60*2:  # if it less than is 2 minute old make it be still processing
+                        my_dict["is_uploaded"] = True
+                        my_dict["is_loaded"] = False
+                        my_dict["percent_loaded"] = 50
+                    else:
+                        my_dict["is_uploaded"] = True
+                        my_dict["is_loaded"] = True
+                        my_dict["percent_loaded"] = 100
 
         return {
             "id": self.package_id,

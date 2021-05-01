@@ -31,7 +31,6 @@ import requests
 import tempfile
 import random
 from collections import OrderedDict
-import boto3
 
 # from app import my_memorycache_dict
 from app import app
@@ -79,9 +78,7 @@ from user import User, default_password
 from app import logger
 
 from app import DEMO_PACKAGE_ID
-
-s3_client = boto3.client("s3")
-print "made s3_client"
+from app import s3_client
 
 def s3_cache_get(url):
     print u"in cache_get with", url
