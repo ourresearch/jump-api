@@ -1601,16 +1601,14 @@ def sign_s3(package_id):
 
     upload_bucket = "unsub-file-uploads-preprocess"
     file_name = request.args.get("filename")
-    file_type = request.args.get("filetype")
 
     presigned_post = s3_client.generate_presigned_post(
         Bucket = upload_bucket,
         Key = file_name,
-        Fields = {"acl": "public-read", "Content-Type": file_type},
-        Conditions = [
-          {"acl": "public-read"},
-          {"Content-Type": file_type}
-        ],
+        # Fields = {"acl": "public-read"},
+        # Conditions = [
+        #   {"acl": "public-read"},
+        # ],
         ExpiresIn = 60*60 # one hour
     )
     return json.dumps({
