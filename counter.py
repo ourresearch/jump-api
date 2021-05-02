@@ -15,6 +15,12 @@ class Counter(db.Model):
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
     journal_name = db.Column(db.Text)
     total = db.Column(db.Numeric)
+    report_version = db.Column(db.Text)
+    report_name = db.Column(db.Text)
+    report_year = db.Column(db.Numeric)
+    metric_type = db.Column(db.Text)
+    access_type = db.Column(db.Text)
+    yop = db.Column(db.Numeric)
 
     def to_dict(self):
         return {
@@ -22,6 +28,12 @@ class Counter(db.Model):
             "package_id": self.package_id,
             "journal_name": self.journal_name,
             "total": self.total,
+            "report_version": self.report_version,
+            "report_name": self.report_name,
+            "report_year": self.report_year,
+            "metric_type": self.metric_type,
+            "access_type": self.access_type,
+            "yop": self.yop,
         }
 
 
