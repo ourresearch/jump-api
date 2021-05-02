@@ -823,7 +823,7 @@ class Package(db.Model):
                 data_file["percent_loaded"] = 100
 
         preprocess_file_list = s3_client.list_objects(Bucket="unsub-file-uploads-preprocess")
-        for preprocess_file in preprocess_file_list["Contents"]:
+        for preprocess_file in preprocess_file_list.get("Contents", []):
             filename = preprocess_file["Key"]
             filename_base = filename.split(".")[0]
             package_id, filetype = filename_base.split("_")
@@ -831,14 +831,8 @@ class Package(db.Model):
             age_seconds = (datetime.datetime.utcnow() - preprocess_file["LastModified"].replace(tzinfo=None)).total_seconds()
             for my_dict in data_files_list:
                 if my_dict["name"] == filetype:
-                    my_dict["uploaded"] = True
-                    my_dict["is_uploaded"] = True
-                    if age_seconds < 60*2:  # if it less than is 2 minute old make it be still processing
-                        my_dict["is_loaded"] = False
-                        my_dict["percent_loaded"] = 50
-                    else:
-                        my_dict["is_loaded"] = True
-                        my_dict["percent_loaded"] = 100
+                    my_dict["is_loaded"] = False
+                    my_dict["percent_loaded"] = 50
 
         return {
             "id": self.package_id,
