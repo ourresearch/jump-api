@@ -37,6 +37,7 @@ def parse_uploads():
             with open(filename, "wb") as temp_file:
                 temp_file.write(contents_string)
 
+            loader = None
             if filetype.startswith("counter"):
                 loader = CounterInput()
             elif filetype.startswith("perpetual-access"):
@@ -44,18 +45,18 @@ def parse_uploads():
             elif filetype.startswith("price"):
                 loader = JournalPriceInput
 
-            load_result = loader.load(package_id, filename, commit=True)
-            # print load_result
+            if loader:
+                load_result = loader.load(package_id, filename, commit=True)
 
-            print u"moving file {}".format(filename)
-            s3_resource = boto3.resource("s3")
-            copy_source = {"Bucket": upload_preprocess_bucket, "Key": filename}
-            s3_resource.meta.client.copy(copy_source, upload_finished_bucket, filename)
-            s3_resource.Object(upload_preprocess_bucket, filename).delete()
-            print "moved"
+                print u"moving file {}".format(filename)
+                s3_resource = boto3.resource("s3")
+                copy_source = {"Bucket": upload_preprocess_bucket, "Key": filename}
+                s3_resource.meta.client.copy(copy_source, upload_finished_bucket, filename)
+                s3_resource.Object(upload_preprocess_bucket, filename).delete()
+                print "moved"
 
         sleep( 2 * random.random())
-        print ".",
+        # print ".",
 
 
         # try this https://pandas.pydata.org/docs/reference/api/pandas.read_csv.html
