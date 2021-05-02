@@ -27,7 +27,12 @@ def parse_uploads():
         for preprocess_file in preprocess_file_list.get("Contents", []):
             filename = preprocess_file["Key"]
             filename_base = filename.split(".")[0]
-            package_id, filetype = filename_base.split("_")
+            try:
+                package_id, filetype = filename_base.split("_")
+            except ValueError:
+                # not a valid file, skip it
+                continue
+
             print u"loading {} {}".format(package_id, filetype)
             size = preprocess_file["Size"]
             age_seconds = (datetime.datetime.utcnow() - preprocess_file["LastModified"].replace(tzinfo=None)).total_seconds()
