@@ -195,7 +195,9 @@ def set_non_own_subscriptions(main_jusp_id, group_jusp_ids, package_type):
     for jusp_id in group_jusp_ids:
         scenario_id = u"scenario-n8els_{}_ownpta".format(jusp_id)
         my_source_scenario_dict = get_latest_scenario_raw(scenario_id)
+        print "subscriptions: ", jusp_id, len(my_source_scenario_dict["subrs"])
         all_subscriptions += my_source_scenario_dict["subrs"]
+        print "len all_subscriptions: ", len(list(set(all_subscriptions)))
 
     all_subscriptions = [sub for sub in all_subscriptions if sub not in main_subscriptions]
     all_subscriptions_dedup = list(set(all_subscriptions))
@@ -239,13 +241,13 @@ if __name__ == "__main__":
     # group_jusp_data["icl"] = {"institution_id": "institution-jiscicl", "subs": subs} #imperial college london, just to see
 
 
-    for jusp_id, data in group_jusp_data.iteritems():
-        print jusp_id, data
-        package_create(jusp_id, data["institution_id"], "own pta")
-        # pta copied over in package_create from own jisc package
-
-        package_create(jusp_id, data["institution_id"], "group pta")
-        update_group_pta(jusp_id, group_jusp_data.keys())
+    # for jusp_id, data in group_jusp_data.iteritems():
+    #     print jusp_id, data
+    #     package_create(jusp_id, data["institution_id"], "own pta")
+    #     # pta copied over in package_create from own jisc package
+    #
+    #     package_create(jusp_id, data["institution_id"], "group pta")
+    #     update_group_pta(jusp_id, group_jusp_data.keys())
 
     # for jusp_id, data in group_jusp_data.iteritems():
     #     # my_source_scenario_dict = get_latest_scenario_raw(data["orig_scenario_id"])
@@ -264,6 +266,6 @@ if __name__ == "__main__":
         results.append(N8UniResult(jusp_id).to_list())
 
     for result_number in range(0, len(results[0])):
-        print ",".join([str(results[column_number][result_number]) for column_number in range(0, len(results))])
+        print ";".join([str(results[column_number][result_number]) for column_number in range(0, len(results))])
 
 
