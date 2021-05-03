@@ -46,9 +46,9 @@ def parse_uploads():
             if filetype.startswith("counter"):
                 loader = CounterInput()
             elif filetype.startswith("perpetual-access"):
-                loader = PerpetualAccessInput
+                loader = PerpetualAccessInput()
             elif filetype.startswith("price"):
-                loader = JournalPriceInput
+                loader = JournalPriceInput()
 
             if loader:
                 load_result = loader.load(package_id, filename, commit=True)
