@@ -556,6 +556,18 @@ def get_link_target(url, base_url, strip_jsessionid=True):
         url = urlparse.urljoin(base_url, url)
     return url
 
+def sql_escape_string(value):
+    if value == None:
+        return "null"
+    value = value.replace("'", "''")
+    return value
+
+def sql_bool(is_value):
+    if is_value==True:
+        return "true"
+    if is_value==False:
+        return "false"
+    return "null"
 
 def run_sql(db, q):
     q = q.strip()
