@@ -219,17 +219,13 @@ class PackageInput:
 
     def delete(self, package_id, file_type=None):
 
-        db.session.execute("delete from {} where package_id = '{}'".format(self.__tablename__, package_id))
-
-        db.session.execute("delete from {} where package_id = '{}'".format(self.destination_table(), package_id))
-
-        db.session.execute("delete from jump_file_import_error_rows where package_id = '{}' and file = '{}'".format(
-            package_id, self.file_type_label()))
-
-        db.session.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
-            package_id, self.file_type_label()))
-
-        safe_commit(db)
+        with get_db_cursor() as cursor:
+            cursor.execute("delete from {} where package_id = '{}'".format(self.__tablename__, package_id))
+            cursor.execute("delete from {} where package_id = '{}'".format(self.destination_table(), package_id))
+            cursor.execute("delete from jump_file_import_error_rows where package_id = '{}' and file = '{}'".format(
+                package_id, self.file_type_label()))
+            cursor.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
+                package_id, self.file_type_label()))
 
         my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
         if my_package:
