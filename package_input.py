@@ -396,8 +396,6 @@ class PackageInput:
                 absolute_line_no += 1
                 if not any([cell.strip() for cell in line]):
                     continue
-                if line_no >= 20:
-                    break
 
                 parsed_rows.append(line)
                 parsed_to_absolute_line_no[line_no] = absolute_line_no
