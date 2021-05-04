@@ -169,7 +169,7 @@ class PackageInput:
     def _raw_s3_bucket(self):
         return u"unsub-file-uploads"
 
-    def _copy_raw_to_s3(self, filename, package_id, num_rows=None):
+    def _copy_raw_to_s3(self, filename, package_id, num_rows=None, failure_message=None):
         if u"." in filename:
             suffix = u".{}".format(filename.split(u".")[-1])
         else:
@@ -188,36 +188,37 @@ class PackageInput:
             file=self.file_type_label(),
             bucket_name=bucket_name,
             object_name=object_name,
-            num_rows=num_rows
+            num_rows=num_rows,
+            failure_message=failure_message
         ))
 
         return "s3://{}/{}".format(bucket_name, object_name)
 
-    def get_raw_upload_object(self, package_id):
-        object_details = RawFileUploadObject.query.filter(
-            RawFileUploadObject.package_id == package_id, RawFileUploadObject.file == self.file_type_label()
-        ).scalar()
+    # def get_raw_upload_object(self, package_id):
+    #     object_details = RawFileUploadObject.query.filter(
+    #         RawFileUploadObject.package_id == package_id, RawFileUploadObject.file == self.file_type_label()
+    #     ).scalar()
+    #
+    #     if not object_details:
+    #         return None
+    #
+    #     try:
+    #         raw_object = s3_client.get_object(Bucket=object_details.bucket_name, Key=object_details.object_name)
+    #
+    #         headers = {
+    #             "Content-Length": raw_object["ContentLength"],
+    #             "Content-Disposition": "attachment; filename='{}'".format(object_details.object_name)
+    #         }
+    #
+    #         return {
+    #             "body": raw_object["Body"],
+    #             "content_type": raw_object["ContentType"],
+    #             "headers": headers
+    #         }
+    #     except s3_client.exceptions.NoSuchKey:
+    #         return None
 
-        if not object_details:
-            return None
-
-        try:
-            raw_object = s3_client.get_object(Bucket=object_details.bucket_name, Key=object_details.object_name)
-
-            headers = {
-                "Content-Length": raw_object["ContentLength"],
-                "Content-Disposition": "attachment; filename='{}'".format(object_details.object_name)
-            }
-
-            return {
-                "body": raw_object["Body"],
-                "content_type": raw_object["ContentType"],
-                "headers": headers
-            }
-        except s3_client.exceptions.NoSuchKey:
-            return None
-
-    def delete(self, package_id, file_type=None):
+    def delete(self, package_id, dummy=None):
 
         with get_db_cursor() as cursor:
             cursor.execute("delete from {} where package_id = '{}'".format(self.__tablename__, package_id))
@@ -523,10 +524,11 @@ class PackageInput:
         except (UnicodeError, csv.Error) as e:
             print u"normalize_rows error {}".format(e)
             message = u"Error reading this file. Try opening this file, save in .xlsx format, and upload that.".format(
-                e.message
-            )
+                e.message)
+            self._copy_raw_to_s3(file_name, package_id, num_rows=None, failure_message=message)
             return {"success": False, "message": message, "warnings": []}
         except RuntimeError as e:
+            self._copy_raw_to_s3(file_name, package_id, num_rows=None, failure_message=e.message)
             return {"success": False, "message": e.message, "warnings": []}
 
         # save normalized rows
@@ -586,7 +588,9 @@ class PackageInput:
 
             db.session.execute(copy_cmd.bindparams(creds=aws_creds))
             self.update_dest_table(package_id)
-            self._copy_raw_to_s3(file_name, package_id, num_rows)
+            self._copy_raw_to_s3(file_name, package_id, num_rows, failure_message=None)
+        else:
+            self._copy_raw_to_s3(file_name, package_id, num_rows=0, failure_message="No usable rows found.")
 
         # delete the current errors, save new errors
         self.save_errors(package_id, error_rows)

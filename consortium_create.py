@@ -181,7 +181,8 @@ def consortium_create():
 
 
 
-# python consortium_calculate.py
+# heroku run --size=performance-l python consortium_create.py --package_id=package-3WkCDEZTqo6S
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run stuff :)")
     parser.add_argument("--package_id", type=str, default=None, help="package id of consortium to recompute")

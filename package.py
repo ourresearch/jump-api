@@ -63,14 +63,6 @@ class Package(db.Model):
     @property
     def unique_saved_scenarios(self):
         response = self.saved_scenarios
-        # if self.is_demo_account:
-        #     unique_saved_scenarios = self.saved_scenarios
-        #     unique_key = self.package_id.replace("demo", "").replace("-package-", "")
-        #     for my_scenario in unique_saved_scenarios:
-        #         my_scenario.package_id = self.package_id
-        #         my_scenario.scenario_id = u"demo-scenario-{}".format(unique_key)
-        #     response = unique_saved_scenarios
-        return response
 
     @property
     def scenario_ids(self):
@@ -357,16 +349,6 @@ class Package(db.Model):
             package_id = DEMO_PACKAGE_ID
         return package_id
 
-    # not used anymore
-    # def clear_package_counter_breakdown_cache(self):
-    #     pass
-    #     # disable memcached
-    #     # my_memcached.delete(self.get_package_counter_breakdown_memcached_key())
-
-    # not used anymore
-    # def get_package_counter_breakdown_memcached_key(self):
-    #     return "package.get_package_counter_breakdown.package_id_for_db.{}".format(self.package_id_for_db)
-
     @cached_property
     def is_owned_by_consortium(self):
         if self.consortia_scenario_ids_who_own_this_package:
@@ -385,71 +367,6 @@ class Package(db.Model):
             cursor.execute(q)
             rows = cursor.fetchall()
         return [row["consortium_scenario_id"] for row in rows]
-
-    # not used anymore
-    # def get_package_counter_breakdown(self):
-    #     package_id = self.package_id_for_db
-    #
-    #     # temp
-    #     # @todo next:
-    #     # see if i can comment this back out
-    #     # see why wiley has more in scenario than it does still publishing with prices
-    #     # self.clear_package_counter_breakdown_cache()
-    #
-    #
-    #     # disable memcached
-    #     # memcached_key = self.get_package_counter_breakdown_memcached_key()
-    #     # my_memcached_results = my_memcached.get(memcached_key)
-    #     # if my_memcached_results:
-    #     #     return my_memcached_results
-    #
-    #     response = OrderedDict()
-    #     response["counts"] = OrderedDict()
-    #     response["diff_counts"] = OrderedDict()
-    #     # response["papers"] = OrderedDict()
-    #     response["package_id"] = package_id
-    #
-    #     response["counts"]["core_journal_rows"] = len(self.get_core_journal_rows)
-    #
-    #     response["counts"]["counter_rows"] = len(self.get_counter_rows)
-    #     response["diff_counts"]["diff_not_in_counter"] = len(self.get_diff_not_in_counter)
-    #
-    #     response["counts"]["counter_unique_rows"] = len(self.get_counter_unique_rows)
-    #     response["diff_counts"]["diff_non_unique"] = len(self.get_diff_non_unique)
-    #     # response["papers"]["diff_non_unique"] = self.get_diff_non_unique
-    #
-    #     response["counts"]["published_in_2019"] = len(self.get_published_in_2019)
-    #     response["diff_counts"]["diff_not_published_in_2019"] = len(self.get_diff_not_published_in_2019)
-    #     # response["papers"]["diff_not_published_in_2019"] = self.get_diff_not_published_in_2019
-    #
-    #     response["counts"]["toll_access_published_in_2019"] = len(self.get_published_toll_access_in_2019)
-    #     response["diff_counts"]["diff_open_access_journals"] =  len(self.get_diff_open_access_journals)
-    #     # response["papers"]["diff_open_access_journals"] =  self.get_diff_open_access_journals
-    #
-    #     response["counts"]["toll_access_published_in_2019_with_elsevier"] = len(self.get_published_toll_access_in_2019_with_publisher)
-    #     print "len(self.get_published_toll_access_in_2019_with_publisher)", len(self.get_published_toll_access_in_2019_with_publisher)
-    #     response["diff_counts"]["diff_changed_publisher"] =  len(self.get_diff_changed_publisher)
-    #     # response["papers"]["diff_changed_publisher"] =  self.get_diff_changed_publisher
-    #
-    #     response["counts"]["published_toll_access_in_2019_with_elsevier_have_price"] = len(self.get_published_toll_access_in_2019_with_publisher_have_price)
-    #     response["diff_counts"]["diff_no_price"] =  len(self.get_diff_no_price)
-    #     # response["papers"]["diff_no_price"] =  self.get_diff_no_price
-    #
-    #     # this is very time consuming so don't include unless needed
-    #
-    #     # response["counts"]["in_scenario"] = len(self.get_in_scenario)
-    #     # response["diff_counts"]["diff_missing_from_scenario"] =  len(self.get_diff_missing_from_scenario)
-    #
-    #     # response["papers"]["diff_missing_from_scenario"] =  self.get_diff_missing_from_scenario
-    #     # response["diff_counts"]["diff_extra_in_scenario"] =  len(self.get_diff_extra_in_scenario)
-    #     # response["papers"]["diff_extra_in_scenario"] =  self.get_diff_extra_in_scenario
-    #
-    #     # response["papers"]["good_to_use"] =  self.get_in_scenario
-    #
-    #     #disable memcached
-    #     # my_memcached.set(memcached_key, response)
-    #
-    #     return response
 
     def get_journal_attributes(self):
         counter_rows = dict((x["issn_l"], x) for x in self.get_unfiltered_counter_rows)
@@ -580,107 +497,6 @@ class Package(db.Model):
         return journals_missing_prices
 
 
-
-    # def get_unexpectedly_no_price(self):
-    #     package_id = self.package_id_for_db
-    #
-    #     command = """select counter.issn_l,
-    #     max(title) as title,
-    #     sum(total::int) as num_2018_downloads
-    #     from jump_counter counter
-    #     left outer join ricks_journal_flat on counter.issn_l = ricks_journal_flat.issn
-    #     where
-    #         package_id='{package_id}'
-    #         and rj.issn_l in (
-    #                 select distinct rj.issn_l
-    #                 from unpaywall u
-    #                 join ricks_journal_flat rj on u.journal_issn_l=rj.issn
-    #                 where rj.issn_l in (
-    #                 select jump_counter.issn_l from jump_counter
-    #                  where package_id="{package_id}'
-    #             )
-    #             and journal_is_oa='false'
-    #             and year=2019
-    #             and rj.issn_l in (
-    #                 select distinct issn_l from ricks_journal rj
-    #                 and {publisher_where}
-	#             )
-    #             and rj.issn_l not in (
-    #                 select jump_counter.issn_l from jump_counter
-    #                 join jump_journal_prices on jump_journal_prices.issn_l = jump_counter.issn_l
-    #                 where jump_counter.package_id='{package_id}' and jump_journal_prices.package_id='658349d9')
-    #             )
-    #     group by counter.issn_l
-    #     order by num_2018_downloads desc
-    #     """.format(package_id=package_id, publisher_where=self.publisher_where.replace("%", "%%"))
-    #     with get_db_cursor() as cursor:
-    #         cursor.execute(command)
-    #         rows = cursor.fetchall()
-    #     return rows
-    #
-    # def get_unexpectedly_no_price_and_greater_than_200_downloads(self):
-    #     package_id = self.package_id_for_db
-    #     rows = self.get_unexpectedly_no_price()
-    #     answer_filtered = [row for row in rows if row["num_2018_downloads"] > 200]
-    #     return answer_filtered
-
-
-    # def get_gold_oa(self):
-    #     package_id = self.package_id_for_db
-    #
-    #     command = """select rj.issn_l, max(title) as title, sum(total::int) as num_2018_downloads
-    #     from jump_counter counter
-    #     left outer join ricks_journal rj on counter.issn_l = rj.issn
-    #     where
-    #         package_id='{package_id}'
-    #         and rj.issn_l not in (
-    #             select distinct rj.issn_l
-    #             from unpaywall u
-    #             join ricks_journal_flat rj on u.journal_issn_l=rj.issn
-    #             where rj.issn_l in (
-    #                 select jump_counter.issn_l from jump_counter
-    #                  where package_id='{package_id}'
-    #             )
-    #             and journal_is_oa='false'
-    #             )
-    #     group by rj.issn_l
-    #     order by num_2018_downloads desc
-    #     """.format(package_id=package_id)
-    #     with get_db_cursor() as cursor:
-    #         cursor.execute(command)
-    #         rows = cursor.fetchall()
-    #     return rows
-
-
-
-    # def get_toll_access_no_2019_papers(self):
-    #     package_id = self.package_id_for_db
-    #
-    #
-    #     command = """select rj.issn_l, max(title) as title, sum(total::int) as num_2018_downloads
-    #     from jump_counter counter
-    #     left outer join ricks_journal jr on counter.issn_l = rj.issn_l
-    #     where
-    #         package_id='{package_id}'
-    #         and rj.issn_l not in (
-    #             select distinct rj.issn_l
-    #             from unpaywall u
-	#             join ricks_journal_flat rj on u.journal_issn_l = rj.issn
-    #             where rj.issn_l in (
-    #             select jump_counter.issn_l from jump_counter
-    #              where package_id='{package_id}'
-    #             )
-    #             and journal_is_oa='false'
-    #             )
-    #     group by rj.issn_l
-    #     order by num_2018_downloads desc
-    #     """.format(package_id=package_id)
-    #     with get_db_cursor() as cursor:
-    #         cursor.execute(command)
-    #         rows = cursor.fetchall()
-    #     return rows
-
-
     @cached_property
     def warnings(self):
         from scenario import get_package_specific_scenario_data_from_db
@@ -802,25 +618,31 @@ class Package(db.Model):
                 "rows_count": None,
                 "error_rows": None}]
 
-        command = u"""select file, created, num_rows from jump_raw_file_upload_object where package_id = '{}'""".format(self.package_id)
+        command = u"""select * from jump_raw_file_upload_object where package_id = '{}'""".format(self.package_id)
         with get_db_cursor() as cursor:
             cursor.execute(command)
-            counter_data_rows = cursor.fetchall()
-
-        for counter_data_row in counter_data_rows:
-            for my_dict in data_files_list:
-                if (my_dict["name"] == counter_data_row["file"]) or (my_dict["name"] == "counter"):
-                    my_dict["uploaded"] = True
-                    my_dict["created_date"] = counter_data_row["created"]
-                    if counter_data_row["num_rows"]:
-                        my_dict["rows_count"] = counter_data_row["num_rows"]
+            raw_file_upload_rows = cursor.fetchall()
 
         for data_file in data_files_list:
+            data_file["is_failed_upload"] = False
+            data_file["failure_message"] = None
             data_file["is_uploaded"] = data_file["uploaded"] #temporary during rename
             data_file["is_loaded"] = data_file["is_uploaded"]  # fix this later, when polling
             data_file["percent_loaded"] = 0
             if data_file["is_loaded"]:
                 data_file["percent_loaded"] = 100
+
+        for raw_file_upload_row in raw_file_upload_rows:
+            for my_dict in data_files_list:
+                if (my_dict["name"] == raw_file_upload_row["file"]) or (my_dict["name"] == "counter"):
+                    my_dict["uploaded"] = True
+                    my_dict["created_date"] = raw_file_upload_row["created"]
+                    if raw_file_upload_row["num_rows"]:
+                        my_dict["rows_count"] = raw_file_upload_row["num_rows"]
+                    if raw_file_upload_row["failure_message"]:
+                        my_dict["is_failed_upload"] = True
+                        my_dict["failure_message"] = raw_file_upload_row["failure_message"]
+
 
         preprocess_file_list = s3_client.list_objects(Bucket="unsub-file-uploads-preprocess")
         for preprocess_file in preprocess_file_list.get("Contents", []):
