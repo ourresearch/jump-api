@@ -624,24 +624,31 @@ class Package(db.Model):
             raw_file_upload_rows = cursor.fetchall()
 
         for data_file in data_files_list:
-            data_file["is_failed_upload"] = False
-            data_file["failure_message"] = None
-            data_file["is_uploaded"] = data_file["uploaded"] #temporary during rename
-            data_file["is_loaded"] = data_file["is_uploaded"]  # fix this later, when polling
-            data_file["percent_loaded"] = 0
-            if data_file["is_loaded"]:
-                data_file["percent_loaded"] = 100
+            data_file["error"] = None
+            data_file["error_details"] = None
+            data_file["is_uploaded"] = False
+            data_file["is_parsed"] = False
+            data_file["is_live"] = False
 
         for raw_file_upload_row in raw_file_upload_rows:
             for my_dict in data_files_list:
-                if (my_dict["name"] == raw_file_upload_row["file"]) or (my_dict["name"] == "counter"):
-                    my_dict["uploaded"] = True
+                if (my_dict["name"] == raw_file_upload_row["file"]):
+                    my_dict["is_uploaded"] = True
+                    my_dict["is_parsed"] = True
                     my_dict["created_date"] = raw_file_upload_row["created"]
                     if raw_file_upload_row["num_rows"]:
                         my_dict["rows_count"] = raw_file_upload_row["num_rows"]
-                    if raw_file_upload_row["failure_message"]:
-                        my_dict["is_failed_upload"] = True
-                        my_dict["failure_message"] = raw_file_upload_row["failure_message"]
+                    if raw_file_upload_row["error"]:
+                        my_dict["is_live"] = False
+                        my_dict["error"] = raw_file_upload_row["error"]
+                        error_details_dict = {
+                            "no_useable_rows": "No usable rows found.",
+                            "error_reading_file": "Error reading this file. Try opening this file, save in .xlsx format, and upload that.",
+                            "runtime_error": "Error processing file. Please email this file to team@ourresearch.org so the Unsub team can look into the problem."
+                        }
+                        my_dict["error_details"] = error_details_dict.get(my_dict["error"], "There was an error")
+                    else:
+                        my_dict["is_live"] = True
 
 
         preprocess_file_list = s3_client.list_objects(Bucket="unsub-file-uploads-preprocess")
@@ -657,8 +664,9 @@ class Package(db.Model):
             age_seconds = (datetime.datetime.utcnow() - preprocess_file["LastModified"].replace(tzinfo=None)).total_seconds()
             for my_dict in data_files_list:
                 if my_dict["name"] == filetype:
-                    my_dict["is_loaded"] = False
-                    my_dict["percent_loaded"] = 50
+                    my_dict["is_uploaded"] = True
+                    my_dict["is_parsed"] = False
+                    my_dict["is_live"] = False
 
         return {
             "id": self.package_id,

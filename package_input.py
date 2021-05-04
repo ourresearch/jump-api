@@ -169,7 +169,7 @@ class PackageInput:
     def _raw_s3_bucket(self):
         return u"unsub-file-uploads"
 
-    def _copy_raw_to_s3(self, filename, package_id, num_rows=None, failure_message=None):
+    def _copy_raw_to_s3(self, filename, package_id, num_rows=None, error=None):
         if u"." in filename:
             suffix = u".{}".format(filename.split(u".")[-1])
         else:
@@ -189,7 +189,7 @@ class PackageInput:
             bucket_name=bucket_name,
             object_name=object_name,
             num_rows=num_rows,
-            failure_message=failure_message
+            error=error
         ))
 
         return "s3://{}/{}".format(bucket_name, object_name)
@@ -523,12 +523,10 @@ class PackageInput:
             normalized_rows, error_rows = self.normalize_rows(file_name, file_package=my_package)
         except (UnicodeError, csv.Error) as e:
             print u"normalize_rows error {}".format(e)
-            message = u"Error reading this file. Try opening this file, save in .xlsx format, and upload that.".format(
-                e.message)
-            self._copy_raw_to_s3(file_name, package_id, num_rows=None, failure_message=message)
-            return {"success": False, "message": message, "warnings": []}
+            self._copy_raw_to_s3(file_name, package_id, num_rows=None, error="error_reading_file")
+            return {"success": False, "message": "error_reading_file", "warnings": []}
         except RuntimeError as e:
-            self._copy_raw_to_s3(file_name, package_id, num_rows=None, failure_message=e.message)
+            self._copy_raw_to_s3(file_name, package_id, num_rows=None, error="runtime_error")
             return {"success": False, "message": e.message, "warnings": []}
 
         # save normalized rows
@@ -588,9 +586,9 @@ class PackageInput:
 
             db.session.execute(copy_cmd.bindparams(creds=aws_creds))
             self.update_dest_table(package_id)
-            self._copy_raw_to_s3(file_name, package_id, num_rows, failure_message=None)
+            self._copy_raw_to_s3(file_name, package_id, num_rows, error=None)
         else:
-            self._copy_raw_to_s3(file_name, package_id, num_rows=0, failure_message="No usable rows found.")
+            self._copy_raw_to_s3(file_name, package_id, num_rows=0, error="no_useable_rows")
 
         # delete the current errors, save new errors
         self.save_errors(package_id, error_rows)
