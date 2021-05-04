@@ -979,7 +979,7 @@ def refresh_cached_prices_from_db(package_id, publisher_name):
     else:
         publisher_where = "true"
 
-    command = u"select issn_l, price from jump_journal_prices where package_id = '{}' and {}".format(package_id, publisher_where)
+    command = u"select issn_l, price from jump_journal_prices where (package_id = '{}') and {}".format(package_id, publisher_where)
     # print "command", command
     with get_db_cursor() as cursor:
         cursor.execute(command)
