@@ -41,9 +41,13 @@ def recompute_journal_metadata():
             cursor.execute(q)
             i += 1
             print i
-    print(elapsed(start_time))
-    print u"done writing to db, took {} seconds".format(elapsed(start_time))
+    print u"done committing journals, took {} seconds total".format(elapsed(start_time))
+    print u"now refreshing flat view"
 
+    with get_db_cursor() as cursor:
+       cursor.execute("refresh materialized view journalsdb_computed_flat;")
+
+    print u"done writing to db, took {} seconds total".format(elapsed(start_time))
 
 
 class JournalsDBRaw(db.Model):
