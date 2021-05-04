@@ -136,7 +136,12 @@ app.config["SQLALCHEMY_BINDS"] = {
 # see https://stackoverflow.com/questions/43594310/redshift-sqlalchemy-long-query-hangs
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = { "pool_pre_ping": True,
                                             "pool_recycle": 300,
-                                            "connect_args": {"keepalives": 1, "keepalives_idle": 10, "keepalives_interval": 2, "keepalives_count": 5,}
+                                            "connect_args": {
+                                                "keepalives": 1,
+                                                "keepalives_idle": 10,
+                                                "keepalives_interval": 2,
+                                                "keepalives_count": 5
+                                            }
             }
 
 # from http://stackoverflow.com/a/12417346/596939
@@ -304,6 +309,15 @@ def reset_cache(module_name, function_name, *args):
         cursor.execute(insert_command)
 
 cached_consortium_scenario_ids = ["tGUVWRiN", "scenario-QC2kbHfUhj9W", "EcUvEELe", "CBy9gUC3", "6it6ajJd", "GcAsm5CX", "aAFAuovt"]
+
+from journalsdb import JournalMetadata
+
+print u"loading all journal metadata...",
+start_time = time()
+all_journal_metadata = JournalMetadata.query.all()
+print u"loaded all journal metadata in {} seconds.".format(elapsed(start_time))
+
+
 
 def warm_cache():
     print u"warming cache"

@@ -97,6 +97,20 @@ class JournalMetadata(db.Model):
     def issns(self):
         return json.loads(self.issns_string)
 
+    @cached_property
+    def publisher_code(self):
+        if self.publisher == "Elsevier":
+            return "Elsevier"
+        elif self.publisher == "Springer Nature":
+            return "SpringerNature"
+        elif self.publisher == "Wiley":
+            return "Wiley"
+        elif self.publisher == "SAGE":
+            return "Sage"
+        elif self.publisher == "Taylor & Francis":
+            return "TaylorFrancis"
+        return self.publisher
+
     def get_insert_values(self):
         response = u"""(
                     '{created}', 
@@ -205,7 +219,7 @@ class JournalMetadata(db.Model):
 
         if not response:
             if use_high_price_if_unknown:
-                response = 99999999
+                response = 9999999999
         return response
 
     def __repr__(self):

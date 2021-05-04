@@ -39,7 +39,6 @@ from consortium import Consortium
 from apc_journal import ApcJournal
 from assumptions import Assumptions
 
-
 def get_clean_package_id(http_request_args):
     if not http_request_args:
         return DEMO_PACKAGE_ID
@@ -147,28 +146,38 @@ class Scenario(object):
         prices_dict = {}
         self.data["prices"] = {}
 
-        prices_to_consider = [self.package_id]
 
         # use defaults if USD
         if self.my_package and self.my_package.currency == "USD":
+            prices_to_consider = [self.package_id]
             prices_to_consider += [DEMO_PACKAGE_ID]
 
-        # special workaround for SUNY
-        from app import suny_consortium_package_ids
-        # print "package_id", self.package_id_for_db, get_parent_consortium_package_id(self.package_id_for_db)
-        if get_parent_consortium_package_id(self.package_id) in suny_consortium_package_ids or self.package_id in suny_consortium_package_ids:
-            prices_to_consider += ["68f1af1d", "93YfzkaA"]
+            # special workaround for SUNY
+            from app import suny_consortium_package_ids
+            # print "package_id", self.package_id_for_db, get_parent_consortium_package_id(self.package_id_for_db)
+            if get_parent_consortium_package_id(self.package_id) in suny_consortium_package_ids or self.package_id in suny_consortium_package_ids:
+                prices_to_consider += ["68f1af1d", "93YfzkaA"]
 
-        prices_raw = get_prices_from_cache(prices_to_consider, self.publisher_name)
-        for package_id_for_prices in prices_to_consider:
-            # print "package_id_for_prices", package_id_for_prices
-            if package_id_for_prices in prices_raw:
-                for my_issnl, price in prices_raw[package_id_for_prices].iteritems():
-                    if price is not None:
-                        prices_dict[my_issnl] = price
-
-                        # print package_id_for_prices, my_issnl, price, "prices_dict[my_issnl]", prices_dict[my_issnl]
-        self.data["prices"] = prices_dict
+            prices_raw = get_prices_from_cache(prices_to_consider, self.publisher_name)
+            for package_id_for_prices in prices_to_consider:
+                # print "package_id_for_prices", package_id_for_prices
+                if package_id_for_prices in prices_raw:
+                    for my_issnl, price in prices_raw[package_id_for_prices].iteritems():
+                        if price is not None:
+                            prices_dict[my_issnl] = price
+                            # print package_id_for_prices, my_issnl, price, "prices_dict[my_issnl]", prices_dict[my_issnl]
+            self.data["prices"] = prices_dict
+        elif self.my_package and self.my_package.currency == "GBP":
+            prices_dict = {}
+            prices_uploaded_raw = refresh_cached_prices_from_db(self.package_id, None)
+            from app import all_journal_metadata
+            for my_journal_metadata in all_journal_metadata:
+                if my_journal_metadata.publisher_code == self.publisher_name:
+                    if my_journal_metadata.is_current_subscription_journal:
+                        prices_dict[my_journal_metadata.issn_l] = prices_uploaded_raw.get(my_journal_metadata.issn_l, None)
+                        if not prices_dict[my_journal_metadata.issn_l]:
+                            prices_dict[my_journal_metadata.issn_l] = my_journal_metadata.get_subscription_price("GBP", use_high_price_if_unknown=True)
+            self.data["prices"] = prices_dict
 
         clean_dict = {}
         for issn_l, price_row in self.data["prices"].iteritems():
@@ -966,9 +975,9 @@ def refresh_cached_prices_from_db(package_id, publisher_name):
     elif publisher_name == "Sage":
         publisher_where = "(publisher ilike '%sage%')"
     elif publisher_name == "TaylorFrancis":
-        publisher_where = "((publisher ilike '%informa uk%') or (publisher ilike '%taylorfrancis%'))"
+        publisher_where = "((publisher ilike '%informa uk%') or (publisher ilike '%taylorfrancis%') or (publisher ilike 'Taylor & Francis')"
     else:
-        return 'false'
+        publisher_where = "true"
 
     command = u"select issn_l, price from jump_journal_prices where package_id = '{}' and {}".format(package_id, publisher_where)
     # print "command", command
