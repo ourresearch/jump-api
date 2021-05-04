@@ -975,7 +975,7 @@ def refresh_cached_prices_from_db(package_id, publisher_name):
     elif publisher_name == "Sage":
         publisher_where = "(publisher ilike '%sage%')"
     elif publisher_name == "TaylorFrancis":
-        publisher_where = "((publisher ilike '%informa uk%') or (publisher ilike '%taylorfrancis%') or (publisher ilike 'Taylor & Francis')"
+        publisher_where = "((publisher ilike '%informa uk%') or (publisher ilike '%taylorfrancis%') or (publisher ilike 'Taylor & Francis'))"
     else:
         publisher_where = "true"
 
