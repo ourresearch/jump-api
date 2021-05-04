@@ -831,6 +831,9 @@ def update_publisher(publisher_id):
     if "name" in request.json:
         publisher.package_name = request.json["name"]
 
+    if "currency" in request.json:
+        publisher.currency = request.json["currency"].upper()
+
     if "warnings" in request.json:
         for warning_dict in request.json["warnings"]:
             if warning_dict["id"] == "missing_perpetual_access":
