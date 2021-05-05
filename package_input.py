@@ -537,6 +537,7 @@ class PackageInput:
             self._copy_raw_to_s3(file_name, package_id, num_rows=None, error="error_reading_file")
             return {"success": False, "message": "error_reading_file", "warnings": []}
         except RuntimeError as e:
+            print u"Runtime Error processing file {}".format(e.message)
             self._copy_raw_to_s3(file_name, package_id, num_rows=None, error="runtime_error")
             return {"success": False, "message": e.message, "warnings": []}
 
