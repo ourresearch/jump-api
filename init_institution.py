@@ -23,6 +23,7 @@ from ror_id import RorId, RorGridCrosswalk
 from saved_scenario import SavedScenario
 from user import User
 
+from util import get_sql_answer
 from util import read_csv_file
 
 # heroku local:run python init_institution.py
@@ -128,46 +129,38 @@ def add_institution(institution_name, old_username, ror_id, is_consortium=False)
         # jump_citing
         logger.info(u"  populating jump_citing for GRID ID {}".format(g_id))
 
-        with get_db_cursor() as cursor:
 
-            num_citing_rows = cursor.execute(
-                "select count(*) from jump_citing where grid_id = '{}'".format(g_id)
-            ).scalar()
-            num_citing_rows_view = cursor.execute(
-                "select count(*) from jump_citing_view where grid_id = '{}'".format(g_id)
-            ).scalar()
+        num_citing_rows = get_sql_answer(db, "select count(*) from jump_citing where grid_id = '{}'".format(g_id))
+        num_citing_rows_view = get_sql_answer(db, "select count(*) from jump_citing_view where grid_id = '{}'".format(g_id))
 
-            logger.info("num_citing_rows: {}, num_citing_rows_view {}".format(num_citing_rows, num_citing_rows_view))
+        logger.info("num_citing_rows: {}, num_citing_rows_view {}".format(num_citing_rows, num_citing_rows_view))
 
-            if num_citing_rows:
-                logger.info(u"    {} jump_citing rows already exist for grid id '{}'".format(num_citing_rows, g_id))
-            else:
-                num_citing_rows = cursor.execute(
+        if num_citing_rows:
+            logger.info(u"    {} jump_citing rows already exist for grid id '{}'".format(num_citing_rows, g_id))
+        else:
+            with get_db_cursor() as cursor:
+                cursor.execute(
                     "insert into jump_citing (select * from jump_citing_view where grid_id = '{}')".format(g_id)
-                ).rowcount
-                logger.info(u"    created {} jump_citing rows for grid id {}".format(num_citing_rows, g_id))
+                )
+            logger.info(u"    created jump_citing rows for grid id {}".format(g_id))
 
-            # jump_authorship
+        # jump_authorship
 
-            logger.info(u"  populating jump_authorship for GRID ID  {}".format(g_id))
+        logger.info(u"  populating jump_authorship for GRID ID  {}".format(g_id))
 
-            num_authorship_rows = cursor.execute(
-                "select count(*) from jump_authorship where grid_id = '{}'".format(g_id)
-            ).scalar()
+        num_authorship_rows = get_sql_answer(db, "select count(*) from jump_authorship where grid_id = '{}'".format(g_id))
+        num_authorship_rows_view = get_sql_answer(db, "select count(*) from jump_authorship_view where grid_id = '{}'".format(g_id))
 
-            num_authorship_rows_view = cursor.execute(
-                "select count(*) from jump_authorship_view where grid_id = '{}'".format(g_id)
-            ).scalar()
+        logger.info("num_authorship_rows: {}, num_authorship_rows_view {}".format(num_authorship_rows, num_authorship_rows_view))
 
-            logger.info("num_authorship_rows: {}, num_authorship_rows_view {}".format(num_authorship_rows, num_authorship_rows_view))
-
-            if num_authorship_rows:
-                logger.info(u"    {} jump_authorship rows already exist for grid id {}".format(num_authorship_rows, g_id))
-            else:
-                num_authorship_rows = cursor.execute(
+        if num_authorship_rows:
+            logger.info(u"    {} jump_authorship rows already exist for grid id {}".format(num_authorship_rows, g_id))
+        else:
+            with get_db_cursor() as cursor:
+                cursor.execute(
                     "insert into jump_authorship (select * from jump_authorship_view where grid_id = '{}')".format(g_id)
-                ).rowcount
-                logger.info(u"    created {} jump_authorship rows for grid id {}".format(num_authorship_rows, g_id))
+                )
+            logger.info(u"    created jump_authorship rows for grid id {}".format(g_id))
 
 
 def add_user(user_info):
@@ -291,10 +284,9 @@ def add_package(institution_username, counter_filename):
     # jump_apc_authorships
     logger.info(u"populating jump_apc_authorships for Publisher {}".format(my_package))
 
-    with get_db_cursor() as cursor:
-        num_apc_authorship_rows = cursor.execute(
-            "select count(*) from jump_apc_authorships where package_id = '{}' and publisher='{}'".format(my_package.package_id, "Elsevier")
-        ).scalar()
+    num_apc_authorship_rows = get_sql_answer(db,
+        "select count(*) from jump_apc_authorships where package_id = '{}' and publisher='{}'".format(my_package.package_id, "Elsevier")
+    )
 
     if num_apc_authorship_rows:
         logger.info(u"  {} jump_apc_authorships rows already exist for Publisher {}".format(
@@ -309,10 +301,10 @@ def add_package(institution_username, counter_filename):
                         where package_id = '{}' and publisher='{}'
                     )
                 """.format(my_package.package_id, publisher_name)
-            ).rowcount
+            )
 
-        logger.info(u"  created {} jump_apc_authorships rows for Publisher {}".format(
-            num_apc_authorship_rows, my_package
+        logger.info(u"  created jump_apc_authorships rows for Publisher {}".format(
+            my_package
         ))
 
     log_level = logging.getLogger("").level
