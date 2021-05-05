@@ -683,7 +683,7 @@ class Package(db.Model):
                 "is_deleted": self.is_deleted is not None and self.is_deleted,
                 "warnings": self.warnings
             }
-        return response
+            return response
 
     def to_dict_minimal(self):
         response = {
