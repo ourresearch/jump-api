@@ -576,98 +576,98 @@ class Package(db.Model):
                 "select count(*) from jump_core_journals_input where package_id = '{}'".format(self.package_id)
             ).scalar()
 
-        if self.institution.is_consortium:
-            counter_uploaded = True
-        else:
-            counter_uploaded = num_counter_rows > 0
+            if self.institution.is_consortium:
+                counter_uploaded = True
+            else:
+                counter_uploaded = num_counter_rows > 0
 
 
-        data_files_list = [
-                {
-                    "name": "counter",
-                    "uploaded": counter_uploaded,
-                    "rows_count": num_counter_rows,
+            data_files_list = [
+                    {
+                        "name": "counter",
+                        "uploaded": counter_uploaded,
+                        "rows_count": num_counter_rows,
+                        "created_date": None,
+                        "error_rows": counter_errors,
+                    },
+                    {
+                        "name": "perpetual-access",
+                        "uploaded": False if self.is_demo else num_pa_rows > 0,
+                        "rows_count": num_pa_rows,
+                        "created_date": None,
+                        "error_rows": pa_errors,
+                    },
+                    {
+                        "name": "price",
+                        "uploaded": False if self.is_demo else num_price_rows > 0,
+                        "rows_count": num_price_rows,
+                        "created_date": None,
+                        "error_rows": price_errors,
+                    },
+                    {
+                        "name": "core-journals",
+                        "uploaded": False if self.is_demo else num_core_rows > 0,
+                        "rows_count": num_core_rows,
+                        "created_date": None,
+                        "error_rows": None,
+                    }]
+            for filename in ["counter-trj2", "counter-trj3", "counter-trj4"]:
+                data_files_list += [{
+                    "name": filename,
+                    "uploaded": False,
                     "created_date": None,
-                    "error_rows": counter_errors,
-                },
-                {
-                    "name": "perpetual-access",
-                    "uploaded": False if self.is_demo else num_pa_rows > 0,
-                    "rows_count": num_pa_rows,
-                    "created_date": None,
-                    "error_rows": pa_errors,
-                },
-                {
-                    "name": "price",
-                    "uploaded": False if self.is_demo else num_price_rows > 0,
-                    "rows_count": num_price_rows,
-                    "created_date": None,
-                    "error_rows": price_errors,
-                },
-                {
-                    "name": "core-journals",
-                    "uploaded": False if self.is_demo else num_core_rows > 0,
-                    "rows_count": num_core_rows,
-                    "created_date": None,
-                    "error_rows": None,
-                }]
-        for filename in ["counter-trj2", "counter-trj3", "counter-trj4"]:
-            data_files_list += [{
-                "name": filename,
-                "uploaded": False,
-                "created_date": None,
-                "rows_count": None,
-                "error_rows": None}]
+                    "rows_count": None,
+                    "error_rows": None}]
 
-        command = u"""select * from jump_raw_file_upload_object where package_id = '{}'""".format(self.package_id)
-        with get_db_cursor() as cursor:
-            cursor.execute(command)
-            raw_file_upload_rows = cursor.fetchall()
+            command = u"""select * from jump_raw_file_upload_object where package_id = '{}'""".format(self.package_id)
+            with get_db_cursor() as cursor:
+                cursor.execute(command)
+                raw_file_upload_rows = cursor.fetchall()
 
-        for data_file in data_files_list:
-            data_file["error"] = None
-            data_file["error_details"] = None
-            data_file["is_uploaded"] = False
-            data_file["is_parsed"] = False
-            data_file["is_live"] = False
+            for data_file in data_files_list:
+                data_file["error"] = None
+                data_file["error_details"] = None
+                data_file["is_uploaded"] = False
+                data_file["is_parsed"] = False
+                data_file["is_live"] = False
 
-        for raw_file_upload_row in raw_file_upload_rows:
-            for my_dict in data_files_list:
-                if (my_dict["name"] == raw_file_upload_row["file"]):
-                    my_dict["is_uploaded"] = True
-                    my_dict["is_parsed"] = True
-                    my_dict["created_date"] = raw_file_upload_row["created"]
-                    if raw_file_upload_row["num_rows"]:
-                        my_dict["rows_count"] = raw_file_upload_row["num_rows"]
-                    if raw_file_upload_row["error"]:
+            for raw_file_upload_row in raw_file_upload_rows:
+                for my_dict in data_files_list:
+                    if (my_dict["name"] == raw_file_upload_row["file"]):
+                        my_dict["is_uploaded"] = True
+                        my_dict["is_parsed"] = True
+                        my_dict["created_date"] = raw_file_upload_row["created"]
+                        if raw_file_upload_row["num_rows"]:
+                            my_dict["rows_count"] = raw_file_upload_row["num_rows"]
+                        if raw_file_upload_row["error"]:
+                            my_dict["is_live"] = False
+                            my_dict["error"] = raw_file_upload_row["error"]
+                            error_details_dict = {
+                                "no_useable_rows": "No usable rows found.",
+                                "error_reading_file": "Error reading this file. Try opening this file, save in .xlsx format, and upload that.",
+                                "runtime_error": "Error processing file. Please email this file to team@ourresearch.org so the Unsub team can look into the problem."
+                            }
+                            my_dict["error_details"] = error_details_dict.get(my_dict["error"], "There was an error")
+                        else:
+                            my_dict["is_live"] = True
+
+
+            preprocess_file_list = s3_client.list_objects(Bucket="unsub-file-uploads-preprocess")
+            for preprocess_file in preprocess_file_list.get("Contents", []):
+                filename = preprocess_file["Key"]
+                filename_base = filename.split(".")[0]
+                try:
+                    package_id, filetype = filename_base.split("_")
+                except ValueError:
+                    # not a valid file, skip it
+                    continue
+                size = preprocess_file["Size"]
+                age_seconds = (datetime.datetime.utcnow() - preprocess_file["LastModified"].replace(tzinfo=None)).total_seconds()
+                for my_dict in data_files_list:
+                    if my_dict["name"] == filetype:
+                        my_dict["is_uploaded"] = True
+                        my_dict["is_parsed"] = False
                         my_dict["is_live"] = False
-                        my_dict["error"] = raw_file_upload_row["error"]
-                        error_details_dict = {
-                            "no_useable_rows": "No usable rows found.",
-                            "error_reading_file": "Error reading this file. Try opening this file, save in .xlsx format, and upload that.",
-                            "runtime_error": "Error processing file. Please email this file to team@ourresearch.org so the Unsub team can look into the problem."
-                        }
-                        my_dict["error_details"] = error_details_dict.get(my_dict["error"], "There was an error")
-                    else:
-                        my_dict["is_live"] = True
-
-
-        preprocess_file_list = s3_client.list_objects(Bucket="unsub-file-uploads-preprocess")
-        for preprocess_file in preprocess_file_list.get("Contents", []):
-            filename = preprocess_file["Key"]
-            filename_base = filename.split(".")[0]
-            try:
-                package_id, filetype = filename_base.split("_")
-            except ValueError:
-                # not a valid file, skip it
-                continue
-            size = preprocess_file["Size"]
-            age_seconds = (datetime.datetime.utcnow() - preprocess_file["LastModified"].replace(tzinfo=None)).total_seconds()
-            for my_dict in data_files_list:
-                if my_dict["name"] == filetype:
-                    my_dict["is_uploaded"] = True
-                    my_dict["is_parsed"] = False
-                    my_dict["is_live"] = False
 
         return {
             "id": self.package_id,
