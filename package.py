@@ -571,9 +571,10 @@ class Package(db.Model):
         num_price_rows = JournalPriceInput.query.filter(JournalPriceInput.package_id == self.package_id).count()
         num_price_rows += num_price_error_rows
 
-        num_core_rows = db.session.execute(
-            "select count(*) from jump_core_journals_input where package_id = '{}'".format(self.package_id)
-        ).scalar()
+        with get_db_cursor() as cursor:
+            num_core_rows = cursor.execute(
+                "select count(*) from jump_core_journals_input where package_id = '{}'".format(self.package_id)
+            ).scalar()
 
         if self.institution.is_consortium:
             counter_uploaded = True
@@ -724,72 +725,75 @@ def clone_demo_package(institution):
         new_scenario.is_base_scenario = scenario.is_base_scenario
 
         db.session.add(new_scenario)
+    safe_commit(db)
 
-    # jump_counter
-    db.session.execute(
-        """
-            insert into jump_counter (issn_l, package_id, journal_name, total, report_year, report_name, report_version, metric_type, yop, access_type) (
-                select issn_l, '{}', journal_name, total, report_year, report_name, report_version, metric_type, yop, access_type 
-                from jump_counter
-                where package_id = '{}'
-            )
-        """.format(new_package.package_id, DEMO_PACKAGE_ID)
-    )
+    with get_db_cursor() as cursor:
 
-    # 'jump_counter_input',
-    db.session.execute(
-        """
-            insert into jump_counter_input (issn, journal_name, total, package_id, report_year, report_name, report_version, metric_type, yop, access_type) (
-                select issn, journal_name, total, '{}', report_year, report_name, report_version, metric_type, yop, access_type
-                from jump_counter_input
-                where package_id = '{}'
-            )
-        """.format(new_package.package_id, DEMO_PACKAGE_ID)
-    )
+        # jump_counter
+        cursor.execute(
+            """
+                insert into jump_counter (issn_l, package_id, journal_name, total, report_year, report_name, report_version, metric_type, yop, access_type) (
+                    select issn_l, '{}', journal_name, total, report_year, report_name, report_version, metric_type, yop, access_type 
+                    from jump_counter
+                    where package_id = '{}'
+                )
+            """.format(new_package.package_id, DEMO_PACKAGE_ID)
+        )
 
-    # jump_core_journals
-    db.session.execute(
-        """
-            insert into jump_core_journals (package_id, issn_l, baseline_access) (
-                select '{}', issn_l, baseline_access from jump_core_journals where package_id = '{}'
-            )
-        """.format(new_package.package_id, DEMO_PACKAGE_ID)
-    )
+        # 'jump_counter_input',
+        cursor.execute(
+            """
+                insert into jump_counter_input (issn, journal_name, total, package_id, report_year, report_name, report_version, metric_type, yop, access_type) (
+                    select issn, journal_name, total, '{}', report_year, report_name, report_version, metric_type, yop, access_type
+                    from jump_counter_input
+                    where package_id = '{}'
+                )
+            """.format(new_package.package_id, DEMO_PACKAGE_ID)
+        )
 
-    # 'jump_perpetual_access'
-    db.session.execute(
-        """
-            insert into jump_perpetual_access (package_id, issn_l, start_date, end_date) (
-                select '{}', issn_l, start_date, end_date 
-                from jump_perpetual_access
-                where package_id = '{}'
-            )
-        """.format(new_package.package_id, DEMO_PACKAGE_ID)
-    )
+        # jump_core_journals
+        cursor.execute(
+            """
+                insert into jump_core_journals (package_id, issn_l, baseline_access) (
+                    select '{}', issn_l, baseline_access from jump_core_journals where package_id = '{}'
+                )
+            """.format(new_package.package_id, DEMO_PACKAGE_ID)
+        )
 
-    # 'jump_perpetual_access_input'
-    db.session.execute(
-        """
-            insert into jump_perpetual_access_input (package_id, issn, start_date, end_date) (
-                select '{}', issn, start_date, end_date 
-                from jump_perpetual_access_input
-                where package_id = '{}'
-            )
-        """.format(new_package.package_id, DEMO_PACKAGE_ID)
-    )
+        # 'jump_perpetual_access'
+        cursor.execute(
+            """
+                insert into jump_perpetual_access (package_id, issn_l, start_date, end_date) (
+                    select '{}', issn_l, start_date, end_date 
+                    from jump_perpetual_access
+                    where package_id = '{}'
+                )
+            """.format(new_package.package_id, DEMO_PACKAGE_ID)
+        )
 
-    # 'jump_apc_authorships'
-    db.session.execute(
-        """
-            insert into jump_apc_authorships (
-                package_id, doi, publisher, num_authors_total, num_authors_from_uni, journal_name, issn_l, year, oa_status, apc
-            ) (
-                select '{}', doi, publisher, num_authors_total, num_authors_from_uni, journal_name, issn_l, year, oa_status, apc 
-                from jump_apc_authorships
-                where package_id = '{}'
-            )
-        """.format(new_package.package_id, DEMO_PACKAGE_ID)
-    )
+        # 'jump_perpetual_access_input'
+        cursor.execute(
+            """
+                insert into jump_perpetual_access_input (package_id, issn, start_date, end_date) (
+                    select '{}', issn, start_date, end_date 
+                    from jump_perpetual_access_input
+                    where package_id = '{}'
+                )
+            """.format(new_package.package_id, DEMO_PACKAGE_ID)
+        )
+
+        # 'jump_apc_authorships'
+        cursor.execute(
+            """
+                insert into jump_apc_authorships (
+                    package_id, doi, publisher, num_authors_total, num_authors_from_uni, journal_name, issn_l, year, oa_status, apc
+                ) (
+                    select '{}', doi, publisher, num_authors_total, num_authors_from_uni, journal_name, issn_l, year, oa_status, apc 
+                    from jump_apc_authorships
+                    where package_id = '{}'
+                )
+            """.format(new_package.package_id, DEMO_PACKAGE_ID)
+        )
 
     return new_package
 

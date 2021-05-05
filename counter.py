@@ -6,7 +6,9 @@ import calendar
 from kids.cache import cache
 
 from util import safe_commit
-from app import db, logger
+from app import db
+from app import logger
+from app import get_db_cursor
 from package_input import PackageInput
 
 class Counter(db.Model):
@@ -244,30 +246,28 @@ class CounterInput(db.Model, PackageInput):
 
         # delete select files if counter 5, else delete all counter data of all report names, including null
         if report_name == "jr1":
-            db.session.execute("delete from {} where package_id = '{}' and ((report_name is null) or (report_name = '{}'))".format(
-                self.__tablename__, package_id, report_name))
+            with get_db_cursor() as cursor:
+                cursor.execute("delete from {} where package_id = '{}' and ((report_name is null) or (report_name = '{}'))".format(
+                    self.__tablename__, package_id, report_name))
 
-            db.session.execute("delete from {} where package_id = '{}' and ((report_name is null) or (report_name = '{}'))".format(
-                self.destination_table(), package_id, report_name))
+                cursor.execute("delete from {} where package_id = '{}' and ((report_name is null) or (report_name = '{}'))".format(
+                    self.destination_table(), package_id, report_name))
 
-            db.session.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
-                package_id, self.calculate_file_type_label(report_name)))
+                cursor.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
+                    package_id, self.calculate_file_type_label(report_name)))
 
-            db.session.execute("delete from jump_file_import_error_rows where package_id = '{}' and file = '{}'".format(
-                package_id, self.calculate_file_type_label(report_name)))
+                cursor.execute("delete from jump_file_import_error_rows where package_id = '{}' and file = '{}'".format(
+                    package_id, self.calculate_file_type_label(report_name)))
 
         else:
-            db.session.execute("delete from {} where package_id = '{}' and report_name = '{}'".format(
-                self.__tablename__, package_id, report_name))
+            with get_db_cursor() as cursor:
+                cursor.execute("delete from {} where package_id = '{}' and report_name = '{}'".format(
+                    self.__tablename__, package_id, report_name))
 
-            db.session.execute("delete from {} where package_id = '{}' and report_name = '{}'".format(
-                self.destination_table(), package_id, report_name))
+                cursor.execute("delete from {} where package_id = '{}' and report_name = '{}'".format(
+                    self.destination_table(), package_id, report_name))
 
-            db.session.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
-                package_id, self.calculate_file_type_label(report_name), report_name))
-
-            if report_name == "trj2":
-                db.session.execute("delete from jump_file_import_error_rows where package_id = '{}' and file = '{}'".format(
+                cursor.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
                     package_id, self.calculate_file_type_label(report_name), report_name))
 
         safe_commit(db)

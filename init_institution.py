@@ -12,6 +12,7 @@ from werkzeug.security import generate_password_hash
 
 from app import db
 from app import logger
+from app import get_db_cursor
 from grid_id import GridId
 from institution import Institution
 from package import Package
@@ -127,45 +128,46 @@ def add_institution(institution_name, old_username, ror_id, is_consortium=False)
         # jump_citing
         logger.info(u"  populating jump_citing for GRID ID {}".format(g_id))
 
-        num_citing_rows = db.session.execute(
-            "select count(*) from jump_citing where grid_id = '{}'".format(g_id)
-        ).scalar()
+        with get_db_cursor() as cursor:
 
-        num_citing_rows_view = db.session.execute(
-            "select count(*) from jump_citing_view where grid_id = '{}'".format(g_id)
-        ).scalar()
+            num_citing_rows = cursor.execute(
+                "select count(*) from jump_citing where grid_id = '{}'".format(g_id)
+            ).scalar()
+            num_citing_rows_view = cursor.execute(
+                "select count(*) from jump_citing_view where grid_id = '{}'".format(g_id)
+            ).scalar()
 
-        logger.info("num_citing_rows: {}, num_citing_rows_view {}".format(num_citing_rows, num_citing_rows_view))
+            logger.info("num_citing_rows: {}, num_citing_rows_view {}".format(num_citing_rows, num_citing_rows_view))
 
-        if num_citing_rows:
-            logger.info(u"    {} jump_citing rows already exist for grid id '{}'".format(num_citing_rows, g_id))
-        else:
-            num_citing_rows = db.session.execute(
-                "insert into jump_citing (select * from jump_citing_view where grid_id = '{}')".format(g_id)
-            ).rowcount
-            logger.info(u"    created {} jump_citing rows for grid id {}".format(num_citing_rows, g_id))
+            if num_citing_rows:
+                logger.info(u"    {} jump_citing rows already exist for grid id '{}'".format(num_citing_rows, g_id))
+            else:
+                num_citing_rows = cursor.execute(
+                    "insert into jump_citing (select * from jump_citing_view where grid_id = '{}')".format(g_id)
+                ).rowcount
+                logger.info(u"    created {} jump_citing rows for grid id {}".format(num_citing_rows, g_id))
 
-        # jump_authorship
+            # jump_authorship
 
-        logger.info(u"  populating jump_authorship for GRID ID  {}".format(g_id))
+            logger.info(u"  populating jump_authorship for GRID ID  {}".format(g_id))
 
-        num_authorship_rows = db.session.execute(
-            "select count(*) from jump_authorship where grid_id = '{}'".format(g_id)
-        ).scalar()
+            num_authorship_rows = cursor.execute(
+                "select count(*) from jump_authorship where grid_id = '{}'".format(g_id)
+            ).scalar()
 
-        num_authorship_rows_view = db.session.execute(
-            "select count(*) from jump_authorship_view where grid_id = '{}'".format(g_id)
-        ).scalar()
+            num_authorship_rows_view = cursor.execute(
+                "select count(*) from jump_authorship_view where grid_id = '{}'".format(g_id)
+            ).scalar()
 
-        logger.info("num_authorship_rows: {}, num_authorship_rows_view {}".format(num_authorship_rows, num_authorship_rows_view))
+            logger.info("num_authorship_rows: {}, num_authorship_rows_view {}".format(num_authorship_rows, num_authorship_rows_view))
 
-        if num_authorship_rows:
-            logger.info(u"    {} jump_authorship rows already exist for grid id {}".format(num_authorship_rows, g_id))
-        else:
-            num_authorship_rows = db.session.execute(
-                "insert into jump_authorship (select * from jump_authorship_view where grid_id = '{}')".format(g_id)
-            ).rowcount
-            logger.info(u"    created {} jump_authorship rows for grid id {}".format(num_authorship_rows, g_id))
+            if num_authorship_rows:
+                logger.info(u"    {} jump_authorship rows already exist for grid id {}".format(num_authorship_rows, g_id))
+            else:
+                num_authorship_rows = cursor.execute(
+                    "insert into jump_authorship (select * from jump_authorship_view where grid_id = '{}')".format(g_id)
+                ).rowcount
+                logger.info(u"    created {} jump_authorship rows for grid id {}".format(num_authorship_rows, g_id))
 
 
 def add_user(user_info):
@@ -289,23 +291,25 @@ def add_package(institution_username, counter_filename):
     # jump_apc_authorships
     logger.info(u"populating jump_apc_authorships for Publisher {}".format(my_package))
 
-    num_apc_authorship_rows = db.session.execute(
-        "select count(*) from jump_apc_authorships where package_id = '{}' and publisher='{}'".format(my_package.package_id, "Elsevier")
-    ).scalar()
+    with get_db_cursor() as cursor:
+        num_apc_authorship_rows = cursor.execute(
+            "select count(*) from jump_apc_authorships where package_id = '{}' and publisher='{}'".format(my_package.package_id, "Elsevier")
+        ).scalar()
 
     if num_apc_authorship_rows:
         logger.info(u"  {} jump_apc_authorships rows already exist for Publisher {}".format(
             num_apc_authorship_rows, my_package
         ))
     else:
-        num_apc_authorship_rows = db.session.execute(
-            """
-                insert into jump_apc_authorships (
-                    select * from jump_apc_authorships_view
-                    where package_id = '{}' and publisher='{}'
-                )
-            """.format(my_package.package_id, publisher_name)
-        ).rowcount
+        with get_db_cursor() as cursor:
+            num_apc_authorship_rows = cursor.execute(
+                """
+                    insert into jump_apc_authorships (
+                        select * from jump_apc_authorships_view
+                        where package_id = '{}' and publisher='{}'
+                    )
+                """.format(my_package.package_id, publisher_name)
+            ).rowcount
 
         logger.info(u"  created {} jump_apc_authorships rows for Publisher {}".format(
             num_apc_authorship_rows, my_package

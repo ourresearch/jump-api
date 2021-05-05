@@ -218,7 +218,7 @@ def get_db_cursor(commit=False, use_realdictcursor=False, use_defaultcursor=Fals
               if commit:
                   connection.commit()
         except Exception as e:
-            print u"error in get_db_cursor", e
+            print u"error in get_db_cursor:", e
         finally:
             cursor.close()
             pass

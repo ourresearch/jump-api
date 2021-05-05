@@ -180,8 +180,12 @@ class PackageInput:
 
         s3_client.upload_file(filename, bucket_name, object_name)
 
-        db.session.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
-            package_id, self.file_type_label()))
+        with get_db_cursor() as cursor:
+            print("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
+                package_id, self.file_type_label()))
+
+            cursor.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
+                package_id, self.file_type_label()))
 
         db.session.add(RawFileUploadObject(
             package_id=package_id,
@@ -221,6 +225,13 @@ class PackageInput:
     def delete(self, package_id, dummy=None):
 
         with get_db_cursor() as cursor:
+            print("delete from {} where package_id = '{}'".format(self.__tablename__, package_id))
+            print("delete from {} where package_id = '{}'".format(self.destination_table(), package_id))
+            print("delete from jump_file_import_error_rows where package_id = '{}' and file = '{}'".format(
+                package_id, self.file_type_label()))
+            print("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
+                package_id, self.file_type_label()))
+
             cursor.execute("delete from {} where package_id = '{}'".format(self.__tablename__, package_id))
             cursor.execute("delete from {} where package_id = '{}'".format(self.destination_table(), package_id))
             cursor.execute("delete from jump_file_import_error_rows where package_id = '{}' and file = '{}'".format(
@@ -270,15 +281,15 @@ class PackageInput:
         #     aws_secret=os.getenv("AWS_SECRET_ACCESS_KEY")
         # )
         #
-        # db.session.execute(unload_cmd.bindparams(creds=aws_creds))
 
-        db.session.execute("delete from {} where package_id = '{}'".format(self.destination_table(), package_id))
+        with get_db_cursor() as cursor:
+            print("delete from {} where package_id = '{}'".format(self.destination_table(), package_id))
+            print("insert into {} (select * from {} where package_id = '{}')".format(
+                    self.destination_table(), self.import_view_name(), package_id))
 
-        db.session.execute(
-            "insert into {} (select * from {} where package_id = '{}')".format(
-                self.destination_table(), self.import_view_name(), package_id
-            )
-        )
+            cursor.execute("delete from {} where package_id = '{}'".format(self.destination_table(), package_id))
+            cursor.execute("insert into {} (select * from {} where package_id = '{}')".format(
+                    self.destination_table(), self.import_view_name(), package_id))
 
     def make_package_file_warning(self, parse_warning, additional_msg=None):
         return {
@@ -584,15 +595,17 @@ class PackageInput:
                 s3_object=s3_object,
             ))
 
+            print(copy_cmd.bindparams(creds=aws_creds))
             db.session.execute(copy_cmd.bindparams(creds=aws_creds))
+            safe_commit(db)
             self.update_dest_table(package_id)
             self._copy_raw_to_s3(file_name, package_id, num_rows, error=None)
         else:
             self._copy_raw_to_s3(file_name, package_id, num_rows=0, error="no_useable_rows")
 
         # delete the current errors, save new errors
-        self.save_errors(package_id, error_rows)
-        db.session.flush()
+        # self.save_errors(package_id, error_rows)
+        # db.session.flush()
 
         if commit:
             db.session.flush()  # see if this fixes Serializable isolation violation
