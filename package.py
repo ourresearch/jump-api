@@ -669,20 +669,21 @@ class Package(db.Model):
                         my_dict["is_parsed"] = False
                         my_dict["is_live"] = False
 
-        return {
-            "id": self.package_id,
-            "name": self.package_name,
-            "currency": self.currency,
-            "publisher": self.publisher,
-            "is_demo": self.is_demo,
-            "journal_detail": None,  #not used anymore
-            "scenarios": [s.to_dict_minimal() for s in self.saved_scenarios],
-            "data_files": data_files_list,
-            "journals": self.get_journal_attributes(),
-            "is_owned_by_consortium": self.is_owned_by_consortium,
-            "is_deleted": self.is_deleted is not None and self.is_deleted,
-            "warnings": self.warnings
-        }
+            response = {
+                "id": self.package_id,
+                "name": self.package_name,
+                "currency": self.currency,
+                "publisher": self.publisher,
+                "is_demo": self.is_demo,
+                "journal_detail": None,  #not used anymore
+                "scenarios": [s.to_dict_minimal() for s in self.saved_scenarios],
+                "data_files": data_files_list,
+                "journals": self.get_journal_attributes(),
+                "is_owned_by_consortium": self.is_owned_by_consortium,
+                "is_deleted": self.is_deleted is not None and self.is_deleted,
+                "warnings": self.warnings
+            }
+        return response
 
     def to_dict_minimal(self):
         response = {
