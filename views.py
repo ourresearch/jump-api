@@ -1090,29 +1090,8 @@ def jump_perpetual_access(package_id):
 @jwt_required
 def jump_journal_public_prices(package_id):
     my_package = authenticate_for_publisher(package_id, Permission.view())
-    table_dicts = my_package.public_price_rows()
-
-    filename = "public-prices.csv"
-    with open(filename, "w") as file:
-        csv_writer = csv.writer(file, encoding="utf-8")
-        keys = [my_key for my_key in table_dicts[0].keys()]
-        csv_writer.writerow(keys)
-        for table_dict in table_dicts:
-            row = []
-            for my_key in keys:
-                if my_key == "issn_l":
-                    # doing this hacky thing so excel doesn't format the issn as a date :(
-                    row.append(u"issn:{}".format(table_dict[my_key]))
-                elif my_key == "issns":
-                    row.append(u",".join(table_dict[my_key]))
-                else:
-                    row.append(table_dict[my_key])
-            csv_writer.writerow(row)
-    with open(filename, "r") as file:
-        contents = file.readlines()
-    return Response(contents, mimetype="text/csv")
-
-
+    rows = my_package.public_price_rows()
+    return jsonify_fast_no_sort({"rows": [row.to_dict() for row in rows]})
 
 
 @app.route("/publisher/<package_id>/price", methods=["GET", "POST", "DELETE"])
