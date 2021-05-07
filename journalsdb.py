@@ -214,18 +214,13 @@ def recompute_journal_metadata():
     with get_db_cursor() as cursor:
         # don't truncate raw!  is populated by xplenty.
         # further more truncate hangs, so do truncation this way instead
-        cursor.execute("create table journalsdb_computed_new like journalsdb_computed;")
-        cursor.execute("alter table journalsdb_computed rename to journalsdb_computed_old;")
-        cursor.execute("alter table journalsdb_computed_new rename to journalsdb_computed;")
-        cursor.execute("drop table journalsdb_computed_old;")
+        cursor.execute("delete from journalsdb_computed;")
         print 6
     print "tables ready for insertion"
-
 
     for journal_raw in journals_raw:
         new_journal_metadata = JournalMetadata(journal_raw)
         new_computed_journals.append(new_journal_metadata)
-        print "X",
 
     print "starting commits"
     start_time = time()
@@ -245,7 +240,8 @@ def recompute_journal_metadata():
     print u"now refreshing flat view"
 
     with get_db_cursor() as cursor:
-       cursor.execute("refresh materialized view journalsdb_computed_flat;")
+        cursor.execute("refresh materialized view journalsdb_computed_flat;")
+        cursor.execute("analyze journalsdb_computed;")
 
     print u"done writing to db, took {} seconds total".format(elapsed(start_time))
 
