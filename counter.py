@@ -195,16 +195,6 @@ class CounterInput(db.Model, PackageInput):
             report_version = None
             report_name = None
 
-
-        # check for COUNTER 5
-        # cop5_error = u"Sorry, we don"t support COUNTER 5 yet. Please upload a COUNTER 4 JR_1 file."
-        #
-        # for header_row in header_rows:
-        #     row_text = u"|".join([cell.strip() for cell in header_row]).lower()
-        #     if u"report_id|tr_j1" in row_text or u"release|5" in row_text:
-        #         raise RuntimeError(cop5_error)
-
-
         # get the year
         # get the header rows that look like months
         # Mar/18, 2017-12-01 00:00:00

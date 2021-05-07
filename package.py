@@ -573,7 +573,7 @@ class Package(db.Model):
 
         with get_db_cursor() as cursor:
             cursor.execute(
-                "select count(*) from jump_core_journals_input where package_id = '{}'".format(self.package_id)
+                "select count(*) from jump_core_journals_input where package_id = '{}' ".format(self.package_id)
             )
             row = cursor.fetchone()
             num_core_rows = row[0] if row else None

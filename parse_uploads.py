@@ -98,5 +98,14 @@ if __name__ == "__main__":
 
     parse_uploads()
 
+    # package_id = "package-nALodSzDfzqv"
+    # loader = PerpetualAccessInput()
+    # filename = "/Users/hpiwowar/Downloads/test-perpetual-access.csv"
 
+    # package_id = "package-DhFCs96d2Vnv"
+    # loader = CounterInput()
+    # filename = "/Users/hpiwowar/Downloads/package-DhFCs96d2Vnv_counter.xls"
+    #
+    # print loader.load(package_id, filename, commit=True)
 
+    # print loader.delete(package_id)

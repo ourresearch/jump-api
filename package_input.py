@@ -454,6 +454,7 @@ class PackageInput:
             #     normalized_column_names += ["total"]
 
             if set(required_keys).difference(set(normalized_column_names)):
+                print u"Error: missing required columns. Required: {}, Have {} As {}.".format(required_keys, raw_column_names, normalized_column_names)
                 raise RuntimeError(u"Missing required columns.")
 
             for row_no, row in enumerate(row_dicts):
@@ -597,6 +598,7 @@ class PackageInput:
             ))
 
             print(copy_cmd.bindparams(creds=aws_creds))
+            safe_commit(db)
             db.session.execute(copy_cmd.bindparams(creds=aws_creds))
             safe_commit(db)
             self.update_dest_table(package_id)
