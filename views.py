@@ -819,7 +819,6 @@ def get_package(package_id):
 
 @app.route("/publisher/<publisher_id>", methods=["POST"])
 @jwt_required
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 def update_publisher(publisher_id):
     authenticate_for_publisher(publisher_id, required_permission=Permission.modify())
 
@@ -861,7 +860,6 @@ def update_publisher(publisher_id):
 
 @app.route("/publisher/new", methods=["POST"])
 @jwt_required
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 def new_publisher():
     auth_user = authenticated_user()
 
@@ -999,7 +997,6 @@ def jump_data_file_status(package_id, data_file_name):
 @app.route("/publisher/<package_id>/counter-trj4", methods=["GET", "POST", "DELETE"])
 @app.route("/publisher/<package_id>/counter", methods=["GET", "POST", "DELETE"])
 @jwt_optional
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 def jump_counter(package_id):
     authenticate_for_publisher(package_id, Permission.view() if request.method == "GET" else Permission.modify())
     url_end = request.base_url.rsplit("/", 1)[1]
@@ -1050,7 +1047,6 @@ def jump_counter(package_id):
 
 @app.route("/publisher/<package_id>/perpetual-access", methods=["GET", "POST", "DELETE"])
 @jwt_optional
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 def jump_perpetual_access(package_id):
     authenticate_for_publisher(package_id, Permission.view() if request.method == "GET" else Permission.modify())
 
@@ -1090,8 +1086,36 @@ def jump_perpetual_access(package_id):
 #     return Response(raw["body"], content_type=raw["content_type"], headers=raw["headers"])
 
 
+@app.route("/publisher/<package_id>/price-public", methods=["GET"])
+@jwt_required
+def jump_journal_public_prices(package_id):
+    my_package = authenticate_for_publisher(package_id, Permission.view())
+    table_dicts = my_package.public_price_rows()
+
+    filename = "public-prices.csv"
+    with open(filename, "w") as file:
+        csv_writer = csv.writer(file, encoding="utf-8")
+        keys = [my_key for my_key in table_dicts[0].keys()]
+        csv_writer.writerow(keys)
+        for table_dict in table_dicts:
+            row = []
+            for my_key in keys:
+                if my_key == "issn_l":
+                    # doing this hacky thing so excel doesn't format the issn as a date :(
+                    row.append(u"issn:{}".format(table_dict[my_key]))
+                elif my_key == "issns":
+                    row.append(u",".join(table_dict[my_key]))
+                else:
+                    row.append(table_dict[my_key])
+            csv_writer.writerow(row)
+    with open(filename, "r") as file:
+        contents = file.readlines()
+    return Response(contents, mimetype="text/csv")
+
+
+
+
 @app.route("/publisher/<package_id>/price", methods=["GET", "POST", "DELETE"])
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 @jwt_optional
 def jump_journal_prices(package_id):
     package = authenticate_for_publisher(package_id, Permission.view() if request.method == "GET" else Permission.modify())
@@ -1457,7 +1481,6 @@ def scenario_post(package_id):
 
 @app.route("/publisher/<publisher_id>/scenario", methods=["POST"])
 @jwt_optional
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 def publisher_scenario_post(publisher_id):
     authenticate_for_publisher(publisher_id, Permission.modify())
 
@@ -1608,10 +1631,6 @@ def sign_s3(package_id):
     presigned_post = s3_client.generate_presigned_post(
         Bucket = upload_bucket,
         Key = file_name,
-        # Fields = {"acl": "public-read"},
-        # Conditions = [
-        #   {"acl": "public-read"},
-        # ],
         ExpiresIn = 60*60 # one hour
     )
     return json.dumps({

@@ -518,6 +518,25 @@ class Package(db.Model):
 
         return response
 
+    def public_price_rows(self):
+        prices_rows = []
+        from journalsdb import all_journal_metadata
+        for my_journal_metadata in all_journal_metadata:
+            if my_journal_metadata.publisher_code == self.publisher:
+                if my_journal_metadata.is_current_subscription_journal:
+                    my_dict = OrderedDict()
+                    my_dict["issn_l"] = my_journal_metadata.issn_l
+                    my_dict["issns"] = my_journal_metadata.issns
+                    my_dict["title"] = my_journal_metadata.title
+                    my_dict["publisher"] = my_journal_metadata.publisher
+                    my_dict["currency"] = self.currency
+                    my_dict["price"] = my_journal_metadata.get_subscription_price(self.currency, use_high_price_if_unknown=False)
+                    prices_rows += [my_dict]
+
+        prices_rows = sorted(prices_rows, key=lambda x: 0 if x["price"]==None else x["price"], reverse=True)
+        return prices_rows
+
+
     def to_dict_summary(self):
 
         return {
@@ -612,7 +631,16 @@ class Package(db.Model):
                         "rows_count": num_core_rows,
                         "created_date": None,
                         "error_rows": None,
-                    }]
+                    },
+                    {
+                        "name": "public-prices",
+                        "uploaded": True,
+                        "rows_count": len(self.public_price_rows()),
+                        "created_date": None,
+                        "error_rows": None,
+                    }
+            ]
+
             for filename in ["counter-trj2", "counter-trj3", "counter-trj4"]:
                 data_files_list += [{
                     "name": filename,

@@ -163,24 +163,27 @@ class JournalMetadata(db.Model):
             subscription_dict = json.loads(journal_raw.subscription_pricing)
             for price_dict in subscription_dict["prices"]:
                 if price_dict["currency"] == "USD":
-                    self.subscription_price_usd = price_dict["price"]
+                    self.subscription_price_usd = int(price_dict["price"])
                 if price_dict["currency"] == "GBP":
-                    self.subscription_price_gbp = price_dict["price"]
+                    self.subscription_price_gbp = int(price_dict["price"])
 
     def set_apc_prices(self, journal_raw):
         if journal_raw.apc_pricing:
             apc_dict = json.loads(journal_raw.apc_pricing)
             for price_dict in apc_dict["apc_prices"]:
                 if price_dict["currency"] == "USD":
-                    self.apc_price_usd = price_dict["price"]
+                    self.apc_price_usd = int(price_dict["price"])
                 if price_dict["currency"] == "GBP":
-                    self.apc_price_gbp = price_dict["price"]
+                    self.apc_price_gbp = int(price_dict["price"])
 
     def get_subscription_price(self, currency="USD", use_high_price_if_unknown=False):
+        response = None
         if currency == "USD":
-            response = self.subscription_price_usd
+            if self.subscription_price_usd:
+                response = int(self.subscription_price_usd)
         elif currency == "GBP":
-            response = self.subscription_price_gbp
+            if self.subscription_price_gbp:
+                response = int(self.subscription_price_gbp)
 
         if not response:
             if use_high_price_if_unknown:
