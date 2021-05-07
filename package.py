@@ -633,7 +633,7 @@ class Package(db.Model):
                         "error_rows": None,
                     },
                     {
-                        "name": "public-prices",
+                        "name": "price-public",
                         "uploaded": True,
                         "rows_count": len(self.public_price_rows()),
                         "created_date": None,
