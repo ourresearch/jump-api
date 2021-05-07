@@ -310,14 +310,6 @@ def reset_cache(module_name, function_name, *args):
 
 cached_consortium_scenario_ids = ["tGUVWRiN", "scenario-QC2kbHfUhj9W", "EcUvEELe", "CBy9gUC3", "6it6ajJd", "GcAsm5CX", "aAFAuovt"]
 
-from journalsdb import JournalMetadata
-
-print u"loading all journal metadata...",
-start_time = time()
-all_journal_metadata = JournalMetadata.query.all()
-print u"loaded all journal metadata in {} seconds.".format(elapsed(start_time))
-
-
 
 def warm_cache():
     print u"warming cache"

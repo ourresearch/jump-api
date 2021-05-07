@@ -13,41 +13,6 @@ from util import chunks
 from util import sql_bool
 from util import sql_escape_string
 
-def recompute_journal_metadata():
-    journals_raw = JournalsDBRaw.query.all()
-    print len(journals_raw)
-
-    new_computed_journals = []
-
-    with get_db_cursor() as cursor:
-       cursor.execute("truncate journalsdb_computed;")
-
-    for journal_raw in journals_raw:
-        new_journal_metadata = JournalMetadata(journal_raw)
-        new_computed_journals.append(new_journal_metadata)
-        print "X",
-
-    print "starting commits"
-    start_time = time()
-    insert_values_list = [j.get_insert_values() for j in new_computed_journals]
-    command_start = u"""INSERT INTO journalsdb_computed ({}) VALUES """.format(
-        ",".join(JournalMetadata.get_insert_column_names()))
-
-    with get_db_cursor() as cursor:
-        i = 0
-        for short_values_list in chunks(insert_values_list, 1000):
-            values_list_string = u",".join(short_values_list)
-            q = u"{} {};".format(command_start, values_list_string)
-            cursor.execute(q)
-            i += 1
-            print i
-    print u"done committing journals, took {} seconds total".format(elapsed(start_time))
-    print u"now refreshing flat view"
-
-    with get_db_cursor() as cursor:
-       cursor.execute("refresh materialized view journalsdb_computed_flat;")
-
-    print u"done writing to db, took {} seconds total".format(elapsed(start_time))
 
 
 class JournalsDBRaw(db.Model):
@@ -224,6 +189,72 @@ class JournalMetadata(db.Model):
 
     def __repr__(self):
         return u"<{} ({}) '{}' {}>".format(self.__class__.__name__, self.issn_l, self.title, self.publisher)
+
+
+
+def recompute_journal_metadata():
+    journals_raw = JournalsDBRaw.query.all()
+    print len(journals_raw)
+
+    new_computed_journals = []
+
+    print "making backups and getting tables ready to run"
+    with get_db_cursor() as cursor:
+        print 1
+        cursor.execute("drop table journalsdb_raw_bak_yesterday;")
+        print 2
+        cursor.execute("drop table journalsdb_computed_bak_yesterday;")
+        print 3
+        cursor.execute("create table journalsdb_raw_bak_yesterday as (select * from journalsdb_raw);")
+        print 4
+        cursor.execute("create table journalsdb_computed_bak_yesterday as (select * from journalsdb_computed);")
+        print 5
+
+    # do it as its own to force commit
+    with get_db_cursor() as cursor:
+        # don't truncate raw!  is populated by xplenty.
+        # further more truncate hangs, so do truncation this way instead
+        cursor.execute("create table journalsdb_computed_new like journalsdb_computed;")
+        cursor.execute("alter table journalsdb_computed rename to journalsdb_computed_old;")
+        cursor.execute("alter table journalsdb_computed_new rename to journalsdb_computed;")
+        cursor.execute("drop table journalsdb_computed_old;")
+        print 6
+    print "tables ready for insertion"
+
+
+    for journal_raw in journals_raw:
+        new_journal_metadata = JournalMetadata(journal_raw)
+        new_computed_journals.append(new_journal_metadata)
+        print "X",
+
+    print "starting commits"
+    start_time = time()
+    insert_values_list = [j.get_insert_values() for j in new_computed_journals]
+    command_start = u"""INSERT INTO journalsdb_computed ({}) VALUES """.format(
+        ",".join(JournalMetadata.get_insert_column_names()))
+
+    with get_db_cursor() as cursor:
+        i = 0
+        for short_values_list in chunks(insert_values_list, 1000):
+            values_list_string = u",".join(short_values_list)
+            q = u"{} {};".format(command_start, values_list_string)
+            cursor.execute(q)
+            i += 1
+            print i
+    print u"done committing journals, took {} seconds total".format(elapsed(start_time))
+    print u"now refreshing flat view"
+
+    with get_db_cursor() as cursor:
+       cursor.execute("refresh materialized view journalsdb_computed_flat;")
+
+    print u"done writing to db, took {} seconds total".format(elapsed(start_time))
+
+
+
+print u"loading all journal metadata...",
+start_time = time()
+all_journal_metadata = JournalMetadata.query.all()
+print u"loaded all journal metadata in {} seconds.".format(elapsed(start_time))
 
 
 # python journalsdb.py --recompute

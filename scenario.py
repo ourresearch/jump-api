@@ -170,7 +170,7 @@ class Scenario(object):
         elif self.my_package and self.my_package.currency == "GBP":
             prices_dict = {}
             prices_uploaded_raw = refresh_cached_prices_from_db(self.package_id, None)
-            from app import all_journal_metadata
+            from journalsdb import all_journal_metadata
             for my_journal_metadata in all_journal_metadata:
                 if my_journal_metadata.publisher_code == self.publisher_name:
                     if my_journal_metadata.is_current_subscription_journal:
