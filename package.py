@@ -657,9 +657,14 @@ class Package(db.Model):
             for data_file in data_files_list:
                 data_file["error"] = None
                 data_file["error_details"] = None
-                data_file["is_uploaded"] = False
-                data_file["is_parsed"] = False
-                data_file["is_live"] = False
+                if data_file["name"] == "price-public":
+                    data_file["is_uploaded"] = True
+                    data_file["is_parsed"] = True
+                    data_file["is_live"] = True
+                else:
+                    data_file["is_uploaded"] = False
+                    data_file["is_parsed"] = False
+                    data_file["is_live"] = False
 
             for raw_file_upload_row in raw_file_upload_rows:
                 for my_dict in data_files_list:
