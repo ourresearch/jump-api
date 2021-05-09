@@ -40,7 +40,8 @@ class Institution(db.Model):
 
     @cached_property
     def packages_sorted(self):
-        response = self.packages
+        packages = self.packages
+        response = [my_package for my_package in packages if not my_package.is_deleted]
         response.sort(key=lambda k: k.package_name, reverse=False)
         response.sort(key=lambda k: k.is_owned_by_consortium, reverse=False) #minor
         response.sort(key=lambda k: k.publisher, reverse=False)  #main sorting key is last
