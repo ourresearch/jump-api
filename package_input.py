@@ -169,7 +169,7 @@ class PackageInput:
     def _raw_s3_bucket(self):
         return u"unsub-file-uploads"
 
-    def _copy_raw_to_s3(self, filename, package_id, num_rows=None, error=None):
+    def _copy_raw_to_s3(self, filename, package_id, num_rows=None, error=None, error_details=None):
         if u"." in filename:
             suffix = u".{}".format(filename.split(u".")[-1])
         else:
@@ -181,20 +181,28 @@ class PackageInput:
         s3_client.upload_file(filename, bucket_name, object_name)
 
         with get_db_cursor() as cursor:
-            print("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
-                package_id, self.file_type_label()))
+            command = "delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
+                package_id, self.file_type_label())
+            cursor.execute(command)
 
-            cursor.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
-                package_id, self.file_type_label()))
+        if error and not error_details:
+            error_details_dict = {
+                "no_useable_rows": "No usable rows found.",
+                "error_reading_file": "Error reading this file. Try opening this file, save in .xlsx format, and upload that."}
+            error_details = error_details_dict.get("error", "Error processing file. Please email this file to team@ourresearch.org so the Unsub team can look into the problem.")
 
-        db.session.add(RawFileUploadObject(
+        new_object = RawFileUploadObject(
             package_id=package_id,
             file=self.file_type_label(),
             bucket_name=bucket_name,
             object_name=object_name,
             num_rows=num_rows,
-            error=error
-        ))
+            error=error,
+            error_details=error_details
+        )
+
+        db.session.add(new_object)
+        safe_commit(db)
 
         return "s3://{}/{}".format(bucket_name, object_name)
 
@@ -350,10 +358,10 @@ class PackageInput:
         if file_name.endswith(u".xls") or file_name.endswith(u".xlsx"):
             sheet_csv_file_names = convert_spreadsheet_to_csv(file_name, parsed=False)
             if not sheet_csv_file_names:
-                raise RuntimeError(u"Could not be opened as a spreadsheet.")
+                raise RuntimeError(u"Error: Could not be opened as a spreadsheet.")
 
             if len(sheet_csv_file_names) > 1:
-                raise RuntimeError(u"Workbook contains multiple sheets.")
+                raise RuntimeError(u"Error: Workbook contains multiple sheets.")
 
             file_name = sheet_csv_file_names[0]
 
@@ -418,7 +426,7 @@ class PackageInput:
 
             if header_index is None:
                 # give up. can't turn rows into dicts if we don't have a header
-                raise RuntimeError(u"Couldn't identify a header row in the file.")
+                raise RuntimeError(u"Error: Couldn't identify a header row in the file.")
 
             error_rows = {
                 "rows": [],
@@ -454,8 +462,7 @@ class PackageInput:
             #     normalized_column_names += ["total"]
 
             if set(required_keys).difference(set(normalized_column_names)):
-                print u"Error: missing required columns. Required: {}, Have {} As {}.".format(required_keys, raw_column_names, normalized_column_names)
-                raise RuntimeError(u"Missing required columns.")
+                raise RuntimeError(u"Error: missing required columns. Required: {}, Found: {}.".format(required_keys, raw_column_names))
 
             for row_no, row in enumerate(row_dicts):
                 absolute_row_no = parsed_to_absolute_line_no[row_no] + header_index + 1
@@ -539,7 +546,7 @@ class PackageInput:
             return {"success": False, "message": "error_reading_file", "warnings": []}
         except RuntimeError as e:
             print u"Runtime Error processing file {}".format(e.message)
-            self._copy_raw_to_s3(file_name, package_id, num_rows=None, error="runtime_error")
+            self._copy_raw_to_s3(file_name, package_id, num_rows=None, error="parsing_error", error_details=e.message)
             return {"success": False, "message": e.message, "warnings": []}
 
         # save normalized rows

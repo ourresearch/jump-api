@@ -63,6 +63,14 @@ class JournalMetadata(db.Model):
         return json.loads(self.issns_string)
 
     @cached_property
+    def display_issns(self):
+        return u",".join(self.issns)
+
+    @cached_property
+    def display_issn_l(self):
+        return u"issn:{}".format(self.issn_l)
+
+    @cached_property
     def publisher_code(self):
         if self.publisher == "Elsevier":
             return "Elsevier"
@@ -163,27 +171,27 @@ class JournalMetadata(db.Model):
             subscription_dict = json.loads(journal_raw.subscription_pricing)
             for price_dict in subscription_dict["prices"]:
                 if price_dict["currency"] == "USD":
-                    self.subscription_price_usd = int(price_dict["price"])
+                    self.subscription_price_usd = float(price_dict["price"])
                 if price_dict["currency"] == "GBP":
-                    self.subscription_price_gbp = int(price_dict["price"])
+                    self.subscription_price_gbp = float(price_dict["price"])
 
     def set_apc_prices(self, journal_raw):
         if journal_raw.apc_pricing:
             apc_dict = json.loads(journal_raw.apc_pricing)
             for price_dict in apc_dict["apc_prices"]:
                 if price_dict["currency"] == "USD":
-                    self.apc_price_usd = int(price_dict["price"])
+                    self.apc_price_usd = float(price_dict["price"])
                 if price_dict["currency"] == "GBP":
-                    self.apc_price_gbp = int(price_dict["price"])
+                    self.apc_price_gbp = float(price_dict["price"])
 
     def get_subscription_price(self, currency="USD", use_high_price_if_unknown=False):
         response = None
         if currency == "USD":
             if self.subscription_price_usd:
-                response = int(self.subscription_price_usd)
+                response = float(self.subscription_price_usd)
         elif currency == "GBP":
             if self.subscription_price_gbp:
-                response = int(self.subscription_price_gbp)
+                response = float(self.subscription_price_gbp)
 
         if not response:
             if use_high_price_if_unknown:
@@ -203,22 +211,16 @@ def recompute_journal_metadata():
 
     print "making backups and getting tables ready to run"
     with get_db_cursor() as cursor:
-        print 1
         cursor.execute("drop table journalsdb_raw_bak_yesterday;")
-        print 2
         cursor.execute("drop table journalsdb_computed_bak_yesterday;")
-        print 3
         cursor.execute("create table journalsdb_raw_bak_yesterday as (select * from journalsdb_raw);")
-        print 4
         cursor.execute("create table journalsdb_computed_bak_yesterday as (select * from journalsdb_computed);")
-        print 5
 
     # do it as its own to force commit
     with get_db_cursor() as cursor:
         # don't truncate raw!  is populated by xplenty.
         # further more truncate hangs, so do truncation this way instead
         cursor.execute("delete from journalsdb_computed;")
-        print 6
     print "tables ready for insertion"
 
     for journal_raw in journals_raw:
@@ -248,13 +250,46 @@ def recompute_journal_metadata():
 
     print u"done writing to db, took {} seconds total".format(elapsed(start_time))
 
+class MissingJournalMetadata(object):
+    def __init__(self, issn_l):
+        self.issn_l = issn_l
+        print "Error: missing journal {} from journalsdb:  https://api.journalsdb.org/journals/{}".format(issn_l, issn_l)
+        super(MissingJournalMetadata, self).__init__()
+
+    @cached_property
+    def display_issn_l(self):
+        return u"issn:{}".format(self.issn_l)
+
+    @cached_property
+    def issns(self):
+        return [self.issn_l]
+
+    @cached_property
+    def display_issns(self):
+        return u",".join(self.issns)
+
+    @cached_property
+    def title(self):
+        return u"Unrecognized Journal"
+
+    @cached_property
+    def publisher(self):
+        return u"Unrecognized Journal"
+
+
+def get_journal_metadata(issn_l):
+    global all_journal_metadata
+    my_journal_metadata = all_journal_metadata.get(issn_l, None)
+    if not my_journal_metadata:
+        my_journal_metadata = MissingJournalMetadata(issn_l=issn_l)
+    return my_journal_metadata
 
 
 print u"loading all journal metadata...",
 start_time = time()
-all_journal_metadata = JournalMetadata.query.all()
+all_journal_metadata_list = JournalMetadata.query.all()
+all_journal_metadata = dict(zip([journal_object.issn_l for journal_object in all_journal_metadata_list], all_journal_metadata_list))
 print u"loaded all journal metadata in {} seconds.".format(elapsed(start_time))
-
 
 # python journalsdb.py --recompute
 if __name__ == "__main__":
@@ -265,3 +300,5 @@ if __name__ == "__main__":
 
     if parsed_args.recompute:
         recompute_journal_metadata()
+
+

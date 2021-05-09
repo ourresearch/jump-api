@@ -11,6 +11,7 @@ class RawFileUploadObject(db.Model):
     created = db.Column(db.DateTime)
     num_rows = db.Column(db.Numeric)
     error = db.Column(db.Text)
+    error_details = db.Column(db.Text)
 
     def __init__(self, **kwargs):
         self.created = datetime.datetime.utcnow().isoformat()

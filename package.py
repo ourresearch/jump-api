@@ -521,7 +521,7 @@ class Package(db.Model):
     def public_price_rows(self):
         prices_rows = []
         from journalsdb import all_journal_metadata
-        for my_journal_metadata in all_journal_metadata:
+        for my_journal_metadata in all_journal_metadata.values():
             if my_journal_metadata.publisher_code == self.publisher:
                 if my_journal_metadata.is_current_subscription_journal:
                     my_dict = OrderedDict()
@@ -672,12 +672,7 @@ class Package(db.Model):
                         if raw_file_upload_row["error"]:
                             my_dict["is_live"] = False
                             my_dict["error"] = raw_file_upload_row["error"]
-                            error_details_dict = {
-                                "no_useable_rows": "No usable rows found.",
-                                "error_reading_file": "Error reading this file. Try opening this file, save in .xlsx format, and upload that.",
-                                "runtime_error": "Error processing file. Please email this file to team@ourresearch.org so the Unsub team can look into the problem."
-                            }
-                            my_dict["error_details"] = error_details_dict.get(my_dict["error"], "There was an error")
+                            my_dict["error_details"] = raw_file_upload_row["error_details"]
                         else:
                             my_dict["is_live"] = True
 

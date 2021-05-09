@@ -171,7 +171,7 @@ class Scenario(object):
             prices_dict = {}
             prices_uploaded_raw = refresh_cached_prices_from_db(self.package_id, None)
             from journalsdb import all_journal_metadata
-            for my_journal_metadata in all_journal_metadata:
+            for my_journal_metadata in all_journal_metadata.values():
                 if my_journal_metadata.publisher_code == self.publisher_name:
                     if my_journal_metadata.is_current_subscription_journal:
                         prices_dict[my_journal_metadata.issn_l] = prices_uploaded_raw.get(my_journal_metadata.issn_l, None)

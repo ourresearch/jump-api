@@ -319,7 +319,7 @@ def add_package(institution_username, counter_filename):
     if load_result["success"]:
         logger.info(load_result["message"])
     else:
-        raise RuntimeError(load_result["message"])
+        raise RuntimeError(u"Error: {}".format(load_result["message"]))
 
 
 # def add_prices():
