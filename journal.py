@@ -1377,7 +1377,7 @@ class Journal(object):
         response = OrderedDict()
 
         # meta
-        response["issn_l"] = self.issn_l
+        response["issn_l"] = u"issn:{}".format(self.issn_l)
         response["title"] = self.title
         response["subject"] = self.subject
         response["era_subjects"] = self.era_subjects

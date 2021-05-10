@@ -485,10 +485,14 @@ class Package(db.Model):
                 continue
             if issn_l in changed_publisher:
                 continue
+            display_issns = None
+            if get_ricks_journal()[issn_l]["issns"]:
+                # print 'get_ricks_journal()[issn_l]["issns"]', get_ricks_journal()[issn_l]["issns"]
+                display_issns = u",".join(get_ricks_journal()[issn_l]["issns"])
             my_dict = {
-                "issn_l": issn_l,
+                "issn_l": u"issn:{}".format(issn_l),
                 "name": get_ricks_journal()[issn_l]["title"],
-                "issns": get_ricks_journal()[issn_l]["issns"],
+                "issns": display_issns,
                 # "counter_sum": counter_rows[issn_l]
                 "counter_total": 42
             }
@@ -525,8 +529,8 @@ class Package(db.Model):
             if my_journal_metadata.publisher_code == self.publisher:
                 if my_journal_metadata.is_current_subscription_journal:
                     my_dict = OrderedDict()
-                    my_dict["issn_l"] = my_journal_metadata.issn_l
-                    my_dict["issns"] = my_journal_metadata.issns
+                    my_dict["issn_l"] = my_journal_metadata.display_issn_l
+                    my_dict["issns"] = my_journal_metadata.display_issns
                     my_dict["title"] = my_journal_metadata.title
                     my_dict["publisher"] = my_journal_metadata.publisher
                     my_dict["currency"] = self.currency

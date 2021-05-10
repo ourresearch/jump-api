@@ -192,8 +192,8 @@ class CounterInput(db.Model, PackageInput):
             report_name = version_labels[assigned_label]["report_name"]
         else:
             print u"Warning: Didn't recognize the counter file type"
-            report_version = None
-            report_name = None
+            report_version = "4"
+            report_name = "jr1"
 
         # get the year
         # get the header rows that look like months
