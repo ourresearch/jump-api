@@ -924,32 +924,6 @@ def new_publisher():
     return jsonify_fast_no_sort(package_dict)
 
 
-## examples
-# /counter/diff_no_price
-# /counter/diff_changed_publisher
-# /counter/
-@app.route("/package/<package_id>/counter/<diff_type>", methods=["GET"])
-@jwt_optional
-def jump_debug_counter_diff_type_package_id(package_id, diff_type):
-    authenticate_for_publisher(package_id, Permission.view())
-
-    if package_id.startswith("demo"):
-        my_package = Package.query.get("demo")
-        my_package.package_id = package_id
-    else:
-        my_package = Package.query.get(package_id)
-
-    if not my_package:
-        abort_json(404, "Package not found")
-
-    rows = getattr(my_package, "get_{}".format(diff_type))
-    my_list = []
-    for row in rows:
-        my_list += [{"issn_l": row["issn_l"], "title": row.get("title", ""), "num_2018_downloads": row.get("num_2018_downloads", None)}]
-
-    return jsonify_fast_no_sort({"count": len(rows), "list": my_list})
-
-
 def _long_error_message():
     return u"Something is wrong with the input file. This is placeholder for a message describing it. It's a little longer than the longest real message."
 

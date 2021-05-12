@@ -44,7 +44,8 @@ class JournalPrice(db.Model):
 
     def to_dict(self):
         return OrderedDict([
-            ("issn_l", self.display_issn_l),
+            ("issn_l_prefixed", self.display_issn_l),
+            ("issn_l", self.issn_l),
             ("issns", self.display_issns),
             ("title", self.title),
             ("publisher", self.publisher),

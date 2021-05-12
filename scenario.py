@@ -702,51 +702,61 @@ def get_consortium_package_ids(package_id):
     package_ids = [row["package_id"] for row in rows]
     return package_ids
 
+# don't cache because called after loading to get fresh data
+def get_counter_journals_by_report_name_from_db(package_id):
+    command = """select report_version, report_name, count(distinct issn_l) as num_journals 
+        from jump_counter 
+        where package_id='{}'
+        group by report_version, report_name
+        """.format(package_id)
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+    return rows
+
+# don't cache because called after loading to get fresh data
+def get_counter_totals_from_db(package_id):
+    counter_dict = defaultdict(int)
+    command = """select issn_l, total, report_version, report_name, metric_type 
+        from jump_counter 
+        where package_id='{}'
+        and (report_name is null or report_name != 'trj4')
+        """.format(package_id)
+    rows = None
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+    if rows:
+        is_counter5 = (rows[0]["report_version"] == "5")
+        for row in rows:
+            if is_counter5:
+                if row["report_name"] in ["trj2", "trj3"]:
+                    if row["metric_type"] in ["Unique_Item_Requests", "No_License"]:
+                        counter_dict[row["issn_l"]] += row.get("total", 0)
+                # else don't do anything with it for now
+            else:
+                counter_dict[row["issn_l"]] += row.get("total")
+    return counter_dict
+
 
 @cache
-def get_package_specific_scenario_data_from_db(input_package_id):
+def get_package_specific_scenario_data_from_db(package_id):
     timing = []
     section_time = time()
 
-    consortium_package_ids = []
-    # consortium_package_ids = get_consortium_package_ids(input_package_id)
-    if not consortium_package_ids:
-        consortium_package_ids = [input_package_id]
 
-    counter_dict = defaultdict(int)
-    for package_id in consortium_package_ids:
-        command = """select issn_l, total, report_version, report_name, metric_type 
-            from jump_counter 
-            where package_id='{}'
-            and (report_name is null or report_name != 'trj4')
-            """.format(package_id)
-        rows = None
-        with get_db_cursor() as cursor:
-            cursor.execute(command)
-            rows = cursor.fetchall()
-        if rows:
-            is_counter5 = (rows[0]["report_version"] == "5")
-            for row in rows:
-                if is_counter5:
-                    if row["report_name"] in ["trj2", "trj3"]:
-                        if row["metric_type"] in ["Unique_Item_Requests", "No_License"]:
-                            counter_dict[row["issn_l"]] += row.get("total", 0)
-                    # else don't do anything with it for now
-                else:
-                    counter_dict[row["issn_l"]] += row.get("total")
+    counter_dict = get_counter_totals_from_db(package_id)
 
     timing.append(("time from db: counter", elapsed(section_time, 2)))
     section_time = time()
-
-    consortium_package_ids_string = ",".join(["'{}'".format(package_id) for package_id in consortium_package_ids])
 
     command = """select citing.issn_l, citing.year::int, sum(num_citations) as num_citations
         from jump_citing citing
         join jump_grid_id institution_grid on citing.grid_id = institution_grid.grid_id
         join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id
         where citing.year < 2019 
-        and package_id in ({})
-        group by issn_l, year""".format(consortium_package_ids_string)
+        and package_id='{}'
+        group by issn_l, year""".format(package_id)
     citation_rows = None
     with get_db_cursor() as cursor:
         cursor.execute(command)
@@ -764,8 +774,8 @@ def get_package_specific_scenario_data_from_db(input_package_id):
         join jump_grid_id institution_grid on authorship.grid_id = institution_grid.grid_id
         join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id
         where authorship.year < 2019 
-        and package_id in ({})
-        group by issn_l, year""".format(consortium_package_ids_string)
+        and package_id='{}'
+        group by issn_l, year""".format(package_id)
     authorship_rows = None
     with get_db_cursor() as cursor:
         cursor.execute(command)

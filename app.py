@@ -198,8 +198,9 @@ def get_db_connection():
         connection.autocommit=True
         # connection.readonly = True
         yield connection
-    except Exception as e:
-        print u"error in get_db_connection", e
+    # except Exception as e:
+    #     print u"error in get_db_connection", e
+    #     raise
     finally:
         app.config['postgreSQL_pool'].putconn(connection)
 
@@ -217,8 +218,9 @@ def get_db_cursor(commit=False, use_realdictcursor=False, use_defaultcursor=Fals
               yield cursor
               if commit:
                   connection.commit()
-        except Exception as e:
-            print u"error in get_db_cursor:", e
+        # except Exception as e:
+        #     print u"error in get_db_cursor:", e
+        #     raise
         finally:
             cursor.close()
             pass

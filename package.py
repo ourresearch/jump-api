@@ -73,8 +73,15 @@ class Package(db.Model):
         return self.package_id.startswith("demo")
 
     @property
-    def has_counter_data(self):
-        return True
+    def has_complete_counter_data(self):
+        if not self.counter_journals_by_report_name:
+            return False
+        report_versions = [row["report_version"] for row in self.counter_journals_by_report_name]
+        if report_versions == ["4"]:
+            return True
+        if report_versions == ["5", "5", "5"]:
+            return True
+        return False
 
     @property
     def has_custom_perpetual_access(self):
@@ -460,43 +467,48 @@ class Package(db.Model):
             "issns": journal_rows.get(issn_l, {}).get("issns", [])
         } for issn_l in distinct_issnls]
 
+
+    @cached_property
+    def counter_totals_from_db(self):
+        from scenario import get_counter_totals_from_db
+        return get_counter_totals_from_db(self.package_id)
+
+    @cached_property
+    def counter_journals_by_report_name(self):
+        from scenario import get_counter_journals_by_report_name_from_db
+        return get_counter_journals_by_report_name_from_db(self.package_id)
+
     @cached_property
     def journals_missing_prices(self):
-        counter_rows = dict((x["issn_l"], x) for x in self.get_unfiltered_counter_rows)
+        from journalsdb import all_journal_metadata
+        from scenario import refresh_cached_prices_from_db
 
-        price_packages = [self.package_id]
-        if self.currency == "USD":
-            price_packages += [DEMO_PACKAGE_ID]
-        has_a_prices = get_prices_from_cache(price_packages, self.publisher)
-
-        open_access = [x["issn_l"] for x in self.get_diff_open_access_journals]
-        not_published_2019 = [x["issn_l"] for x in self.get_diff_not_published_in_2019]
-        changed_publisher = [x["issn_l"] for x in self.get_diff_changed_publisher]
-
+        counter_rows = self.counter_totals_from_db
+        prices_uploaded_raw = refresh_cached_prices_from_db(self.package_id, None)
         journals_missing_prices = []
-        for issn_l in counter_rows:
-            if issn_l in has_a_prices:
-                continue
-            if issn_l in open_access:
-                continue
-            if issn_l in not_published_2019:
-                continue
-            if issn_l in changed_publisher:
-                continue
-            if issn_l in changed_publisher:
-                continue
-            display_issns = None
-            if get_ricks_journal()[issn_l]["issns"]:
-                # print 'get_ricks_journal()[issn_l]["issns"]', get_ricks_journal()[issn_l]["issns"]
-                display_issns = u",".join(get_ricks_journal()[issn_l]["issns"])
-            my_dict = {
-                "issn_l": u"issn:{}".format(issn_l),
-                "name": get_ricks_journal()[issn_l]["title"],
-                "issns": display_issns,
-                # "counter_sum": counter_rows[issn_l]
-                "counter_total": 42
-            }
-            journals_missing_prices.append(my_dict)
+
+        for my_journal_metadata in all_journal_metadata.values():
+            if my_journal_metadata.publisher_code == self.publisher:
+                if my_journal_metadata.is_current_subscription_journal:
+                    issn_l = my_journal_metadata.issn_l
+                    if not issn_l in counter_rows:
+                        pass
+                    if prices_uploaded_raw.get(issn_l, None) != None:
+                        pass
+                    elif my_journal_metadata.get_subscription_price(self.currency, use_high_price_if_unknown=False) != None:
+                        pass
+                    else:
+                        my_dict = OrderedDict([
+                            ("issn_l_prefixed", my_journal_metadata.display_issn_l),
+                            ("issn_l", my_journal_metadata.issn_l),
+                            ("name", my_journal_metadata.title),
+                            ("issns", my_journal_metadata.display_issns),
+                            ("currency", self.currency),
+                            ("counter_total", counter_rows[issn_l]),
+                        ])
+                        journals_missing_prices.append(my_dict)
+
+        journals_missing_prices = sorted(journals_missing_prices, key=lambda x: 0 if x["counter_total"]==None else x["counter_total"], reverse=True)
 
         return journals_missing_prices
 
@@ -506,6 +518,14 @@ class Package(db.Model):
         from scenario import get_package_specific_scenario_data_from_db
 
         response = []
+
+        if not self.has_complete_counter_data:
+            response += [{
+                "id": "missing_counter_data",
+                "is_dismissed": False,
+                "journals": None
+            }]
+
         if not self.has_custom_perpetual_access:
             response += [{
                 "id": "missing_perpetual_access",
@@ -513,7 +533,7 @@ class Package(db.Model):
                 "journals": None
             }]
 
-        if self.journals_missing_prices:
+        if (not self.has_complete_counter_data) or (len(self.journals_missing_prices) > 0):
             response += [{
                 "id": "missing_prices",
                 "is_dismissed": (True == self.is_dismissed_warning_missing_prices),
@@ -529,7 +549,8 @@ class Package(db.Model):
             if my_journal_metadata.publisher_code == self.publisher:
                 if my_journal_metadata.is_current_subscription_journal:
                     my_dict = OrderedDict()
-                    my_dict["issn_l"] = my_journal_metadata.display_issn_l
+                    my_dict["issn_l_prefixed"] = my_journal_metadata.display_issn_l
+                    my_dict["issn_l"] = my_journal_metadata.issn_l
                     my_dict["issns"] = my_journal_metadata.display_issns
                     my_dict["title"] = my_journal_metadata.title
                     my_dict["publisher"] = my_journal_metadata.publisher
@@ -547,7 +568,7 @@ class Package(db.Model):
                 "id": self.package_id,
                 "name": self.package_name,
                 "currency": self.currency,
-                "hasCounterData": self.has_counter_data,
+                "hasCounterData": self.has_complete_counter_data,
                 "hasCustomPrices": self.has_custom_prices,
                 "hasCoreJournalList": self.has_core_journal_list,
                 "hasCustomPerpetualAccess": self.has_custom_perpetual_access,
