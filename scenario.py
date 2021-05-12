@@ -22,6 +22,7 @@ import simplejson as json
 from app import use_groups
 from app import get_db_cursor
 from app import DEMO_PACKAGE_ID
+from app import JISC_PACKAGE_ID
 from app import db
 # from app import my_memcached # disable memcached
 from app import logger
@@ -146,38 +147,43 @@ class Scenario(object):
         prices_dict = {}
         self.data["prices"] = {}
 
+        use_high_price_if_unknown = False
+        if self.package_id.startswith("package-jisc") or (self.package_id == JISC_PACKAGE_ID):
+            use_high_price_if_unknown = True
 
-        # use defaults if USD
-        if self.my_package and self.my_package.currency == "USD":
-            prices_to_consider = [self.package_id]
-            prices_to_consider += [DEMO_PACKAGE_ID]
+        #
+        # # use defaults if USD
+        # if self.my_package and self.my_package.currency == "USD":
+        #     prices_to_consider = [self.package_id]
+        #     prices_to_consider += [DEMO_PACKAGE_ID]
+        #
+        #     # special workaround for SUNY
+        #     from app import suny_consortium_package_ids
+        #     # print "package_id", self.package_id_for_db, get_parent_consortium_package_id(self.package_id_for_db)
+        #     if get_parent_consortium_package_id(self.package_id) in suny_consortium_package_ids or self.package_id in suny_consortium_package_ids:
+        #         prices_to_consider += ["68f1af1d", "93YfzkaA"]
+        #
+        #     prices_raw = get_prices_from_cache(prices_to_consider, self.publisher_name)
+        #     for package_id_for_prices in prices_to_consider:
+        #         # print "package_id_for_prices", package_id_for_prices
+        #         if package_id_for_prices in prices_raw:
+        #             for my_issnl, price in prices_raw[package_id_for_prices].iteritems():
+        #                 if price is not None:
+        #                     prices_dict[my_issnl] = price
+        #                     # print package_id_for_prices, my_issnl, price, "prices_dict[my_issnl]", prices_dict[my_issnl]
+        #     self.data["prices"] = prices_dict
+        # elif self.my_package and self.my_package.currency == "GBP":
 
-            # special workaround for SUNY
-            from app import suny_consortium_package_ids
-            # print "package_id", self.package_id_for_db, get_parent_consortium_package_id(self.package_id_for_db)
-            if get_parent_consortium_package_id(self.package_id) in suny_consortium_package_ids or self.package_id in suny_consortium_package_ids:
-                prices_to_consider += ["68f1af1d", "93YfzkaA"]
-
-            prices_raw = get_prices_from_cache(prices_to_consider, self.publisher_name)
-            for package_id_for_prices in prices_to_consider:
-                # print "package_id_for_prices", package_id_for_prices
-                if package_id_for_prices in prices_raw:
-                    for my_issnl, price in prices_raw[package_id_for_prices].iteritems():
-                        if price is not None:
-                            prices_dict[my_issnl] = price
-                            # print package_id_for_prices, my_issnl, price, "prices_dict[my_issnl]", prices_dict[my_issnl]
-            self.data["prices"] = prices_dict
-        elif self.my_package and self.my_package.currency == "GBP":
-            prices_dict = {}
-            prices_uploaded_raw = refresh_cached_prices_from_db(self.package_id, None)
-            from journalsdb import all_journal_metadata
-            for my_journal_metadata in all_journal_metadata.values():
-                if my_journal_metadata.publisher_code == self.publisher_name:
-                    if my_journal_metadata.is_current_subscription_journal:
-                        prices_dict[my_journal_metadata.issn_l] = prices_uploaded_raw.get(my_journal_metadata.issn_l, None)
-                        if not prices_dict[my_journal_metadata.issn_l]:
-                            prices_dict[my_journal_metadata.issn_l] = my_journal_metadata.get_subscription_price("GBP", use_high_price_if_unknown=True)
-            self.data["prices"] = prices_dict
+        prices_dict = {}
+        prices_uploaded_raw = refresh_cached_prices_from_db(self.package_id, None)
+        from journalsdb import all_journal_metadata
+        for my_journal_metadata in all_journal_metadata.values():
+            if my_journal_metadata.publisher_code == self.publisher_name:
+                if my_journal_metadata.is_current_subscription_journal:
+                    prices_dict[my_journal_metadata.issn_l] = prices_uploaded_raw.get(my_journal_metadata.issn_l, None)
+                    if not prices_dict[my_journal_metadata.issn_l]:
+                        prices_dict[my_journal_metadata.issn_l] = my_journal_metadata.get_subscription_price(self.my_package.currency, use_high_price_if_unknown=use_high_price_if_unknown)
+        self.data["prices"] = prices_dict
 
         clean_dict = {}
         for issn_l, price_row in self.data["prices"].iteritems():
