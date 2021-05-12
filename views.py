@@ -1313,12 +1313,16 @@ def export_get(table_dicts):
     with open(filename, "w") as file:
         csv_writer = csv.writer(file, encoding="utf-8")
         keys = [my_key for my_key in table_dicts[0].keys() if my_key not in keys_not_to_export]
+        keys = ["issn_l_prefixed"] + keys
 
         csv_writer.writerow(keys)
         for table_dict in table_dicts:
             row = []
             for my_key in keys:
-                row.append(table_dict[my_key])
+                if my_key == "issn_l_prefixed":
+                    row.append(u"issn:{}".format(table_dict["issn_l"]))
+                else:
+                    row.append(table_dict[my_key])
             csv_writer.writerow(row)
 
     with open(filename, "r") as file:
