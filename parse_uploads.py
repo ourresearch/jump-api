@@ -63,25 +63,6 @@ def parse_uploads():
         sleep( 2 * random.random())
         # print ".",
 
-
-        # try this https://pandas.pydata.org/docs/reference/api/pandas.read_csv.html
-        # with header as offset
-        # pass "names"
-        # use usecols
-        # use dtype
-        # use engine=c
-        # use skiprows
-
-        # import chardet
-        #
-        # import pandas as pd
-        #
-        # with open(r'C:\Users\indreshb\Downloads\Pokemon.csv', 'rb') as f:
-        #
-        # result = chardet.detect(f.read()) # or readline if the file is large
-        #
-        # df=pd.read_csv(r'C:\Users\indreshb\Downloads\Pokemon.csv',encoding=result['encoding'])
-
         # move the file
         # write it into the file uploads table
         # counter input and counter

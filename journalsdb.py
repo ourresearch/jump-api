@@ -198,6 +198,16 @@ class JournalMetadata(db.Model):
                 response = 9999999999
         return response
 
+    def get_apc_price(self, currency="USD"):
+        response = None
+        if currency == "USD":
+            if self.apc_price_usd:
+                response = float(self.apc_price_usd)
+        elif currency == "GBP":
+            if self.apc_price_gbp:
+                response = float(self.apc_price_gbp)
+        return response
+
     def __repr__(self):
         return u"<{} ({}) '{}' {}>".format(self.__class__.__name__, self.issn_l, self.title, self.publisher)
 

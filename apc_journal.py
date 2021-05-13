@@ -16,8 +16,12 @@ class ApcJournal(object):
         self.is_in_package = False
         self.subscribed = False
         self.scenario = None
+        self.package_id = None
+        self.package_currency = None
         if scenario:
             self.scenario = weakref.proxy(scenario)
+            self.package_id = self.scenario.package_id
+            self.package_currency = self.scenario.my_package.currency
             matching_journal = self.scenario.get_journal(self.issn_l)
             if matching_journal:
                 self.is_in_package = True
@@ -58,14 +62,17 @@ class ApcJournal(object):
     def apc_price_display(self):
         if not self.have_data:
             return "unknown"
-        return self.apc_2019
+        return self.apc_price
 
     @cached_property
-    def apc_2019(self):
-        try:
-            response = int(self.first_df.get("apc", None))
-        except (ValueError, TypeError):
-            response = None
+    def apc_price(self):
+        from journalsdb import get_journal_metadata
+        my_journal_metadata = get_journal_metadata(self.issn_l)
+
+        response = None
+        if my_journal_metadata:
+            response = my_journal_metadata.get_apc_price(self.package_currency)
+
         return response
 
     @cached_property
@@ -74,7 +81,9 @@ class ApcJournal(object):
 
     @cached_property
     def cost_apc_historical_by_year(self):
-        return [round(self.my_data_dict.get(year, defaultdict(int))["dollars"], 4) for year in self.historical_years_by_year]
+        if not self.apc_price:
+            return [None for year in self.historical_years_by_year]
+        return [round(self.apc_price * self.my_data_dict.get(year, defaultdict(int))["authorship_fraction"], 4) for year in self.historical_years_by_year]
 
     @cached_property
     def num_apc_papers_historical(self):
@@ -118,8 +127,8 @@ class ApcJournal(object):
             }
         table_row = OrderedDict()
         table_row["oa_status"] = self.oa_status
-        if self.apc_2019:
-            table_row["apc_price"] = self.apc_2019
+        if self.apc_price:
+            table_row["apc_price"] = self.apc_price
         else:
             table_row["apc_price"] = None
         table_row["num_apc_papers"] = round(self.num_apc_papers_historical, 1)
