@@ -62,7 +62,7 @@ class Package(db.Model):
 
     @property
     def unique_saved_scenarios(self):
-        response = self.saved_scenarios
+        return self.saved_scenarios
 
     @property
     def scenario_ids(self):
