@@ -173,6 +173,17 @@ class Consortium(object):
     @cached_property
     def scenario_saved_dict(self):
         from saved_scenario import get_latest_scenario_raw
+        from saved_scenario import save_raw_scenario_to_db
+        from saved_scenario import SavedScenario
+
+        response = get_latest_scenario_raw(self.scenario_id)
+        if not response:
+            print u"Couldn't find a saved set of parameter settings, so buiding one"
+            my_saved_scenario = SavedScenario.query.get(self.scenario_id)
+            dict_to_save = my_saved_scenario.to_dict_saved_from_db()
+            dict_to_save["name"] = my_saved_scenario.scenario_name
+            save_raw_scenario_to_db(self.scenario_id, dict_to_save, None)
+
         response = get_latest_scenario_raw(self.scenario_id)
         response["configs"]["cost_bigdeal"] = self.big_deal_cost_for_included_members
         return response

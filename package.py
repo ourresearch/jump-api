@@ -46,10 +46,9 @@ class Package(db.Model):
     created = db.Column(db.DateTime)
     is_demo = db.Column(db.Boolean)
     big_deal_cost = db.Column(db.Numeric)
+    big_deal_cost_increase = db.Column(db.Float)
     is_deleted = db.Column(db.Boolean)
     currency = db.Column(db.Text)
-    is_dismissed_warning_missing_perpetual_access = db.Column(db.Boolean)
-    is_dismissed_warning_missing_prices = db.Column(db.Boolean)
 
     saved_scenarios = db.relationship("SavedScenario", lazy="subquery", backref=db.backref("package", lazy="subquery"))
     institution = db.relationship("Institution", lazy="subquery", uselist=False)
@@ -72,8 +71,9 @@ class Package(db.Model):
     def is_demo_account(self):
         return self.package_id.startswith("demo")
 
-    @property
+    @cached_property
     def has_complete_counter_data(self):
+        print "self.counter_journals_by_report_name", self.counter_journals_by_report_name
         if not self.counter_journals_by_report_name:
             return False
         report_versions = [row["report_version"] for row in self.counter_journals_by_report_name]
@@ -523,6 +523,13 @@ class Package(db.Model):
 
         if not self.institution.is_consortium:
 
+            if (self.big_deal_cost == None) or (self.big_deal_cost_increase == None):
+                response += [{
+                    "id": "missing_big_deal_costs",
+                    "is_dismissed": False,
+                    "journals": None
+                }]
+
             if not self.has_complete_counter_data:
                 response += [{
                     "id": "missing_counter_data",
@@ -533,14 +540,14 @@ class Package(db.Model):
             if not self.has_custom_perpetual_access:
                 response += [{
                     "id": "missing_perpetual_access",
-                    "is_dismissed": (True == self.is_dismissed_warning_missing_perpetual_access),
+                    "is_dismissed": False,
                     "journals": None
                 }]
 
             if (not self.has_complete_counter_data) or (len(self.journals_missing_prices) > 0):
                 response += [{
                     "id": "missing_prices",
-                    "is_dismissed": (True == self.is_dismissed_warning_missing_prices),
+                    "is_dismissed": False,
                     "journals": self.journals_missing_prices
                 }]
 
@@ -712,6 +719,84 @@ class Package(db.Model):
                         else:
                             my_dict["is_live"] = True
 
+            #
+            # data_files_list = [
+            #         {
+            #             "name": "counter",
+            #             "uploaded": counter_uploaded,
+            #             "rows_count": num_counter_rows,
+            #             "error_rows": counter_errors,
+            #         },
+            #         {
+            #             "name": "perpetual-access",
+            #             "uploaded": False if self.is_demo else num_pa_rows > 0,
+            #             "rows_count": num_pa_rows,
+            #             "error_rows": pa_errors,
+            #         },
+            #         {
+            #             "name": "price",
+            #             "uploaded": False if self.is_demo else num_price_rows > 0,
+            #             "rows_count": num_price_rows,
+            #             "error_rows": price_errors,
+            #         },
+            #         {
+            #             "name": "core-journals",
+            #             "uploaded": False if self.is_demo else num_core_rows > 0,
+            #             "rows_count": num_core_rows,
+            #             "error_rows": None,
+            #         },
+            #         {
+            #             "name": "price-public",
+            #             "uploaded": True,
+            #             "rows_count": len(self.public_price_rows()),
+            #             "error_rows": None,
+            #         },
+            #         {
+            #             "name": "counter-trj2",
+            #             "uploaded": True,
+            #             "rows_count": len(self.public_price_rows()),
+            #             "error_rows": None,
+            #         },
+            #         {
+            #             "name": "counter-trj3",
+            #             "uploaded": True,
+            #             "rows_count": len(self.public_price_rows()),
+            #             "error_rows": None,
+            #         },
+            #         {
+            #             "name": "counter-trj4",
+            #             "uploaded": True,
+            #             "rows_count": len(self.public_price_rows()),
+            #             "error_rows": None,
+            #         }
+            # ]
+            #
+            # for data_file in data_files_list:
+            #     data_file["error"] = None
+            #     data_file["error_details"] = None
+            #     data_file["created_date"] = None
+            #     if data_file["rows_count"]:
+            #         data_file["is_uploaded"] = True
+            #         data_file["is_parsed"] = True
+            #         data_file["is_live"] = True
+            #     else:
+            #         data_file["is_uploaded"] = False
+            #         data_file["is_parsed"] = False
+            #         data_file["is_live"] = False
+            #
+            # command = u"""select * from jump_raw_file_upload_object where package_id = '{}'""".format(self.package_id)
+            # with get_db_cursor() as cursor:
+            #     cursor.execute(command)
+            #     raw_file_upload_rows = cursor.fetchall()
+            #
+            # for raw_file_upload_row in raw_file_upload_rows:
+            #     for my_dict in data_files_list:
+            #         if (my_dict["name"] == raw_file_upload_row["file"]):
+            #             if raw_file_upload_row["error"]:
+            #                 my_dict["is_live"] = False
+            #                 my_dict["error"] = raw_file_upload_row["error"]
+            #                 my_dict["error_details"] = raw_file_upload_row["error_details"]
+
 
             preprocess_file_list = s3_client.list_objects(Bucket="unsub-file-uploads-preprocess")
             for preprocess_file in preprocess_file_list.get("Contents", []):
@@ -741,8 +826,11 @@ class Package(db.Model):
                 "data_files": data_files_list,
                 "journals": self.get_journal_attributes(),
                 "is_owned_by_consortium": self.is_owned_by_consortium,
+                "is_consortium": self.institution.is_consortium,
                 "is_deleted": self.is_deleted is not None and self.is_deleted,
-                "warnings": self.warnings
+                "warnings": self.warnings,
+                "cost_bigdeal": self.big_deal_cost,
+                "cost_bigdeal_increase": self.big_deal_cost_increase
             }
             return response
 
@@ -753,6 +841,7 @@ class Package(db.Model):
             "currency": self.currency,
             "publisher": self.publisher,
             "is_owned_by_consortium": self.is_owned_by_consortium,
+            "is_consortium": self.institution.is_consortium,
             "is_deleted": self.is_deleted is not None and self.is_deleted,
         }
         return response

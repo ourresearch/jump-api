@@ -833,23 +833,22 @@ def update_publisher(publisher_id):
     if "currency" in request.json:
         publisher.currency = request.json["currency"].upper()
 
-    if "warnings" in request.json:
-        for warning_dict in request.json["warnings"]:
-            if warning_dict["id"] == "missing_perpetual_access":
-                publisher.is_dismissed_warning_missing_perpetual_access = warning_dict["is_dismissed"]
-            if warning_dict["id"] == "missing_prices":
-                publisher.is_dismissed_warning_missing_prices = warning_dict["is_dismissed"]
-
     if "is_deleted" in request.json:
         publisher.is_deleted = request.json["is_deleted"]
 
     if "cost_bigdeal" in request.json:
         try:
-            cost = float(request.json["cost_bigdeal"]) if request.json["cost_bigdeal"] is not None else None
+            cost = int(request.json["cost_bigdeal"]) if request.json["cost_bigdeal"] is not None else None
         except (ValueError, TypeError):
-            return abort_json(400, u"Couln't parse cost_bigdeal '{}' as a number.".format(request.json["cost_bigdeal"]))
-
+            return abort_json(400, u"Couldn't parse cost_bigdeal '{}' as a float.".format(request.json["cost_bigdeal"]))
         publisher.big_deal_cost = cost
+
+    if "cost_bigdeal_increase" in request.json:
+        try:
+            increase = float(request.json["cost_bigdeal_increase"]) if request.json["cost_bigdeal_increase"] is not None else None
+        except (ValueError, TypeError):
+            return abort_json(400, u"Couldn't parse cost_bigdeal_increase '{}' as a float.".format(request.json["cost_bigdeal_increase"]))
+        publisher.big_deal_cost_increase = increase
 
     db.session.merge(publisher)
     safe_commit(db)
@@ -987,7 +986,9 @@ def jump_counter(package_id):
         else:
             return abort_json(404, u"no counter file for package {}".format(package_id))
     elif request.method == "DELETE":
+        print "starting delete"
         response = CounterInput().delete(package_id, report_name)
+        print "done delete"
         return jsonify_fast_no_sort({"message": response})
     else:
         if request.args.get("error", False):
@@ -1483,6 +1484,7 @@ def scenario_delete(scenario_id):
     get_saved_scenario(scenario_id, required_permission=Permission.modify())
 
     command = "delete from jump_package_scenario where scenario_id = '{}'".format(scenario_id)
+    print command
     with get_db_cursor() as cursor:
         cursor.execute(command)
 

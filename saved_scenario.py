@@ -259,6 +259,8 @@ class SavedScenario(db.Model):
             response["publisher_name"] = self.package.package_name
             response["institution_id"] = self.package.institution.id
             response["institution_name"] = self.package.institution.display_name
+            response["cost_bigdeal"] = self.package.big_deal_cost
+            response["cost_bigdeal_increase"] = self.package.big_deal_cost_increase
 
         response["scenario_created"] = self.created
         response["is_base_scenario"] = self.is_base_scenario

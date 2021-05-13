@@ -408,22 +408,32 @@ class Scenario(object):
 
     @cached_property
     def cost_bigdeal_raw(self):
+        if self.my_package and self.my_package.big_deal_cost:
+            return float(self.my_package.big_deal_cost)
+
         big_deal_cost = self.settings.cost_bigdeal
         if isinstance(big_deal_cost, str):
             big_deal_cost = big_deal_cost.replace(",", "")
             big_deal_cost = float(big_deal_cost)
 
-        from assumptions import DEFAULT_COST_BIGDEAL
-        if big_deal_cost != float(DEFAULT_COST_BIGDEAL):
-            if self.my_package and self.my_package.big_deal_cost:
-                return float(self.my_package.big_deal_cost)
+        # from assumptions import DEFAULT_COST_BIGDEAL
+        # if big_deal_cost != float(DEFAULT_COST_BIGDEAL):
+        #     if self.my_package and self.my_package.big_deal_cost:
+        #         return float(self.my_package.big_deal_cost)
 
         return float(big_deal_cost)
 
 
     @cached_property
+    def cost_bigdeal_increase_raw(self):
+        if self.my_package and self.my_package.big_deal_cost_increase:
+            return float(self.my_package.big_deal_cost_increase)
+
+        return self.settings.cost_bigdeal_increase
+
+    @cached_property
     def cost_bigdeal_projected_by_year(self):
-        return [round(((1+self.settings.cost_bigdeal_increase/float(100))**year) * self.cost_bigdeal_raw )
+        return [round(((1+self.cost_bigdeal_increase_raw/float(100))**year) * self.cost_bigdeal_raw )
                                             for year in self.years]
 
     @cached_property
