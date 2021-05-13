@@ -188,6 +188,10 @@ class Scenario(object):
         clean_dict = {}
         for issn_l, price_row in self.data["prices"].iteritems():
             include_this_journal = True
+
+            if self.data["prices"][issn_l] == None:
+                include_this_journal = False
+
             if "core_list" in self.data and self.data["core_list"]:
                 if issn_l not in self.data["core_list"].keys():
                     include_this_journal = False
