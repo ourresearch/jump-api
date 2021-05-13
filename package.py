@@ -493,7 +493,9 @@ class Package(db.Model):
                     issn_l = my_journal_metadata.issn_l
                     if not issn_l in counter_rows:
                         pass
-                    if prices_uploaded_raw.get(issn_l, None) != None:
+                    elif counter_rows[issn_l] == 0:
+                        pass
+                    elif prices_uploaded_raw.get(issn_l, None) != None:
                         pass
                     elif my_journal_metadata.get_subscription_price(self.currency, use_high_price_if_unknown=False) != None:
                         pass
@@ -548,15 +550,17 @@ class Package(db.Model):
         for my_journal_metadata in all_journal_metadata.values():
             if my_journal_metadata.publisher_code == self.publisher:
                 if my_journal_metadata.is_current_subscription_journal:
-                    my_dict = OrderedDict()
-                    my_dict["issn_l_prefixed"] = my_journal_metadata.display_issn_l
-                    my_dict["issn_l"] = my_journal_metadata.issn_l
-                    my_dict["issns"] = my_journal_metadata.display_issns
-                    my_dict["title"] = my_journal_metadata.title
-                    my_dict["publisher"] = my_journal_metadata.publisher
-                    my_dict["currency"] = self.currency
-                    my_dict["price"] = my_journal_metadata.get_subscription_price(self.currency, use_high_price_if_unknown=False)
-                    prices_rows += [my_dict]
+                    my_price = my_journal_metadata.get_subscription_price(self.currency, use_high_price_if_unknown=False)
+                    if my_price != None:
+                        my_dict = OrderedDict()
+                        my_dict["issn_l_prefixed"] = my_journal_metadata.display_issn_l
+                        my_dict["issn_l"] = my_journal_metadata.issn_l
+                        my_dict["issns"] = my_journal_metadata.display_issns
+                        my_dict["title"] = my_journal_metadata.title
+                        my_dict["publisher"] = my_journal_metadata.publisher
+                        my_dict["currency"] = self.currency
+                        my_dict["price"] = my_price
+                        prices_rows += [my_dict]
 
         prices_rows = sorted(prices_rows, key=lambda x: 0 if x["price"]==None else x["price"], reverse=True)
         return prices_rows
