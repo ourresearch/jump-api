@@ -1279,13 +1279,10 @@ def live_publisher_id_apc_get(publisher_id):
     if not my_package:
         abort_json(404, "Publisher not found")
 
-    if my_package.unique_saved_scenarios:
-        my_scenario = my_package.unique_saved_scenarios[0]
-    else:
-        my_scenario = default_scenario(my_package.package_id)
-        db.session.add(my_scenario)
-        safe_commit(db)
+    if not my_package.unique_saved_scenarios:
+        abort_json(404, "Scenario not found")
 
+    my_scenario = my_package.unique_saved_scenarios[0]
     scenario_id = my_scenario.scenario_id
 
     my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
