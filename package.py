@@ -521,26 +521,28 @@ class Package(db.Model):
 
         response = []
 
-        if not self.has_complete_counter_data:
-            response += [{
-                "id": "missing_counter_data",
-                "is_dismissed": False,
-                "journals": None
-            }]
+        if not self.institution.is_consortium:
 
-        if not self.has_custom_perpetual_access:
-            response += [{
-                "id": "missing_perpetual_access",
-                "is_dismissed": (True == self.is_dismissed_warning_missing_perpetual_access),
-                "journals": None
-            }]
+            if not self.has_complete_counter_data:
+                response += [{
+                    "id": "missing_counter_data",
+                    "is_dismissed": False,
+                    "journals": None
+                }]
 
-        if (not self.has_complete_counter_data) or (len(self.journals_missing_prices) > 0):
-            response += [{
-                "id": "missing_prices",
-                "is_dismissed": (True == self.is_dismissed_warning_missing_prices),
-                "journals": self.journals_missing_prices
-            }]
+            if not self.has_custom_perpetual_access:
+                response += [{
+                    "id": "missing_perpetual_access",
+                    "is_dismissed": (True == self.is_dismissed_warning_missing_perpetual_access),
+                    "journals": None
+                }]
+
+            if (not self.has_complete_counter_data) or (len(self.journals_missing_prices) > 0):
+                response += [{
+                    "id": "missing_prices",
+                    "is_dismissed": (True == self.is_dismissed_warning_missing_prices),
+                    "journals": self.journals_missing_prices
+                }]
 
         return response
 
