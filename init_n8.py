@@ -187,14 +187,14 @@ def copy_subscriptions(jusp_id, package_type, subscriptions):
 
 def set_non_own_subscriptions(main_jusp_id, group_jusp_ids, package_type):
     main_scenario_id = u"scenario-n8els_{}_ownpta".format(main_jusp_id)
-    main_scenario_dict = get_latest_scenario_raw(main_scenario_id)
+    (updated, main_scenario_dict) = get_latest_scenario_raw(main_scenario_id)
     main_subscriptions = main_scenario_dict["subrs"]
 
     all_subscriptions = []
 
     for jusp_id in group_jusp_ids:
         scenario_id = u"scenario-n8els_{}_ownpta".format(jusp_id)
-        my_source_scenario_dict = get_latest_scenario_raw(scenario_id)
+        (updated, my_source_scenario_dict) = get_latest_scenario_raw(scenario_id)
         print "subscriptions: ", jusp_id, len(my_source_scenario_dict["subrs"])
         all_subscriptions += my_source_scenario_dict["subrs"]
         print "len all_subscriptions: ", len(list(set(all_subscriptions)))

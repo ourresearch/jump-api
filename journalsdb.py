@@ -286,6 +286,14 @@ class MissingJournalMetadata(object):
     def publisher(self):
         return u"Unrecognized Journal"
 
+    @cached_property
+    def get_apc_price(self, currency):
+        return None
+
+    @cached_property
+    def get_subscription_price(self, currency, use_high_price_if_unknown=False):
+        return None
+
 
 def get_journal_metadata(issn_l):
     global all_journal_metadata
@@ -302,6 +310,7 @@ all_journal_metadata = dict(zip([journal_object.issn_l for journal_object in all
 print u"loaded all journal metadata in {} seconds.".format(elapsed(start_time))
 
 # python journalsdb.py --recompute
+# heroku run --size=performance-l python journalsdb.py --recompute -r heroku
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()

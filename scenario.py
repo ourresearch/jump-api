@@ -97,7 +97,6 @@ class Scenario(object):
     def __init__(self, package_id, http_request_args=None, my_jwt=None):
         self.timing_messages = []
         self.section_time = time()        
-        self.settings = Assumptions(http_request_args)
         self.package_id = get_clean_package_id({"package": package_id})
         self.package_id_for_db = self.package_id
         if self.package_id.startswith("demo"):
@@ -114,6 +113,8 @@ class Scenario(object):
         self.institution_short_name = my_institution.old_username
         self.institution_id = my_institution.id
         self.my_package = my_package
+
+        self.settings = Assumptions(http_request_args, self.my_package.currency)
 
         # from app import USE_PAPER_GROWTH
         # if USE_PAPER_GROWTH:
