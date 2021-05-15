@@ -37,7 +37,7 @@ def parse_uploads():
                 report_name = "jr1"
                 if "-" in file:
                     report_name = file.split("-")[1]
-                CounterInput.delete(package_id, report_name=report_name)
+                CounterInput().delete(package_id, report_name=report_name)
             # the delete will also delete the raw row which will take it off this queue
 
 
