@@ -43,6 +43,9 @@ institution_ids_string = u",".join(["'{}'".format(institution_id) for institutio
 
 
 def copy_package(old_package_id, new_package_id):
+    print "HEATHER THIS NEEDS TO BE UPDATED FOR COUNTER 5 columns"
+    print 1/0
+
     command = """
         insert into jump_counter (issn_l, package_id, organization, publisher, issn, journal_name, total) (
             select issn_l, '{new_package_id}', organization, publisher, issn, journal_name, total

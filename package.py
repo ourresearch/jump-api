@@ -893,8 +893,8 @@ def clone_demo_package(institution):
         # jump_counter
         cursor.execute(
             """
-                insert into jump_counter (issn_l, package_id, journal_name, total, report_year, report_name, report_version, metric_type, yop, access_type) (
-                    select issn_l, '{}', journal_name, total, report_year, report_name, report_version, metric_type, yop, access_type 
+                insert into jump_counter (issn_l, package_id, journal_name, total, report_year, report_name, report_version, metric_type, yop, access_type, created) (
+                    select issn_l, '{}', journal_name, total, report_year, report_name, report_version, metric_type, yop, access_type, created 
                     from jump_counter
                     where package_id = '{}'
                 )
@@ -924,8 +924,8 @@ def clone_demo_package(institution):
         # 'jump_perpetual_access'
         cursor.execute(
             """
-                insert into jump_perpetual_access (package_id, issn_l, start_date, end_date) (
-                    select '{}', issn_l, start_date, end_date 
+                insert into jump_perpetual_access (package_id, issn_l, start_date, end_date, created) (
+                    select '{}', issn_l, start_date, end_date, created 
                     from jump_perpetual_access
                     where package_id = '{}'
                 )
