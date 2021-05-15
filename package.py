@@ -72,6 +72,9 @@ class Package(db.Model):
 
     @cached_property
     def has_complete_counter_data(self):
+        if self.institution.is_consortium:
+            return True
+
         print "self.counter_journals_by_report_name", self.counter_journals_by_report_name
         if not self.counter_journals_by_report_name:
             return False
@@ -513,6 +516,17 @@ class Package(db.Model):
 
         return journals_missing_prices
 
+    @cached_property
+    def returned_big_deal_cost(self):
+        if self.institution.is_consortium:
+            return 42
+        return self.big_deal_cost
+
+    @cached_property
+    def returned_big_deal_cost_increase(self):
+        if self.institution.is_consortium:
+            return 42
+        return self.big_deal_cost_increase
 
     @cached_property
     def warnings(self):
@@ -832,8 +846,8 @@ class Package(db.Model):
                 "is_consortium": self.institution.is_consortium,
                 "is_deleted": self.is_deleted is not None and self.is_deleted,
                 "warnings": self.warnings,
-                "cost_bigdeal": self.big_deal_cost,
-                "cost_bigdeal_increase": self.big_deal_cost_increase,
+                "cost_bigdeal": self.returned_big_deal_cost,
+                "cost_bigdeal_increase": self.returned_big_deal_cost_increase,
                 "has_complete_counter_data": self.has_complete_counter_data
             }
             return response
