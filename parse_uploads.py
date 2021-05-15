@@ -32,7 +32,7 @@ def parse_uploads():
             if file == "price":
                 JournalPriceInput().delete(package_id)
             elif file == "perpetual-access":
-                PerpetualAccessInput.delete(package_id)
+                PerpetualAccessInput().delete(package_id)
             else:
                 report_name = "jr1"
                 if "-" in file:
