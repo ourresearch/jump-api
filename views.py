@@ -832,7 +832,7 @@ def update_publisher(publisher_id):
 
     if "currency" in request.json:
         publisher.currency = request.json["currency"]
-        if publisher.currency == "":
+        if (publisher.currency == "") or (publisher.currency == None):
             publisher.currency = None
         else:
             publisher.currency = publisher.currency.upper()
@@ -842,7 +842,7 @@ def update_publisher(publisher_id):
 
     if "cost_bigdeal" in request.json:
         cost = request.json["cost_bigdeal"]
-        if cost == "":
+        if (cost == "") or (cost == None):
             cost = None
         else:
             try:
@@ -853,7 +853,7 @@ def update_publisher(publisher_id):
 
     if "cost_bigdeal_increase" in request.json:
         increase = request.json["cost_bigdeal_increase"]
-        if increase == "":
+        if (increase == "") or (increase == None):
             increase = None
         else:
             try:
