@@ -832,24 +832,34 @@ def update_publisher(publisher_id):
 
     if "currency" in request.json:
         publisher.currency = request.json["currency"]
-        if publisher.currency:
+        if publisher.currency == "":
+            publisher.currency = None
+        else:
             publisher.currency = publisher.currency.upper()
 
     if "is_deleted" in request.json:
         publisher.is_deleted = request.json["is_deleted"]
 
     if "cost_bigdeal" in request.json:
-        try:
-            cost = int(request.json["cost_bigdeal"]) if request.json["cost_bigdeal"] is not None else None
-        except (ValueError, TypeError):
-            return abort_json(400, u"Couldn't parse cost_bigdeal '{}' as a float.".format(request.json["cost_bigdeal"]))
+        cost = request.json["cost_bigdeal"]
+        if cost == "":
+            cost = None
+        else:
+            try:
+                cost = int(float(cost))
+            except (ValueError, TypeError):
+                return abort_json(400, u"Couldn't parse cost_bigdeal '{}' as an int.".format(cost))
         publisher.big_deal_cost = cost
 
     if "cost_bigdeal_increase" in request.json:
-        try:
-            increase = float(request.json["cost_bigdeal_increase"]) if request.json["cost_bigdeal_increase"] is not None else None
-        except (ValueError, TypeError):
-            return abort_json(400, u"Couldn't parse cost_bigdeal_increase '{}' as a float.".format(request.json["cost_bigdeal_increase"]))
+        increase = request.json["cost_bigdeal_increase"]
+        if increase == "":
+            increase = None
+        else:
+            try:
+                increase = float(increase)
+            except (ValueError, TypeError):
+                return abort_json(400, u"Couldn't parse cost_bigdeal_increase '{}' as a float.".format(increase))
         publisher.big_deal_cost_increase = increase
 
     db.session.merge(publisher)
