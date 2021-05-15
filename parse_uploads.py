@@ -22,7 +22,7 @@ from journal_price import JournalPriceInput
 def parse_uploads():
 
     while True:
-        command = u"""select * from jump_raw_file_upload_object where to_delete_date is not null""".format(self.package_id)
+        command = u"""select * from jump_raw_file_upload_object where to_delete_date is not null"""
         with get_db_cursor() as cursor:
             cursor.execute(command)
             raw_file_upload_rows_to_delete = cursor.fetchall()
