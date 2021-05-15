@@ -71,6 +71,10 @@ class JournalMetadata(db.Model):
         return u"issn:{}".format(self.issn_l)
 
     @cached_property
+    def is_hybrid(self):
+        return not self.is_gold_journal_in_most_recent_year
+
+    @cached_property
     def publisher_code(self):
         if self.publisher == "Elsevier":
             return "Elsevier"
@@ -263,7 +267,7 @@ def recompute_journal_metadata():
 class MissingJournalMetadata(object):
     def __init__(self, issn_l):
         self.issn_l = issn_l
-        print "Error: missing journal {} from journalsdb:  https://api.journalsdb.org/journals/{}".format(issn_l, issn_l)
+        print u"Error: missing journal {} from journalsdb:  https://api.journalsdb.org/journals/{}".format(issn_l, issn_l)
         super(MissingJournalMetadata, self).__init__()
 
     @cached_property
@@ -273,6 +277,10 @@ class MissingJournalMetadata(object):
     @cached_property
     def issns(self):
         return [self.issn_l]
+
+    @cached_property
+    def is_hybrid(self):
+        return None
 
     @cached_property
     def display_issns(self):
@@ -295,18 +303,50 @@ class MissingJournalMetadata(object):
         return None
 
 
-def get_journal_metadata(issn_l):
+def get_journal_metadata(issn):
+    global all_journal_metadata_flat
+    my_journal_metadata = all_journal_metadata_flat.get(issn, None)
+    if not my_journal_metadata:
+        my_journal_metadata = MissingJournalMetadata(issn_l=issn)
+    return my_journal_metadata
+
+def get_journal_metadata_issnl_only(issn_l):
     global all_journal_metadata
     my_journal_metadata = all_journal_metadata.get(issn_l, None)
     if not my_journal_metadata:
         my_journal_metadata = MissingJournalMetadata(issn_l=issn_l)
     return my_journal_metadata
 
+def get_journal_metadata_for_publisher(publisher):
+    lookup_journaldb_publisher = {
+        "SpringerNature": "Springer Nature",
+        "Sage": "SAGE",
+        "TaylorFrancis": "Taylor & Francis"
+    }
+    publisher_normalized = lookup_journaldb_publisher.get(publisher, publisher)
+    journal_metadata_list = JournalMetadata.query.filter(JournalMetadata.publisher == publisher_normalized).all()
+    journal_metadata_dict = dict(zip([journal_object.issn_l for journal_object in journal_metadata_list], journal_metadata_list))
+    return journal_metadata_dict
+
+def get_journal_metadata_for_publisher_currently_subscription(publisher):
+    my_journals = get_journal_metadata_for_publisher(publisher)
+    response = {}
+    for issn_l, journal_metadata in my_journals.iteritems():
+        if journal_metadata.is_current_subscription_journal:
+            response[issn_l] = journal_metadata
+    return response
+
 
 print u"loading all journal metadata...",
 start_time = time()
 all_journal_metadata_list = JournalMetadata.query.all()
 all_journal_metadata = dict(zip([journal_object.issn_l for journal_object in all_journal_metadata_list], all_journal_metadata_list))
+all_journal_metadata_flat = {}
+for issn_l, journal_metadata in all_journal_metadata.iteritems():
+    for issn in journal_metadata.issns:
+        all_journal_metadata_flat[issn] = journal_metadata
+
+
 print u"loaded all journal metadata in {} seconds.".format(elapsed(start_time))
 
 # python journalsdb.py --recompute

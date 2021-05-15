@@ -335,18 +335,12 @@ def warm_cache():
 
     # do this second so it is a bit random when it gets here
 
-    from scenario import get_ricks_journal
-    from scenario import get_ricks_journal_flat
-    from scenario import _load_hybrid_2019_from_db
     from scenario import _load_journal_era_subjects_from_db
-    get_ricks_journal()
-    get_ricks_journal_flat()
-    _load_hybrid_2019_from_db()
     _load_journal_era_subjects_from_db()
 
     import scenario
     scenario.get_common_package_data_for_all()
-    scenario.get_common_package_data_specific(DEMO_PACKAGE_ID)
+    # scenario.get_common_package_data_specific(DEMO_PACKAGE_ID)
 
     print u"done warming the cache in {}s".format(elapsed(start_time))
 

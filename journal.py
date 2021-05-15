@@ -69,9 +69,7 @@ class Journal(object):
 
     @cached_property
     def title(self):
-        if self.ricks_journal_row:
-            return self.ricks_journal_row["title"]
-        return u"Unknown Title"
+        return self.journal_metadata.title
 
 
     @cached_property
@@ -84,19 +82,13 @@ class Journal(object):
         return self._scenario_data["journal_era_subjects"].get(self.issn_l, [])
 
     @cached_property
-    def ricks_journal_row(self):
-        from scenario import get_ricks_journal
-        row = get_ricks_journal()[self.issn_l]
-        return row
+    def journal_metadata(self):
+        from journalsdb import all_journal_metadata
+        return all_journal_metadata[self.issn_l]
 
     @cached_property
     def issns(self):
-        if self.ricks_journal_row:
-            try:
-                return json.loads(self.ricks_journal_row["issns"])
-            except:
-                return self.ricks_journal_row["issns"]
-        return []
+        return self.journal_metadata.issns
 
     @cached_property
     def institution_id(self):
@@ -415,8 +407,8 @@ class Journal(object):
 
         data_dict = self._scenario_data["perpetual_access"]
 
-        if not data_dict:
-            return self.year_by_perpetual_access_years
+        # if not data_dict:
+        #     return self.year_by_perpetual_access_years
 
         if self.issn_l not in data_dict:
             return []
@@ -426,10 +418,7 @@ class Journal(object):
 
         #   if no dates, then no perpetual access
         if not start_date:
-            if self.institution_id in ["institution-W8v4xcUiDww4"]:
-                start_date = datetime.datetime(1899, 1, 1)  # far in the past
-            else:
-                return []
+            start_date = datetime.datetime(1850, 1, 1)  # far in the past
 
         #   if no end date, then has perpetual access till the model says it doesn't
         if not end_date:
@@ -462,15 +451,12 @@ class Journal(object):
 
     @cached_property
     def downloads_backfile_by_year(self):
-        if self.settings.include_backfile:
-            response = self.sum_obs_pub_matrix_by_obs(self.backfile_obs_pub)
-            # if self.issn_l == "0271-678X":
-            #     print self.backfile_obs_pub
-            #     print self.sum_obs_pub_matrix_by_obs(self.backfile_obs_pub)
-            response = [min(response[year], self.downloads_total_by_year[year] - self.downloads_oa_by_year[year]) for year in self.years]
-            return response
-        else:
-            return [0 for year in self.years]
+        response = self.sum_obs_pub_matrix_by_obs(self.backfile_obs_pub)
+        # if self.issn_l == "0271-678X":
+        #     print self.backfile_obs_pub
+        #     print self.sum_obs_pub_matrix_by_obs(self.backfile_obs_pub)
+        response = [min(response[year], self.downloads_total_by_year[year] - self.downloads_oa_by_year[year]) for year in self.years]
+        return response
 
     @cached_property
     def downloads_obs_pub(self):
@@ -526,7 +512,7 @@ class Journal(object):
             for pub_year in range(2011, 2025):
                 pub_key = "pub{}".format(pub_year)
                 value = self.backfile_raw_obs_pub[obs_key][pub_key]
-                value *= (self.settings.backfile_contribution / 100.0)
+                # value *= (self.settings.backfile_contribution / 100.0)
                 value = max(0, value)
                 response[obs_key][pub_key] = int(round(value))
 
@@ -1362,8 +1348,7 @@ class Journal(object):
 
     @cached_property
     def is_hybrid_2019(self):
-        from scenario import get_hybrid_2019
-        return self.issn_l in get_hybrid_2019()
+        return self.journal_metadata.is_hybrid
 
     @cached_property
     def baseline_access(self):
@@ -1372,76 +1357,6 @@ class Journal(object):
         if not self.issn_l in rows:
             return None
         return rows[self.issn_l]["baseline_access"]
-
-    def to_dict_export(self):
-        response = OrderedDict()
-
-        # meta
-        response["issn_l"] = u"issn:{}".format(self.issn_l)
-        response["title"] = self.title
-        response["subject"] = self.subject
-        response["era_subjects"] = self.era_subjects
-        try:
-            response["issns"] = u",".join(self.issns)
-        except TypeError:
-            print "BUG TypeError"
-            print self.issn_l
-            print self.issns
-            print self.ricks_journal_row
-            from scenario import get_ricks_journal
-            print len(get_ricks_journal())
-            response["issns"] = None
-
-        response["subscribed"] = self.subscribed
-
-        # overview
-        response["cpu"] = display_cpu(self.cpu)
-        response["cpu_rank"] = display_cpu(self.cpu_rank)
-        response["cost"] = self.cost_actual
-        response["usage"] = round(self.use_total)
-        response["instant_usage_percent"] = round(self.use_instant_percent)
-        response["free_instant_usage_percent"] = round(self.use_free_instant_percent)
-
-        # cost
-        response["subscription_cost"] = round(self.subscription_cost)
-        response["ill_cost"] = round(self.ill_cost)
-        response["subscription_minus_ill_cost"] = round(self.cost_subscription_minus_ill)
-        response["old_school_cpu"] = display_cpu(self.old_school_cpu)
-        response["old_school_cpu_rank"] = display_cpu(self.old_school_cpu_rank)
-
-        # fulfillment
-        response["use_oa_percent"] = round(float(100)*self.use_actual["oa_plus_social_networks"]/self.use_total)
-        response["use_backfile_percent"] = round(float(100)*self.use_actual["backfile"]/self.use_total)
-        response["use_subscription_percent"] = round(float(100)*self.use_actual["subscription"]/self.use_total)
-        response["use_ill_percent"] = round(float(100)*self.use_actual["ill"]/self.use_total)
-        response["use_other_delayed_percent"] =  round(float(100)*self.use_actual["other_delayed"]/self.use_total)
-        response["perpetual_access_years"] = self.display_perpetual_access_years
-        response["baseline_access"] = self.baseline_access
-        response["bronze_oa_embargo_months"] = self.bronze_oa_embargo_months
-        # response["num_papers_slope_percent"] = self.num_papers_slope_percent
-
-        # oa
-        # response["use_green_percent"] = round(float(100)*self.use_oa_green/self.use_total)
-        # response["use_hybrid_percent"] = round(float(100)*self.use_oa_hybrid/self.use_total)
-        # response["use_bronze_percent"] = round(float(100)*self.use_oa_bronze/self.use_total)
-        # response["use_social_networks_percent"] = round(float(100)*self.use_social_networks/self.use_total)
-        # response["use_peer_reviewed_percent"] =  round(float(100)*self.use_oa_peer_reviewed/self.use_total)
-
-        # impact
-        response["downloads"] = round(self.downloads_total)
-        response["citations"] = round(self.num_citations, 1)
-        response["authorships"] = round(self.num_authorships, 1)
-
-        # fuzzed
-        response["cpu_fuzzed"] = self.cpu_fuzzed
-        response["subscription_cost_fuzzed"] = self.cost_subscription_fuzzed
-        response["subscription_minus_ill_cost_fuzzed"] = self.cost_subscription_minus_ill_fuzzed
-        response["usage_fuzzed"] = self.use_total_fuzzed
-        response["downloads_fuzzed"] = self.downloads_fuzzed
-        response["citations_fuzzed"] = self.num_citations_fuzzed
-        response["authorships_fuzzed"] = self.num_authorships_fuzzed
-
-        return response
 
 
     def to_dict_journals(self):

@@ -403,11 +403,6 @@ class Consortium(object):
         print "after db get to_dict_journal_zoom", elapsed(start_time)
         return response
 
-    def to_dict_export(self):
-        response = {}
-        response["journals"] = [j.to_dict_export() for j in self.journals_sorted_cpu]
-        return response
-
     @cached_property
     def journals(self):
         response = None

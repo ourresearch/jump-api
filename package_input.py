@@ -85,16 +85,17 @@ class PackageInput:
 
     @staticmethod
     def normalize_issn(issn, warn_if_blank=False):
-        from scenario import get_ricks_journal_flat
+        from journalsdb import all_journal_metadata_flat
         if issn:
+            issn = issn.replace(u"issn:", "")
             issn = sub(ur"\s", "", issn).upper()
             if re.match(ur"^\d{4}-?\d{3}(?:X|\d)$", issn):
                 issn = issn.replace(u"-", "")
                 issn = issn[0:4] + u"-" + issn[4:8]
-                if issn in get_ricks_journal_flat():
-                    return issn
-                else:
+                if all_journal_metadata_flat.get(issn, None) == None:
+                    print u"Error: missing journal {} from journalsdb:  https://api.journalsdb.org/journals/{}".format(issn, issn)
                     return ParseWarning.unknown_issn
+                return issn
             elif re.match(ur"^[A-Z0-9]{4}-\d{3}(?:X|\d)$", issn):
                 return ParseWarning.bundle_issn
             else:
@@ -362,8 +363,6 @@ class PackageInput:
         return False
 
     def normalize_rows(self, file_name, file_package=None):
-        from scenario import get_ricks_journal_flat
-
         # convert to csv if needed
         if file_name.endswith(u".xls") or file_name.endswith(u".xlsx"):
             sheet_csv_file_names = convert_spreadsheet_to_csv(file_name, parsed=False)

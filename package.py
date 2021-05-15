@@ -22,8 +22,6 @@ from journal_price import JournalPriceInput
 from perpetual_access import PerpetualAccessInput
 from saved_scenario import SavedScenario # used in relationship
 from institution import Institution  # used in relationship
-from scenario import get_hybrid_2019
-from scenario import get_ricks_journal
 from scenario import get_prices_from_cache
 from scenario import get_core_list_from_db
 from scenario import get_perpetual_access_from_cache
@@ -130,7 +128,7 @@ class Package(db.Model):
             core.issn_l, 
             title as title
             from jump_core_journals core
-            left outer join ricks_journal on core.issn_l = ricks_journal.issn_l
+            left outer join journalsdb_computed on core.issn_l = journalsdb_computed.issn_l
             where package_id='{package_id}' 
             order by title desc
             """.format(package_id=self.package_id_for_db)
@@ -150,7 +148,7 @@ class Package(db.Model):
            listagg(title, ',') as title, 
            sum(total::int) as num_2018_downloads
            from jump_counter counter
-           left outer join ricks_journal_flat rj on counter.issn_l = rj.issn
+           left outer join journalsdb_computed_flat rj on counter.issn_l = rj.issn
            where package_id='{package_id}'
            group by rj.issn_l           
            order by num_2018_downloads desc
@@ -166,7 +164,7 @@ class Package(db.Model):
             sum(total::int) as num_2018_downloads, 
             count(*) as num_journals_with_issn_l
             from jump_counter counter
-            left outer join ricks_journal_flat rj on counter.issn_l = rj.issn
+            left outer join journalsdb_computed_flat rj on counter.issn_l = rj.issn
             where package_id='{package_id}' 
             {and_where}
             group by rj.issn_l
@@ -179,7 +177,7 @@ class Package(db.Model):
     def get_published_in_2019(self):
         rows = self.get_base(and_where=""" and rj.issn_l in
 	            (select rj.issn_l from unpaywall u 
-	            join ricks_journal_flat rj on u.journal_issn_l = rj.issn
+	            join journalsdb_computed_flat rj on u.journal_issn_l = rj.issn
 	            where year=2019 
 	            group by rj.issn_l) """)
         return self.filter_by_core_list(rows)
@@ -188,7 +186,7 @@ class Package(db.Model):
     def get_published_toll_access_in_2019(self):
         rows = self.get_base(and_where=""" and rj.issn_l in
 	            (select rj.issn_l from unpaywall u 
-	            join ricks_journal_flat rj on u.journal_issn_l = rj.issn
+	            join journalsdb_computed_flat rj on u.journal_issn_l = rj.issn
 	            where year=2019 and journal_is_oa='false' 
 	            group by rj.issn_l) """)
         return self.filter_by_core_list(rows)
@@ -196,15 +194,15 @@ class Package(db.Model):
     @cached_property
     def publisher_where(self):
         if self.publisher == "Elsevier":
-            return "(rj.publisher ilike '%elsevier%')"
+            return "(rj.publisher = 'Elsevier')"
         elif self.publisher == "Wiley":
-            return "(rj.publisher ilike '%wiley%')"
+            return "(rj.publisher = 'Wiley')"
         elif self.publisher == "SpringerNature":
-            return "((rj.publisher ilike '%springer%') or (rj.publisher ilike '%nature%'))"
+            return "(rj.publisher = 'Springer Nature')"
         elif self.publisher == "Sage":
-            return "(rj.publisher ilike '%sage%')"
+            return "(rj.publisher = 'SAGE')"
         elif self.publisher == "TaylorFrancis":
-            return "(rj.publisher ilike '%informa uk%')"
+            return "(rj.publisher = 'Taylor & Francis')"
         else:
             return "false"
 
@@ -228,7 +226,7 @@ class Package(db.Model):
         rows = self.get_base(and_where=""" and rj.issn_l in
 	            (select distinct rj.issn_l 
 	            from unpaywall u 
-	            join ricks_journal_flat rj on u.journal_issn_l=rj.issn
+	            join journalsdb_computed_flat rj on u.journal_issn_l=rj.issn
 	            where year=2019 and journal_is_oa='false'
 	            and {publisher_where}
 	            ) """.format(publisher_where=self.publisher_where))
@@ -239,7 +237,7 @@ class Package(db.Model):
         rows = self.get_base(and_where=""" and rj.issn_l in
 	            (select distinct rj.issn_l 
 	            from unpaywall u 
-	            join ricks_journal_flat rj on u.journal_issn_l=rj.issn
+	            join journalsdb_computed_flat rj on u.journal_issn_l=rj.issn
 	            where year=2019 and journal_is_oa='false'
 	            and {publisher_where}
 	            )
@@ -398,76 +396,70 @@ class Package(db.Model):
         not_published_2019 = set([x["issn_l"] for x in self.get_diff_not_published_in_2019])
         changed_publisher = set([x["issn_l"] for x in self.get_diff_changed_publisher])
 
-        distinct_issnls = set([x for x in
-                               counter_rows.keys() +
-                               pa_rows.keys() +
-                               package_prices.keys() +
-                               list(open_access) +
-                               list(not_published_2019) +
-                               list(changed_publisher)
-                               if x
-                               ])
+        from journalsdb import get_journal_metadata
+        from journalsdb import get_journal_metadata_for_publisher_currently_subscription
 
-        journal_rows = get_ricks_journal()
+        distinct_issnls = get_journal_metadata_for_publisher_currently_subscription(self.publisher)
 
-        for issn_l, journal in journal_rows.items():
-            try:
-                journal["issns"] = json.loads(journal["issns"])
-            except (TypeError, ValueError):
-                journal["issns"] = None
+        from journalsdb import get_journal_metadata
 
-        return [{
-            "issn_l": issn_l,
-            "name": journal_rows.get(issn_l, {}).get("title", None),
-            "upload_data": {
-                "counter_downloads": counter_defaults[issn_l]["num_2018_downloads"],
-                "perpetual_access_dates": [pa_defaults[issn_l]["start_date"], pa_defaults[issn_l]["end_date"]],
-                "price": package_price_defaults[issn_l],
-            },
-            "has_upload_data": {
-                "counter": issn_l in counter_rows,
-                "perpetual_access": issn_l in pa_rows,
-                "price": issn_l in package_prices,
-            },
-            "attributes": {
-                "is_oa": issn_l in open_access,
-                "not_published_2019": issn_l in not_published_2019,
-                "changed_publisher": issn_l in changed_publisher,
-                "is_hybrid_2019": issn_l in get_hybrid_2019(),
-                "has_public_price": issn_l in public_prices,
-                "public_price": public_price_defaults[issn_l],
-            },
-            "data_sources": [
-                {
-                    "id": "counter",
-                    "source": "custom" if issn_l in counter_rows else None,
-                    "value": counter_defaults[issn_l]["num_2018_downloads"],
+        response = []
+        for issn_l in distinct_issnls:
+            new_dict = {
+                "issn_l": issn_l,
+                "name": get_journal_metadata(issn_l).title,
+                "upload_data": {
+                    "counter_downloads": counter_defaults[issn_l]["num_2018_downloads"],
+                    "perpetual_access_dates": [pa_defaults[issn_l]["start_date"], pa_defaults[issn_l]["end_date"]],
+                    "price": package_price_defaults[issn_l],
                 },
-                {
-                    "id": "perpetual_access",
-                    "source": (
-                        "custom" if issn_l in pa_rows
-                        else None if pa_rows
-                        else "default"
-                    ),
-                    "value": (
-                        [pa_rows[issn_l]["start_date"], pa_rows[issn_l]["end_date"]] if issn_l in pa_rows
-                        else [None, None] if pa_rows
-                        else [datetime.datetime(2010, 1, 1), None]
-                    ),
+                "has_upload_data": {
+                    "counter": issn_l in counter_rows,
+                    "perpetual_access": issn_l in pa_rows,
+                    "price": issn_l in package_prices,
                 },
-                {
-                    "id": "price",
-                    "source": (
-                        "custom" if package_prices.get(issn_l, None) is not None
-                        else "default" if public_prices.get(issn_l, None) is not None
-                        else None
-                    ),
-                    "value": package_price_defaults[issn_l] or public_price_defaults[issn_l],
+                "attributes": {
+                    "is_oa": issn_l in open_access,
+                    "not_published_2019": issn_l in not_published_2019,
+                    "changed_publisher": issn_l in changed_publisher,
+                    "is_hybrid_2019": get_journal_metadata(issn_l).is_hybrid,
+                    "has_public_price": issn_l in public_prices,
+                    "public_price": public_price_defaults[issn_l],
                 },
-            ],
-            "issns": journal_rows.get(issn_l, {}).get("issns", [])
-        } for issn_l in distinct_issnls]
+                "data_sources": [
+                    {
+                        "id": "counter",
+                        "source": "custom" if issn_l in counter_rows else None,
+                        "value": counter_defaults[issn_l]["num_2018_downloads"],
+                    },
+                    {
+                        "id": "perpetual_access",
+                        "source": (
+                            "custom" if issn_l in pa_rows
+                            else None if pa_rows
+                            else "default"
+                        ),
+                        "value": (
+                            [pa_rows[issn_l]["start_date"], pa_rows[issn_l]["end_date"]] if issn_l in pa_rows
+                            else [None, None] if pa_rows
+                            else [datetime.datetime(2010, 1, 1), None]
+                        ),
+                    },
+                    {
+                        "id": "price",
+                        "source": (
+                            "custom" if package_prices.get(issn_l, None) is not None
+                            else "default" if public_prices.get(issn_l, None) is not None
+                            else None
+                        ),
+                        "value": package_price_defaults[issn_l] or public_price_defaults[issn_l],
+                    },
+                ],
+                "issns": get_journal_metadata(issn_l).issns
+                }
+            response += [new_dict]
+        return response
+
 
 
     @cached_property

@@ -17,7 +17,6 @@ from package import Package
 from saved_scenario import SavedScenario
 from saved_scenario import save_raw_scenario_to_db
 from saved_scenario import get_latest_scenario_raw
-from scenario import get_ricks_journal_flat
 from n8_uni_result import N8UniResult
 from util import safe_commit
 from util import get_sql_answer
@@ -211,10 +210,8 @@ def set_non_own_subscriptions(main_jusp_id, group_jusp_ids, package_type):
 # yor york institution-3pQc7HbKgqYD https://unsub.org/i/institution-3pQc7HbKgqYD/p/package-ioUUYHNQRwom/s/hPWVrTDf
 
 def get_issnls(issns):
-    bad_issns = [issn for issn in issns if issn not in get_ricks_journal_flat()]
-    if bad_issns:
-        print "bad issns:", bad_issns
-    response = [get_ricks_journal_flat()[issn]["issn_l"] for issn in issns if issn in get_ricks_journal_flat()]
+    from journalsdb import get_journal_metadata
+    response = [get_journal_metadata(issn)["issn_l"] for issn in issns]
     return response
 
 # python init_n8.py

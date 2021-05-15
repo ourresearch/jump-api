@@ -944,41 +944,41 @@ def get_prices_from_cache(package_ids, publisher_name):
     return lookup_dict
 
 
-@memorycache
-def get_ricks_journal():
-    command = """select issn_l, title, issns from ricks_journal"""
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
-    my_dict = dict([(a["issn_l"], a) for a in rows])
-    return my_dict
+# @memorycache
+# def get_ricks_journal():
+#     command = """select issn_l, title, issns from ricks_journal"""
+#     with get_db_cursor() as cursor:
+#         cursor.execute(command)
+#         rows = cursor.fetchall()
+#     my_dict = dict([(a["issn_l"], a) for a in rows])
+#     return my_dict
+#
+# @memorycache
+# def get_ricks_journal_flat():
+#     issns = {}
+#     with get_db_cursor() as cursor:
+#         cursor.execute('select issn, issn_l, publisher from ricks_journal_flat')
+#         rows = cursor.fetchall()
+#     for row in rows:
+#         issns[row['issn']] = {'issn_l': row['issn_l'], 'publisher': row['publisher']}
+#     return issns
 
-@memorycache
-def get_ricks_journal_flat():
-    issns = {}
-    with get_db_cursor() as cursor:
-        cursor.execute('select issn, issn_l, publisher from ricks_journal_flat')
-        rows = cursor.fetchall()
-    for row in rows:
-        issns[row['issn']] = {'issn_l': row['issn_l'], 'publisher': row['publisher']}
-    return issns
-
-
-_hybrid_2019 = None
-
-def _load_hybrid_2019_from_db():
-    global _hybrid_2019
-
-    if _hybrid_2019 is None:
-        with get_db_cursor() as cursor:
-            cursor.execute('select issn_l from jump_hybrid_journals_2019')
-            rows = cursor.fetchall()
-        _hybrid_2019 = {row["issn_l"] for row in rows}
-
-
-def get_hybrid_2019():
-    _load_hybrid_2019_from_db()
-    return _hybrid_2019
+#
+# _hybrid_2019 = None
+#
+# def _load_hybrid_2019_from_db():
+#     global _hybrid_2019
+#
+#     if _hybrid_2019 is None:
+#         with get_db_cursor() as cursor:
+#             cursor.execute('select issn_l from jump_hybrid_journals_2019')
+#             rows = cursor.fetchall()
+#         _hybrid_2019 = {row["issn_l"] for row in rows}
+#
+#
+# def get_hybrid_2019():
+#     _load_hybrid_2019_from_db()
+#     return _hybrid_2019
 
 
 _journal_era_subjects = None
