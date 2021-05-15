@@ -833,7 +833,7 @@ class Package(db.Model):
                 "is_deleted": self.is_deleted is not None and self.is_deleted,
                 "warnings": self.warnings,
                 "cost_bigdeal": self.big_deal_cost,
-                "cost_bigdeal_increase": self.big_deal_cost_increase
+                "cost_bigdeal_increase": self.big_deal_cost_increase,
                 "has_complete_counter_data": self.has_complete_counter_data
             }
             return response
