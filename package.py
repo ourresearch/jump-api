@@ -56,7 +56,6 @@ class Package(db.Model):
     def __init__(self, **kwargs):
         self.created = datetime.datetime.utcnow().isoformat()
         self.is_deleted = False
-        self.currency = "USD"
         super(Package, self).__init__(**kwargs)
 
     @property
@@ -523,19 +522,19 @@ class Package(db.Model):
 
         if not self.institution.is_consortium:
 
-            if (self.big_deal_cost == None) or (self.big_deal_cost_increase == None):
-                response += [{
-                    "id": "missing_big_deal_costs",
-                    "is_dismissed": False,
-                    "journals": None
-                }]
+            # if (self.big_deal_cost == None) or (self.big_deal_cost_increase == None):
+            #     response += [{
+            #         "id": "missing_big_deal_costs",
+            #         "is_dismissed": False,
+            #         "journals": None
+            #     }]
 
-            if not self.has_complete_counter_data:
-                response += [{
-                    "id": "missing_counter_data",
-                    "is_dismissed": False,
-                    "journals": None
-                }]
+            # if not self.has_complete_counter_data:
+            #     response += [{
+            #         "id": "missing_counter_data",
+            #         "is_dismissed": False,
+            #         "journals": None
+            #     }]
 
             if not self.has_custom_perpetual_access:
                 response += [{
@@ -707,17 +706,21 @@ class Package(db.Model):
             for raw_file_upload_row in raw_file_upload_rows:
                 for my_dict in data_files_list:
                     if (my_dict["name"] == raw_file_upload_row["file"]):
-                        my_dict["is_uploaded"] = True
-                        my_dict["is_parsed"] = True
-                        my_dict["created_date"] = raw_file_upload_row["created"]
-                        if raw_file_upload_row["num_rows"]:
-                            my_dict["rows_count"] = raw_file_upload_row["num_rows"]
-                        if raw_file_upload_row["error"]:
-                            my_dict["is_live"] = False
-                            my_dict["error"] = raw_file_upload_row["error"]
-                            my_dict["error_details"] = raw_file_upload_row["error_details"]
+                        if raw_file_upload_row["to_delete_date"] != None:
+                            # act like it has already been deleted
+                            my_dict["rows_count"] = 0
+                            pass
                         else:
+                            my_dict["is_uploaded"] = True
+                            my_dict["is_parsed"] = True
                             my_dict["is_live"] = True
+                            my_dict["created_date"] = raw_file_upload_row["created"]
+                            if raw_file_upload_row["num_rows"]:
+                                my_dict["rows_count"] = raw_file_upload_row["num_rows"]
+                            if raw_file_upload_row["error"]:
+                                my_dict["error"] = raw_file_upload_row["error"]
+                                my_dict["error_details"] = raw_file_upload_row["error_details"]
+                                my_dict["is_live"] = False
 
             #
             # data_files_list = [
@@ -831,6 +834,7 @@ class Package(db.Model):
                 "warnings": self.warnings,
                 "cost_bigdeal": self.big_deal_cost,
                 "cost_bigdeal_increase": self.big_deal_cost_increase
+                "has_complete_counter_data": self.has_complete_counter_data
             }
             return response
 

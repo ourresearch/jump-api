@@ -831,7 +831,9 @@ def update_publisher(publisher_id):
         publisher.package_name = request.json["name"]
 
     if "currency" in request.json:
-        publisher.currency = request.json["currency"].upper()
+        publisher.currency = request.json["currency"]
+        if publisher.currency:
+            publisher.currency = publisher.currency.upper()
 
     if "is_deleted" in request.json:
         publisher.is_deleted = request.json["is_deleted"]
@@ -986,10 +988,8 @@ def jump_counter(package_id):
         else:
             return abort_json(404, u"no counter file for package {}".format(package_id))
     elif request.method == "DELETE":
-        print "starting delete"
-        response = CounterInput().delete(package_id, report_name)
-        print "done delete"
-        return jsonify_fast_no_sort({"message": response})
+        CounterInput().set_to_delete(package_id, report_name)
+        return jsonify_fast_no_sort({"message": "Queued for delete."})
     else:
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
@@ -1032,7 +1032,8 @@ def jump_perpetual_access(package_id):
         else:
             return abort_json(404, u"no perpetual access file for package {}".format(package_id))
     elif request.method == "DELETE":
-        return jsonify_fast_no_sort({"message": PerpetualAccessInput().delete(package_id)})
+        PerpetualAccessInput().set_to_delete(package_id)
+        return jsonify_fast_no_sort({"message": "Queued for delete."})
     else:
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
@@ -1081,7 +1082,8 @@ def jump_journal_prices(package_id):
         else:
             return abort_json(404, u"no journal price file for package {}".format(package_id))
     elif request.method == "DELETE":
-        return jsonify_fast_no_sort({"message": JournalPriceInput().delete(package_id)})
+        JournalPriceInput().set_to_delete(package_id)
+        return jsonify_fast_no_sort({"message": "Queued for delete."})
     else:
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())

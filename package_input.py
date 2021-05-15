@@ -230,7 +230,17 @@ class PackageInput:
     #     except s3_client.exceptions.NoSuchKey:
     #         return None
 
-    def delete(self, package_id, dummy=None):
+    def set_to_delete(self, package_id, report_name=None):
+        with get_db_cursor() as cursor:
+            command = "update jump_raw_file_upload_object set to_delete_date=sysdate where package_id = '{}' and file = '{}'".format(
+                package_id, self.file_type_label())
+            print command
+            cursor.execute(command)
+        return u"Queued to delete"
+
+
+    # report_name is used by CounterInput override
+    def delete(self, package_id, report_name=None):
 
         with get_db_cursor() as cursor:
             print("delete from {} where package_id = '{}'".format(self.__tablename__, package_id))

@@ -222,6 +222,21 @@ class CounterInput(db.Model, PackageInput):
 
         return normalized_rows
 
+    def set_to_delete(self, package_id, report_name=None):
+        if report_name:
+            report_name = report_name.lower()
+
+        if report_name == None:
+            report_name = "jr1"
+
+        with get_db_cursor() as cursor:
+            command = "update jump_raw_file_upload_object set to_delete_date=sysdate where package_id = '{}' and file = '{}'".format(
+                package_id, self.calculate_file_type_label(report_name))
+            print command
+            cursor.execute(command)
+
+        return u"Queued to delete"
+
 
     def delete(self, package_id, report_name=None):
         # DELETE to /publisher/<publisher_id>/counter/trj2  (or trj3, trj4)

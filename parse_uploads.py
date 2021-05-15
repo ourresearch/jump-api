@@ -11,6 +11,7 @@ import boto3
 import argparse
 
 from app import s3_client
+from app import get_db_cursor
 import package
 from package_input import PackageInput
 from counter import CounterInput
@@ -21,6 +22,25 @@ from journal_price import JournalPriceInput
 def parse_uploads():
 
     while True:
+        command = u"""select * from jump_raw_file_upload_object where to_delete_date is not null""".format(self.package_id)
+        with get_db_cursor() as cursor:
+            cursor.execute(command)
+            raw_file_upload_rows_to_delete = cursor.fetchall()
+        for row_to_delete in raw_file_upload_rows_to_delete:
+            file = row_to_delete["file"]
+            package_id = row_to_delete["package_id"]
+            if file == "price":
+                JournalPriceInput().delete(package_id)
+            elif file == "perpetual-access":
+                PerpetualAccessInput.delete(package_id)
+            else:
+                report_name = "jr1"
+                if "-" in file:
+                    report_name = file.split("-")[1]
+                CounterInput.delete(package_id, report_name=report_name)
+            # the delete will also delete the raw row which will take it off this queue
+
+
         upload_preprocess_bucket = "unsub-file-uploads-preprocess"
         upload_finished_bucket = "unsub-file-uploads"
         preprocess_file_list = s3_client.list_objects(Bucket=upload_preprocess_bucket)
