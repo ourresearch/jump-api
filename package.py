@@ -77,8 +77,9 @@ class Package(db.Model):
         if my_data_file_dict["is_live"]:
             return True
 
-        my_data_file_dict_list = [self.data_files_dict[my_key] for my_key in ["counter-trj2", "counter-trj3", "counter-trj4"]]
-        if len(my_data_file_dict_list) == 3:
+        if self.data_files_dict["counter-trj2"]["is_live"] and \
+                self.data_files_dict["counter-trj3"]["is_live"] and \
+                self.data_files_dict["counter-trj4"]["is_live"]:
             return True
 
         return False
