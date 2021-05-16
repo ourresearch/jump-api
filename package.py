@@ -72,9 +72,7 @@ class Package(db.Model):
         if self.institution.is_consortium:
             return True
 
-        my_list = self.data_files_dict["counter"]
-        my_data_file_dict = self.data_files_dict["counter"]
-        if my_data_file_dict["is_live"]:
+        if self.data_files_dict["counter"]["is_live"]:
             return True
 
         if self.data_files_dict["counter-trj2"]["is_live"] and \
