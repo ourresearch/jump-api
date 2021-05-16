@@ -10,30 +10,19 @@ import pandas as pd
 class ApcJournal(object):
     years = range(0, 5)
 
-    def __init__(self, issn_l, scenario_data, df_dict, scenario=None):
+    def __init__(self, issn_l, apc_data, df_dict, currency):
         self.issn_l = issn_l
         self.have_data = False
-        self.is_in_package = False
-        self.subscribed = False
         self.scenario = None
         self.package_id = None
-        self.package_currency = None
-        if scenario:
-            self.scenario = weakref.proxy(scenario)
-            self.package_id = self.scenario.package_id
-            self.package_currency = self.scenario.my_package.currency
-            matching_journal = self.scenario.get_journal(self.issn_l)
-            if matching_journal:
-                self.is_in_package = True
-                self.subscribed = matching_journal.subscribed
-        self._scenario_data = scenario_data
+        self.package_currency = currency
 
         self.my_df_dict = {
             "df_by_issn_l_and_year": df_dict["df_by_issn_l_and_year"].copy(deep=True),
             "df": df_dict["df"].copy(deep=True)
         }
 
-        if self.issn_l in [issn_dict["issn_l"] for issn_dict in self._scenario_data["apc"]]:
+        if self.issn_l in [issn_dict["issn_l"] for issn_dict in apc_data]:
             self.have_data = True
 
 
@@ -51,12 +40,25 @@ class ApcJournal(object):
         return matching_rows_df.iloc[0].to_dict()
 
     @cached_property
+    def journal_metadata(self):
+        from journalsdb import get_journal_metadata
+        return get_journal_metadata(self.issn_l)
+
+    @cached_property
+    def issns(self):
+        return self.journal_metadata.issns
+
+    @cached_property
     def title(self):
-        return self.first_df["journal_name"]
+        return self.journal_metadata.title
 
     @cached_property
     def oa_status(self):
-        return self.first_df["oa_status"]
+        if self.journal_metadata.is_hybrid:
+            return "hybrid"
+        if self.journal_metadata.set_is_gold_journal_in_most_recent_year:
+            return "gold"
+        return "unknown"
 
     @cached_property
     def apc_price_display(self):
@@ -66,12 +68,9 @@ class ApcJournal(object):
 
     @cached_property
     def apc_price(self):
-        from journalsdb import get_journal_metadata
-        my_journal_metadata = get_journal_metadata(self.issn_l)
-
         response = None
-        if my_journal_metadata:
-            response = my_journal_metadata.get_apc_price(self.package_currency)
+        if self.journal_metadata:
+            response = self.journal_metadata.get_apc_price(self.package_currency)
 
         return response
 
@@ -119,11 +118,11 @@ class ApcJournal(object):
 
     def to_dict(self):
         response = OrderedDict()
-        response["meta"] = {"issn_l": self.issn_l,
-                    "title": self.title,
-                    "subject": None,
-                    "subscribed": self.subscribed,
-                    "is_in_package": self.is_in_package
+        response["meta"] = {
+            "issn_l": self.issn_l,
+            "issn_l_prefixed": self.journal_metadata.display_issn_l,
+             "title": self.title,
+             "issns": self.journal_metadata.display_issns,
             }
         table_row = OrderedDict()
         table_row["oa_status"] = self.oa_status

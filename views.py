@@ -1286,11 +1286,7 @@ def live_publisher_id_apc_get(publisher_id):
     if not my_package.unique_saved_scenarios:
         response = jsonify_fast_no_sort({"message": "need a scenario in order to see apcs"})
 
-    my_scenario = my_package.unique_saved_scenarios[0]
-    scenario_id = my_scenario.scenario_id
-
-    my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
-    response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_apc())
+    response = jsonify_fast_no_sort(my_package.to_dict_apc())
     return response
 
 

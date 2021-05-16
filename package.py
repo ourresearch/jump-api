@@ -9,6 +9,8 @@ import datetime
 import shortuuid
 import json
 from time import time
+import numpy as np
+import pandas as pd
 
 from app import db
 from app import get_db_cursor
@@ -20,18 +22,39 @@ from assumptions import Assumptions
 from counter import CounterInput
 from journal_price import JournalPriceInput
 from perpetual_access import PerpetualAccessInput
+from apc_journal import ApcJournal
 from saved_scenario import SavedScenario # used in relationship
 from institution import Institution  # used in relationship
 from scenario import get_core_list_from_db
 from scenario import get_perpetual_access_from_cache
+from scenario import get_apc_data_from_db
 from util import get_sql_answers
 from util import get_sql_rows
-from util import get_sql_dict_rows, safe_commit
+from util import get_sql_dict_rows
+from util import safe_commit
+from util import for_sorting
 
 
 def get_ids():
     rows = get_sql_dict_rows("""select * from jump_account_package_scenario_view order by username""")
     return rows
+
+def get_fresh_apc_journal_list(issn_ls, apc_df_dict, my_package):
+    print "in get_fresh_apc_journal_list"
+
+    from journalsdb import get_journal_metadata
+    apc_journals = []
+    if not hasattr(my_package, "apc_data"):
+        my_package.apc_data = get_apc_data_from_db(my_package.package_id)
+
+    for issn_l in issn_ls:
+        my_journal_metadata = get_journal_metadata(issn_l)
+        if my_journal_metadata:
+            if my_journal_metadata.get_apc_price(my_package.currency):
+                new_apc_journal = ApcJournal(issn_l, my_package.apc_data, apc_df_dict, my_package.currency)
+                apc_journals.append(new_apc_journal)
+    return apc_journals
+
 
 class Package(db.Model):
     __tablename__ = "jump_account_package"
@@ -365,89 +388,6 @@ class Package(db.Model):
             rows = cursor.fetchall()
         return [row["consortium_scenario_id"] for row in rows]
 
-    # def get_journal_attributes(self):
-    #     counter_rows = dict((x["issn_l"], x) for x in self.get_unfiltered_counter_rows)
-    #     counter_defaults = defaultdict(lambda: defaultdict(lambda: None), counter_rows)
-    #
-    #     # pa_rows = get_perpetual_access_from_cache([self.package_id])
-    #     pa_rows = get_perpetual_access_from_cache(self.package_id)
-    #     pa_defaults = defaultdict(lambda: defaultdict(lambda: None), pa_rows)
-    #
-    #
-    #     all_prices = get_custom_prices(self.package_id)
-    #     package_prices = all_prices[self.package_id]
-    #     public_prices = all_prices[DEMO_PACKAGE_ID]
-    #     package_price_defaults = defaultdict(lambda: None, package_prices)
-    #     public_price_defaults = defaultdict(lambda: None, public_prices)
-    #
-    #     open_access = set([x["issn_l"] for x in self.get_diff_open_access_journals])
-    #     not_published_2019 = set([x["issn_l"] for x in self.get_diff_not_published_in_2019])
-    #     changed_publisher = set([x["issn_l"] for x in self.get_diff_changed_publisher])
-    #
-    #     from journalsdb import get_journal_metadata
-    #     from journalsdb import get_journal_metadata_for_publisher_currently_subscription
-    #
-    #     distinct_issnls = get_journal_metadata_for_publisher_currently_subscription(self.publisher)
-    #
-    #     from journalsdb import get_journal_metadata
-    #
-    #     response = []
-    #     for issn_l in distinct_issnls:
-    #         new_dict = {
-    #             "issn_l": issn_l,
-    #             "name": get_journal_metadata(issn_l).title,
-    #             "upload_data": {
-    #                 "counter_downloads": counter_defaults[issn_l]["num_2018_downloads"],
-    #                 "perpetual_access_dates": [pa_defaults[issn_l]["start_date"], pa_defaults[issn_l]["end_date"]],
-    #                 "price": package_price_defaults[issn_l],
-    #             },
-    #             "has_upload_data": {
-    #                 "counter": issn_l in counter_rows,
-    #                 "perpetual_access": issn_l in pa_rows,
-    #                 "price": issn_l in package_prices,
-    #             },
-    #             "attributes": {
-    #                 "is_oa": issn_l in open_access,
-    #                 "not_published_2019": issn_l in not_published_2019,
-    #                 "changed_publisher": issn_l in changed_publisher,
-    #                 "is_hybrid_2019": get_journal_metadata(issn_l).is_hybrid,
-    #                 "has_public_price": issn_l in public_prices,
-    #                 "public_price": public_price_defaults[issn_l],
-    #             },
-    #             "data_sources": [
-    #                 {
-    #                     "id": "counter",
-    #                     "source": "custom" if issn_l in counter_rows else None,
-    #                     "value": counter_defaults[issn_l]["num_2018_downloads"],
-    #                 },
-    #                 {
-    #                     "id": "perpetual_access",
-    #                     "source": (
-    #                         "custom" if issn_l in pa_rows
-    #                         else None if pa_rows
-    #                         else "default"
-    #                     ),
-    #                     "value": (
-    #                         [pa_rows[issn_l]["start_date"], pa_rows[issn_l]["end_date"]] if issn_l in pa_rows
-    #                         else [None, None] if pa_rows
-    #                         else [datetime.datetime(2010, 1, 1), None]
-    #                     ),
-    #                 },
-    #                 {
-    #                     "id": "price",
-    #                     "source": (
-    #                         "custom" if package_prices.get(issn_l, None) is not None
-    #                         else "default" if public_prices.get(issn_l, None) is not None
-    #                         else None
-    #                     ),
-    #                     "value": package_price_defaults[issn_l] or public_price_defaults[issn_l],
-    #                 },
-    #             ],
-    #             "issns": get_journal_metadata(issn_l).issns
-    #             }
-    #         response += [new_dict]
-    #     return response
-    #
 
 
     @cached_property
@@ -550,6 +490,88 @@ class Package(db.Model):
         prices_rows = sorted(prices_rows, key=lambda x: 0 if x["price"]==None else x["price"], reverse=True)
         return prices_rows
 
+    @cached_property
+    def apc_journals(self):
+        if not hasattr(self, "apc_data"):
+            self.apc_data = get_apc_data_from_db(self.package_id)
+
+        df = pd.DataFrame(self.apc_data)
+    #     # df["apc"] = df["apc"].astype(float)
+        df["year"] = df["year"].astype(int)
+        df["authorship_fraction"] = df.num_authors_from_uni/df.num_authors_total
+        df_by_issn_l_and_year = df.groupby(["issn_l", "year"]).authorship_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'size': 'num_papers', "sum": "authorship_fraction"})
+        my_dict = {"df": df, "df_by_issn_l_and_year": df_by_issn_l_and_year}
+        return get_fresh_apc_journal_list(my_dict["df"].issn_l.unique(), my_dict, self)
+
+    @cached_property
+    def apc_journals_sorted_spend(self):
+        self.apc_journals.sort(key=lambda k: for_sorting(k.cost_apc_historical), reverse=True)
+        return self.apc_journals
+
+    @cached_property
+    def num_apc_papers_historical(self):
+        return round(np.sum([j.num_apc_papers_historical for j in self.apc_journals]))
+
+    @cached_property
+    def years(self):
+        return range(0, 5)
+
+    @cached_property
+    def cost_apc_historical_by_year(self):
+        return [round(np.sum([j.cost_apc_historical_by_year[year] for j in self.apc_journals])) for year in self.years]
+
+    @cached_property
+    def cost_apc_historical(self):
+        return round(np.mean(self.cost_apc_historical_by_year))
+
+    @cached_property
+    def cost_apc_historical_hybrid_by_year(self):
+        return [round(np.sum([j.cost_apc_historical_by_year[year] for j in self.apc_journals if j.oa_status=="hybrid"]), 4) for year in self.years]
+
+    @cached_property
+    def cost_apc_historical_hybrid(self):
+        return round(np.mean(self.cost_apc_historical_hybrid_by_year))
+
+    @cached_property
+    def cost_apc_historical_gold_by_year(self):
+        return [round(np.sum([j.cost_apc_historical_by_year[year] for j in self.apc_journals if j.oa_status=="gold"]), 4) for year in self.years]
+
+    @cached_property
+    def cost_apc_historical_gold(self):
+        return round(np.mean(self.cost_apc_historical_gold_by_year))
+
+    @cached_property
+    def fractional_authorships_total_by_year(self):
+        return [round(np.sum([j.fractional_authorships_total_by_year[year] for j in self.apc_journals]), 4) for year in self.years]
+
+    @cached_property
+    def fractional_authorships_total(self):
+        return round(np.mean(self.fractional_authorships_total_by_year), 2)
+
+    @cached_property
+    def apc_journals_sorted_fractional_authorship(self):
+        self.apc_journals.sort(key=lambda k: for_sorting(k.fractional_authorships_total), reverse=True)
+        return self.apc_journals
+
+    @cached_property
+    def apc_price(self):
+        if self.apc_journals:
+            return np.max([j.apc_price for j in self.apc_journals])
+        else:
+            return 0
+
+    def to_dict_apc(self):
+        response = {
+            "headers": [
+                    {"text": "OA type", "value": "oa_status", "percent": None, "raw": None, "display": "text"},
+                    {"text": "APC price", "value": "apc_price", "percent": None, "raw": self.apc_price, "display": "currency_int"},
+                    {"text": "Number APC papers", "value": "num_apc_papers", "percent": None, "raw": self.num_apc_papers_historical, "display": "float1"},
+                    {"text": "Total fractional authorship", "value": "fractional_authorship", "percent": None, "raw": self.fractional_authorships_total, "display": "float1"},
+                    {"text": "APC Dollars Spent", "value": "cost_apc", "percent": None, "raw": self.cost_apc_historical, "display": "currency_int"},
+            ]
+        }
+        response["journals"] = [j.to_dict() for j in self.apc_journals_sorted_spend]
+        return response
 
     def to_dict_summary(self):
 
@@ -762,6 +784,7 @@ def clone_demo_package(institution):
         )
 
     return new_package
+
 
 
 def check_if_to_delete(package_id, file):

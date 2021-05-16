@@ -37,7 +37,6 @@ from util import get_sql_answer
 
 from journal import Journal
 from consortium import Consortium
-from apc_journal import ApcJournal
 from assumptions import Assumptions
 
 def get_clean_package_id(http_request_args):
@@ -74,17 +73,6 @@ def get_fresh_journal_list(scenario, my_jwt):
 
     return journals
 
-
-def get_fresh_apc_journal_list(issn_ls, apc_df_dict, scenario):
-    from journalsdb import get_journal_metadata
-    apc_journals = []
-    for issn_l in issn_ls:
-        my_journal_metadata = get_journal_metadata(issn_l)
-        if my_journal_metadata:
-            if my_journal_metadata.get_apc_price(scenario.my_package.currency):
-                new_apc_journal = ApcJournal(issn_l, scenario.data, apc_df_dict, scenario)
-                apc_journals.append(new_apc_journal)
-    return apc_journals
 
 
 class Scenario(object):
@@ -210,17 +198,7 @@ class Scenario(object):
             return True
         return False
 
-    @cached_property
-    def apc_journals(self):
-        if self.data["apc"]:
-            df = pd.DataFrame(self.data["apc"])
-        #     # df["apc"] = df["apc"].astype(float)
-            df["year"] = df["year"].astype(int)
-            df["authorship_fraction"] = df.num_authors_from_uni/df.num_authors_total
-            df_by_issn_l_and_year = df.groupby(["issn_l", "year"]).authorship_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'size': 'num_papers', "sum": "authorship_fraction"})
-            my_dict = {"df": df, "df_by_issn_l_and_year": df_by_issn_l_and_year}
-            return get_fresh_apc_journal_list(my_dict["df"].issn_l.unique(), my_dict, self)
-        return []
+
 
     @cached_property
     def journals_sorted_cpu(self):
@@ -231,11 +209,6 @@ class Scenario(object):
     def journals_sorted_use_total(self):
         self.journals.sort(key=lambda k: for_sorting(k.use_total), reverse=True)
         return self.journals
-
-    @cached_property
-    def apc_journals_sorted_spend(self):
-        self.apc_journals.sort(key=lambda k: for_sorting(k.cost_apc_historical), reverse=True)
-        return self.apc_journals
 
     @cached_property
     def subscribed(self):
@@ -482,12 +455,6 @@ class Scenario(object):
     def historical_years_by_year(self):
         return range(2014, 2019)
 
-
-    @cached_property
-    def apc_journals_sorted_fractional_authorship(self):
-        self.apc_journals.sort(key=lambda k: for_sorting(k.fractional_authorships_total), reverse=True)
-        return self.apc_journals
-
     @cached_property
     def num_citations(self):
         return round(np.sum([j.num_citations for j in self.journals]), 4)
@@ -495,49 +462,6 @@ class Scenario(object):
     @cached_property
     def num_authorships(self):
         return round(np.sum([j.num_authorships for j in self.journals]), 4)
-
-    @cached_property
-    def num_apc_papers_historical(self):
-        return round(np.sum([j.num_apc_papers_historical for j in self.apc_journals]))
-
-    @cached_property
-    def cost_apc_historical_by_year(self):
-        return [round(np.sum([j.cost_apc_historical_by_year[year] for j in self.apc_journals])) for year in self.years]
-
-    @cached_property
-    def cost_apc_historical(self):
-        return round(np.mean(self.cost_apc_historical_by_year))
-
-    @cached_property
-    def cost_apc_historical_hybrid_by_year(self):
-        return [round(np.sum([j.cost_apc_historical_by_year[year] for j in self.apc_journals if j.oa_status=="hybrid"]), 4) for year in self.years]
-
-    @cached_property
-    def cost_apc_historical_hybrid(self):
-        return round(np.mean(self.cost_apc_historical_hybrid_by_year))
-
-    @cached_property
-    def cost_apc_historical_gold_by_year(self):
-        return [round(np.sum([j.cost_apc_historical_by_year[year] for j in self.apc_journals if j.oa_status=="gold"]), 4) for year in self.years]
-
-    @cached_property
-    def cost_apc_historical_gold(self):
-        return round(np.mean(self.cost_apc_historical_gold_by_year))
-
-    @cached_property
-    def fractional_authorships_total_by_year(self):
-        return [round(np.sum([j.fractional_authorships_total_by_year[year] for j in self.apc_journals]), 4) for year in self.years]
-
-    @cached_property
-    def fractional_authorships_total(self):
-        return round(np.mean(self.fractional_authorships_total_by_year), 2)
-
-    @cached_property
-    def apc_price(self):
-        if self.apc_journals:
-            return np.max([j.apc_price for j in self.apc_journals])
-        else:
-            return 0
 
     @cached_property
     def num_citations_weight_percent(self):
@@ -619,27 +543,6 @@ class Scenario(object):
         self.log_timing("to dict")
         response["_timing"] = self.timing_messages
         return response
-
-    def to_dict_apc(self):
-        response = {
-                "_settings": self.settings.to_dict(),
-                "_summary": self.to_dict_summary_dict(),
-                "name": "APC Cost",
-                "description": "Understand how much your institution spends on APCs with this publisher.",
-                "figure": [],
-                "headers": [
-                        {"text": "OA type", "value": "oa_status", "percent": None, "raw": None, "display": "text"},
-                        {"text": "APC price", "value": "apc_price", "percent": None, "raw": self.apc_price, "display": "currency_int"},
-                        {"text": "Number APC papers", "value": "num_apc_papers", "percent": None, "raw": self.num_apc_papers_historical, "display": "float1"},
-                        {"text": "Total fractional authorship", "value": "fractional_authorship", "percent": None, "raw": self.fractional_authorships_total, "display": "float1"},
-                        {"text": "APC Dollars Spent", "value": "cost_apc", "percent": None, "raw": self.cost_apc_historical, "display": "currency_int"},
-                ]
-        }
-        response["journals"] = [j.to_dict() for j in self.apc_journals_sorted_spend]
-        self.log_timing("to dict")
-        response["_timing"] = self.timing_messages
-        return response
-
 
     def to_dict_summary(self):
         response = {
@@ -1020,9 +923,6 @@ def get_common_package_data_specific(package_id):
     for member_package_id in my_data["member_package_ids"]:
         my_data[member_package_id] = get_package_specific_scenario_data_from_db(member_package_id)
         my_timing.log_timing("get_package_specific_scenario_data_from_db")
-
-    my_data["apc"] = get_apc_data_from_db(package_id)  # gets everything from consortium itself
-    my_timing.log_timing("get_apc_data_from_db")
 
     my_data["core_list"] = get_core_list_from_db(package_id)
     my_timing.log_timing("get_core_list_from_db")
