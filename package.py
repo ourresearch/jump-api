@@ -629,23 +629,25 @@ class Package(db.Model):
         return data_files_dict
 
     def to_package_dict(self):
-            response = OrderedDict([
-                ("id", self.package_id),
-                ("name", self.package_name),
-                ("publisher", self.publisher),
-                ("currency", self.currency),
-                ("cost_bigdeal", self.returned_big_deal_cost),
-                ("cost_bigdeal_increase", self.returned_big_deal_cost_increase),
-                ("is_owned_by_consortium", self.is_owned_by_consortium),
-                ("is_consortium", self.institution.is_consortium),
-                ("is_deleted", self.is_deleted is not None and self.is_deleted),
-                ("is_demo", self.is_demo),
-                ("has_complete_counter_data", self.has_complete_counter_data),
-                ("data_files", self.data_files_dict.values()),
-                ("scenarios", [s.to_dict_minimal() for s in self.saved_scenarios]),
-                ("warnings", self.warnings),
-            ])
-            return response
+        data_files_list = sorted(self.data_files_dict.values(), key=lambda x: "0" if x["created_date"]==None else x["created_date"].isoformat(), reverse=True)
+
+        response = OrderedDict([
+            ("id", self.package_id),
+            ("name", self.package_name),
+            ("publisher", self.publisher),
+            ("currency", self.currency),
+            ("cost_bigdeal", self.returned_big_deal_cost),
+            ("cost_bigdeal_increase", self.returned_big_deal_cost_increase),
+            ("is_owned_by_consortium", self.is_owned_by_consortium),
+            ("is_consortium", self.institution.is_consortium),
+            ("is_deleted", self.is_deleted is not None and self.is_deleted),
+            ("is_demo", self.is_demo),
+            ("has_complete_counter_data", self.has_complete_counter_data),
+            ("data_files", data_files_list),
+            ("scenarios", [s.to_dict_minimal() for s in self.saved_scenarios]),
+            ("warnings", self.warnings),
+        ])
+        return response
 
     def to_dict_minimal(self):
         response = {
