@@ -588,6 +588,7 @@ class Package(db.Model):
         data_files_dict["price-public"]["is_uploaded"] = True
         data_files_dict["price-public"]["is_parsed"] = True
         data_files_dict["price-public"]["is_live"] = True
+        data_files_dict["price-public"]["rows_count"] = len(self.public_price_rows())
 
         # go through all the upload rows
         for raw_file_upload_row in raw_file_upload_rows:
