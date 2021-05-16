@@ -621,7 +621,6 @@ class Scenario(object):
         return response
 
     def to_dict_apc(self):
-        response = {}
         response = {
                 "_settings": self.settings.to_dict(),
                 "_summary": self.to_dict_summary_dict(),

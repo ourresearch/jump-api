@@ -628,7 +628,7 @@ class Package(db.Model):
         return data_files_dict
 
     def to_package_dict(self):
-        data_files_list = sorted(self.data_files_dict.values(), key=lambda x: "0" if x["created_date"]==None else x["created_date"].isoformat(), reverse=True)
+        data_files_list = sorted(self.data_files_dict.values(), key=lambda x: 0 if x["rows_count"]==None else x["rows_count"], reverse=True)
 
         response = OrderedDict([
             ("id", self.package_id),
