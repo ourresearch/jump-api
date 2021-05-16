@@ -5,8 +5,6 @@ import requests
 import package
 from app import db
 from institution import Institution
-from scenario import refresh_perpetual_access_from_db
-from scenario import refresh_cached_prices_from_db
 
 
 def purge_common_package_data_cache(package_id):
@@ -26,12 +24,11 @@ def purge_common_package_data_cache(package_id):
 
 def purge_all_caches(package_id):
     purge_common_package_data_cache(package_id)
-    refresh_perpetual_access_from_db(package_id)
 
     my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
     if my_package:
         # my_package.clear_package_counter_breakdown_cache() # not used anymore
-        refresh_cached_prices_from_db(my_package.package_id, my_package.publisher)
+        pass
     else:
         print u"package not found: {}".format(package_id)
 

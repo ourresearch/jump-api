@@ -160,31 +160,10 @@ class Scenario(object):
         if self.package_id.startswith("package-jisc") or (self.package_id == JISC_PACKAGE_ID):
             use_high_price_if_unknown = True
 
-        #
-        # # use defaults if USD
-        # if self.my_package and self.my_package.currency == "USD":
-        #     prices_to_consider = [self.package_id]
-        #     prices_to_consider += [DEMO_PACKAGE_ID]
-        #
-        #     # special workaround for SUNY
-        #     from app import suny_consortium_package_ids
-        #     # print "package_id", self.package_id_for_db, get_parent_consortium_package_id(self.package_id_for_db)
-        #     if get_parent_consortium_package_id(self.package_id) in suny_consortium_package_ids or self.package_id in suny_consortium_package_ids:
-        #         prices_to_consider += ["68f1af1d", "93YfzkaA"]
-        #
-        #     prices_raw = get_prices_from_cache(prices_to_consider, self.publisher_name)
-        #     for package_id_for_prices in prices_to_consider:
-        #         # print "package_id_for_prices", package_id_for_prices
-        #         if package_id_for_prices in prices_raw:
-        #             for my_issnl, price in prices_raw[package_id_for_prices].iteritems():
-        #                 if price is not None:
-        #                     prices_dict[my_issnl] = price
-        #                     # print package_id_for_prices, my_issnl, price, "prices_dict[my_issnl]", prices_dict[my_issnl]
-        #     self.data["prices"] = prices_dict
-        # elif self.my_package and self.my_package.currency == "GBP":
+        from package import get_custom_prices
 
         prices_dict = {}
-        prices_uploaded_raw = refresh_cached_prices_from_db(self.package_id, None)
+        prices_uploaded_raw = get_custom_prices(self.package_id)
         from journalsdb import all_journal_metadata
         for my_journal_metadata in all_journal_metadata.values():
             if my_journal_metadata.publisher_code == self.publisher_name:
@@ -842,31 +821,8 @@ def get_apc_data_from_db(input_package_id):
     return rows
 
 
-def _perpetual_access_cache_key(package_id):
-    return u'scenario.get_perpetual_access.{}'.format(package_id)
-
-
-def refresh_perpetual_access_from_db(package_id):
-    pass
-
-# disable memcached
-#     command = text(
-#         u'select * from jump_perpetual_access where package_id = :package_id'
-#     ).bindparams(package_id=package_id)
-#
-#     rows = db.engine.execute(command).fetchall()
-#     package_dict = dict([(a["issn_l"], a) for a in rows])
-#
-#     my_memcached.set(_perpetual_access_cache_key(package_id), package_dict)
-#
-#     return package_dict
-
 
 def get_perpetual_access_from_cache(package_id, unused_publisher_name=None):
-    # disable memcached
-    # memcached_key = _perpetual_access_cache_key(package_id)
-    # return my_memcached.get(memcached_key) or refresh_perpetual_access_from_db(package_id)
-
     command = text(
         u'select * from jump_perpetual_access where package_id = :package_id'
     ).bindparams(package_id=package_id)
@@ -918,67 +874,8 @@ def get_num_papers_from_db():
     return lookup_dict
 
 
-def _journal_price_cache_key(package_id, publisher_name):
-    return u'scenario.get_journal_prices.{}.{}'.format(package_id, publisher_name)
 
 
-
-
-def get_prices_from_cache(package_ids, publisher_name):
-
-    lookup_dict = defaultdict(dict)
-
-    for package_id in package_ids:
-        package_dict = None
-
-        # temp
-        # disable memcached
-        # refresh_cached_prices_from_db(package_id, publisher_name)
-        # memcached_key = _journal_price_cache_key(package_id, publisher_name)
-        # package_dict = my_memcached.get(memcached_key)
-
-        if not package_dict:
-            package_dict = refresh_cached_prices_from_db(package_id, publisher_name)
-        lookup_dict[package_id] = package_dict
-
-    return lookup_dict
-
-
-# @memorycache
-# def get_ricks_journal():
-#     command = """select issn_l, title, issns from ricks_journal"""
-#     with get_db_cursor() as cursor:
-#         cursor.execute(command)
-#         rows = cursor.fetchall()
-#     my_dict = dict([(a["issn_l"], a) for a in rows])
-#     return my_dict
-#
-# @memorycache
-# def get_ricks_journal_flat():
-#     issns = {}
-#     with get_db_cursor() as cursor:
-#         cursor.execute('select issn, issn_l, publisher from ricks_journal_flat')
-#         rows = cursor.fetchall()
-#     for row in rows:
-#         issns[row['issn']] = {'issn_l': row['issn_l'], 'publisher': row['publisher']}
-#     return issns
-
-#
-# _hybrid_2019 = None
-#
-# def _load_hybrid_2019_from_db():
-#     global _hybrid_2019
-#
-#     if _hybrid_2019 is None:
-#         with get_db_cursor() as cursor:
-#             cursor.execute('select issn_l from jump_hybrid_journals_2019')
-#             rows = cursor.fetchall()
-#         _hybrid_2019 = {row["issn_l"] for row in rows}
-#
-#
-# def get_hybrid_2019():
-#     _load_hybrid_2019_from_db()
-#     return _hybrid_2019
 
 
 _journal_era_subjects = None
@@ -1001,35 +898,6 @@ def get_journal_era_subjects():
     return _journal_era_subjects
 
 
-def refresh_cached_prices_from_db(package_id, publisher_name):
-    package_dict = {}
-    publisher_where = ""
-    if publisher_name == "Elsevier":
-        publisher_where = "(publisher ilike '%elsevier%')"
-    elif publisher_name == "Wiley":
-        publisher_where = "(publisher ilike '%wiley%')"
-    elif publisher_name == "SpringerNature":
-        publisher_where = "((publisher ilike '%springer%') or (publisher ilike '%nature%'))"
-    elif publisher_name == "Sage":
-        publisher_where = "(publisher ilike '%sage%')"
-    elif publisher_name == "TaylorFrancis":
-        publisher_where = "((publisher ilike '%informa uk%') or (publisher ilike '%taylorfrancis%') or (publisher ilike 'Taylor & Francis'))"
-    else:
-        publisher_where = "true"
-
-    command = u"select issn_l, price from jump_journal_prices where (package_id = '{}') and {}".format(package_id, publisher_where)
-    # print "command", command
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
-
-    for row in rows:
-        package_dict[row["issn_l"]] = row["price"]
-
-    #disable memcached
-    # my_memcached.set(_journal_price_cache_key(package_id, publisher_name), package_dict)
-
-    return package_dict
 
 
 @cache

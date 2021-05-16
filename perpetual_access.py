@@ -6,7 +6,6 @@ from collections import OrderedDict
 
 from app import db
 from package_input import PackageInput
-from scenario import refresh_perpetual_access_from_db
 
 
 class PerpetualAccess(db.Model):
@@ -107,4 +106,3 @@ class PerpetualAccessInput(db.Model, PackageInput):
 
     def clear_caches(self, my_package):
         super(PerpetualAccessInput, self).clear_caches(my_package)
-        refresh_perpetual_access_from_db(my_package.package_id)

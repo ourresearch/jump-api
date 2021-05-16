@@ -22,7 +22,6 @@ from journal_price import JournalPriceInput
 from perpetual_access import PerpetualAccessInput
 from saved_scenario import SavedScenario # used in relationship
 from institution import Institution  # used in relationship
-from scenario import get_prices_from_cache
 from scenario import get_core_list_from_db
 from scenario import get_perpetual_access_from_cache
 from util import get_sql_answers
@@ -73,39 +72,33 @@ class Package(db.Model):
         if self.institution.is_consortium:
             return True
 
-        print "self.counter_journals_by_report_name", self.counter_journals_by_report_name
-        if not self.counter_journals_by_report_name:
-            return False
-        report_versions = [row["report_version"] for row in self.counter_journals_by_report_name]
-        if report_versions == ["4"]:
+        my_list = self.data_files_list
+        my_data_file_dict = [d for d in my_list if d["file"]=="counter"][0]
+        if my_data_file_dict["is_live"]:
             return True
-        if report_versions == ["5", "5", "5"]:
+
+        my_data_file_dict_list = [d for d in my_list if d["file"] in ["counter-trj2", "counter-trj3", "counter-trj4"]]
+        if len(my_data_file_dict_list) == 3:
             return True
+
         return False
 
     @property
     def has_custom_perpetual_access(self):
-        # perpetual_access_rows = get_perpetual_access_from_cache([self.package_id])
-        perpetual_access_rows = get_perpetual_access_from_cache(self.package_id)
-        if perpetual_access_rows:
-            return True
-        from app import suny_consortium_package_ids
-        if self.package_id in suny_consortium_package_ids or self.consortium_package_id in suny_consortium_package_ids:
+        my_list = self.data_files_list
+        my_data_file_dict = [d for d in my_list if d["file"]=="perpetual-access"][0]
+        if my_data_file_dict["is_live"]:
             return True
         return False
 
     @property
     def has_custom_prices(self):
-        package_ids = [x for x in [self.package_id, self.consortium_package_id] if x]
-        if package_ids:
-            prices_rows = get_prices_from_cache(package_ids, self.publisher)
-            package_ids_with_prices = prices_rows.keys()
-            if self.package_id in package_ids_with_prices or self.consortium_package_id in package_ids_with_prices:
-                return True
-        from app import suny_consortium_package_ids
-        if self.package_id in suny_consortium_package_ids:
+        my_list = self.data_files_list
+        my_data_file_dict = [d for d in my_list if d["file"]=="price"][0]
+        if my_data_file_dict["is_live"]:
             return True
         return False
+
 
     @property
     def has_core_journal_list(self):
@@ -386,7 +379,7 @@ class Package(db.Model):
         price_packages = [self.package_id]
         if self.currency == "USD":
             price_packages += [DEMO_PACKAGE_ID]
-        all_prices = get_prices_from_cache(price_packages, self.publisher)
+        all_prices = get_custom_prices(price_packages)
         package_prices = all_prices[self.package_id]
         public_prices = all_prices[DEMO_PACKAGE_ID]
         package_price_defaults = defaultdict(lambda: None, package_prices)
@@ -475,10 +468,9 @@ class Package(db.Model):
     @cached_property
     def journals_missing_prices(self):
         from journalsdb import all_journal_metadata
-        from scenario import refresh_cached_prices_from_db
 
         counter_rows = self.counter_totals_from_db
-        prices_uploaded_raw = refresh_cached_prices_from_db(self.package_id, None)
+        prices_uploaded_raw = get_custom_prices(self.package_id)
         journals_missing_prices = []
 
         for my_journal_metadata in all_journal_metadata.values():
@@ -527,20 +519,6 @@ class Package(db.Model):
         response = []
 
         if not self.institution.is_consortium:
-
-            # if (self.big_deal_cost == None) or (self.big_deal_cost_increase == None):
-            #     response += [{
-            #         "id": "missing_big_deal_costs",
-            #         "is_dismissed": False,
-            #         "journals": None
-            #     }]
-
-            # if not self.has_complete_counter_data:
-            #     response += [{
-            #         "id": "missing_counter_data",
-            #         "is_dismissed": False,
-            #         "journals": None
-            #     }]
 
             if not self.has_custom_perpetual_access:
                 response += [{
@@ -592,12 +570,9 @@ class Package(db.Model):
                 "hasCustomPerpetualAccess": self.has_custom_perpetual_access,
         }
 
-    def to_package_dict(self):
-        # journal_detail = dict(self.get_package_counter_breakdown())  # not used anymore
-        # journal_detail["publisher_id"] = journal_detail.pop("package_id") # not used anymore
 
-        # counter stats
-
+    @property
+    def data_files_list(self):
         counter_errors = CounterInput().load_errors(self.package_id)
 
         if counter_errors:
@@ -644,7 +619,6 @@ class Package(db.Model):
                 counter_uploaded = True
             else:
                 counter_uploaded = num_counter_rows > 0
-
 
             data_files_list = [
                     {
@@ -728,85 +702,6 @@ class Package(db.Model):
                                 my_dict["error_details"] = raw_file_upload_row["error_details"]
                                 my_dict["is_live"] = False
 
-            #
-            # data_files_list = [
-            #         {
-            #             "name": "counter",
-            #             "uploaded": counter_uploaded,
-            #             "rows_count": num_counter_rows,
-            #             "error_rows": counter_errors,
-            #         },
-            #         {
-            #             "name": "perpetual-access",
-            #             "uploaded": False if self.is_demo else num_pa_rows > 0,
-            #             "rows_count": num_pa_rows,
-            #             "error_rows": pa_errors,
-            #         },
-            #         {
-            #             "name": "price",
-            #             "uploaded": False if self.is_demo else num_price_rows > 0,
-            #             "rows_count": num_price_rows,
-            #             "error_rows": price_errors,
-            #         },
-            #         {
-            #             "name": "core-journals",
-            #             "uploaded": False if self.is_demo else num_core_rows > 0,
-            #             "rows_count": num_core_rows,
-            #             "error_rows": None,
-            #         },
-            #         {
-            #             "name": "price-public",
-            #             "uploaded": True,
-            #             "rows_count": len(self.public_price_rows()),
-            #             "error_rows": None,
-            #         },
-            #         {
-            #             "name": "counter-trj2",
-            #             "uploaded": True,
-            #             "rows_count": len(self.public_price_rows()),
-            #             "error_rows": None,
-            #         },
-            #         {
-            #             "name": "counter-trj3",
-            #             "uploaded": True,
-            #             "rows_count": len(self.public_price_rows()),
-            #             "error_rows": None,
-            #         },
-            #         {
-            #             "name": "counter-trj4",
-            #             "uploaded": True,
-            #             "rows_count": len(self.public_price_rows()),
-            #             "error_rows": None,
-            #         }
-            # ]
-            #
-            # for data_file in data_files_list:
-            #     data_file["error"] = None
-            #     data_file["error_details"] = None
-            #     data_file["created_date"] = None
-            #     if data_file["rows_count"]:
-            #         data_file["is_uploaded"] = True
-            #         data_file["is_parsed"] = True
-            #         data_file["is_live"] = True
-            #     else:
-            #         data_file["is_uploaded"] = False
-            #         data_file["is_parsed"] = False
-            #         data_file["is_live"] = False
-            #
-            # command = u"""select * from jump_raw_file_upload_object where package_id = '{}'""".format(self.package_id)
-            # with get_db_cursor() as cursor:
-            #     cursor.execute(command)
-            #     raw_file_upload_rows = cursor.fetchall()
-            #
-            # for raw_file_upload_row in raw_file_upload_rows:
-            #     for my_dict in data_files_list:
-            #         if (my_dict["name"] == raw_file_upload_row["file"]):
-            #             if raw_file_upload_row["error"]:
-            #                 my_dict["is_live"] = False
-            #                 my_dict["error"] = raw_file_upload_row["error"]
-            #                 my_dict["error_details"] = raw_file_upload_row["error_details"]
-
-
             preprocess_file_list = s3_client.list_objects(Bucket="unsub-file-uploads-preprocess")
             for preprocess_file in preprocess_file_list.get("Contents", []):
                 filename = preprocess_file["Key"]
@@ -823,7 +718,9 @@ class Package(db.Model):
                         my_dict["is_uploaded"] = True
                         my_dict["is_parsed"] = False
                         my_dict["is_live"] = False
+        return my_dict
 
+    def to_package_dict(self):
             response = {
                 "id": self.package_id,
                 "name": self.package_name,
@@ -832,7 +729,7 @@ class Package(db.Model):
                 "is_demo": self.is_demo,
                 "journal_detail": None,  #not used anymore
                 "scenarios": [s.to_dict_minimal() for s in self.saved_scenarios],
-                "data_files": data_files_list,
+                "data_files": self.data_files_list,
                 "journals": self.get_journal_attributes(),
                 "is_owned_by_consortium": self.is_owned_by_consortium,
                 "is_consortium": self.institution.is_consortium,
@@ -959,3 +856,30 @@ def clone_demo_package(institution):
     return new_package
 
 
+def check_if_to_delete(package_id, file):
+    command = u"""select * from jump_raw_file_upload_object where package_id = '{}' and to_delete_date is not null""".format(package_id)
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows_to_delete = cursor.fetchall()
+    for row in rows_to_delete:
+        if (row["package_id"] == package_id) and (row["file"] == file):
+            return True
+    return False
+
+
+def get_custom_prices(package_id):
+    package_dict = {}
+
+    if check_if_to_delete(package_id, "price"):
+        return package_dict
+
+    command = u"select issn_l, price from jump_journal_prices where (package_id = '{}')".format(package_id)
+    # print "command", command
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+
+    for row in rows:
+        package_dict[row["issn_l"]] = row["price"]
+
+    return package_dict
