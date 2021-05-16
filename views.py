@@ -1284,7 +1284,7 @@ def live_publisher_id_apc_get(publisher_id):
         abort_json(404, "Publisher not found")
 
     if not my_package.unique_saved_scenarios:
-        abort_json(404, "Scenario not found")
+        response = jsonify_fast_no_sort({"message": "need a scenario in order to see apcs"})
 
     my_scenario = my_package.unique_saved_scenarios[0]
     scenario_id = my_scenario.scenario_id
