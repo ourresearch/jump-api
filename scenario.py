@@ -64,7 +64,7 @@ def get_fresh_journal_list(scenario, my_jwt):
         issnls_to_build = [issn_l for issn_l in issnls_to_build if issn_l in scenario.data[DEMO_PACKAGE_ID]["counter_dict"].keys()]
         package_id = DEMO_PACKAGE_ID
     else:
-        issnls_to_build = [issn_l for issn_l in issnls_to_build if issn_l in scenario.data[scenario.package_id_for_db]["counter_dict"].keys()]
+        issnls_to_build = [issn_l for issn_l in issnls_to_build if issn_l in scenario.data[scenario.package_id]["counter_dict"].keys()]
         package_id = scenario.package_id
 
     journals = [Journal(issn_l, package_id=package_id) for issn_l in issnls_to_build if issn_l]
@@ -155,20 +155,16 @@ class Scenario(object):
         prices_dict = {}
         prices_uploaded_raw = get_custom_prices(self.package_id)
         print u"len prices_uploaded_raw {}".format(len(prices_uploaded_raw))
-        from journalsdb import all_journal_metadata
-        from journalsdb import get_journal_metadata_for_publisher
+        from journalsdb import get_journal_metadata_for_publisher_currently_subscription
 
-        # print u"len all_journal_metadata {}".format(len(all_journal_metadata))
-
-        publisher_journals = get_journal_metadata_for_publisher(self.publisher_name)
+        publisher_journals = get_journal_metadata_for_publisher_currently_subscription(self.publisher_name)
         print u"len publisher_journals {}".format(len(publisher_journals))
 
         for my_issn_l, my_journal_metadata in publisher_journals.iteritems():
             print u"{} {}".format(my_issn_l, my_journal_metadata)
-            if my_journal_metadata.is_current_subscription_journal:
-                prices_dict[my_issn_l] = prices_uploaded_raw.get(my_issn_l, None)
-                if not prices_dict[my_issn_l]:
-                    prices_dict[my_issn_l] = my_journal_metadata.get_subscription_price(self.my_package.currency, use_high_price_if_unknown=use_high_price_if_unknown)
+            prices_dict[my_issn_l] = prices_uploaded_raw.get(my_issn_l, None)
+            if not prices_dict[my_issn_l]:
+                prices_dict[my_issn_l] = my_journal_metadata.get_subscription_price(self.my_package.currency, use_high_price_if_unknown=use_high_price_if_unknown)
         print "len prices_dict {}".format(len(prices_dict))
         self.data["prices"] = prices_dict
 
@@ -659,8 +655,7 @@ def get_counter_totals_from_db(package_id):
                 counter_dict[row["issn_l"]] += row.get("total")
     return counter_dict
 
-
-@cache
+# don't cache because called after loading to get fresh data
 def get_package_specific_scenario_data_from_db(package_id):
     timing = []
     section_time = time()
