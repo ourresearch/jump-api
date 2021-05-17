@@ -495,6 +495,9 @@ class Package(db.Model):
         if not hasattr(self, "apc_data"):
             self.apc_data = get_apc_data_from_db(self.package_id)
 
+        if not self.apc_data:
+            return []
+
         df = pd.DataFrame(self.apc_data)
     #     # df["apc"] = df["apc"].astype(float)
         df["year"] = df["year"].astype(int)
