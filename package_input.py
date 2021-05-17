@@ -244,13 +244,6 @@ class PackageInput:
     def delete(self, package_id, report_name=None):
 
         with get_db_cursor() as cursor:
-            print("delete from {} where package_id = '{}'".format(self.__tablename__, package_id))
-            print("delete from {} where package_id = '{}'".format(self.destination_table(), package_id))
-            print("delete from jump_file_import_error_rows where package_id = '{}' and file = '{}'".format(
-                package_id, self.file_type_label()))
-            print("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
-                package_id, self.file_type_label()))
-
             cursor.execute("delete from {} where package_id = '{}'".format(self.__tablename__, package_id))
             cursor.execute("delete from {} where package_id = '{}'".format(self.destination_table(), package_id))
             cursor.execute("delete from jump_file_import_error_rows where package_id = '{}' and file = '{}'".format(
@@ -262,7 +255,9 @@ class PackageInput:
         if my_package:
             self.clear_caches(my_package)
 
-        return u"Deleted {} rows for package {}.".format(self.__class__.__name__, package_id)
+        message = u"Deleted {} rows for package {}.".format(self.__class__.__name__, package_id)
+        print message
+        return message
 
 
     def clear_caches(self, my_package):
@@ -278,34 +273,11 @@ class PackageInput:
                 email = u"heather+{}@ourresearch.org".format(my_package.package_id)
                 my_consortium.queue_for_recompute(email)
                 reset_cache("consortium", "consortium_get_computed_data", consortium_scenario_id)
-        else:
-            print u"NO NEED TO cache clear consortium_get_computed_data for my_package {}".format(my_package)
 
         # my_package.clear_package_counter_breakdown_cache() # not used anymore
 
     def update_dest_table(self, package_id):
-        # unload_cmd = text("""
-        #     unload
-        #     ('select * from {view} where package_id = \\'{package_id}\\'')
-        #     to 's3://jump-redshift-staging/{package_id}_{view}_{uuid}/'
-        #     with credentials :creds csv""".format(
-        #         view=self.import_view_name(),
-        #         package_id=package_id,
-        #         uuid=shortuuid.uuid(),
-        #     )
-        # )
-        #
-        # aws_creds = "aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}".format(
-        #     aws_key=os.getenv("AWS_ACCESS_KEY_ID"),
-        #     aws_secret=os.getenv("AWS_SECRET_ACCESS_KEY")
-        # )
-        #
-
         with get_db_cursor() as cursor:
-            print("delete from {} where package_id = '{}'".format(self.destination_table(), package_id))
-            print("insert into {} (select * from {} where package_id = '{}')".format(
-                    self.destination_table(), self.import_view_name(), package_id))
-
             cursor.execute("delete from {} where package_id = '{}'".format(self.destination_table(), package_id))
             cursor.execute("insert into {} (select * from {} where package_id = '{}')".format(
                     self.destination_table(), self.import_view_name(), package_id))
