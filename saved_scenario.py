@@ -269,6 +269,8 @@ class SavedScenario(db.Model):
         return response
 
     def to_dict_journals(self):
+        self.set_live_scenario()  # in case not done
+
         response = OrderedDict()
         response["meta"] = self.to_dict_meta()
 
