@@ -163,12 +163,12 @@ class Scenario(object):
         publisher_journals = get_journal_metadata_for_publisher(self.publisher_name)
         print u"len publisher_journals {}".format(len(publisher_journals))
 
-        for my_journal_metadata in publisher_journals.values():
-            print my_journal_metadata
+        for my_issn_l, my_journal_metadata in publisher_journals.iteritems():
+            print u"{} {}".format(my_issn_l, my_journal_metadata)
             if my_journal_metadata.is_current_subscription_journal:
-                prices_dict[my_journal_metadata.issn_l] = prices_uploaded_raw.get(my_journal_metadata.issn_l, None)
-                if not prices_dict[my_journal_metadata.issn_l]:
-                    prices_dict[my_journal_metadata.issn_l] = my_journal_metadata.get_subscription_price(self.my_package.currency, use_high_price_if_unknown=use_high_price_if_unknown)
+                prices_dict[my_issn_l] = prices_uploaded_raw.get(my_issn_l, None)
+                if not prices_dict[my_issn_l]:
+                    prices_dict[my_issn_l] = my_journal_metadata.get_subscription_price(self.my_package.currency, use_high_price_if_unknown=use_high_price_if_unknown)
         print "len prices_dict {}".format(len(prices_dict))
         self.data["prices"] = prices_dict
 
