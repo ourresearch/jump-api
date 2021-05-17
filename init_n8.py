@@ -155,14 +155,14 @@ def update_group_pta(jusp_id, group_jusp_ids):
 
     command = """        
         insert into jump_perpetual_access (package_id, issn_l, start_date, end_date) (
-            select '{package_id}', issn_l, coalesce(min(start_date), '2010-01-01'::timestamp) as start_date, coalesce(max(end_date), max(end_date), null) as end_date
+            select '{package_id}', issn_l, coalesce(min(start_date), '1850-01-01'::timestamp) as start_date, coalesce(max(end_date), max(end_date), null) as end_date
             from jump_perpetual_access
             where package_id in ({jisc_package_ids_string})
             group by issn_l
         );
         
         insert into jump_perpetual_access_input (package_id, issn, start_date, end_date) (
-            select '{package_id}', issn_l as issn, coalesce(min(start_date), '2010-01-01'::timestamp) as start_date, coalesce(max(end_date), max(end_date), null) as end_date
+            select '{package_id}', issn_l as issn, coalesce(min(start_date), '1850-01-01'::timestamp) as start_date, coalesce(max(end_date), max(end_date), null) as end_date
             from jump_perpetual_access
             where package_id in ({jisc_package_ids_string})
             group by issn_l
@@ -238,24 +238,26 @@ if __name__ == "__main__":
     # group_jusp_data["icl"] = {"institution_id": "institution-jiscicl", "subs": subs} #imperial college london, just to see
 
 
-    # for jusp_id, data in group_jusp_data.iteritems():
-    #     print jusp_id, data
-    #     package_create(jusp_id, data["institution_id"], "own pta")
-    #     # pta copied over in package_create from own jisc package
-    #
-    #     package_create(jusp_id, data["institution_id"], "group pta")
-    #     update_group_pta(jusp_id, group_jusp_data.keys())
+    if False:
+        # for jusp_id, data in group_jusp_data.iteritems():
+        #     print jusp_id, data
+        #     package_create(jusp_id, data["institution_id"], "own pta")
+        #     # pta copied over in package_create from own jisc package
+        #
+        #     package_create(jusp_id, data["institution_id"], "group pta")
+        #     update_group_pta(jusp_id, group_jusp_data.keys())
 
-    # for jusp_id, data in group_jusp_data.iteritems():
-    #     # my_source_scenario_dict = get_latest_scenario_raw(data["orig_scenario_id"])
-    #     # subscriptions = my_source_scenario_dict["subrs"]
-    #
-    #     subscriptions = get_issnls(data["subs"])
-    #     # print jusp_id, len(subscriptions), len(data["subs"])
-    #     copy_subscriptions(jusp_id, "own pta", subscriptions)
+        # for jusp_id, data in group_jusp_data.iteritems():
+        #     # my_source_scenario_dict = get_latest_scenario_raw(data["orig_scenario_id"])
+        #     # subscriptions = my_source_scenario_dict["subrs"]
+        #
+        #     subscriptions = get_issnls(data["subs"])
+        #     # print jusp_id, len(subscriptions), len(data["subs"])
+        #     copy_subscriptions(jusp_id, "own pta", subscriptions)
 
-    # for jusp_id, data in group_jusp_data.iteritems():
-    #     set_non_own_subscriptions(jusp_id, group_jusp_data.keys(), "group pta")
+        # for jusp_id, data in group_jusp_data.iteritems():
+        #     set_non_own_subscriptions(jusp_id, group_jusp_data.keys(), "group pta")
+        pass
 
     print "gathering results"
     results = []

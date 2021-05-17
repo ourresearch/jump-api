@@ -39,6 +39,10 @@ class N8UniResult(object):
         return response
 
     def num_own_subscriptions(self):
+        # print self.saved_scenario_ownpta
+        # print self.saved_scenario_ownpta.package_id
+        # print self.saved_scenario_ownpta.live_scenario
+        # print len(self.saved_scenario_ownpta.live_scenario.subscribed)
         return len(self.saved_scenario_ownpta.live_scenario.subscribed)
 
     def num_group_subscriptions(self):

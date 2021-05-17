@@ -144,7 +144,7 @@ class Scenario(object):
         self.data["prices"] = {}
 
         use_high_price_if_unknown = False
-        if self.package_id.startswith("package-jisc") or (self.package_id == JISC_PACKAGE_ID):
+        if self.package_id.startswith("package-jisc") or self.package_id.startswith("package-n8") or (self.package_id == JISC_PACKAGE_ID):
             use_high_price_if_unknown = True
 
         from package import get_custom_prices
