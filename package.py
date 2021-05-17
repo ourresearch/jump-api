@@ -71,7 +71,7 @@ class Package(db.Model):
     currency = db.Column(db.Text)
 
     saved_scenarios = db.relationship("SavedScenario", lazy="subquery", backref=db.backref("package", lazy="subquery"))
-    institution = db.relationship("Institution", lazy="subquery", uselist=False)
+    institution = db.relationship("Institution", lazy="subquery", uselist=False, backref=db.backref("packages", lazy="subquery"))
 
     def __init__(self, **kwargs):
         self.created = datetime.datetime.utcnow().isoformat()
