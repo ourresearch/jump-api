@@ -132,7 +132,6 @@ def jsonify_fast_no_sort_simple(*args, **kwargs):
 
 class Consortium(object):
     def __init__(self, scenario_id, package_id=None):
-        print "BUILDING SCENARIO OBJECT", scenario_id, package_id
         self.scenario_id = None
         consortium_ids = get_consortium_ids()
         if scenario_id:
@@ -250,7 +249,6 @@ class Consortium(object):
 
         start_time = time()
         response_list = [j.to_dict_journals() for j in self.journals_sorted_cpu]
-        print "after to_dict_journals on each journal", elapsed(start_time)
 
         my_response["journals"] = response_list
         my_response["member_institutions"] = self.member_institution_included_list
@@ -406,17 +404,14 @@ class Consortium(object):
         response = None
         rows = self.journal_member_data
         start_time = time()
-        print "creating consortium journals"
 
         issn_ls = consortium_get_issns(self.scenario_id)
-        print "before journals", elapsed(start_time)
         start_time = time()
         journals_dicts_by_issn_l = defaultdict(list)
         for d in rows:
             if d["member_package_id"] in self.member_institution_included_list:
                 journals_dicts_by_issn_l[d["issn_l"]].append(d)
 
-        print "after calculating", elapsed(start_time)
         start_time = time()
         journal_list = []
         for issn_l in issn_ls:
@@ -438,8 +433,6 @@ class Consortium(object):
 
         for rank, my_journal in enumerate(journal_list):
             my_journal.cpu_rank = rank + 1
-
-        print "after journals", elapsed(start_time)
 
         return journal_list
 
