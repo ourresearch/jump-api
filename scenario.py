@@ -56,6 +56,7 @@ def get_fresh_journal_list(scenario, my_jwt):
 
     journals_to_exclude = ["0370-2693"]
     issn_ls = scenario.data["unpaywall_downloads_dict"].keys()
+    print u"len issn_ls {}".format(len(issn_ls))
     issnls_to_build = [issn_l for issn_l in issn_ls if issn_l not in journals_to_exclude]
 
     # only include things in the counter file
@@ -67,6 +68,7 @@ def get_fresh_journal_list(scenario, my_jwt):
         package_id = scenario.package_id
 
     journals = [Journal(issn_l, package_id=package_id) for issn_l in issnls_to_build if issn_l]
+    print u"len journals {}".format(len(journals))
 
     for my_journal in journals:
         my_journal.set_scenario(scenario)
@@ -152,13 +154,21 @@ class Scenario(object):
 
         prices_dict = {}
         prices_uploaded_raw = get_custom_prices(self.package_id)
+        print u"len prices_uploaded_raw {}".format(len(prices_uploaded_raw))
         from journalsdb import all_journal_metadata
-        for my_journal_metadata in all_journal_metadata.values():
-            if my_journal_metadata.publisher_code == self.publisher_name:
-                if my_journal_metadata.is_current_subscription_journal:
-                    prices_dict[my_journal_metadata.issn_l] = prices_uploaded_raw.get(my_journal_metadata.issn_l, None)
-                    if not prices_dict[my_journal_metadata.issn_l]:
-                        prices_dict[my_journal_metadata.issn_l] = my_journal_metadata.get_subscription_price(self.my_package.currency, use_high_price_if_unknown=use_high_price_if_unknown)
+        from journalsdb import get_journal_metadata_for_publisher
+
+        # print u"len all_journal_metadata {}".format(len(all_journal_metadata))
+
+        publisher_journals = get_journal_metadata_for_publisher(self.publisher_name)
+        # print u"len publisher_journals {}".format(len(publisher_journals))
+
+        for my_journal_metadata in publisher_journals:
+            if my_journal_metadata.is_current_subscription_journal:
+                prices_dict[my_journal_metadata.issn_l] = prices_uploaded_raw.get(my_journal_metadata.issn_l, None)
+                if not prices_dict[my_journal_metadata.issn_l]:
+                    prices_dict[my_journal_metadata.issn_l] = my_journal_metadata.get_subscription_price(self.my_package.currency, use_high_price_if_unknown=use_high_price_if_unknown)
+        print "len prices_dict {}".format(len(prices_dict))
         self.data["prices"] = prices_dict
 
         clean_dict = {}
@@ -203,6 +213,7 @@ class Scenario(object):
     @cached_property
     def journals_sorted_cpu(self):
         self.journals.sort(key=lambda k: for_sorting(k.cpu), reverse=False)
+        print u"len self.journals {}".format(len(self.journals))
         return self.journals
 
     @cached_property
