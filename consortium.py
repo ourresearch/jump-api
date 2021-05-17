@@ -71,12 +71,10 @@ def consortium_get_computed_data(scenario_id):
     with get_db_cursor(use_defaultcursor=True) as cursor:
         cursor.execute(command)
         rows = cursor.fetchall()
-    print "get with default cursor in consortium_get_computed_data", elapsed(start_time)
 
     column_string = """member_package_id, scenario_id, updated, issn_l, usage, cpu, package_id, consortium_name, institution_name, institution_short_name, subject, era_subjects, is_society_journal, subscription_cost, ill_cost, use_instant_for_debugging, use_social_networks, use_oa, use_backfile, use_subscription, use_other_delayed, use_ill, perpetual_access_years, baseline_access, use_social_networks_percent, use_green_percent, use_hybrid_percent, use_bronze_percent, use_peer_reviewed_percent, bronze_oa_embargo_months, is_hybrid_2019, downloads, citations, authorships"""
     start_time = time()
     response = cursor_rows_to_dicts(column_string, rows)
-    print "after dict build in consortium_get_computed_data ", elapsed(start_time)
 
     return response
 
@@ -89,7 +87,6 @@ def consortium_get_issns(scenario_id):
         cursor.execute(command)
         rows = cursor.fetchall()
 
-    print "after db get consortium_get_issns", elapsed(start_time)
     return [row["issn_l"] for row in rows]
 
 
@@ -330,7 +327,6 @@ class Consortium(object):
                     print "len(app.my_memorycache_dict)", len(app.my_memorycache_dict)
 
                     my_live_scenario = Scenario(member_package_id, self.scenario_saved_dict, my_jwt=None)
-                    print u"after my_live_scenario with {} {}".format(member_package_id, self.scenario_id)
                     command_list = [my_journal.to_values_journals_for_consortium() for my_journal in my_live_scenario.journals]
 
                     # save all of these in the db
@@ -396,7 +392,6 @@ class Consortium(object):
                 if row["package_id"] in self.member_institution_included_list:
                     response.append(row)
 
-        print "after db get to_dict_journal_zoom", elapsed(start_time)
         return response
 
     @cached_property
@@ -466,7 +461,6 @@ class Consortium(object):
                 if row["package_id"] in self.member_institution_included_list:
                     row["included"] = True
 
-        print "after db get to_dict_institutions", elapsed(start_time)
         return rows
 
 

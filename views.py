@@ -263,14 +263,11 @@ def user_login():
     if username is None and email is None:
         return abort_json(400, "Username or email parameter is required.")
 
-    print u"before lookup_user"
     login_user = lookup_user(email=email, username=username)
 
     # maybe the username was passed as an email
     if not login_user and email and not username:
         login_user = lookup_user(username=email)
-
-    print u"after lookup_user"
 
     if not login_user:
         return abort_json(404, u"User does not exist.")
@@ -279,7 +276,6 @@ def user_login():
         return abort_json(403, u"Bad password.")
 
     identity_dict = make_identity_dict(login_user)
-    print "identity_dict", identity_dict
     logger.info(u"login to account {} with {}".format(login_user.username, identity_dict))
     access_token = create_access_token(identity=identity_dict)
 
@@ -287,13 +283,9 @@ def user_login():
         UserInstitutionPermission.user_id == login_user.id,
     ).first()
 
-    print u"done query"
-
     if not login_user_permissions:
         assign_demo_institution(login_user)
         safe_commit(db)
-
-    print u"done assign_demo_institution"
 
     return jsonify({"access_token": access_token})
 
@@ -1422,9 +1414,7 @@ def scenario_post(package_id):
             login_user = authenticated_user()
             new_consortia.queue_for_recompute(login_user.email)
 
-    print "getting my_new_scenario"
     my_new_scenario = get_saved_scenario(new_scenario_id, required_permission=Permission.view())
-    print "got my_new_scenario"
 
     return jsonify_fast_no_sort(my_new_scenario.to_dict_journals())
 

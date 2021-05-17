@@ -120,7 +120,6 @@ class Scenario(object):
 
         self.data = get_common_package_data(package_id_in_cache)
         self.log_timing("get_common_package_data from_cache")
-        logger.debug("get_common_package_data from_cache")
 
         self.set_clean_data()  #order for this one matters, after get common, before build journals
         self.log_timing("set_clean_data")
