@@ -58,6 +58,7 @@ def get_fresh_journal_list(scenario, my_jwt):
     issn_ls = scenario.data["unpaywall_downloads_dict"].keys()
     print u"len issn_ls {}".format(len(issn_ls))
     issnls_to_build = [issn_l for issn_l in issn_ls if issn_l not in journals_to_exclude]
+    print u"len issnls_to_build {}".format(len(issnls_to_build))
 
     # only include things in the counter file
     if my_package.is_demo:
@@ -66,6 +67,9 @@ def get_fresh_journal_list(scenario, my_jwt):
     else:
         issnls_to_build = [issn_l for issn_l in issnls_to_build if issn_l in scenario.data[scenario.package_id]["counter_dict"].keys()]
         package_id = scenario.package_id
+
+    print "scenario.package_id", scenario.package_id
+    print u"len issnls_to_build2 {}".format(len(issnls_to_build))
 
     journals = [Journal(issn_l, package_id=package_id) for issn_l in issnls_to_build if issn_l]
     print u"len journals {}".format(len(journals))
@@ -161,7 +165,7 @@ class Scenario(object):
         print u"len publisher_journals {}".format(len(publisher_journals))
 
         for my_issn_l, my_journal_metadata in publisher_journals.iteritems():
-            print u"{} {}".format(my_issn_l, my_journal_metadata)
+            # print u"{} {}".format(my_issn_l, my_journal_metadata)
             prices_dict[my_issn_l] = prices_uploaded_raw.get(my_issn_l, None)
             if not prices_dict[my_issn_l]:
                 prices_dict[my_issn_l] = my_journal_metadata.get_subscription_price(self.my_package.currency, use_high_price_if_unknown=use_high_price_if_unknown)
@@ -914,7 +918,7 @@ def get_common_package_data(package_id):
 
     return my_data
 
-@memorycache
+# not cached on purpose, because components are cached to save space
 def get_common_package_data_specific(package_id):
     my_timing = TimingMessages()
     my_data = {}

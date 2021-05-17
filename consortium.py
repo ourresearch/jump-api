@@ -81,7 +81,6 @@ def consortium_get_computed_data(scenario_id):
     return response
 
 
-@memorycache
 def consortium_get_issns(scenario_id):
     start_time = time()
 
@@ -94,7 +93,6 @@ def consortium_get_issns(scenario_id):
     return [row["issn_l"] for row in rows]
 
 
-@memorycache
 def big_deal_costs_for_members():
     start_time = time()
 
