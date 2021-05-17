@@ -161,9 +161,10 @@ class Scenario(object):
         # print u"len all_journal_metadata {}".format(len(all_journal_metadata))
 
         publisher_journals = get_journal_metadata_for_publisher(self.publisher_name)
-        # print u"len publisher_journals {}".format(len(publisher_journals))
+        print u"len publisher_journals {}".format(len(publisher_journals))
 
-        for my_journal_metadata in publisher_journals:
+        for my_journal_metadata in publisher_journals.values():
+            print my_journal_metadata
             if my_journal_metadata.is_current_subscription_journal:
                 prices_dict[my_journal_metadata.issn_l] = prices_uploaded_raw.get(my_journal_metadata.issn_l, None)
                 if not prices_dict[my_journal_metadata.issn_l]:
