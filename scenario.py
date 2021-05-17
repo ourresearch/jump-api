@@ -981,10 +981,8 @@ def get_common_package_data_for_all():
         # return (my_data, my_timing)
 
         s3_clientobj = s3_client.get_object(Bucket="unsub-cache", Key="get_common_package_data_for_all.json")
-        print u"made s3_clientobj"
         contents_string = s3_clientobj["Body"].read().decode("utf-8")
         contents_json = json.loads(contents_string)
-        print u"got contents_json"
         return (contents_json, my_timing)
 
     except Exception as e:
