@@ -268,9 +268,9 @@ def recompute_journal_metadata():
 class MissingJournalMetadata(object):
     def __init__(self, issn_l):
         self.issn_l = issn_l
-        print u"Error: missing journal {} from journalsdb:  https://api.journalsdb.org/journals/{}".format(issn_l, issn_l)
+        print u"Error: in MissingJournalMetadata missing journal {} from journalsdb:  https://api.journalsdb.org/journals/{}".format(issn_l, issn_l)
         r = requests.post("https://api.journalsdb.org/missing_journal", json={"issn": issn_l})
-        print u"{}".format(r)
+        print u"Response posting about missing journal: {}".format(r)
         super(MissingJournalMetadata, self).__init__()
 
     @cached_property

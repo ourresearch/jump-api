@@ -7,6 +7,7 @@ import re
 import tempfile
 import calendar
 from re import sub
+import requests
 
 import babel.numbers
 import dateutil.parser
@@ -93,7 +94,9 @@ class PackageInput:
                 issn = issn.replace(u"-", "")
                 issn = issn[0:4] + u"-" + issn[4:8]
                 if all_journal_metadata_flat.get(issn, None) == None:
-                    print u"Error: missing journal {} from journalsdb:  https://api.journalsdb.org/journals/{}".format(issn, issn)
+                    print u"Error: missing journal in normalize_issn {} from journalsdb:  https://api.journalsdb.org/journals/{}".format(issn, issn)
+                    r = requests.post("https://api.journalsdb.org/missing_journal", json={"issn": issn})
+                    print u"Response posting about missing journal: {}".format(r)
                     return ParseWarning.unknown_issn
                 return issn
             elif re.match(ur"^[A-Z0-9]{4}-\d{3}(?:X|\d)$", issn):
