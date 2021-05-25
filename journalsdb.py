@@ -268,9 +268,14 @@ def recompute_journal_metadata():
 class MissingJournalMetadata(object):
     def __init__(self, issn_l):
         self.issn_l = issn_l
-        print u"Error: in MissingJournalMetadata missing journal {} from journalsdb:  https://api.journalsdb.org/journals/{}".format(issn_l, issn_l)
+        print u"in MissingJournalMetadata missing journal {} from journalsdb:  https://api.journalsdb.org/journals/{}".format(issn_l, issn_l)
         r = requests.post("https://api.journalsdb.org/missing_journal", json={"issn": issn_l})
-        print u"Response posting about missing journal: {}".format(r)
+        if r.status_code == 200:
+            print u"Error: in MissingJournalMetadata Response posting about missing journal {}: previously reported missing".format(issn_l)
+        elif r.status_code == 201:
+            print u"Error: in MissingJournalMetadata Response posting about missing journal {}: first time reported missing".format(issn_l)
+        else:
+            print u"Error: in MissingJournalMetadata Response posting about missing journal {}: {}".format(issn_l, r)
         super(MissingJournalMetadata, self).__init__()
 
     @cached_property
