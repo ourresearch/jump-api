@@ -1561,6 +1561,37 @@ def admin_change_password():
 def admin_register_user():
     return abort_json(404, "Removed. Use /user/new or /user/demo.")
 
+@app.route("/admin/accounts", methods=["GET"])
+def admin_accounts_get():
+    key = request.args.get("key", "This is not the key you are looking for")
+    if key != os.getenv("OURRESEARCH_ADMIN_VIEW_KEY"):
+        return abort_json(401, "Must provide admin view key")
+
+    command = u"select * from jump_debug_new_institutions;"
+
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        data_rows = cursor.fetchall()
+
+    columns = u"""days_old, institution_display_name, ror_id, technical_admin_emails, is_consortium, account_created_date""".split(", ")
+
+    filename = "export.csv"
+    with open(filename, "w") as file:
+        csv_writer = csv.writer(file, encoding="utf-8")
+
+        csv_writer.writerow(columns)
+        for data_row in data_rows:
+            output_row = []
+            for column in columns:
+                output_row.append(data_row[column])
+            csv_writer.writerow(output_row)
+
+    with open(filename, "r") as file:
+        contents = file.readlines()
+
+    return Response(contents, mimetype="text/text")
+
+
 @app.route("/publisher/<package_id>/sign-s3")
 @jwt_required
 def sign_s3(package_id):
