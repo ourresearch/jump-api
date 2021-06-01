@@ -34,22 +34,24 @@ from util import read_csv_file
 
 # configuration here
 
+institution_name = None
+institution_rows = []
 
+# institution_name = u"University of Central Oklahoma"
+#
+# institution_rows = [{
+#     "institution_name": institution_name,
+#     "username": u"uco",
+#     "ror_id": "02n455404"
+# }]
 
-institution_name = u"ABC"
-
-
-institution_rows = [{
-    "institution_name": institution_name,
-    "username": u"abc",
-    "ror_id": "ABC"
-}]
 
 user_rows = [
     {
         "email": None,
         "name": None,
-        "email_and_name": "QA <team+abc@ourresearch.org>",
+        "jisc_id": "lei",
+        "email_and_name": "Joanne Dunham <joanne.dunham@leicester.ac.uk>",
         "password": u"",
         "institution_name": institution_name,
         "permissions": [u"view", u"modify", u"admin"]  # default is view, modify, admin
@@ -177,15 +179,20 @@ def add_user(user_info):
     logger.info(u"\ninitializing user {}".format(email))
 
     # don't use a jisc institution in this script
-    my_institutions = db.session.query(Institution).filter(Institution.display_name == user_info["institution_name"],
-                                                           Institution.id.notlike('%jisc%')).all()
-
-    if my_institutions:
-        my_institution = my_institutions[0]
-        logger.info(u"  *** using existing institution {} ***".format(my_institution))
+    if user_info.get("jisc_id", None) != None:
+        institution_id = u"institution-jisc{}".format(user_info["jisc_id"])
+        my_institution = Institution.query.get(institution_id)
+        print my_institution
     else:
-        logger.info(u"  *** FAILED: institution {} doesn't exist, exiting ***".format(user_info["institution_name"]))
-        return
+        my_institutions = db.session.query(Institution).filter(Institution.display_name == user_info["institution_name"],
+                                                               Institution.id.notlike('%jisc%')).all()
+
+        if my_institutions:
+            my_institution = my_institutions[0]
+            logger.info(u"  *** using existing institution {} ***".format(my_institution))
+        else:
+            logger.info(u"  *** FAILED: institution {} doesn't exist, exiting ***".format(user_info["institution_name"]))
+            return
 
     my_user = db.session.query(User).filter(User.email.ilike(email)).scalar()
 
@@ -361,6 +368,7 @@ if __name__ == "__main__":
     parser.add_argument("--username", help="username of institution", type=str, default=None)
     parsed_args = parser.parse_args()
     commit = parsed_args.commit
+
 
     if parsed_args.institutions:
         if parsed_args.file:
