@@ -153,7 +153,7 @@ class JournalMetadata(db.Model):
     def set_is_gold_journal_in_most_recent_year(self, journal_raw):
         self.is_gold_journal_in_most_recent_year = False
         if journal_raw.open_access:
-            self.is_gold_journal_in_most_recent_year = (json.loads(journal_raw.open_access)["gold_rate"] == 1)
+            self.is_gold_journal_in_most_recent_year = (json.loads(journal_raw.open_access)["is_gold_journal"] == True)
 
     def set_is_currently_publishing(self, journal_raw):
         self.is_currently_publishing = False

@@ -56,7 +56,7 @@ class ApcJournal(object):
     def oa_status(self):
         if self.journal_metadata.is_hybrid:
             return "hybrid"
-        if self.journal_metadata.set_is_gold_journal_in_most_recent_year:
+        if self.journal_metadata.is_gold_journal_in_most_recent_year:
             return "gold"
         return "unknown"
 
