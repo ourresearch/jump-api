@@ -43,6 +43,9 @@ institution_ids_string = u",".join(["'{}'".format(institution_id) for institutio
 
 
 def copy_package(old_package_id, new_package_id):
+    print "HEATHER THIS NEEDS TO BE UPDATED FOR COUNTER 5 columns"
+    print 1/0
+
     command = """
         insert into jump_counter (issn_l, package_id, organization, publisher, issn, journal_name, total) (
             select issn_l, '{new_package_id}', organization, publisher, issn, journal_name, total
@@ -181,16 +184,22 @@ def consortium_create():
 
 
 
-# python consortium_calculate.py
+# heroku run --size=performance-l python consortium_create.py --package_id=package-3WkCDEZTqo6S
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run stuff :)")
+    parser.add_argument("--package_id", type=str, default=None, help="package id of consortium to recompute")
 
     parsed_args = parser.parse_args()
     parsed_vars = vars(parsed_args)
 
+    consortium_package_id = parsed_vars["package_id"]
+
+
     # consortium_create()
 
-    consortium_package_id = "package-2NNrG6YCAvAh"
+    # consortium_package_id = "package-2NNrG6YCAvAh"
+    # consortium_package_id = "package-3WkCDEZTqo6S"
 
     # copy_package("package-UKqnJcsns7QL", "package-cmpUKqnJcsns7QL")
     # command = """
@@ -204,8 +213,9 @@ if __name__ == "__main__":
     from consortium import get_consortium_ids
     consortium_ids = get_consortium_ids()
     for d in consortium_ids:
-        print d["package_id"]
-        if consortium_package_id==d["package_id"]:
+        # print d["package_id"]
+        if consortium_package_id == d["package_id"]:
+            print "starting to recompute row {}".format(d)
             new_consortia = Consortium(d["scenario_id"])
             new_consortia.recompute_journal_dicts()
             print u"recomputing {}".format(new_consortia)

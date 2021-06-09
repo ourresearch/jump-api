@@ -12,6 +12,7 @@ from werkzeug.security import generate_password_hash
 
 from app import db
 from app import logger
+from app import get_db_cursor
 from grid_id import GridId
 from institution import Institution
 from package import Package
@@ -22,6 +23,7 @@ from ror_id import RorId, RorGridCrosswalk
 from saved_scenario import SavedScenario
 from user import User
 
+from util import get_sql_answer
 from util import read_csv_file
 
 # heroku local:run python init_institution.py
@@ -32,22 +34,24 @@ from util import read_csv_file
 
 # configuration here
 
+institution_name = None
+institution_rows = []
 
+# institution_name = u"University of Central Oklahoma"
+#
+# institution_rows = [{
+#     "institution_name": institution_name,
+#     "username": u"uco",
+#     "ror_id": "02n455404"
+# }]
 
-institution_name = u"ABC"
-
-
-institution_rows = [{
-    "institution_name": institution_name,
-    "username": u"abc",
-    "ror_id": "ABC"
-}]
 
 user_rows = [
     {
         "email": None,
         "name": None,
-        "email_and_name": "QA <team+abc@ourresearch.org>",
+        "jisc_id": "lei",
+        "email_and_name": "Joanne Dunham <joanne.dunham@leicester.ac.uk>",
         "password": u"",
         "institution_name": institution_name,
         "permissions": [u"view", u"modify", u"admin"]  # default is view, modify, admin
@@ -127,45 +131,38 @@ def add_institution(institution_name, old_username, ror_id, is_consortium=False)
         # jump_citing
         logger.info(u"  populating jump_citing for GRID ID {}".format(g_id))
 
-        num_citing_rows = db.session.execute(
-            "select count(*) from jump_citing where grid_id = '{}'".format(g_id)
-        ).scalar()
 
-        num_citing_rows_view = db.session.execute(
-            "select count(*) from jump_citing_view where grid_id = '{}'".format(g_id)
-        ).scalar()
+        num_citing_rows = get_sql_answer(db, "select count(*) from jump_citing where grid_id = '{}'".format(g_id))
+        num_citing_rows_view = get_sql_answer(db, "select count(*) from jump_citing_view where grid_id = '{}'".format(g_id))
 
         logger.info("num_citing_rows: {}, num_citing_rows_view {}".format(num_citing_rows, num_citing_rows_view))
 
         if num_citing_rows:
             logger.info(u"    {} jump_citing rows already exist for grid id '{}'".format(num_citing_rows, g_id))
         else:
-            num_citing_rows = db.session.execute(
-                "insert into jump_citing (select * from jump_citing_view where grid_id = '{}')".format(g_id)
-            ).rowcount
-            logger.info(u"    created {} jump_citing rows for grid id {}".format(num_citing_rows, g_id))
+            with get_db_cursor() as cursor:
+                cursor.execute(
+                    "insert into jump_citing (select * from jump_citing_view where grid_id = '{}')".format(g_id)
+                )
+            logger.info(u"    created jump_citing rows for grid id {}".format(g_id))
 
         # jump_authorship
 
         logger.info(u"  populating jump_authorship for GRID ID  {}".format(g_id))
 
-        num_authorship_rows = db.session.execute(
-            "select count(*) from jump_authorship where grid_id = '{}'".format(g_id)
-        ).scalar()
-
-        num_authorship_rows_view = db.session.execute(
-            "select count(*) from jump_authorship_view where grid_id = '{}'".format(g_id)
-        ).scalar()
+        num_authorship_rows = get_sql_answer(db, "select count(*) from jump_authorship where grid_id = '{}'".format(g_id))
+        num_authorship_rows_view = get_sql_answer(db, "select count(*) from jump_authorship_view where grid_id = '{}'".format(g_id))
 
         logger.info("num_authorship_rows: {}, num_authorship_rows_view {}".format(num_authorship_rows, num_authorship_rows_view))
 
         if num_authorship_rows:
             logger.info(u"    {} jump_authorship rows already exist for grid id {}".format(num_authorship_rows, g_id))
         else:
-            num_authorship_rows = db.session.execute(
-                "insert into jump_authorship (select * from jump_authorship_view where grid_id = '{}')".format(g_id)
-            ).rowcount
-            logger.info(u"    created {} jump_authorship rows for grid id {}".format(num_authorship_rows, g_id))
+            with get_db_cursor() as cursor:
+                cursor.execute(
+                    "insert into jump_authorship (select * from jump_authorship_view where grid_id = '{}')".format(g_id)
+                )
+            logger.info(u"    created jump_authorship rows for grid id {}".format(g_id))
 
 
 def add_user(user_info):
@@ -182,15 +179,20 @@ def add_user(user_info):
     logger.info(u"\ninitializing user {}".format(email))
 
     # don't use a jisc institution in this script
-    my_institutions = db.session.query(Institution).filter(Institution.display_name == user_info["institution_name"],
-                                                           Institution.id.notlike('%jisc%')).all()
-
-    if my_institutions:
-        my_institution = my_institutions[0]
-        logger.info(u"  *** using existing institution {} ***".format(my_institution))
+    if user_info.get("jisc_id", None) != None:
+        institution_id = u"institution-jisc{}".format(user_info["jisc_id"])
+        my_institution = Institution.query.get(institution_id)
+        print my_institution
     else:
-        logger.info(u"  *** FAILED: institution {} doesn't exist, exiting ***".format(user_info["institution_name"]))
-        return
+        my_institutions = db.session.query(Institution).filter(Institution.display_name == user_info["institution_name"],
+                                                               Institution.id.notlike('%jisc%')).all()
+
+        if my_institutions:
+            my_institution = my_institutions[0]
+            logger.info(u"  *** using existing institution {} ***".format(my_institution))
+        else:
+            logger.info(u"  *** FAILED: institution {} doesn't exist, exiting ***".format(user_info["institution_name"]))
+            return
 
     my_user = db.session.query(User).filter(User.email.ilike(email)).scalar()
 
@@ -289,26 +291,27 @@ def add_package(institution_username, counter_filename):
     # jump_apc_authorships
     logger.info(u"populating jump_apc_authorships for Publisher {}".format(my_package))
 
-    num_apc_authorship_rows = db.session.execute(
+    num_apc_authorship_rows = get_sql_answer(db,
         "select count(*) from jump_apc_authorships where package_id = '{}' and publisher='{}'".format(my_package.package_id, "Elsevier")
-    ).scalar()
+    )
 
     if num_apc_authorship_rows:
         logger.info(u"  {} jump_apc_authorships rows already exist for Publisher {}".format(
             num_apc_authorship_rows, my_package
         ))
     else:
-        num_apc_authorship_rows = db.session.execute(
-            """
-                insert into jump_apc_authorships (
-                    select * from jump_apc_authorships_view
-                    where package_id = '{}' and publisher='{}'
-                )
-            """.format(my_package.package_id, publisher_name)
-        ).rowcount
+        with get_db_cursor() as cursor:
+            num_apc_authorship_rows = cursor.execute(
+                """
+                    insert into jump_apc_authorships (
+                        select * from jump_apc_authorships_view
+                        where package_id = '{}' and publisher='{}'
+                    )
+                """.format(my_package.package_id, publisher_name)
+            )
 
-        logger.info(u"  created {} jump_apc_authorships rows for Publisher {}".format(
-            num_apc_authorship_rows, my_package
+        logger.info(u"  created jump_apc_authorships rows for Publisher {}".format(
+            my_package
         ))
 
     log_level = logging.getLogger("").level
@@ -323,7 +326,7 @@ def add_package(institution_username, counter_filename):
     if load_result["success"]:
         logger.info(load_result["message"])
     else:
-        raise RuntimeError(load_result["message"])
+        raise RuntimeError(u"Error: {}".format(load_result["message"]))
 
 
 # def add_prices():
@@ -365,6 +368,7 @@ if __name__ == "__main__":
     parser.add_argument("--username", help="username of institution", type=str, default=None)
     parsed_args = parser.parse_args()
     commit = parsed_args.commit
+
 
     if parsed_args.institutions:
         if parsed_args.file:

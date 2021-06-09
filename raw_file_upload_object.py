@@ -10,6 +10,9 @@ class RawFileUploadObject(db.Model):
     object_name = db.Column(db.Text)
     created = db.Column(db.DateTime)
     num_rows = db.Column(db.Numeric)
+    error = db.Column(db.Text)
+    error_details = db.Column(db.Text)
+    to_delete_date = db.Column(db.DateTime)
 
     def __init__(self, **kwargs):
         self.created = datetime.datetime.utcnow().isoformat()

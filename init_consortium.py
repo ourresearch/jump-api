@@ -46,8 +46,8 @@ member_package_id_string = u",".join(["'{}'".format(package_id) for package_id i
 
 def copy_package(old_package_id, new_package_id):
     command = """
-        insert into jump_counter (issn_l, package_id, journal_name, total, report_year, report_name, report_version, metric_type, yop, access_type) (
-            select issn_l, '{new_package_id}', journal_name, total, report_year, report_name, report_version, metric_type, yop, access_type
+        insert into jump_counter (issn_l, package_id, journal_name, total, report_year, report_name, report_version, metric_type, yop, access_type, created) (
+            select issn_l, '{new_package_id}', journal_name, total, report_year, report_name, report_version, metric_type, yop, access_type, created
             from jump_counter
             where package_id = '{old_package_id}'
         );
@@ -58,8 +58,8 @@ def copy_package(old_package_id, new_package_id):
             where package_id = '{old_package_id}'
         );
         
-        insert into jump_perpetual_access (package_id, issn_l, start_date, end_date) (
-            select '{new_package_id}', issn_l, start_date, end_date
+        insert into jump_perpetual_access (package_id, issn_l, start_date, end_date, created) (
+            select '{new_package_id}', issn_l, start_date, end_date, created
             from jump_perpetual_access
             where package_id = '{old_package_id}'
         );
@@ -70,8 +70,8 @@ def copy_package(old_package_id, new_package_id):
             where package_id = '{old_package_id}'
         );
         
-        insert into jump_journal_prices (package_id, publisher, title, issn_l, price) (
-            select '{new_package_id}', publisher, title, issn_l, price
+        insert into jump_journal_prices (package_id, publisher, title, issn_l, price, created) (
+            select '{new_package_id}', publisher, title, issn_l, price, created
             from jump_journal_prices
             where package_id = '{old_package_id}'
         );

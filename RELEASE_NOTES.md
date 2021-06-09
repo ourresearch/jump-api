@@ -5,6 +5,8 @@ both its appearance and its underlying data.
 This means you will often see changes in the UI/UX, and sometimes in the presented data.  
 Most of these changes are too small to note, but we'll keep a record of the larger ones here:
 
+- 2021/05/17 Many updates, including COUNTER 5 support, GBP support, Perpetual Access (PTA) changes, and more.  See [Release Notes](http://help.unsub.org/en/articles/5238375-release-notes-may-2021). 
+- 2021/05/12 Updating Unsub's journal lists (publicly available prices, which journals are published by which publishers, which journals have flipped to OA, which journals are new, etc).  The forecasts and APC calculations on your dashboards may update slightly as a result.  
 - 2020/12/13 Fixed bug for overriding custom big deal price for universities in consortia
 - 2020/12/10 Was requiring a publisher match to include OA in forecast; now only requires an ISSN match
 - 2020/12/09 In the upload tab, show the sum of all COUNTER data for the same issn_l

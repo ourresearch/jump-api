@@ -71,17 +71,14 @@ def consortium_get_computed_data(scenario_id):
     with get_db_cursor(use_defaultcursor=True) as cursor:
         cursor.execute(command)
         rows = cursor.fetchall()
-    print "get with default cursor in consortium_get_computed_data", elapsed(start_time)
 
     column_string = """member_package_id, scenario_id, updated, issn_l, usage, cpu, package_id, consortium_name, institution_name, institution_short_name, subject, era_subjects, is_society_journal, subscription_cost, ill_cost, use_instant_for_debugging, use_social_networks, use_oa, use_backfile, use_subscription, use_other_delayed, use_ill, perpetual_access_years, baseline_access, use_social_networks_percent, use_green_percent, use_hybrid_percent, use_bronze_percent, use_peer_reviewed_percent, bronze_oa_embargo_months, is_hybrid_2019, downloads, citations, authorships"""
     start_time = time()
     response = cursor_rows_to_dicts(column_string, rows)
-    print "after dict build in consortium_get_computed_data ", elapsed(start_time)
 
     return response
 
 
-@memorycache
 def consortium_get_issns(scenario_id):
     start_time = time()
 
@@ -90,11 +87,9 @@ def consortium_get_issns(scenario_id):
         cursor.execute(command)
         rows = cursor.fetchall()
 
-    print "after db get consortium_get_issns", elapsed(start_time)
     return [row["issn_l"] for row in rows]
 
 
-@memorycache
 def big_deal_costs_for_members():
     start_time = time()
 
@@ -134,7 +129,6 @@ def jsonify_fast_no_sort_simple(*args, **kwargs):
 
 class Consortium(object):
     def __init__(self, scenario_id, package_id=None):
-        print "BUILDING SCENARIO OBJECT", scenario_id, package_id
         self.scenario_id = None
         consortium_ids = get_consortium_ids()
         if scenario_id:
@@ -173,7 +167,18 @@ class Consortium(object):
     @cached_property
     def scenario_saved_dict(self):
         from saved_scenario import get_latest_scenario_raw
-        response = get_latest_scenario_raw(self.scenario_id)
+        from saved_scenario import save_raw_scenario_to_db
+        from saved_scenario import SavedScenario
+
+        (updated, response) = get_latest_scenario_raw(self.scenario_id)
+        if not response:
+            print u"Couldn't find a saved set of parameter settings, so buiding one"
+            my_saved_scenario = SavedScenario.query.get(self.scenario_id)
+            dict_to_save = my_saved_scenario.to_dict_saved_from_db()
+            dict_to_save["name"] = my_saved_scenario.scenario_name
+            save_raw_scenario_to_db(self.scenario_id, dict_to_save, None)
+
+        (updated, response) = get_latest_scenario_raw(self.scenario_id)
         response["configs"]["cost_bigdeal"] = self.big_deal_cost_for_included_members
         return response
 
@@ -241,7 +246,6 @@ class Consortium(object):
 
         start_time = time()
         response_list = [j.to_dict_journals() for j in self.journals_sorted_cpu]
-        print "after to_dict_journals on each journal", elapsed(start_time)
 
         my_response["journals"] = response_list
         my_response["member_institutions"] = self.member_institution_included_list
@@ -323,7 +327,6 @@ class Consortium(object):
                     print "len(app.my_memorycache_dict)", len(app.my_memorycache_dict)
 
                     my_live_scenario = Scenario(member_package_id, self.scenario_saved_dict, my_jwt=None)
-                    print u"after my_live_scenario with {} {}".format(member_package_id, self.scenario_id)
                     command_list = [my_journal.to_values_journals_for_consortium() for my_journal in my_live_scenario.journals]
 
                     # save all of these in the db
@@ -389,12 +392,6 @@ class Consortium(object):
                 if row["package_id"] in self.member_institution_included_list:
                     response.append(row)
 
-        print "after db get to_dict_journal_zoom", elapsed(start_time)
-        return response
-
-    def to_dict_export(self):
-        response = {}
-        response["journals"] = [j.to_dict_export() for j in self.journals_sorted_cpu]
         return response
 
     @cached_property
@@ -402,17 +399,14 @@ class Consortium(object):
         response = None
         rows = self.journal_member_data
         start_time = time()
-        print "creating consortium journals"
 
         issn_ls = consortium_get_issns(self.scenario_id)
-        print "before journals", elapsed(start_time)
         start_time = time()
         journals_dicts_by_issn_l = defaultdict(list)
         for d in rows:
             if d["member_package_id"] in self.member_institution_included_list:
                 journals_dicts_by_issn_l[d["issn_l"]].append(d)
 
-        print "after calculating", elapsed(start_time)
         start_time = time()
         journal_list = []
         for issn_l in issn_ls:
@@ -434,8 +428,6 @@ class Consortium(object):
 
         for rank, my_journal in enumerate(journal_list):
             my_journal.cpu_rank = rank + 1
-
-        print "after journals", elapsed(start_time)
 
         return journal_list
 
@@ -469,7 +461,6 @@ class Consortium(object):
                 if row["package_id"] in self.member_institution_included_list:
                     row["included"] = True
 
-        print "after db get to_dict_institutions", elapsed(start_time)
         return rows
 
 

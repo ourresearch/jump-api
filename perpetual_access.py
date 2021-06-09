@@ -2,26 +2,66 @@
 
 from cached_property import cached_property
 from datetime import datetime
+from collections import OrderedDict
 
 from app import db
 from package_input import PackageInput
-from scenario import refresh_perpetual_access_from_db
 
 
 class PerpetualAccess(db.Model):
     __tablename__ = "jump_perpetual_access"
-    package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
     issn_l = db.Column(db.Text, primary_key=True)
     start_date = db.Column(db.DateTime)
     end_date = db.Column(db.DateTime)
+    package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
+
+    @cached_property
+    def journal_metadata(self):
+        from journalsdb import get_journal_metadata_flat
+        return get_journal_metadata_flat(self.issn_l)
+
+    @cached_property
+    def issns(self):
+        return self.journal_metadata.issns
+
+    @cached_property
+    def display_issns(self):
+        return self.journal_metadata.display_issns
+
+    @cached_property
+    def display_issn_l(self):
+        return self.journal_metadata.display_issn_l
+
+    @cached_property
+    def title(self):
+        return self.journal_metadata.title
+
+    @cached_property
+    def publisher(self):
+        return self.journal_metadata.publisher
+
+    @cached_property
+    def display_start_date(self):
+        if not self.start_date:
+            return None
+        return self.start_date.isoformat()[0:10]
+
+    @cached_property
+    def display_end_date(self):
+        if not self.end_date:
+            return None
+        return self.end_date.isoformat()[0:10]
 
     def to_dict(self):
-        return {
-            "package_id": self.package_id,
-            "issn_l": self.issn_l,
-            "start_date": self.start_date and self.start_date.isoformat(),
-            "end_date": self.end_date and self.end_date.isoformat(),
-        }
+        return OrderedDict([
+            ("issn_l_prefixed", self.display_issn_l),
+            ("issn_l", self.issn_l),
+            ("issns", self.display_issns),
+            ("title", self.title),
+            ("publisher", self.publisher),
+            ("start_date", self.display_start_date),
+            ("end_date", self.display_end_date),
+        ])
 
 
 class PerpetualAccessInput(db.Model, PackageInput):
@@ -66,4 +106,3 @@ class PerpetualAccessInput(db.Model, PackageInput):
 
     def clear_caches(self, my_package):
         super(PerpetualAccessInput, self).clear_caches(my_package)
-        refresh_perpetual_access_from_db(my_package.package_id)

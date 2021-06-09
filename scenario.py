@@ -22,10 +22,12 @@ import simplejson as json
 from app import use_groups
 from app import get_db_cursor
 from app import DEMO_PACKAGE_ID
+from app import JISC_PACKAGE_ID
 from app import db
 # from app import my_memcached # disable memcached
 from app import logger
 from app import memorycache
+from app import s3_client
 
 from time import time
 from util import elapsed
@@ -35,9 +37,7 @@ from util import get_sql_answer
 
 from journal import Journal
 from consortium import Consortium
-from apc_journal import ApcJournal
 from assumptions import Assumptions
-
 
 def get_clean_package_id(http_request_args):
     if not http_request_args:
@@ -63,7 +63,7 @@ def get_fresh_journal_list(scenario, my_jwt):
         issnls_to_build = [issn_l for issn_l in issnls_to_build if issn_l in scenario.data[DEMO_PACKAGE_ID]["counter_dict"].keys()]
         package_id = DEMO_PACKAGE_ID
     else:
-        issnls_to_build = [issn_l for issn_l in issnls_to_build if issn_l in scenario.data[scenario.package_id_for_db]["counter_dict"].keys()]
+        issnls_to_build = [issn_l for issn_l in issnls_to_build if issn_l in scenario.data[scenario.package_id]["counter_dict"].keys()]
         package_id = scenario.package_id
 
     journals = [Journal(issn_l, package_id=package_id) for issn_l in issnls_to_build if issn_l]
@@ -73,9 +73,6 @@ def get_fresh_journal_list(scenario, my_jwt):
 
     return journals
 
-
-def get_fresh_apc_journal_list(issn_ls, apc_df_dict, scenario):
-    return [ApcJournal(issn_l, scenario.data, apc_df_dict, scenario) for issn_l in issn_ls]
 
 
 class Scenario(object):
@@ -88,7 +85,6 @@ class Scenario(object):
     def __init__(self, package_id, http_request_args=None, my_jwt=None):
         self.timing_messages = []
         self.section_time = time()        
-        self.settings = Assumptions(http_request_args)
         self.package_id = get_clean_package_id({"package": package_id})
         self.package_id_for_db = self.package_id
         if self.package_id.startswith("demo"):
@@ -106,6 +102,8 @@ class Scenario(object):
         self.institution_id = my_institution.id
         self.my_package = my_package
 
+        self.settings = Assumptions(http_request_args, self.my_package.currency)
+
         # from app import USE_PAPER_GROWTH
         # if USE_PAPER_GROWTH:
         #     self.data = get_common_package_data(self.package_id_for_db)
@@ -122,7 +120,6 @@ class Scenario(object):
 
         self.data = get_common_package_data(package_id_in_cache)
         self.log_timing("get_common_package_data from_cache")
-        logger.debug("get_common_package_data from_cache")
 
         self.set_clean_data()  #order for this one matters, after get common, before build journals
         self.log_timing("set_clean_data")
@@ -146,32 +143,32 @@ class Scenario(object):
         prices_dict = {}
         self.data["prices"] = {}
 
-        prices_to_consider = [self.package_id]
+        use_high_price_if_unknown = False
+        if self.package_id.startswith("package-jisc") or self.package_id.startswith("package-n8") or (self.package_id == JISC_PACKAGE_ID):
+            use_high_price_if_unknown = True
 
-        # use defaults if USD
-        if self.my_package and self.my_package.currency == "USD":
-            prices_to_consider += [DEMO_PACKAGE_ID]
+        from package import get_custom_prices
 
-        # special workaround for SUNY
-        from app import suny_consortium_package_ids
-        # print "package_id", self.package_id_for_db, get_parent_consortium_package_id(self.package_id_for_db)
-        if get_parent_consortium_package_id(self.package_id) in suny_consortium_package_ids or self.package_id in suny_consortium_package_ids:
-            prices_to_consider += ["68f1af1d", "93YfzkaA"]
+        prices_dict = {}
+        prices_uploaded_raw = get_custom_prices(self.package_id)
+        from journalsdb import get_journal_metadata_for_publisher_currently_subscription
 
-        prices_raw = get_prices_from_cache(prices_to_consider, self.publisher_name)
-        for package_id_for_prices in prices_to_consider:
-            # print "package_id_for_prices", package_id_for_prices
-            if package_id_for_prices in prices_raw:
-                for my_issnl, price in prices_raw[package_id_for_prices].iteritems():
-                    if price is not None:
-                        prices_dict[my_issnl] = price
+        publisher_journals = get_journal_metadata_for_publisher_currently_subscription(self.publisher_name)
 
-                        # print package_id_for_prices, my_issnl, price, "prices_dict[my_issnl]", prices_dict[my_issnl]
+        for my_issn_l, my_journal_metadata in publisher_journals.iteritems():
+            # print u"{} {}".format(my_issn_l, my_journal_metadata)
+            prices_dict[my_issn_l] = prices_uploaded_raw.get(my_issn_l, None)
+            if not prices_dict[my_issn_l]:
+                prices_dict[my_issn_l] = my_journal_metadata.get_subscription_price(self.my_package.currency, use_high_price_if_unknown=use_high_price_if_unknown)
         self.data["prices"] = prices_dict
 
         clean_dict = {}
         for issn_l, price_row in self.data["prices"].iteritems():
             include_this_journal = True
+
+            if self.data["prices"][issn_l] == None:
+                include_this_journal = False
+
             if "core_list" in self.data and self.data["core_list"]:
                 if issn_l not in self.data["core_list"].keys():
                     include_this_journal = False
@@ -202,18 +199,7 @@ class Scenario(object):
             return True
         return False
 
-    @cached_property
-    def apc_journals(self):
-        if self.data["apc"]:
-            df = pd.DataFrame(self.data["apc"])
-        #     # df["apc"] = df["apc"].astype(float)
-            df["year"] = df["year"].astype(int)
-            df["authorship_fraction"] = df.num_authors_from_uni/df.num_authors_total
-            df["apc_fraction"] = df["apc"].astype(float) * df["authorship_fraction"]
-            df_by_issn_l_and_year = df.groupby(["issn_l", "year"]).apc_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'size': 'num_papers', "sum": "dollars"})
-            my_dict = {"df": df, "df_by_issn_l_and_year": df_by_issn_l_and_year}
-            return get_fresh_apc_journal_list(my_dict["df"].issn_l.unique(), my_dict, self)
-        return []
+
 
     @cached_property
     def journals_sorted_cpu(self):
@@ -224,11 +210,6 @@ class Scenario(object):
     def journals_sorted_use_total(self):
         self.journals.sort(key=lambda k: for_sorting(k.use_total), reverse=True)
         return self.journals
-
-    @cached_property
-    def apc_journals_sorted_spend(self):
-        self.apc_journals.sort(key=lambda k: for_sorting(k.cost_apc_historical), reverse=True)
-        return self.apc_journals
 
     @cached_property
     def subscribed(self):
@@ -381,22 +362,32 @@ class Scenario(object):
 
     @cached_property
     def cost_bigdeal_raw(self):
+        if self.my_package and self.my_package.big_deal_cost:
+            return float(self.my_package.big_deal_cost)
+
         big_deal_cost = self.settings.cost_bigdeal
         if isinstance(big_deal_cost, str):
             big_deal_cost = big_deal_cost.replace(",", "")
             big_deal_cost = float(big_deal_cost)
 
-        from assumptions import DEFAULT_COST_BIGDEAL
-        if big_deal_cost != float(DEFAULT_COST_BIGDEAL):
-            if self.my_package and self.my_package.big_deal_cost:
-                return float(self.my_package.big_deal_cost)
+        # from assumptions import DEFAULT_COST_BIGDEAL
+        # if big_deal_cost != float(DEFAULT_COST_BIGDEAL):
+        #     if self.my_package and self.my_package.big_deal_cost:
+        #         return float(self.my_package.big_deal_cost)
 
         return float(big_deal_cost)
 
 
     @cached_property
+    def cost_bigdeal_increase_raw(self):
+        if self.my_package and self.my_package.big_deal_cost_increase:
+            return float(self.my_package.big_deal_cost_increase)
+
+        return self.settings.cost_bigdeal_increase
+
+    @cached_property
     def cost_bigdeal_projected_by_year(self):
-        return [round(((1+self.settings.cost_bigdeal_increase/float(100))**year) * self.cost_bigdeal_raw )
+        return [round(((1+self.cost_bigdeal_increase_raw/float(100))**year) * self.cost_bigdeal_raw )
                                             for year in self.years]
 
     @cached_property
@@ -465,12 +456,6 @@ class Scenario(object):
     def historical_years_by_year(self):
         return range(2014, 2019)
 
-
-    @cached_property
-    def apc_journals_sorted_fractional_authorship(self):
-        self.apc_journals.sort(key=lambda k: for_sorting(k.fractional_authorships_total), reverse=True)
-        return self.apc_journals
-
     @cached_property
     def num_citations(self):
         return round(np.sum([j.num_citations for j in self.journals]), 4)
@@ -478,49 +463,6 @@ class Scenario(object):
     @cached_property
     def num_authorships(self):
         return round(np.sum([j.num_authorships for j in self.journals]), 4)
-
-    @cached_property
-    def num_apc_papers_historical(self):
-        return round(np.sum([j.num_apc_papers_historical for j in self.apc_journals]))
-
-    @cached_property
-    def cost_apc_historical_by_year(self):
-        return [round(np.sum([j.cost_apc_historical_by_year[year] for j in self.apc_journals])) for year in self.years]
-
-    @cached_property
-    def cost_apc_historical(self):
-        return round(np.mean(self.cost_apc_historical_by_year))
-
-    @cached_property
-    def cost_apc_historical_hybrid_by_year(self):
-        return [round(np.sum([j.cost_apc_historical_by_year[year] for j in self.apc_journals if j.oa_status=="hybrid"]), 4) for year in self.years]
-
-    @cached_property
-    def cost_apc_historical_hybrid(self):
-        return round(np.mean(self.cost_apc_historical_hybrid_by_year))
-
-    @cached_property
-    def cost_apc_historical_gold_by_year(self):
-        return [round(np.sum([j.cost_apc_historical_by_year[year] for j in self.apc_journals if j.oa_status=="gold"]), 4) for year in self.years]
-
-    @cached_property
-    def cost_apc_historical_gold(self):
-        return round(np.mean(self.cost_apc_historical_gold_by_year))
-
-    @cached_property
-    def fractional_authorships_total_by_year(self):
-        return [round(np.sum([j.fractional_authorships_total_by_year[year] for j in self.apc_journals]), 4) for year in self.years]
-
-    @cached_property
-    def fractional_authorships_total(self):
-        return round(np.mean(self.fractional_authorships_total_by_year), 2)
-
-    @cached_property
-    def apc_price(self):
-        if self.apc_journals:
-            return np.max([j.apc_2019 for j in self.apc_journals])
-        else:
-            return 0
 
     @cached_property
     def num_citations_weight_percent(self):
@@ -603,28 +545,6 @@ class Scenario(object):
         response["_timing"] = self.timing_messages
         return response
 
-    def to_dict_apc(self):
-        response = {}
-        response = {
-                "_settings": self.settings.to_dict(),
-                "_summary": self.to_dict_summary_dict(),
-                "name": "APC Cost",
-                "description": "Understand how much your institution spends on APCs with this publisher.",
-                "figure": [],
-                "headers": [
-                        {"text": "OA type", "value": "oa_status", "percent": None, "raw": None, "display": "text"},
-                        {"text": "APC price", "value": "apc_price", "percent": None, "raw": self.apc_price, "display": "currency_int"},
-                        {"text": "Number APC papers", "value": "num_apc_papers", "percent": None, "raw": self.num_apc_papers_historical, "display": "float1"},
-                        {"text": "Total fractional authorship", "value": "fractional_authorship", "percent": None, "raw": self.fractional_authorships_total, "display": "float1"},
-                        {"text": "APC Dollars Spent", "value": "cost_apc", "percent": None, "raw": self.cost_apc_historical, "display": "currency_int"},
-                ]
-        }
-        response["journals"] = [j.to_dict() for j in self.apc_journals_sorted_spend]
-        self.log_timing("to dict")
-        response["_timing"] = self.timing_messages
-        return response
-
-
     def to_dict_summary(self):
         response = {
                 "_settings": self.settings.to_dict(),
@@ -692,51 +612,60 @@ def get_consortium_package_ids(package_id):
     package_ids = [row["package_id"] for row in rows]
     return package_ids
 
+# don't cache because called after loading to get fresh data
+def get_counter_journals_by_report_name_from_db(package_id):
+    command = """select report_version, report_name, count(distinct issn_l) as num_journals 
+        from jump_counter 
+        where package_id='{}'
+        group by report_version, report_name
+        """.format(package_id)
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+    return rows
 
-@cache
-def get_package_specific_scenario_data_from_db(input_package_id):
+# don't cache because called after loading to get fresh data
+def get_counter_totals_from_db(package_id):
+    counter_dict = defaultdict(int)
+    command = """select issn_l, total, report_version, report_name, metric_type 
+        from jump_counter 
+        where package_id='{}'
+        and (report_name is null or report_name != 'trj4')
+        """.format(package_id)
+    rows = None
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        rows = cursor.fetchall()
+    if rows:
+        is_counter5 = (rows[0]["report_version"] == "5")
+        for row in rows:
+            if is_counter5:
+                if row["report_name"] in ["trj2", "trj3"]:
+                    if row["metric_type"] in ["Unique_Item_Requests", "No_License"]:
+                        counter_dict[row["issn_l"]] += row.get("total", 0)
+                # else don't do anything with it for now
+            else:
+                counter_dict[row["issn_l"]] += row.get("total")
+    return counter_dict
+
+# don't cache because called after loading to get fresh data
+def get_package_specific_scenario_data_from_db(package_id):
     timing = []
     section_time = time()
 
-    consortium_package_ids = []
-    # consortium_package_ids = get_consortium_package_ids(input_package_id)
-    if not consortium_package_ids:
-        consortium_package_ids = [input_package_id]
 
-    counter_dict = defaultdict(int)
-    for package_id in consortium_package_ids:
-        command = """select issn_l, total, report_version, report_name, metric_type 
-            from jump_counter 
-            where package_id='{}'
-            and (report_name is null or report_name != 'trj4')
-            """.format(package_id)
-        rows = None
-        with get_db_cursor() as cursor:
-            cursor.execute(command)
-            rows = cursor.fetchall()
-        if rows:
-            is_counter5 = (rows[0]["report_version"] == "5")
-            for row in rows:
-                if is_counter5:
-                    if row["report_name"] in ["trj2", "trj3"]:
-                        if row["metric_type"] in ["Unique_Item_Requests", "No_License"]:
-                            counter_dict[row["issn_l"]] += row.get("total", 0)
-                    # else don't do anything with it for now
-                else:
-                    counter_dict[row["issn_l"]] += row.get("total")
+    counter_dict = get_counter_totals_from_db(package_id)
 
     timing.append(("time from db: counter", elapsed(section_time, 2)))
     section_time = time()
-
-    consortium_package_ids_string = ",".join(["'{}'".format(package_id) for package_id in consortium_package_ids])
 
     command = """select citing.issn_l, citing.year::int, sum(num_citations) as num_citations
         from jump_citing citing
         join jump_grid_id institution_grid on citing.grid_id = institution_grid.grid_id
         join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id
         where citing.year < 2019 
-        and package_id in ({})
-        group by issn_l, year""".format(consortium_package_ids_string)
+        and package_id='{}'
+        group by issn_l, year""".format(package_id)
     citation_rows = None
     with get_db_cursor() as cursor:
         cursor.execute(command)
@@ -754,8 +683,8 @@ def get_package_specific_scenario_data_from_db(input_package_id):
         join jump_grid_id institution_grid on authorship.grid_id = institution_grid.grid_id
         join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id
         where authorship.year < 2019 
-        and package_id in ({})
-        group by issn_l, year""".format(consortium_package_ids_string)
+        and package_id='{}'
+        group by issn_l, year""".format(package_id)
     authorship_rows = None
     with get_db_cursor() as cursor:
         cursor.execute(command)
@@ -794,31 +723,8 @@ def get_apc_data_from_db(input_package_id):
     return rows
 
 
-def _perpetual_access_cache_key(package_id):
-    return u'scenario.get_perpetual_access.{}'.format(package_id)
-
-
-def refresh_perpetual_access_from_db(package_id):
-    pass
-
-# disable memcached
-#     command = text(
-#         u'select * from jump_perpetual_access where package_id = :package_id'
-#     ).bindparams(package_id=package_id)
-#
-#     rows = db.engine.execute(command).fetchall()
-#     package_dict = dict([(a["issn_l"], a) for a in rows])
-#
-#     my_memcached.set(_perpetual_access_cache_key(package_id), package_dict)
-#
-#     return package_dict
-
 
 def get_perpetual_access_from_cache(package_id, unused_publisher_name=None):
-    # disable memcached
-    # memcached_key = _perpetual_access_cache_key(package_id)
-    # return my_memcached.get(memcached_key) or refresh_perpetual_access_from_db(package_id)
-
     command = text(
         u'select * from jump_perpetual_access where package_id = :package_id'
     ).bindparams(package_id=package_id)
@@ -870,67 +776,8 @@ def get_num_papers_from_db():
     return lookup_dict
 
 
-def _journal_price_cache_key(package_id, publisher_name):
-    return u'scenario.get_journal_prices.{}.{}'.format(package_id, publisher_name)
 
 
-
-
-def get_prices_from_cache(package_ids, publisher_name):
-
-    lookup_dict = defaultdict(dict)
-
-    for package_id in package_ids:
-        package_dict = None
-
-        # temp
-        # disable memcached
-        # refresh_cached_prices_from_db(package_id, publisher_name)
-        # memcached_key = _journal_price_cache_key(package_id, publisher_name)
-        # package_dict = my_memcached.get(memcached_key)
-
-        if not package_dict:
-            package_dict = refresh_cached_prices_from_db(package_id, publisher_name)
-        lookup_dict[package_id] = package_dict
-
-    return lookup_dict
-
-
-@memorycache
-def get_ricks_journal():
-    command = """select issn_l, title, issns from ricks_journal"""
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
-    my_dict = dict([(a["issn_l"], a) for a in rows])
-    return my_dict
-
-@memorycache
-def get_ricks_journal_flat():
-    issns = {}
-    with get_db_cursor() as cursor:
-        cursor.execute('select issn, issn_l, publisher from ricks_journal_flat')
-        rows = cursor.fetchall()
-    for row in rows:
-        issns[row['issn']] = {'issn_l': row['issn_l'], 'publisher': row['publisher']}
-    return issns
-
-
-_hybrid_2019 = None
-
-def _load_hybrid_2019_from_db():
-    global _hybrid_2019
-
-    if _hybrid_2019 is None:
-        with get_db_cursor() as cursor:
-            cursor.execute('select issn_l from jump_hybrid_journals_2019')
-            rows = cursor.fetchall()
-        _hybrid_2019 = {row["issn_l"] for row in rows}
-
-
-def get_hybrid_2019():
-    _load_hybrid_2019_from_db()
-    return _hybrid_2019
 
 
 _journal_era_subjects = None
@@ -953,35 +800,6 @@ def get_journal_era_subjects():
     return _journal_era_subjects
 
 
-def refresh_cached_prices_from_db(package_id, publisher_name):
-    package_dict = {}
-    publisher_where = ""
-    if publisher_name == "Elsevier":
-        publisher_where = "(publisher ilike '%elsevier%')"
-    elif publisher_name == "Wiley":
-        publisher_where = "(publisher ilike '%wiley%')"
-    elif publisher_name == "SpringerNature":
-        publisher_where = "((publisher ilike '%springer%') or (publisher ilike '%nature%'))"
-    elif publisher_name == "Sage":
-        publisher_where = "(publisher ilike '%sage%')"
-    elif publisher_name == "TaylorFrancis":
-        publisher_where = "((publisher ilike '%informa uk%') or (publisher ilike '%taylorfrancis%'))"
-    else:
-        return 'false'
-
-    command = u"select issn_l, price from jump_journal_prices where package_id = '{}' and {}".format(package_id, publisher_where)
-    # print "command", command
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        rows = cursor.fetchall()
-
-    for row in rows:
-        package_dict[row["issn_l"]] = row["price"]
-
-    #disable memcached
-    # my_memcached.set(_journal_price_cache_key(package_id, publisher_name), package_dict)
-
-    return package_dict
 
 
 @cache
@@ -1089,7 +907,7 @@ def get_common_package_data(package_id):
 
     return my_data
 
-@memorycache
+# not cached on purpose, because components are cached to save space
 def get_common_package_data_specific(package_id):
     my_timing = TimingMessages()
     my_data = {}
@@ -1105,9 +923,6 @@ def get_common_package_data_specific(package_id):
     for member_package_id in my_data["member_package_ids"]:
         my_data[member_package_id] = get_package_specific_scenario_data_from_db(member_package_id)
         my_timing.log_timing("get_package_specific_scenario_data_from_db")
-
-    my_data["apc"] = get_apc_data_from_db(package_id)  # gets everything from consortium itself
-    my_timing.log_timing("get_apc_data_from_db")
 
     my_data["core_list"] = get_core_list_from_db(package_id)
     my_timing.log_timing("get_core_list_from_db")
@@ -1165,15 +980,9 @@ def get_common_package_data_for_all():
         # print u"found pickled, returning"
         # return (my_data, my_timing)
 
-        import boto3
-        s3_client = boto3.client("s3")
-        print u"made s3_client"
-
         s3_clientobj = s3_client.get_object(Bucket="unsub-cache", Key="get_common_package_data_for_all.json")
-        print u"made s3_clientobj"
         contents_string = s3_clientobj["Body"].read().decode("utf-8")
         contents_json = json.loads(contents_string)
-        print u"got contents_json"
         return (contents_json, my_timing)
 
     except Exception as e:

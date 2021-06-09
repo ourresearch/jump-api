@@ -18,6 +18,7 @@ from random import shuffle
 from contextlib import contextmanager
 from collections import OrderedDict
 from dozer import Dozer
+import boto3
 
 warnings.filterwarnings("ignore", category=UserWarning, module='psycopg2')
 import psycopg2
@@ -41,6 +42,7 @@ from util import HTTPMethodOverrideMiddleware
 
 HEROKU_APP_NAME = "jump-api"
 DEMO_PACKAGE_ID = "658349d9"
+JISC_PACKAGE_ID = "package-3WkCDEZTqo6S"
 USE_PAPER_GROWTH = False
 
 # set up logging
@@ -135,7 +137,12 @@ app.config["SQLALCHEMY_BINDS"] = {
 # see https://stackoverflow.com/questions/43594310/redshift-sqlalchemy-long-query-hangs
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = { "pool_pre_ping": True,
                                             "pool_recycle": 300,
-                                            "connect_args": {"keepalives": 1, "keepalives_idle": 10, "keepalives_interval": 2, "keepalives_count": 5,}
+                                            "connect_args": {
+                                                "keepalives": 1,
+                                                "keepalives_idle": 10,
+                                                "keepalives_interval": 2,
+                                                "keepalives_count": 5
+                                            }
             }
 
 # from http://stackoverflow.com/a/12417346/596939
@@ -192,8 +199,9 @@ def get_db_connection():
         connection.autocommit=True
         # connection.readonly = True
         yield connection
-    except Exception as e:
-        print u"error in get_db_connection", e
+    # except Exception as e:
+    #     print u"error in get_db_connection", e
+    #     raise
     finally:
         app.config['postgreSQL_pool'].putconn(connection)
 
@@ -212,7 +220,8 @@ def get_db_cursor(commit=False, use_realdictcursor=False, use_defaultcursor=Fals
               if commit:
                   connection.commit()
         except Exception as e:
-            print u"error in get_db_cursor", e
+            print u"Error: error in get_db_cursor: {} {}, rolling back".format(e, e.message)
+            connection.rollback()
         finally:
             cursor.close()
             pass
@@ -224,6 +233,9 @@ def get_db_cursor(commit=False, use_realdictcursor=False, use_defaultcursor=Fals
 # my_memcached = bmemcached.Client(memcached_servers, username=memcached_user, password=memcached_password)
 # my_memcached.enable_retry_delay(True)  # Enabled by default. Sets retry delay to 5s.
 ## my_memcached.flush_all()
+
+s3_client = boto3.client("s3")
+print "made s3_client"
 
 use_groups_lookup = OrderedDict()
 use_groups_lookup["oa_plus_social_networks"] = {"display": "OA", "free_instant": True}
@@ -301,6 +313,7 @@ def reset_cache(module_name, function_name, *args):
 
 cached_consortium_scenario_ids = ["tGUVWRiN", "scenario-QC2kbHfUhj9W", "EcUvEELe", "CBy9gUC3", "6it6ajJd", "GcAsm5CX", "aAFAuovt"]
 
+
 def warm_cache():
     print u"warming cache"
 
@@ -322,18 +335,12 @@ def warm_cache():
 
     # do this second so it is a bit random when it gets here
 
-    from scenario import get_ricks_journal
-    from scenario import get_ricks_journal_flat
-    from scenario import _load_hybrid_2019_from_db
     from scenario import _load_journal_era_subjects_from_db
-    get_ricks_journal()
-    get_ricks_journal_flat()
-    _load_hybrid_2019_from_db()
     _load_journal_era_subjects_from_db()
 
     import scenario
     scenario.get_common_package_data_for_all()
-    scenario.get_common_package_data_specific(DEMO_PACKAGE_ID)
+    # scenario.get_common_package_data_specific(DEMO_PACKAGE_ID)
 
     print u"done warming the cache in {}s".format(elapsed(start_time))
 
@@ -362,3 +369,5 @@ else:
 # print "clearing cache"
 # reset_cache("consortium", "consortium_get_computed_data", "scenario-fsVitXLd")
 # print "cache clear set"
+
+

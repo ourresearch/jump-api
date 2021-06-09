@@ -11,7 +11,7 @@ from flask import url_for
 from flask import Response
 from flask import send_file
 from flask import g
-from flask_jwt_extended import jwt_required, jwt_optional, create_access_token, get_jwt_identity
+from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
 from pyinstrument import Profiler
 from sqlalchemy import or_
 from sqlalchemy import func as sql_func
@@ -31,7 +31,6 @@ import requests
 import tempfile
 import random
 from collections import OrderedDict
-import boto3
 
 # from app import my_memorycache_dict
 from app import app
@@ -61,7 +60,7 @@ from saved_scenario import get_latest_scenario
 from saved_scenario import save_raw_scenario_to_db
 from saved_scenario import save_raw_member_institutions_included_to_db
 from saved_scenario import get_latest_scenario_raw
-from scenario import get_common_package_data, refresh_cached_prices_from_db, refresh_perpetual_access_from_db
+from scenario import get_common_package_data
 from scenario import get_clean_package_id
 from consortium import get_consortium_ids
 from consortium import Consortium
@@ -79,9 +78,7 @@ from user import User, default_password
 from app import logger
 
 from app import DEMO_PACKAGE_ID
-
-s3_client = boto3.client("s3")
-print "made s3_client"
+from app import s3_client
 
 def s3_cache_get(url):
     print u"in cache_get with", url
@@ -205,7 +202,7 @@ def base_endpoint():
 
 
 @app.route("/scenario/<scenario_id>/journal/<issn_l>", methods=["GET"])
-@jwt_optional
+@jwt_required
 def jump_scenario_issn_get(scenario_id, issn_l):
     my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
     scenario = my_saved_scenario.live_scenario
@@ -266,14 +263,11 @@ def user_login():
     if username is None and email is None:
         return abort_json(400, "Username or email parameter is required.")
 
-    print u"before lookup_user"
     login_user = lookup_user(email=email, username=username)
 
     # maybe the username was passed as an email
     if not login_user and email and not username:
         login_user = lookup_user(username=email)
-
-    print u"after lookup_user"
 
     if not login_user:
         return abort_json(404, u"User does not exist.")
@@ -282,7 +276,6 @@ def user_login():
         return abort_json(403, u"Bad password.")
 
     identity_dict = make_identity_dict(login_user)
-    print "identity_dict", identity_dict
     logger.info(u"login to account {} with {}".format(login_user.username, identity_dict))
     access_token = create_access_token(identity=identity_dict)
 
@@ -290,13 +283,9 @@ def user_login():
         UserInstitutionPermission.user_id == login_user.id,
     ).first()
 
-    print u"done query"
-
     if not login_user_permissions:
         assign_demo_institution(login_user)
         safe_commit(db)
-
-    print u"done assign_demo_institution"
 
     return jsonify({"access_token": access_token})
 
@@ -543,7 +532,7 @@ def user_info(user_id, email, username):
 
 
 @app.route("/user-permissions", methods=["GET", "POST"])
-@jwt_optional
+@jwt_required
 def user_permissions():
     request_args = dict(request.args)
     request_args.update(request.form)
@@ -629,7 +618,7 @@ def user_permissions():
     return jsonify_fast_no_sort(query_user.to_dict_permissions().get(institution_id, {}))
 
 # @app.route("/institution/institution-Afxc4mAYXoJH", methods=["GET"])
-# @jwt_optional
+# @jwt_required
 # def institution_jisc(institution_id="institution-Afxc4mAYXoJH"):
 #     print u"in institution_jisc"
 #
@@ -648,7 +637,7 @@ def user_permissions():
 
 
 @app.route("/institution/<institution_id>", methods=["POST", "GET"])
-@jwt_optional
+@jwt_required
 def institution(institution_id):
 
     inst = Institution.query.get(institution_id)
@@ -677,7 +666,7 @@ def institution(institution_id):
 
 
 @app.route("/institution/<institution_id>/ror/<ror_id>", methods=["POST", "DELETE"])
-@jwt_optional
+@jwt_required
 def institution_ror_id(institution_id, ror_id):
     inst = Institution.query.get(institution_id)
     if not inst:
@@ -801,7 +790,7 @@ def get_jwt():
 
 
 # @app.route("/publisher/package-3WkCDEZTqo6S", methods=["GET"])
-# @jwt_optional
+# @jwt_required
 # def get_package_jisc_package_3WkCDEZTqo6S(package_id="package-3WkCDEZTqo6S"):
 #     authenticate_for_publisher(package_id, Permission.view())
 #     print u"in get_package_package_3WkCDEZTqo6S"
@@ -810,7 +799,7 @@ def get_jwt():
 
 
 @app.route("/publisher/<package_id>", methods=["GET"])
-@jwt_optional
+@jwt_required
 def get_package(package_id):
     authenticate_for_publisher(package_id, Permission.view())
 
@@ -822,7 +811,6 @@ def get_package(package_id):
 
 @app.route("/publisher/<publisher_id>", methods=["POST"])
 @jwt_required
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 def update_publisher(publisher_id):
     authenticate_for_publisher(publisher_id, required_permission=Permission.modify())
 
@@ -834,23 +822,37 @@ def update_publisher(publisher_id):
     if "name" in request.json:
         publisher.package_name = request.json["name"]
 
-    if "warnings" in request.json:
-        for warning_dict in request.json["warnings"]:
-            if warning_dict["id"] == "missing_perpetual_access":
-                publisher.is_dismissed_warning_missing_perpetual_access = warning_dict["is_dismissed"]
-            if warning_dict["id"] == "missing_prices":
-                publisher.is_dismissed_warning_missing_prices = warning_dict["is_dismissed"]
+    if "currency" in request.json:
+        publisher.currency = request.json["currency"]
+        if (publisher.currency == "") or (publisher.currency == None):
+            publisher.currency = None
+        else:
+            publisher.currency = publisher.currency.upper()
 
     if "is_deleted" in request.json:
         publisher.is_deleted = request.json["is_deleted"]
 
     if "cost_bigdeal" in request.json:
-        try:
-            cost = float(request.json["cost_bigdeal"]) if request.json["cost_bigdeal"] is not None else None
-        except (ValueError, TypeError):
-            return abort_json(400, u"Couln't parse cost_bigdeal '{}' as a number.".format(request.json["cost_bigdeal"]))
-
+        cost = request.json["cost_bigdeal"]
+        if (cost == "") or (cost == None):
+            cost = None
+        else:
+            try:
+                cost = int(float(cost))
+            except (ValueError, TypeError):
+                return abort_json(400, u"Couldn't parse cost_bigdeal '{}' as an int.".format(cost))
         publisher.big_deal_cost = cost
+
+    if "cost_bigdeal_increase" in request.json:
+        increase = request.json["cost_bigdeal_increase"]
+        if (increase == "") or (increase == None):
+            increase = None
+        else:
+            try:
+                increase = float(increase)
+            except (ValueError, TypeError):
+                return abort_json(400, u"Couldn't parse cost_bigdeal_increase '{}' as a float.".format(increase))
+        publisher.big_deal_cost_increase = increase
 
     db.session.merge(publisher)
     safe_commit(db)
@@ -861,7 +863,6 @@ def update_publisher(publisher_id):
 
 @app.route("/publisher/new", methods=["POST"])
 @jwt_required
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
 def new_publisher():
     auth_user = authenticated_user()
 
@@ -916,7 +917,7 @@ def new_publisher():
     q = """
             insert into jump_apc_authorships (
                 select * from jump_apc_authorships_view
-                where package_id = '{}' and issn_l in (select issn_l from ricks_journal rj where {}))
+                where package_id = '{}' and issn_l in (select issn_l from journalsdb_computed rj where {}))
         """.format(new_package.package_id, new_package.publisher_where)
     # print "q", q
     with get_db_cursor() as cursor:
@@ -924,32 +925,6 @@ def new_publisher():
 
     package_dict = new_package.to_package_dict()
     return jsonify_fast_no_sort(package_dict)
-
-
-## examples
-# /counter/diff_no_price
-# /counter/diff_changed_publisher
-# /counter/
-@app.route("/package/<package_id>/counter/<diff_type>", methods=["GET"])
-@jwt_optional
-def jump_debug_counter_diff_type_package_id(package_id, diff_type):
-    authenticate_for_publisher(package_id, Permission.view())
-
-    if package_id.startswith("demo"):
-        my_package = Package.query.get("demo")
-        my_package.package_id = package_id
-    else:
-        my_package = Package.query.get(package_id)
-
-    if not my_package:
-        abort_json(404, "Package not found")
-
-    rows = getattr(my_package, "get_{}".format(diff_type))
-    my_list = []
-    for row in rows:
-        my_list += [{"issn_l": row["issn_l"], "title": row.get("title", ""), "num_2018_downloads": row.get("num_2018_downloads", None)}]
-
-    return jsonify_fast_no_sort({"count": len(rows), "list": my_list})
 
 
 def _long_error_message():
@@ -980,6 +955,17 @@ def _load_package_file(package_id, req, table_class):
     else:
         return abort_json(400, u"expected a JSON object like {file: <base64-encoded file>, name: <file name>}")
 
+@app.route("/publisher/<package_id>/<data_file_name>/status", methods=["GET"])
+@jwt_required
+def jump_data_file_status(package_id, data_file_name):
+    authenticate_for_publisher(package_id, Permission.view())
+    package = Package.query.filter(Package.package_id == package_id).scalar()
+    package_dict = package.to_package_dict()
+    data_files_list = package_dict["data_files"]
+    for data_file_dict in data_files_list:
+        if data_file_dict["name"] == data_file_name:
+            return jsonify_fast_no_sort(data_file_dict)
+    return abort_json(400, "Unknown data file type {}".format(data_file_name))
 
 
 @app.route("/publisher/<package_id>/counter-jr1", methods=["GET", "POST", "DELETE"])
@@ -987,8 +973,7 @@ def _load_package_file(package_id, req, table_class):
 @app.route("/publisher/<package_id>/counter-trj3", methods=["GET", "POST", "DELETE"])
 @app.route("/publisher/<package_id>/counter-trj4", methods=["GET", "POST", "DELETE"])
 @app.route("/publisher/<package_id>/counter", methods=["GET", "POST", "DELETE"])
-@jwt_optional
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
+@jwt_required
 def jump_counter(package_id):
     authenticate_for_publisher(package_id, Permission.view() if request.method == "GET" else Permission.modify())
     url_end = request.base_url.rsplit("/", 1)[1]
@@ -996,17 +981,15 @@ def jump_counter(package_id):
         url_end = "counter-jr1"
     report_name = url_end.split("-")[1]
 
-    print "report_name", report_name
-
     if request.method == "GET":
-        rows = Counter.query.filter(Counter.package_id == package_id).all()
+        rows = Counter.query.filter(Counter.package_id == package_id, Counter.report_name == report_name).all()
         if rows:
             return jsonify_fast_no_sort({"rows": [row.to_dict() for row in rows]})
         else:
             return abort_json(404, u"no counter file for package {}".format(package_id))
     elif request.method == "DELETE":
-        response = CounterInput().delete(package_id, report_name)
-        return jsonify_fast_no_sort({"message": response})
+        CounterInput().set_to_delete(package_id, report_name)
+        return jsonify_fast_no_sort({"message": "Queued for delete."})
     else:
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
@@ -1014,18 +997,11 @@ def jump_counter(package_id):
             print u"loading counter package {}".format(package_id)
             response = _load_package_file(package_id, request, CounterInput)
 
-            # add a package scenario if there isn't already one
-            my_package = Package.query.get(package_id)
-            if not my_package.scenario_ids:
-                new_scenario = default_scenario(package_id)
-                db.session.add(new_scenario)
-                safe_commit(db)
-
             return jsonify_fast_no_sort(response)
 
 
 # @app.route("/publisher/<package_id>/counter/raw", methods=["GET"])
-# @jwt_optional
+# @jwt_required
 # def jump_get_raw_counter(package_id):
 #     authenticate_for_publisher(package_id, Permission.view() if request.method == "GET" else Permission.modify())
 #
@@ -1038,8 +1014,7 @@ def jump_counter(package_id):
 
 
 @app.route("/publisher/<package_id>/perpetual-access", methods=["GET", "POST", "DELETE"])
-@jwt_optional
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
+@jwt_required
 def jump_perpetual_access(package_id):
     authenticate_for_publisher(package_id, Permission.view() if request.method == "GET" else Permission.modify())
 
@@ -1050,7 +1025,8 @@ def jump_perpetual_access(package_id):
         else:
             return abort_json(404, u"no perpetual access file for package {}".format(package_id))
     elif request.method == "DELETE":
-        return jsonify_fast_no_sort({"message": PerpetualAccessInput().delete(package_id)})
+        PerpetualAccessInput().set_to_delete(package_id)
+        return jsonify_fast_no_sort({"message": "Queued for delete."})
     else:
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
@@ -1067,7 +1043,7 @@ def jump_perpetual_access(package_id):
 
 
 # @app.route("/publisher/<package_id>/perpetual-access/raw", methods=["GET"])
-# @jwt_optional
+# @jwt_required
 # def jump_get_raw_perpetual_access(package_id):
 #     authenticate_for_publisher(package_id, Permission.view() if request.method == "GET" else Permission.modify())
 #
@@ -1079,9 +1055,16 @@ def jump_perpetual_access(package_id):
 #     return Response(raw["body"], content_type=raw["content_type"], headers=raw["headers"])
 
 
+@app.route("/publisher/<package_id>/price-public", methods=["GET"])
+@jwt_required
+def jump_journal_public_prices(package_id):
+    my_package = authenticate_for_publisher(package_id, Permission.view())
+    rows = my_package.public_price_rows()
+    return jsonify_fast_no_sort({"rows": rows})
+
+
 @app.route("/publisher/<package_id>/price", methods=["GET", "POST", "DELETE"])
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
-@jwt_optional
+@jwt_required
 def jump_journal_prices(package_id):
     package = authenticate_for_publisher(package_id, Permission.view() if request.method == "GET" else Permission.modify())
 
@@ -1092,7 +1075,8 @@ def jump_journal_prices(package_id):
         else:
             return abort_json(404, u"no journal price file for package {}".format(package_id))
     elif request.method == "DELETE":
-        return jsonify_fast_no_sort({"message": JournalPriceInput().delete(package_id)})
+        JournalPriceInput().set_to_delete(package_id)
+        return jsonify_fast_no_sort({"message": "Queued for delete."})
     else:
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
@@ -1101,7 +1085,7 @@ def jump_journal_prices(package_id):
 
 
 # @app.route("/publisher/<package_id>/price/raw", methods=["GET"])
-# @jwt_optional
+# @jwt_required
 # def jump_get_raw_journal_prices(package_id):
 #     authenticate_for_publisher(package_id, Permission.view() if request.method == "GET" else Permission.modify())
 #
@@ -1120,6 +1104,7 @@ def post_subscription_guts(scenario_id, scenario_name=None):
     dict_to_save = request.get_json()
     if scenario_name:
         scenario_name = scenario_name.replace(u'"', u'""')
+        scenario_name = scenario_name.replace(u'&', u' ')
         dict_to_save["scenario_name"] = scenario_name
         save_raw_scenario_to_db(scenario_id, dict_to_save, get_ip(request))
 
@@ -1145,10 +1130,11 @@ def scenario_id_post(scenario_id):
 
     scenario_name = request.json.get("name", None)
     if scenario_name:
-        command = u"update jump_package_scenario set scenario_name = %s where scenario_id = %s"
-
+        scenario_name = scenario_name.replace(u'"', u'""')
+        scenario_name = scenario_name.replace(u'&', u' ')
+        command = u"update jump_package_scenario set scenario_name = '{}' where scenario_id = '{}'".format(scenario_name, scenario_id)
         with get_db_cursor() as cursor:
-            cursor.execute(command, (scenario_name, scenario_id))
+            cursor.execute(command)
 
     my_timing = TimingMessages()
     post_subscription_guts(scenario_id, scenario_name)
@@ -1199,7 +1185,7 @@ def member_institutions_scenario_id_post(scenario_id):
 
 
 @app.route("/scenario/<scenario_id>", methods=["GET"])
-@jwt_optional
+@jwt_required
 def live_scenario_id_get(scenario_id):
     my_timing = TimingMessages()
     my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
@@ -1223,7 +1209,7 @@ def ror_autocomplete(query):
 
 
 @app.route("/scenario/<scenario_id>/summary", methods=["GET"])
-@jwt_optional
+@jwt_required
 def scenario_id_summary_get(scenario_id):
     my_timing = TimingMessages()
     my_saved_scenario = get_saved_scenario(scenario_id)
@@ -1233,7 +1219,7 @@ def scenario_id_summary_get(scenario_id):
 
 
 @app.route("/scenario/<scenario_id>/journals", methods=["GET"])
-@jwt_optional
+@jwt_required
 def scenario_id_journals_get(scenario_id):
     start_time = time()
 
@@ -1250,7 +1236,7 @@ def scenario_id_journals_get(scenario_id):
 
 
 @app.route("/scenario/<scenario_id>/member-institutions", methods=["GET"])
-@jwt_optional
+@jwt_required
 def scenario_member_institutions_get(scenario_id):
     consortium_ids = get_consortium_ids()
     for row in consortium_ids:
@@ -1261,7 +1247,7 @@ def scenario_member_institutions_get(scenario_id):
 
 
 @app.route("/package/<package_id>/member-institutions", methods=["GET"])
-@jwt_optional
+@jwt_required
 def package_member_institutions_get(package_id):
     consortium_ids = get_consortium_ids()
     for row in consortium_ids:
@@ -1275,14 +1261,14 @@ def check_authorized():
     return True
 
 @app.route("/scenario/<scenario_id>/details", methods=["GET"])
-@jwt_optional
+@jwt_required
 def scenario_id_details_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_details())
 
 
 @app.route("/publisher/<publisher_id>/apc", methods=["GET"])
-@jwt_optional
+@jwt_required
 def live_publisher_id_apc_get(publisher_id):
     authenticate_for_publisher(publisher_id, required_permission=Permission.view())
 
@@ -1291,17 +1277,10 @@ def live_publisher_id_apc_get(publisher_id):
     if not my_package:
         abort_json(404, "Publisher not found")
 
-    if my_package.unique_saved_scenarios:
-        my_scenario = my_package.unique_saved_scenarios[0]
-    else:
-        my_scenario = default_scenario(my_package.package_id)
-        db.session.add(my_scenario)
-        safe_commit(db)
+    if not my_package.unique_saved_scenarios:
+        response = jsonify_fast_no_sort({"message": "need a scenario in order to see apcs"})
 
-    scenario_id = my_scenario.scenario_id
-
-    my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
-    response = jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_apc())
+    response = jsonify_fast_no_sort(my_package.to_dict_apc())
     return response
 
 
@@ -1325,14 +1304,14 @@ def export_get(table_dicts):
     with open(filename, "w") as file:
         csv_writer = csv.writer(file, encoding="utf-8")
         keys = [my_key for my_key in table_dicts[0].keys() if my_key not in keys_not_to_export]
+        keys = ["issn_l_prefixed"] + keys
 
         csv_writer.writerow(keys)
         for table_dict in table_dicts:
             row = []
             for my_key in keys:
-                if my_key in ["issn_l", "issns"]:
-                    # doing this hacky thing so excel doesn't format the issn as a date :(
-                    row.append(u"issn:{}".format(table_dict[my_key]))
+                if my_key == "issn_l_prefixed":
+                    row.append(u"issn:{}".format(table_dict["issn_l"]))
                 else:
                     row.append(table_dict[my_key])
             csv_writer.writerow(row)
@@ -1393,10 +1372,12 @@ def scenario_id_export_get(scenario_id):
 
 
 @app.route("/package/<package_id>/scenario", methods=["POST"])
-@jwt_optional
+@jwt_required
 def scenario_post(package_id):
     new_scenario_id = request.json.get("id", shortuuid.uuid()[0:8])
     new_scenario_name = request.json.get("name", "New Scenario")
+    new_scenario_name = new_scenario_name.replace(u'"', u'""')
+    new_scenario_name = new_scenario_name.replace(u'&', u' ')
 
     if package_id.startswith("demo-package") and not new_scenario_id.startswith("demo-scenario-"):
         new_scenario_id = "demo-scenario-" + new_scenario_id
@@ -1437,21 +1418,20 @@ def scenario_post(package_id):
             login_user = authenticated_user()
             new_consortia.queue_for_recompute(login_user.email)
 
-    print "getting my_new_scenario"
     my_new_scenario = get_saved_scenario(new_scenario_id, required_permission=Permission.view())
-    print "got my_new_scenario"
 
     return jsonify_fast_no_sort(my_new_scenario.to_dict_journals())
 
 
 @app.route("/publisher/<publisher_id>/scenario", methods=["POST"])
-@jwt_optional
-# @timeout_decorator.timeout(25, timeout_exception=TimeoutError)
+@jwt_required
 def publisher_scenario_post(publisher_id):
     authenticate_for_publisher(publisher_id, Permission.modify())
 
     new_scenario_id = request.json.get("id", "scenario-{}".format(shortuuid.uuid()[0:12]))
     new_scenario_name = request.json.get("name", "New Scenario")
+    new_scenario_name = new_scenario_name.replace(u'"', u'""')
+    new_scenario_name = new_scenario_name.replace(u'&', u' ')
 
     my_saved_scenario_to_copy_from = None
 
@@ -1492,13 +1472,14 @@ def publisher_scenario_post(publisher_id):
 
 
 @app.route("/scenario/<scenario_id>", methods=["DELETE"])
-@jwt_optional
+@jwt_required
 def scenario_delete(scenario_id):
     # just delete it out of the table, leave the saves
     # doing it this way makes sure we have permission to acces and therefore delete the scenario
     get_saved_scenario(scenario_id, required_permission=Permission.modify())
 
     command = "delete from jump_package_scenario where scenario_id = '{}'".format(scenario_id)
+    print command
     with get_db_cursor() as cursor:
         cursor.execute(command)
 
@@ -1586,6 +1567,54 @@ def admin_change_password():
 def admin_register_user():
     return abort_json(404, "Removed. Use /user/new or /user/demo.")
 
+@app.route("/admin/accounts", methods=["GET"])
+def admin_accounts_get():
+    key = request.args.get("key", "This is not the key you are looking for")
+    if key != os.getenv("OURRESEARCH_ADMIN_VIEW_KEY"):
+        return abort_json(401, "Must provide admin view key")
+
+    command = u"select * from jump_debug_new_institutions;"
+
+    with get_db_cursor() as cursor:
+        cursor.execute(command)
+        data_rows = cursor.fetchall()
+
+    columns = u"""days_old, institution_display_name, ror_id, technical_admin_emails, is_consortium, account_created_date""".split(", ")
+
+    filename = "export.csv"
+    with open(filename, "w") as file:
+        csv_writer = csv.writer(file, encoding="utf-8")
+
+        csv_writer.writerow(columns)
+        for data_row in data_rows:
+            output_row = []
+            for column in columns:
+                output_row.append(data_row[column])
+            csv_writer.writerow(output_row)
+
+    with open(filename, "r") as file:
+        contents = file.readlines()
+
+    return Response(contents, mimetype="text/text")
+
+
+@app.route("/publisher/<package_id>/sign-s3")
+@jwt_required
+def sign_s3(package_id):
+    authenticate_for_publisher(package_id, Permission.modify())
+
+    upload_bucket = "unsub-file-uploads-preprocess"
+    file_name = request.args.get("filename")
+
+    presigned_post = s3_client.generate_presigned_post(
+        Bucket = upload_bucket,
+        Key = file_name,
+        ExpiresIn = 60*60 # one hour
+    )
+    return json.dumps({
+    "data": presigned_post,
+    "url": u"https://{}.s3.amazonaws.com/{}".format(upload_bucket, file_name)
+    })
 
 
 cache_last_updated = "1999-01-01"

@@ -23,7 +23,6 @@ class Institution(db.Model):
 
     grid_ids = relationship(GridId, lazy='subquery')
     ror_ids = relationship(RorId, lazy='subquery')
-    packages = relationship('Package', lazy='subquery')
 
     def user_permissions(self, is_consortium=None):
         user_ids = db.session.query(UserInstitutionPermission.user_id).filter(
@@ -31,6 +30,8 @@ class Institution(db.Model):
         users = User.query.filter(User.id.in_(user_ids)).all()
 
         permission_dicts = [u.to_dict_permissions()[self.id] for u in users if (u.email and (not u.email.startswith("team+")))]
+        # permission_dicts = [u.to_dict_permissions()[self.id] for u in users]
+
         if is_consortium is not None:
             permission_dicts = [d for d in permission_dicts if d["is_consortium"]==is_consortium]
 
@@ -38,7 +39,8 @@ class Institution(db.Model):
 
     @cached_property
     def packages_sorted(self):
-        response = self.packages
+        packages = self.packages
+        response = [my_package for my_package in packages if not my_package.is_deleted]
         response.sort(key=lambda k: k.package_name, reverse=False)
         response.sort(key=lambda k: k.is_owned_by_consortium, reverse=False) #minor
         response.sort(key=lambda k: k.publisher, reverse=False)  #main sorting key is last

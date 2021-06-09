@@ -7,9 +7,9 @@ import re
 import tempfile
 import calendar
 from re import sub
+import requests
 
 import babel.numbers
-import boto3
 import dateutil.parser
 import shortuuid
 import unicodecsv as csv
@@ -22,6 +22,7 @@ from app import db, logger
 from app import get_db_cursor
 from app import reset_cache
 from consortium import Consortium
+from app import s3_client
 from excel import convert_spreadsheet_to_csv
 from package_file_error_rows import PackageFileErrorRow
 from raw_file_upload_object import RawFileUploadObject
@@ -85,16 +86,24 @@ class PackageInput:
 
     @staticmethod
     def normalize_issn(issn, warn_if_blank=False):
-        from scenario import get_ricks_journal_flat
+        from journalsdb import all_journal_metadata_flat
         if issn:
+            issn = issn.replace(u"issn:", "")
             issn = sub(ur"\s", "", issn).upper()
             if re.match(ur"^\d{4}-?\d{3}(?:X|\d)$", issn):
                 issn = issn.replace(u"-", "")
                 issn = issn[0:4] + u"-" + issn[4:8]
-                if issn in get_ricks_journal_flat():
-                    return issn
-                else:
+                if all_journal_metadata_flat.get(issn, None) == None:
+                    print u"Missing journal in normalize_issn {} from journalsdb:  https://api.journalsdb.org/journals/{}".format(issn, issn)
+                    r = requests.post("https://api.journalsdb.org/missing_journal", json={"issn": issn})
+                    if r.status_code == 200:
+                        print u"Error: Response posting about missing journal {}: previously reported missing".format(issn)
+                    elif r.status_code == 201:
+                        print u"Error: Response posting about missing journal {}: first time reported missing".format(issn)
+                    else:
+                        print u"Error: Response posting about missing journal {}: {}".format(issn, r)
                     return ParseWarning.unknown_issn
+                return issn
             elif re.match(ur"^[A-Z0-9]{4}-\d{3}(?:X|\d)$", issn):
                 return ParseWarning.bundle_issn
             else:
@@ -131,7 +140,7 @@ class PackageInput:
     def apply_header(self, normalized_rows, header_rows):
         return normalized_rows
 
-    # @cache
+    @cache
     def normalize_column_name(self, raw_column_name):
         for canonical_name, spec in self.csv_columns().items():
             name_snippets = spec["name_snippets"]
@@ -154,25 +163,22 @@ class PackageInput:
 
         return None
 
-    # @cache
+    @cache
     def normalize_cell(self, normalized_column_name, raw_column_value):
         spec = self.csv_columns()[normalized_column_name]
         return spec["normalize"](raw_column_value, spec.get("warn_if_blank", False))
 
 
     def _copy_staging_csv_to_s3(self, filename, package_id):
-        s3 = boto3.client("s3")
         bucket_name = "jump-redshift-staging"
         object_name = "{}_{}_{}".format(package_id, self.__class__.__name__, shortuuid.uuid())
-        s3.upload_file(filename, bucket_name, object_name)
+        s3_client.upload_file(filename, bucket_name, object_name)
         return "s3://{}/{}".format(bucket_name, object_name)
 
     def _raw_s3_bucket(self):
         return u"unsub-file-uploads"
 
-    def _copy_raw_to_s3(self, filename, package_id, num_rows=None):
-        s3 = boto3.client("s3")
-
+    def _copy_raw_to_s3(self, filename, package_id, num_rows=None, error=None, error_details=None):
         if u"." in filename:
             suffix = u".{}".format(filename.split(u".")[-1])
         else:
@@ -181,66 +187,85 @@ class PackageInput:
         object_name = "{}_{}{}".format(package_id, self.file_type_label(), suffix)
         bucket_name = self._raw_s3_bucket()
 
-        s3.upload_file(filename, bucket_name, object_name)
+        s3_client.upload_file(filename, bucket_name, object_name)
 
-        db.session.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
-            package_id, self.file_type_label()))
+        with get_db_cursor() as cursor:
+            command = "delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
+                package_id, self.file_type_label())
+            cursor.execute(command)
 
-        db.session.add(RawFileUploadObject(
+        if error and not error_details:
+            error_details_dict = {
+                "no_useable_rows": "No usable rows found.",
+                "error_reading_file": "Error reading this file. Try opening this file, save in .xlsx format, and upload that."}
+            error_details = error_details_dict.get("error", "Error processing file. Please email this file to team@ourresearch.org so the Unsub team can look into the problem.")
+
+        new_object = RawFileUploadObject(
             package_id=package_id,
             file=self.file_type_label(),
             bucket_name=bucket_name,
             object_name=object_name,
-            num_rows=num_rows
-        ))
+            num_rows=num_rows,
+            error=error,
+            error_details=error_details
+        )
+
+        db.session.add(new_object)
+        safe_commit(db)
 
         return "s3://{}/{}".format(bucket_name, object_name)
 
-    def get_raw_upload_object(self, package_id):
-        object_details = RawFileUploadObject.query.filter(
-            RawFileUploadObject.package_id == package_id, RawFileUploadObject.file == self.file_type_label()
-        ).scalar()
+    # def get_raw_upload_object(self, package_id):
+    #     object_details = RawFileUploadObject.query.filter(
+    #         RawFileUploadObject.package_id == package_id, RawFileUploadObject.file == self.file_type_label()
+    #     ).scalar()
+    #
+    #     if not object_details:
+    #         return None
+    #
+    #     try:
+    #         raw_object = s3_client.get_object(Bucket=object_details.bucket_name, Key=object_details.object_name)
+    #
+    #         headers = {
+    #             "Content-Length": raw_object["ContentLength"],
+    #             "Content-Disposition": "attachment; filename='{}'".format(object_details.object_name)
+    #         }
+    #
+    #         return {
+    #             "body": raw_object["Body"],
+    #             "content_type": raw_object["ContentType"],
+    #             "headers": headers
+    #         }
+    #     except s3_client.exceptions.NoSuchKey:
+    #         return None
 
-        if not object_details:
-            return None
+    def set_to_delete(self, package_id, report_name=None):
+        with get_db_cursor() as cursor:
+            command = "update jump_raw_file_upload_object set to_delete_date=sysdate where package_id = '{}' and file = '{}'".format(
+                package_id, self.file_type_label())
+            print command
+            cursor.execute(command)
+        return u"Queued to delete"
 
-        s3 = boto3.client("s3")
 
-        try:
-            raw_object = s3.get_object(Bucket=object_details.bucket_name, Key=object_details.object_name)
+    # report_name is used by CounterInput override
+    def delete(self, package_id, report_name=None):
 
-            headers = {
-                "Content-Length": raw_object["ContentLength"],
-                "Content-Disposition": "attachment; filename='{}'".format(object_details.object_name)
-            }
-
-            return {
-                "body": raw_object["Body"],
-                "content_type": raw_object["ContentType"],
-                "headers": headers
-            }
-        except s3.exceptions.NoSuchKey:
-            return None
-
-    def delete(self, package_id, file_type=None):
-
-        db.session.execute("delete from {} where package_id = '{}'".format(self.__tablename__, package_id))
-
-        db.session.execute("delete from {} where package_id = '{}'".format(self.destination_table(), package_id))
-
-        db.session.execute("delete from jump_file_import_error_rows where package_id = '{}' and file = '{}'".format(
-            package_id, self.file_type_label()))
-
-        db.session.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
-            package_id, self.file_type_label()))
-
-        safe_commit(db)
+        with get_db_cursor() as cursor:
+            cursor.execute("delete from {} where package_id = '{}'".format(self.__tablename__, package_id))
+            cursor.execute("delete from {} where package_id = '{}'".format(self.destination_table(), package_id))
+            cursor.execute("delete from jump_file_import_error_rows where package_id = '{}' and file = '{}'".format(
+                package_id, self.file_type_label()))
+            cursor.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
+                package_id, self.file_type_label()))
 
         my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
         if my_package:
             self.clear_caches(my_package)
 
-        return u"Deleted {} rows for package {}.".format(self.__class__.__name__, package_id)
+        message = u"Deleted {} rows for package {}.".format(self.__class__.__name__, package_id)
+        print message
+        return message
 
 
     def clear_caches(self, my_package):
@@ -256,37 +281,14 @@ class PackageInput:
                 email = u"heather+{}@ourresearch.org".format(my_package.package_id)
                 my_consortium.queue_for_recompute(email)
                 reset_cache("consortium", "consortium_get_computed_data", consortium_scenario_id)
-        else:
-            print u"NO NEED TO cache clear consortium_get_computed_data for my_package {}".format(my_package)
 
         # my_package.clear_package_counter_breakdown_cache() # not used anymore
 
     def update_dest_table(self, package_id):
-        # unload_cmd = text("""
-        #     unload
-        #     ('select * from {view} where package_id = \\'{package_id}\\'')
-        #     to 's3://jump-redshift-staging/{package_id}_{view}_{uuid}/'
-        #     with credentials :creds csv""".format(
-        #         view=self.import_view_name(),
-        #         package_id=package_id,
-        #         uuid=shortuuid.uuid(),
-        #     )
-        # )
-        #
-        # aws_creds = "aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}".format(
-        #     aws_key=os.getenv("AWS_ACCESS_KEY_ID"),
-        #     aws_secret=os.getenv("AWS_SECRET_ACCESS_KEY")
-        # )
-        #
-        # db.session.execute(unload_cmd.bindparams(creds=aws_creds))
-
-        db.session.execute("delete from {} where package_id = '{}'".format(self.destination_table(), package_id))
-
-        db.session.execute(
-            "insert into {} (select * from {} where package_id = '{}')".format(
-                self.destination_table(), self.import_view_name(), package_id
-            )
-        )
+        with get_db_cursor() as cursor:
+            cursor.execute("delete from {} where package_id = '{}'".format(self.destination_table(), package_id))
+            cursor.execute("insert into {} (select * from {} where package_id = '{}')".format(
+                    self.destination_table(), self.import_view_name(), package_id))
 
     def make_package_file_warning(self, parse_warning, additional_msg=None):
         return {
@@ -341,16 +343,14 @@ class PackageInput:
         return False
 
     def normalize_rows(self, file_name, file_package=None):
-        from scenario import get_ricks_journal_flat
-
         # convert to csv if needed
         if file_name.endswith(u".xls") or file_name.endswith(u".xlsx"):
             sheet_csv_file_names = convert_spreadsheet_to_csv(file_name, parsed=False)
             if not sheet_csv_file_names:
-                raise RuntimeError(u"Could not be opened as a spreadsheet.")
+                raise RuntimeError(u"Error: Could not be opened as a spreadsheet.")
 
             if len(sheet_csv_file_names) > 1:
-                raise RuntimeError(u"Workbook contains multiple sheets.")
+                raise RuntimeError(u"Error: Workbook contains multiple sheets.")
 
             file_name = sheet_csv_file_names[0]
 
@@ -401,8 +401,6 @@ class PackageInput:
                 absolute_line_no += 1
                 if not any([cell.strip() for cell in line]):
                     continue
-                # if line_no >= 20:
-                #     break
 
                 parsed_rows.append(line)
                 parsed_to_absolute_line_no[line_no] = absolute_line_no
@@ -415,11 +413,9 @@ class PackageInput:
 
                 line_no += 1
 
-            print "have header row"
-
             if header_index is None:
                 # give up. can't turn rows into dicts if we don't have a header
-                raise RuntimeError(u"Couldn't identify a header row in the file.")
+                raise RuntimeError(u"Error: Couldn't identify a header row in the file.")
 
             error_rows = {
                 "rows": [],
@@ -443,8 +439,6 @@ class PackageInput:
             row_dicts = [dict(zip(parsed_rows[header_index], x)) for x in parsed_rows[header_index+1:]]
 
 
-            print "here"
-
             # if ("total" in required_keys) and ("total" not in normalized_column_names) and ("jan" in normalized_column_names):
             #     for row in row_dicts:
             #
@@ -456,35 +450,8 @@ class PackageInput:
             #
             #     normalized_column_names += ["total"]
 
-            print "after that"
-
             if set(required_keys).difference(set(normalized_column_names)):
-                raise RuntimeError(u"Missing required columns.")
-
-            print "now here"
-            print "row_dicts"
-            print row_dicts[0:1]
-            print
-            print row_dicts[0].keys()
-
-            # try this https://pandas.pydata.org/docs/reference/api/pandas.read_csv.html
-            # with header as offset
-            # pass "names"
-            # use usecols
-            # use dtype
-            # use engine=c
-            # use skiprows
-
-            # import chardet
-            #
-            # import pandas as pd
-            #
-            # with open(r'C:\Users\indreshb\Downloads\Pokemon.csv', 'rb') as f:
-            #
-            # result = chardet.detect(f.read()) # or readline if the file is large
-            #
-            # df=pd.read_csv(r'C:\Users\indreshb\Downloads\Pokemon.csv',encoding=result['encoding'])
-
+                raise RuntimeError(u"Error: missing required columns. Required: {}, Found: {}.".format(required_keys, raw_column_names))
 
             for row_no, row in enumerate(row_dicts):
                 absolute_row_no = parsed_to_absolute_line_no[row_no] + header_index + 1
@@ -544,24 +511,14 @@ class PackageInput:
 
                     error_rows["rows"].append(error_row)
 
-            print "normalized_rows"
-            print normalized_rows[0:1]
-            print
-            print normalized_rows[0].keys()
-            print "before for"
-
             for normalized, raw in normalized_to_raw_map.items():
                 if normalized:
                     error_rows["headers"].append({"id": normalized, "name": raw})
-
-            print "before apply header"
 
             self.apply_header(normalized_rows, parsed_rows[0:header_index+1])
 
             if not error_rows["rows"]:
                 error_rows = None
-
-            print "before return"
 
             return normalized_rows, error_rows
 
@@ -574,11 +531,11 @@ class PackageInput:
             normalized_rows, error_rows = self.normalize_rows(file_name, file_package=my_package)
         except (UnicodeError, csv.Error) as e:
             print u"normalize_rows error {}".format(e)
-            message = u"Error reading this file. Try opening this file, save in .xlsx format, and upload that.".format(
-                e.message
-            )
-            return {"success": False, "message": message, "warnings": []}
+            self._copy_raw_to_s3(file_name, package_id, num_rows=None, error="error_reading_file")
+            return {"success": False, "message": "error_reading_file", "warnings": []}
         except RuntimeError as e:
+            print u"Runtime Error processing file {}".format(e.message)
+            self._copy_raw_to_s3(file_name, package_id, num_rows=None, error="parsing_error", error_details=e.message)
             return {"success": False, "message": e.message, "warnings": []}
 
         # save normalized rows
@@ -636,13 +593,18 @@ class PackageInput:
                 s3_object=s3_object,
             ))
 
+            print(copy_cmd.bindparams(creds=aws_creds))
+            safe_commit(db)
             db.session.execute(copy_cmd.bindparams(creds=aws_creds))
+            safe_commit(db)
             self.update_dest_table(package_id)
-            self._copy_raw_to_s3(file_name, package_id, num_rows)
+            self._copy_raw_to_s3(file_name, package_id, num_rows, error=None)
+        else:
+            self._copy_raw_to_s3(file_name, package_id, num_rows=0, error="no_useable_rows")
 
         # delete the current errors, save new errors
-        self.save_errors(package_id, error_rows)
-        db.session.flush()
+        # self.save_errors(package_id, error_rows)
+        # db.session.flush()
 
         if commit:
             db.session.flush()  # see if this fixes Serializable isolation violation

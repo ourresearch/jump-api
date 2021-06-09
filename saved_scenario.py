@@ -42,9 +42,10 @@ def save_raw_member_institutions_included_to_db(scenario_id, member_institutions
 
 
 def get_latest_scenario_raw(scenario_id):
+    updated = None
     scenario_data = None
     with get_db_cursor() as cursor:
-        command = u"""select scenario_json from jump_scenario_details_paid where scenario_id='{}' order by updated desc limit 1;""".format(
+        command = u"""select updated, scenario_json from jump_scenario_details_paid where scenario_id='{}' order by updated desc limit 1;""".format(
             scenario_id
         )
         # print command
@@ -52,9 +53,10 @@ def get_latest_scenario_raw(scenario_id):
         rows = cursor.fetchall()
 
     if rows:
+        updated = rows[0]["updated"]
         scenario_data = json.loads(rows[0]["scenario_json"])
 
-    return scenario_data
+    return (updated, scenario_data)
 
 
 def get_latest_scenario(scenario_id, my_jwt=None):
@@ -187,7 +189,7 @@ class SavedScenario(db.Model):
 
 
     def to_dict_saved_from_db(self):
-        response = get_latest_scenario_raw(self.scenario_id)
+        (updated, response) = get_latest_scenario_raw(self.scenario_id)
         if not response:
             self.set_live_scenario()  # in case not done
 
@@ -259,12 +261,16 @@ class SavedScenario(db.Model):
             response["publisher_name"] = self.package.package_name
             response["institution_id"] = self.package.institution.id
             response["institution_name"] = self.package.institution.display_name
+            response["cost_bigdeal"] = self.package.big_deal_cost
+            response["cost_bigdeal_increase"] = self.package.big_deal_cost_increase
 
         response["scenario_created"] = self.created
         response["is_base_scenario"] = self.is_base_scenario
         return response
 
     def to_dict_journals(self):
+        self.set_live_scenario()  # in case not done
+
         response = OrderedDict()
         response["meta"] = self.to_dict_meta()
 

@@ -1,10 +1,8 @@
 import json
-import boto3
 import os
 
 from app import get_db_cursor
-
-s3_client = boto3.client("s3")
+from app import s3_client
 
 # filenames = [key["Key"] for key in s3_client.list_objects(Bucket="unsub-jisc")["Contents"]]
 # filenames.reverse()

@@ -35,9 +35,8 @@ class UserInstitutionPermission(db.Model):
     institution_id = db.Column(db.Integer, ForeignKey('jump_institution.id'), primary_key=True)
     permission_id = db.Column(db.Integer, ForeignKey('jump_permission.id'), primary_key=True)
 
-    user = relationship('User', lazy='subquery', uselist=False)
+    user = relationship('User', lazy='subquery', uselist=False, backref=db.backref("permissions", lazy="subquery"))
     institution = relationship('Institution', lazy='subquery', uselist=False)
-
     permission = relationship(Permission, lazy='subquery')
 
     def __repr__(self):

@@ -17,7 +17,6 @@ from package import Package
 from saved_scenario import SavedScenario
 from saved_scenario import save_raw_scenario_to_db
 from saved_scenario import get_latest_scenario_raw
-from scenario import get_ricks_journal_flat
 from n8_uni_result import N8UniResult
 from util import safe_commit
 from util import get_sql_answer
@@ -29,8 +28,8 @@ def copy_into_n8_package(old_package_id, new_package_id, copy_counter=True, copy
 
     if copy_counter:
         command += """
-            insert into jump_counter (issn_l, package_id, journal_name, total, report_year, report_name, report_version, metric_type, yop, access_type) (
-                select issn_l, '{new_package_id}', journal_name, total, report_year, report_name, report_version, metric_type, yop, access_type
+            insert into jump_counter (issn_l, package_id, journal_name, total, report_year, report_name, report_version, metric_type, yop, access_type, created) (
+                select issn_l, '{new_package_id}', journal_name, total, report_year, report_name, report_version, metric_type, yop, access_type, created
                 from jump_counter
                 where package_id = '{old_package_id}'
             );
@@ -43,8 +42,8 @@ def copy_into_n8_package(old_package_id, new_package_id, copy_counter=True, copy
 
     if copy_perpetual_access:
         command += """        
-            insert into jump_perpetual_access (package_id, issn_l, start_date, end_date) (
-                select '{new_package_id}', issn_l, start_date, end_date
+            insert into jump_perpetual_access (package_id, issn_l, start_date, end_date, created) (
+                select '{new_package_id}', issn_l, start_date, end_date, created
                 from jump_perpetual_access
                 where package_id = '{old_package_id}'
             );
@@ -57,8 +56,8 @@ def copy_into_n8_package(old_package_id, new_package_id, copy_counter=True, copy
 
     if copy_prices:
         command += """        
-            insert into jump_journal_prices (package_id, publisher, title, issn_l, price) (
-                select '{new_package_id}', publisher, title, issn_l, price
+            insert into jump_journal_prices (package_id, publisher, title, issn_l, price, created) (
+                select '{new_package_id}', publisher, title, issn_l, price, created
                 from jump_journal_prices
                 where package_id = '{old_package_id}'
             );
@@ -156,14 +155,14 @@ def update_group_pta(jusp_id, group_jusp_ids):
 
     command = """        
         insert into jump_perpetual_access (package_id, issn_l, start_date, end_date) (
-            select '{package_id}', issn_l, coalesce(min(start_date), '2010-01-01'::timestamp) as start_date, coalesce(max(end_date), max(end_date), null) as end_date
+            select '{package_id}', issn_l, coalesce(min(start_date), '1850-01-01'::timestamp) as start_date, coalesce(max(end_date), max(end_date), null) as end_date
             from jump_perpetual_access
             where package_id in ({jisc_package_ids_string})
             group by issn_l
         );
         
         insert into jump_perpetual_access_input (package_id, issn, start_date, end_date) (
-            select '{package_id}', issn_l as issn, coalesce(min(start_date), '2010-01-01'::timestamp) as start_date, coalesce(max(end_date), max(end_date), null) as end_date
+            select '{package_id}', issn_l as issn, coalesce(min(start_date), '1850-01-01'::timestamp) as start_date, coalesce(max(end_date), max(end_date), null) as end_date
             from jump_perpetual_access
             where package_id in ({jisc_package_ids_string})
             group by issn_l
@@ -187,15 +186,17 @@ def copy_subscriptions(jusp_id, package_type, subscriptions):
 
 def set_non_own_subscriptions(main_jusp_id, group_jusp_ids, package_type):
     main_scenario_id = u"scenario-n8els_{}_ownpta".format(main_jusp_id)
-    main_scenario_dict = get_latest_scenario_raw(main_scenario_id)
+    (updated, main_scenario_dict) = get_latest_scenario_raw(main_scenario_id)
     main_subscriptions = main_scenario_dict["subrs"]
 
     all_subscriptions = []
 
     for jusp_id in group_jusp_ids:
         scenario_id = u"scenario-n8els_{}_ownpta".format(jusp_id)
-        my_source_scenario_dict = get_latest_scenario_raw(scenario_id)
+        (updated, my_source_scenario_dict) = get_latest_scenario_raw(scenario_id)
+        print "subscriptions: ", jusp_id, len(my_source_scenario_dict["subrs"])
         all_subscriptions += my_source_scenario_dict["subrs"]
+        print "len all_subscriptions: ", len(list(set(all_subscriptions)))
 
     all_subscriptions = [sub for sub in all_subscriptions if sub not in main_subscriptions]
     all_subscriptions_dedup = list(set(all_subscriptions))
@@ -209,10 +210,8 @@ def set_non_own_subscriptions(main_jusp_id, group_jusp_ids, package_type):
 # yor york institution-3pQc7HbKgqYD https://unsub.org/i/institution-3pQc7HbKgqYD/p/package-ioUUYHNQRwom/s/hPWVrTDf
 
 def get_issnls(issns):
-    bad_issns = [issn for issn in issns if issn not in get_ricks_journal_flat()]
-    if bad_issns:
-        print "bad issns:", bad_issns
-    response = [get_ricks_journal_flat()[issn]["issn_l"] for issn in issns if issn in get_ricks_journal_flat()]
+    from journalsdb import get_journal_metadata
+    response = [get_journal_metadata(issn)["issn_l"] for issn in issns]
     return response
 
 # python init_n8.py
@@ -239,24 +238,26 @@ if __name__ == "__main__":
     # group_jusp_data["icl"] = {"institution_id": "institution-jiscicl", "subs": subs} #imperial college london, just to see
 
 
-    for jusp_id, data in group_jusp_data.iteritems():
-        print jusp_id, data
-        package_create(jusp_id, data["institution_id"], "own pta")
-        # pta copied over in package_create from own jisc package
+    if False:
+        # for jusp_id, data in group_jusp_data.iteritems():
+        #     print jusp_id, data
+        #     package_create(jusp_id, data["institution_id"], "own pta")
+        #     # pta copied over in package_create from own jisc package
+        #
+        #     package_create(jusp_id, data["institution_id"], "group pta")
+        #     update_group_pta(jusp_id, group_jusp_data.keys())
 
-        package_create(jusp_id, data["institution_id"], "group pta")
-        update_group_pta(jusp_id, group_jusp_data.keys())
+        # for jusp_id, data in group_jusp_data.iteritems():
+        #     # my_source_scenario_dict = get_latest_scenario_raw(data["orig_scenario_id"])
+        #     # subscriptions = my_source_scenario_dict["subrs"]
+        #
+        #     subscriptions = get_issnls(data["subs"])
+        #     # print jusp_id, len(subscriptions), len(data["subs"])
+        #     copy_subscriptions(jusp_id, "own pta", subscriptions)
 
-    # for jusp_id, data in group_jusp_data.iteritems():
-    #     # my_source_scenario_dict = get_latest_scenario_raw(data["orig_scenario_id"])
-    #     # subscriptions = my_source_scenario_dict["subrs"]
-    #
-    #     subscriptions = get_issnls(data["subs"])
-    #     # print jusp_id, len(subscriptions), len(data["subs"])
-    #     copy_subscriptions(jusp_id, "own pta", subscriptions)
-
-    # for jusp_id, data in group_jusp_data.iteritems():
-    #     set_non_own_subscriptions(jusp_id, group_jusp_data.keys(), "group pta")
+        # for jusp_id, data in group_jusp_data.iteritems():
+        #     set_non_own_subscriptions(jusp_id, group_jusp_data.keys(), "group pta")
+        pass
 
     print "gathering results"
     results = []
@@ -264,6 +265,6 @@ if __name__ == "__main__":
         results.append(N8UniResult(jusp_id).to_list())
 
     for result_number in range(0, len(results[0])):
-        print ",".join([str(results[column_number][result_number]) for column_number in range(0, len(results))])
+        print ";".join([str(results[column_number][result_number]) for column_number in range(0, len(results))])
 
 

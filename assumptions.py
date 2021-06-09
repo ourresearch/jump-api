@@ -5,8 +5,11 @@ from util import str2bool
 DEFAULT_COST_BIGDEAL = 2100000
 
 class Assumptions(object):
-    def __init__(self, http_request_args=None):
-        self.cost_ill = 17
+    def __init__(self, http_request_args=None, currency="USD"):
+        if currency == "GBP":
+            self.cost_ill = 12
+        else:
+            self.cost_ill = 17
         self.cost_bigdeal_increase = 5  # percent
         self.cost_alacart_increase = 8  # percent
         self.cost_bigdeal = DEFAULT_COST_BIGDEAL
