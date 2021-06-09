@@ -1104,6 +1104,7 @@ def post_subscription_guts(scenario_id, scenario_name=None):
     dict_to_save = request.get_json()
     if scenario_name:
         scenario_name = scenario_name.replace(u'"', u'""')
+        scenario_name = scenario_name.replace(u'&', u' ')
         dict_to_save["scenario_name"] = scenario_name
         save_raw_scenario_to_db(scenario_id, dict_to_save, get_ip(request))
 
@@ -1129,10 +1130,11 @@ def scenario_id_post(scenario_id):
 
     scenario_name = request.json.get("name", None)
     if scenario_name:
-        command = u"update jump_package_scenario set scenario_name = %s where scenario_id = %s"
-
+        scenario_name = scenario_name.replace(u'"', u'""')
+        scenario_name = scenario_name.replace(u'&', u' ')
+        command = u"update jump_package_scenario set scenario_name = '{}' where scenario_id = '{}'".format(scenario_name, scenario_id)
         with get_db_cursor() as cursor:
-            cursor.execute(command, (scenario_name, scenario_id))
+            cursor.execute(command)
 
     my_timing = TimingMessages()
     post_subscription_guts(scenario_id, scenario_name)
@@ -1374,6 +1376,8 @@ def scenario_id_export_get(scenario_id):
 def scenario_post(package_id):
     new_scenario_id = request.json.get("id", shortuuid.uuid()[0:8])
     new_scenario_name = request.json.get("name", "New Scenario")
+    new_scenario_name = new_scenario_name.replace(u'"', u'""')
+    new_scenario_name = new_scenario_name.replace(u'&', u' ')
 
     if package_id.startswith("demo-package") and not new_scenario_id.startswith("demo-scenario-"):
         new_scenario_id = "demo-scenario-" + new_scenario_id
@@ -1426,6 +1430,8 @@ def publisher_scenario_post(publisher_id):
 
     new_scenario_id = request.json.get("id", "scenario-{}".format(shortuuid.uuid()[0:12]))
     new_scenario_name = request.json.get("name", "New Scenario")
+    new_scenario_name = new_scenario_name.replace(u'"', u'""')
+    new_scenario_name = new_scenario_name.replace(u'&', u' ')
 
     my_saved_scenario_to_copy_from = None
 
