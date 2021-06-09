@@ -663,9 +663,11 @@ def get_package_specific_scenario_data_from_db(package_id):
         from jump_citing citing
         join jump_grid_id institution_grid on citing.grid_id = institution_grid.grid_id
         join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id
+        join jump_counter counter on counter.package_id = institution_package.package_id
         where citing.year < 2019 
-        and package_id='{}'
-        group by issn_l, year""".format(package_id)
+        and counter.issn_l = citing.issn_l
+        and institution_package.package_id='{}'
+        group by citing.issn_l, year""".format(package_id)
     citation_rows = None
     with get_db_cursor() as cursor:
         cursor.execute(command)
@@ -682,9 +684,12 @@ def get_package_specific_scenario_data_from_db(package_id):
         from jump_authorship authorship
         join jump_grid_id institution_grid on authorship.grid_id = institution_grid.grid_id
         join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id
+        join jump_counter counter on counter.package_id = institution_package.package_id
         where authorship.year < 2019 
-        and package_id='{}'
-        group by issn_l, year""".format(package_id)
+        and counter.issn_l = authorship.issn_l
+        and institution_package.package_id='{}'
+        group by authorship.issn_l, year
+""".format(package_id)
     authorship_rows = None
     with get_db_cursor() as cursor:
         cursor.execute(command)
