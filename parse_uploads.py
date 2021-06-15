@@ -12,6 +12,7 @@ import argparse
 
 from app import s3_client
 from app import get_db_cursor
+from app import db
 import package
 from package_input import PackageInput
 from counter import CounterInput
@@ -43,6 +44,7 @@ def parse_uploads():
 
         except Exception as e:
             print "Error: exception {} during parse_uploads".format(e)
+            db.session.rollback()
 
         try:
             upload_preprocess_bucket = "unsub-file-uploads-preprocess"
@@ -86,6 +88,7 @@ def parse_uploads():
 
         except Exception as e:
             print "Error: exception {} during parse_uploads".format(e)
+            db.session.rollback()
 
         sleep( 2 * random.random())
         # print ".",
