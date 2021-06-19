@@ -627,7 +627,7 @@ def get_counter_journals_by_report_name_from_db(package_id):
 # don't cache because called after loading to get fresh data
 def get_counter_totals_from_db(package_id):
     counter_dict = defaultdict(int)
-    command = """select issn_l, total, report_version, report_name, metric_type 
+    command = """select issn_l, total::float, report_version, report_name, metric_type 
         from jump_counter 
         where package_id='{}'
         and (report_name is null or report_name != 'trj4')
@@ -642,7 +642,7 @@ def get_counter_totals_from_db(package_id):
             if is_counter5:
                 if row["report_name"] in ["trj2", "trj3"]:
                     if row["metric_type"] in ["Unique_Item_Requests", "No_License"]:
-                        counter_dict[row["issn_l"]] += row.get("total", 0)
+                        counter_dict[row["issn_l"]] += row.get("total", 0.0)
                 # else don't do anything with it for now
             else:
                 counter_dict[row["issn_l"]] += row.get("total")

@@ -65,7 +65,7 @@ class Package(db.Model):
     consortium_package_id = db.Column(db.Text)
     created = db.Column(db.DateTime)
     is_demo = db.Column(db.Boolean)
-    big_deal_cost = db.Column(db.Numeric)
+    big_deal_cost = db.Column(db.Numeric(asdecimal=False))
     big_deal_cost_increase = db.Column(db.Float)
     is_deleted = db.Column(db.Boolean)
     currency = db.Column(db.Text)

@@ -16,13 +16,13 @@ class Counter(db.Model):
     issn_l = db.Column(db.Text, primary_key=True)
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
     journal_name = db.Column(db.Text)
-    total = db.Column(db.Numeric)
+    total = db.Column(db.Numeric(asdecimal=False))
     report_version = db.Column(db.Text, primary_key=True)
     report_name = db.Column(db.Text, primary_key=True)
-    report_year = db.Column(db.Numeric)
+    report_year = db.Column(db.Numeric(asdecimal=False))
     metric_type = db.Column(db.Text, primary_key=True)
     access_type = db.Column(db.Text, primary_key=True)
-    yop = db.Column(db.Numeric, primary_key=True)
+    yop = db.Column(db.Numeric(asdecimal=False), primary_key=True)
 
     def to_dict(self):
         return {
@@ -43,15 +43,15 @@ class CounterInput(db.Model, PackageInput):
     __tablename__ = "jump_counter_input"
     report_version = db.Column(db.Text, primary_key=True)
     report_name = db.Column(db.Text, primary_key=True)
-    report_year = db.Column(db.Numeric)
+    report_year = db.Column(db.Numeric(asdecimal=False))
     metric_type = db.Column(db.Text, primary_key=True)
-    yop = db.Column(db.Numeric, primary_key=True)
+    yop = db.Column(db.Numeric(asdecimal=False), primary_key=True)
     access_type = db.Column(db.Text, primary_key=True)
     start_date = db.Column(db.DateTime)
     end_date = db.Column(db.DateTime)
     issn = db.Column(db.Text, primary_key=True)
     journal_name = db.Column(db.Text)
-    total = db.Column(db.Numeric)
+    total = db.Column(db.Numeric(asdecimal=False))
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
 
     def calculate_file_type_label(self, report_name):

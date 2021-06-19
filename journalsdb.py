@@ -41,11 +41,11 @@ class JournalMetadata(db.Model):
     is_current_subscription_journal = db.Column(db.Boolean)
     is_gold_journal_in_most_recent_year = db.Column(db.Boolean)
     is_currently_publishing = db.Column(db.Boolean)
-    subscription_price_usd = db.Column(db.Numeric)
-    subscription_price_gbp = db.Column(db.Numeric)
-    apc_price_usd = db.Column(db.Numeric)
-    apc_price_gbp = db.Column(db.Numeric)
-    num_dois_in_2020 = db.Column(db.Numeric)
+    subscription_price_usd = db.Column(db.Numeric(asdecimal=False))
+    subscription_price_gbp = db.Column(db.Numeric(asdecimal=False))
+    apc_price_usd = db.Column(db.Numeric(asdecimal=False))
+    apc_price_gbp = db.Column(db.Numeric(asdecimal=False))
+    num_dois_in_2020 = db.Column(db.Numeric(asdecimal=False))
 
     def __init__(self, journal_raw):
         self.created = datetime.datetime.utcnow().isoformat()
@@ -331,9 +331,14 @@ def get_journal_metadata_for_publisher(publisher):
         "TaylorFrancis": "Taylor & Francis"
     }
     publisher_normalized = lookup_journaldb_publisher.get(publisher, publisher)
-    journal_metadata_list = JournalMetadata.query.filter(JournalMetadata.publisher == publisher_normalized).all()
-    journal_metadata_dict = dict(zip([journal_object.issn_l for journal_object in journal_metadata_list], journal_metadata_list))
-    return journal_metadata_dict
+
+    global all_journal_metadata
+
+    response = {}
+    for issn_l, journal_metadata in all_journal_metadata.iteritems():
+        if journal_metadata.publisher == publisher_normalized:
+            response[issn_l] = journal_metadata
+    return response
 
 def get_journal_metadata_for_publisher_currently_subscription(publisher):
     my_journals = get_journal_metadata_for_publisher(publisher)

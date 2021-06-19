@@ -13,8 +13,8 @@ class JournalPrice(db.Model):
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
     issn_l = db.Column(db.Text, primary_key=True)
     subject = db.Column(db.Text)
-    price = db.Column(db.Numeric)
-    year = db.Column(db.Numeric)
+    price = db.Column(db.Numeric(asdecimal=False))
+    year = db.Column(db.Numeric(asdecimal=False))
 
     @cached_property
     def journal_metadata(self):
@@ -55,8 +55,8 @@ class JournalPrice(db.Model):
 class JournalPriceInput(db.Model, PackageInput):
     __tablename__ = "jump_journal_prices_input"
     issn = db.Column(db.Text, primary_key=True)
-    price = db.Column(db.Numeric)
-    year = db.Column(db.Numeric)
+    price = db.Column(db.Numeric(asdecimal=False))
+    year = db.Column(db.Numeric(asdecimal=False))
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
 
     def import_view_name(self):
