@@ -914,17 +914,11 @@ def new_publisher():
     db.session.add(new_package)
     safe_commit(db)
 
-    q = """
-            insert into jump_apc_authorships (
-                select * from jump_apc_authorships_view
-                where package_id = '{}' and issn_l in (select issn_l from journalsdb_computed rj where {}))
-        """.format(new_package.package_id, new_package.publisher_where)
-    # print "q", q
-    with get_db_cursor() as cursor:
-        cursor.execute(q)
+    new_package.update_apc_authorships()
 
     package_dict = new_package.to_package_dict()
     return jsonify_fast_no_sort(package_dict)
+
 
 
 def _long_error_message():

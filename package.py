@@ -563,6 +563,19 @@ class Package(db.Model):
         else:
             return 0
 
+    def update_apc_authorships(self):
+        delete_q = """ delete from jump_apc_authorships where package_id = '{}' """.format(self.package_id)
+        insert_q = """
+                insert into jump_apc_authorships (
+                    select * from jump_apc_authorships_view
+                    where package_id = '{}' and issn_l in (select issn_l from journalsdb_computed rj where {}))
+            """.format(self.package_id, self.publisher_where)
+        print insert_q
+        with get_db_cursor() as cursor:
+            cursor.execute(delete_q)
+            rows_inserted = cursor.execute(insert_q)
+        return rows_inserted
+
     def to_dict_apc(self):
         response = {
             "headers": [

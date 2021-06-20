@@ -34,24 +34,24 @@ from util import read_csv_file
 
 # configuration here
 
-institution_name = None
-institution_rows = []
+# institution_name = None
+# institution_rows = []
 
-# institution_name = u"University of Central Oklahoma"
-#
-# institution_rows = [{
-#     "institution_name": institution_name,
-#     "username": u"uco",
-#     "ror_id": "02n455404"
-# }]
+institution_name = u"College of New Jersey"
+
+institution_rows = [{
+    "institution_name": institution_name,
+    "username": u"tcnj",
+    "ror_id_list": ["02nx5r318"]
+    }]
 
 
 user_rows = [
     {
         "email": None,
         "name": None,
-        "jisc_id": "lei",
-        "email_and_name": "Joanne Dunham <joanne.dunham@leicester.ac.uk>",
+        # "jisc_id": "lei",
+        "email_and_name": "Jia Mi <jmi@tcnj.edu>",
         "password": u"",
         "institution_name": institution_name,
         "permissions": [u"view", u"modify", u"admin"]  # default is view, modify, admin
@@ -78,7 +78,7 @@ files = {
 # configuration above
 
 
-def add_institution(institution_name, old_username, ror_id, is_consortium=False):
+def add_institution(institution_name, old_username, ror_id_list, is_consortium=False):
     logger.info(u"initializing institution {}".format(institution_name))
 
 
@@ -98,39 +98,44 @@ def add_institution(institution_name, old_username, ror_id, is_consortium=False)
         db.session.add(my_institution)
         logger.info(u"  adding {}".format(my_institution))
 
-    if not ror_id:
+    if not ror_id_list:
         return
 
-    logger.info(u"adding ROR IDs")
+    for ror_id in ror_id_list:
+        add_ror(ror_id, my_institution.id)
 
-    for er in db.session.query(RorId).filter(RorId.institution_id == my_institution.id).all():
-        logger.info(u"  *** removing existing ROR ID {} for {} ***".format(er.ror_id, my_institution.display_name))
-        db.session.delete(er)
 
-    # could later expand function ot take multiple ror_ids at once
+def add_ror(ror_id, institution_id):
+    logger.info(u"adding ROR IDs, if needed")
 
-    db.session.add(RorId(institution_id=my_institution.id, ror_id=ror_id))
-    logger.info(u"  adding ROR ID {} for {}".format(ror_id, my_institution.display_name))
+    if not db.session.query(RorId).filter(RorId.institution_id == institution_id, RorId.ror_id==ror_id).all():
+        db.session.add(RorId(institution_id=institution_id, ror_id=ror_id))
+        logger.info(u"  adding ROR ID {} for {}".format(ror_id, institution_id))
+    else:
+        logger.info(u"  ROR ID already there")
+
+    db.session.commit()
 
     # add grid ids
-    logger.info(u"adding GRID IDs")
+    logger.info(u"adding GRID IDs, if needed")
     logger.info(u"  looking up GRID IDs")
     grid_ids = [x.grid_id for x in RorGridCrosswalk.query.filter(RorGridCrosswalk.ror_id == ror_id).all()]
 
     if not grid_ids:
         raise ValueError(u"at least one ror id corresponding to a grid id is required)")
 
-    for eg in db.session.query(GridId).filter(GridId.institution_id == my_institution.id).all():
-        logger.info(u"  *** removing existing GRID ID {} for {} ***".format(eg.grid_id, my_institution.display_name))
-        db.session.delete(eg)
-
     for g_id in grid_ids:
-        db.session.add(GridId(institution_id=my_institution.id, grid_id=g_id))
-        logger.info(u"  adding GRID ID {} for {}".format(g_id, my_institution.display_name))
+        if not db.session.query(GridId).filter(GridId.institution_id == institution_id, GridId.grid_id==g_id).all():
+            db.session.add(GridId(institution_id=institution_id, grid_id=g_id))
+            logger.info(u"  adding GRID ID {} for {}".format(g_id, institution_id))
+        else:
+            logger.info(u"  GRID ID already there")
+
+        db.session.commit()
+
 
         # jump_citing
         logger.info(u"  populating jump_citing for GRID ID {}".format(g_id))
-
 
         num_citing_rows = get_sql_answer(db, "select count(*) from jump_citing where grid_id = '{}'".format(g_id))
         num_citing_rows_view = get_sql_answer(db, "select count(*) from jump_citing_view where grid_id = '{}'".format(g_id))
@@ -141,6 +146,9 @@ def add_institution(institution_name, old_username, ror_id, is_consortium=False)
             logger.info(u"    {} jump_citing rows already exist for grid id '{}'".format(num_citing_rows, g_id))
         else:
             with get_db_cursor() as cursor:
+                cursor.execute(
+                    "delete from jump_citing where grid_id = '{}'".format(g_id)
+                )
                 cursor.execute(
                     "insert into jump_citing (select * from jump_citing_view where grid_id = '{}')".format(g_id)
                 )
@@ -160,9 +168,17 @@ def add_institution(institution_name, old_username, ror_id, is_consortium=False)
         else:
             with get_db_cursor() as cursor:
                 cursor.execute(
+                    "delete from jump_authorship where grid_id = '{}'".format(g_id)
+                )
+                cursor.execute(
                     "insert into jump_authorship (select * from jump_authorship_view where grid_id = '{}')".format(g_id)
                 )
             logger.info(u"    created jump_authorship rows for grid id {}".format(g_id))
+
+        my_packages = Package.query.filter(Package.institution_id==institution_id)
+        for my_package in my_packages:
+            rows_inserted = my_package.update_apc_authorships()
+            logger.info(u"    inserted apc rows for package {}".format(my_package))
 
 
 def add_user(user_info):
@@ -237,123 +253,6 @@ def add_user(user_info):
         logger.info(u"  adding {}".format(user_perm))
 
 
-
-def add_package(institution_username, counter_filename):
-
-    if "elsevier" in counter_filename:
-        publisher_name = "Elsevier"
-    elif "wiley" in counter_filename:
-        publisher_name = "Wiley"
-    else:
-        raise NotImplementedError("not a known publisher")
-    package_display_name = u"{} {}".format(publisher_name, datetime.utcnow().isoformat())
-
-    # add a Publisher
-    logger.info(u"adding a Publisher")
-
-    now = datetime.utcnow().isoformat()
-
-    my_institutions = db.session.query(Institution).filter(Institution.old_username == institution_username,
-                                                           Institution.id.notlike('%jisc%')).all()
-    if my_institutions:
-        my_institution = my_institutions[0]
-
-    my_package = Package(
-        package_id=u"package-{}".format(shortuuid.uuid()[0:12]),
-        publisher=publisher_name,
-        package_name=package_display_name,
-        created=now,
-        institution_id=my_institution.id,
-        is_demo=False
-    )
-    db.session.add(my_package)
-    db.session.flush()
-    logger.info(u"  adding {}".format(my_package))
-
-    # add Scenario
-
-    logger.info(u"adding a Scenario for Publisher {}".format(my_package))
-    my_scenarios = db.session.query(SavedScenario).filter(SavedScenario.package_id == my_package.package_id).all()
-
-    if not my_scenarios:
-        my_scenario = SavedScenario(False, u"scenario-{}".format(shortuuid.uuid()[0:12]), None)
-        my_scenario.package_id = my_package.package_id
-        my_scenario.scenario_name = u"First Scenario"
-        my_scenario.created = now
-        my_scenario.is_base_scenario = True
-
-        db.session.add(my_scenario)
-        logger.info(u"  adding {}".format(my_scenario))
-    else:
-        for scenario in my_scenarios:
-            logger.info(u"  found an existing Scenario {}".format(scenario))
-
-    # jump_apc_authorships
-    logger.info(u"populating jump_apc_authorships for Publisher {}".format(my_package))
-
-    num_apc_authorship_rows = get_sql_answer(db,
-        "select count(*) from jump_apc_authorships where package_id = '{}' and publisher='{}'".format(my_package.package_id, "Elsevier")
-    )
-
-    if num_apc_authorship_rows:
-        logger.info(u"  {} jump_apc_authorships rows already exist for Publisher {}".format(
-            num_apc_authorship_rows, my_package
-        ))
-    else:
-        with get_db_cursor() as cursor:
-            num_apc_authorship_rows = cursor.execute(
-                """
-                    insert into jump_apc_authorships (
-                        select * from jump_apc_authorships_view
-                        where package_id = '{}' and publisher='{}'
-                    )
-                """.format(my_package.package_id, publisher_name)
-            )
-
-        logger.info(u"  created jump_apc_authorships rows for Publisher {}".format(
-            my_package
-        ))
-
-    log_level = logging.getLogger("").level
-
-    logger.info(u"loading counter {} for publisher {}".format(
-        counter_filename, my_package.package_id)
-    )
-    logging.getLogger("").setLevel(logging.WARNING)
-    from counter import CounterInput
-    load_result = CounterInput().load(my_package.package_id, counter_filename, commit=False)
-    logging.getLogger("").setLevel(log_level)
-    if load_result["success"]:
-        logger.info(load_result["message"])
-    else:
-        raise RuntimeError(u"Error: {}".format(load_result["message"]))
-
-
-# def add_prices():
-#     logger.info(u"loading journal price list {} for publisher {}".format(files["prices"], my_package.package_id))
-#     logging.getLogger("").setLevel(logging.WARNING)
-#     from journal_price import JournalPriceInput
-#     success, message = JournalPriceInput.load(my_package.package_id, files["prices"], commit=False)
-#     logging.getLogger("").setLevel(log_level)
-#     if success:
-#         logger.info(message)
-#     else:
-#         raise RuntimeError(message)
-#
-# def add_backfile():
-#     logger.info(u"loading perpetual access list {} for publisher {}".format(
-#         files["perpetual_access"], my_package.package_id)
-#     )
-#     logging.getLogger("").setLevel(logging.WARNING)
-#     success, message = PerpetualAccessInput.load(my_package.package_id, files["perpetual_access"], commit=False)
-#     logging.getLogger("").setLevel(log_level)
-#     if success:
-#         logger.info(message)
-#     else:
-#         raise RuntimeError(message)
-
-# python init_institution.py --institutions --file ~/Downloads/temp.csv
-# python init_institution.py --username emory --counter --file ~/Dropbox/companywide/unpaywall_journals_counter/counter/emory-elsevier-2018.xlsx
 # python init_institution.py --institutions --users --commit
 
 
@@ -361,13 +260,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--commit", help="Commit changes.", action="store_true", default=False)
     parser.add_argument("--institutions", help="true if want to add institutions", action="store_true", default=False)
-    parser.add_argument("--counter", help="true if want to add counter", action="store_true", default=False)
     parser.add_argument("--users", help="true if want to add users", action="store_true", default=False)
     parser.add_argument("--is_consortium", help="true if is a consortium", action="store_true", default=False)
-    parser.add_argument("--file", help="Filename of CSV", type=str, default=None)
-    parser.add_argument("--username", help="username of institution", type=str, default=None)
     parsed_args = parser.parse_args()
     commit = parsed_args.commit
+
+    # ror_id = "00xmkp704"
+    # institution_id = "institution-dbnbdwsYditg"
+    # add_ror(ror_id, institution_id)
+    # print 1/0
 
 
     if parsed_args.institutions:
@@ -375,7 +276,7 @@ if __name__ == "__main__":
             institution_rows = read_csv_file(parsed_args.file)
 
         for row in institution_rows:
-            my_institution = add_institution(row["institution_name"], row["username"], row["ror_id"], parsed_args.is_consortium)
+            my_institution = add_institution(row["institution_name"], row["username"], row["ror_id_list"], parsed_args.is_consortium)
 
             if commit:
                 logger.info("commit")
@@ -398,51 +299,11 @@ if __name__ == "__main__":
                 logger.info("rollback, run with --commit to commit")
                 db.session.rollback()
 
-    if parsed_args.counter:
-        add_package(parsed_args.username, parsed_args.file)
-
-        # logging.getLogger("").setLevel(logging.WARNING)
-        # from counter import CounterInput
-        # load_result = CounterInput.load("publisher-hdWY3dkWbJqQ", filename)
-        # if load_result["success"]:
-        #     logger.info(load_result["message"])
-        # else:
-        #     raise RuntimeError(load_result["message"])
-
-    #
-    # usernames = """
-    # orgusername
-    # """.split()
-    #
-    #
-    # for username in usernames:
-    #     print u"username: {}".format(username)
-    #     filenames = glob.glob("/Users/hpiwowar/Dropbox/companywide/unpaywall_journals_counter/counter/{}-elsevier-2018.txt_utf8".format(username))
-    #     print filenames[0]
-    #     add_package(username, filenames[0])
-    #
-    # if commit:
-    #     logger.info("commit")
-    #     db.session.commit()
-    # else:
-    #     logger.info("rollback, run with --commit to commit")
-    #     db.session.rollback()
-
-    # elif parsed_args.prices:
-    #     add_prices(parsed_args.file)
-    #
-    # elif parsed_args.backfile:
-    #     add_backfile(parsed_args.file)
-
     if commit:
         logger.info("commit")
         db.session.commit()
     else:
         logger.info("rollback, run with --commit to commit")
         db.session.rollback()
-
-
-# insert into jump_user_institution_permission (user_id, institution_id, permission_id)
-# (select 'user-oG2hLFX8JGjU' as user_id, institution_id, 1 as permission_id from jump_user_institution_permission where user_id='user-oG2hLFX8JGjU' and permission_id=81)
 
 
