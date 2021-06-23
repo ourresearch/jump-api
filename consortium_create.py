@@ -184,7 +184,7 @@ def consortium_create():
 
 
 
-# heroku run --size=performance-l python consortium_create.py --package_id=package-3WkCDEZTqo6S
+# heroku run --size=performance-l python consortium_create.py --package_id=package-3WkCDEZTqo6S -r heroku
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run stuff :)")

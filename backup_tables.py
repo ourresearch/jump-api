@@ -2,7 +2,7 @@
 
 # python backup_tables.py
 if __name__ == "__main__":
-    suffix = "20210517"
+    suffix = "20210620"
     table_names = """
         jump_counter
         jump_journal_prices
@@ -18,3 +18,4 @@ if __name__ == "__main__":
 
     for table in table_names:
         print u"create table {table}_{suffix} as (select * from {table});".format(table=table, suffix=suffix)
+

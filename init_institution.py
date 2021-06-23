@@ -34,24 +34,24 @@ from util import read_csv_file
 
 # configuration here
 
-# institution_name = None
-# institution_rows = []
+institution_name = None
+institution_rows = []
 
-institution_name = u"College of New Jersey"
-
-institution_rows = [{
-    "institution_name": institution_name,
-    "username": u"tcnj",
-    "ror_id_list": ["02nx5r318"]
-    }]
+# institution_name = u"College of New Jersey"
+#
+# institution_rows = [{
+#     "institution_name": institution_name,
+#     "username": u"tcnj",
+#     "ror_id_list": ["02nx5r318"]
+#     }]
 
 
 user_rows = [
     {
         "email": None,
         "name": None,
-        # "jisc_id": "lei",
-        "email_and_name": "Jia Mi <jmi@tcnj.edu>",
+        "jisc_id": "hwa",
+        "email_and_name": "Admin <i.w.young@hw.ac.uk>",
         "password": u"",
         "institution_name": institution_name,
         "permissions": [u"view", u"modify", u"admin"]  # default is view, modify, admin
@@ -272,8 +272,6 @@ if __name__ == "__main__":
 
 
     if parsed_args.institutions:
-        if parsed_args.file:
-            institution_rows = read_csv_file(parsed_args.file)
 
         for row in institution_rows:
             my_institution = add_institution(row["institution_name"], row["username"], row["ror_id_list"], parsed_args.is_consortium)
@@ -286,8 +284,6 @@ if __name__ == "__main__":
                 db.session.rollback()
 
     if parsed_args.users:
-        if parsed_args.file:
-            user_rows = read_csv_file(parsed_args.file)
 
         for row in user_rows:
             my_user = add_user(row)
