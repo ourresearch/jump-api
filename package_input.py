@@ -96,7 +96,7 @@ class PackageInput:
                 if all_journal_metadata_flat.get(issn, None) == None:
                     print u"Missing journal in normalize_issn {} from journalsdb:  https://api.journalsdb.org/journals/{}".format(issn, issn)
                     r = requests.post("https://api.journalsdb.org/missing_journal", json={"issn": issn})
-                    print u"Error: Response posting about missing journal {}: {}".format(r.status_code, r.text)
+                    print u"Error: Response posting about missing journal {}: {}".format(r.status_code, r.json()["message"])
                     return ParseWarning.unknown_issn
                 return issn
             elif re.match(ur"^[A-Z0-9]{4}-\d{3}(?:X|\d)$", issn):
