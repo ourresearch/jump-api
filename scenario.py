@@ -158,7 +158,7 @@ class Scenario(object):
         for my_issn_l, my_journal_metadata in publisher_journals.iteritems():
             # print u"{} {}".format(my_issn_l, my_journal_metadata)
             prices_dict[my_issn_l] = prices_uploaded_raw.get(my_issn_l, None)
-            if not prices_dict[my_issn_l]:
+            if prices_dict[my_issn_l] == None:
                 prices_dict[my_issn_l] = my_journal_metadata.get_subscription_price(self.my_package.currency, use_high_price_if_unknown=use_high_price_if_unknown)
         self.data["prices"] = prices_dict
 
