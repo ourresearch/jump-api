@@ -101,6 +101,10 @@ class ConsortiumJournal(Journal):
         return None
 
     @cached_property
+    def institution_id(self):
+        return self.list_attribute("institution_id")
+
+    @cached_property
     def institution_name(self):
         return self.list_attribute("institution_name")
 

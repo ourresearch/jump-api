@@ -1278,10 +1278,12 @@ def live_publisher_id_apc_get(publisher_id):
     return response
 
 
-def export_get(table_dicts):
-    keys_not_to_export = ["institution_name",
+def export_get(table_dicts, include_institution_name=False):
+    if not table_dicts:
+        return []
+
+    keys_not_to_export = ["package_id",
                           "institution_short_name",
-                          "package_id",
                           "use_groups_free_instant",
                           "use_groups_if_subscribed",
                           "use_groups_if_not_subscribed",
@@ -1294,9 +1296,13 @@ def export_get(table_dicts):
                           "use_peer_reviewed_percent",
                           ]
 
+    if not include_institution_name:
+        keys_not_to_export += ["institution_name", "institution_id"]
+
     filename = "export.csv"
     with open(filename, "w") as file:
         csv_writer = csv.writer(file, encoding="utf-8")
+
         keys = [my_key for my_key in table_dicts[0].keys() if my_key not in keys_not_to_export]
         keys = ["issn_l_prefixed"] + keys
 
@@ -1306,6 +1312,13 @@ def export_get(table_dicts):
             for my_key in keys:
                 if my_key == "issn_l_prefixed":
                     row.append(u"issn:{}".format(table_dict["issn_l"]))
+                elif my_key == "institution_name":
+                    row.append(u",".join(table_dict["institution_name"]))
+                elif my_key == "institution_id":
+                    if table_dict.get("institution_id", []) and (table_dict["institution_id"] != [None]):
+                        row.append(u",".join(table_dict.get("institution_id", [])))
+                    else:
+                        row.append("")
                 else:
                     row.append(table_dict[my_key])
             csv_writer.writerow(row)
@@ -1332,6 +1345,27 @@ def scenario_id_export_subscriptions_txt_get(scenario_id):
     subscription_list_comma_separated = u",".join(subscription_list)
 
     return Response(subscription_list_comma_separated, mimetype="text/text")
+
+
+
+
+@app.route("/scenario/<scenario_id>/member-institutions/consortial-scenarios.csv", methods=["GET"])
+@jwt_required
+def scenario_id_member_institutions_export_csv_get(scenario_id):
+    member_ids = request.args.get("only", None)
+    my_consortium = Consortium(scenario_id)
+    table_dicts = my_consortium.to_dict_journals_list_by_institution(details=True, member_ids=member_ids)
+    contents = export_get(table_dicts, include_institution_name=True)
+    return Response(contents, mimetype="text/csv")
+
+@app.route("/scenario/<scenario_id>/member-institutions/consortial-scenarios", methods=["GET"])
+@jwt_required
+def scenario_id_member_institutions_export_text_get(scenario_id):
+    member_ids = request.args.get("only", None)
+    my_consortium = Consortium(scenario_id)
+    table_dicts = my_consortium.to_dict_journals_list_by_institution(details=True, member_ids=member_ids)
+    contents = export_get(table_dicts, include_institution_name=True)
+    return Response(contents, mimetype="text/text")
 
 
 @app.route("/scenario/<scenario_id>/export.csv", methods=["GET"])

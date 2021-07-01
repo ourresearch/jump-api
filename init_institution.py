@@ -34,24 +34,25 @@ from util import read_csv_file
 
 # configuration here
 
-institution_name = None
-institution_rows = []
+# institution_name = None
+# institution_rows = []
 
-# institution_name = u"College of New Jersey"
-#
-# institution_rows = [{
-#     "institution_name": institution_name,
-#     "username": u"tcnj",
-#     "ror_id_list": ["02nx5r318"]
-#     }]
+institution_name = u"Consortium for Testing"
+
+institution_rows = [{
+    "institution_name": institution_name,
+    "username": u"consortiumtest",
+    # "ror_id_list": ["02nx5r318"]
+    "ror_id_list": []
+    }]
 
 
 user_rows = [
     {
         "email": None,
         "name": None,
-        "jisc_id": "hwa",
-        "email_and_name": "Admin <i.w.young@hw.ac.uk>",
+        # "jisc_id": "lcs",
+        "email_and_name": "Admin <team+consortiumtest@ourresearch.org>",
         "password": u"",
         "institution_name": institution_name,
         "permissions": [u"view", u"modify", u"admin"]  # default is view, modify, admin
@@ -88,6 +89,9 @@ def add_institution(institution_name, old_username, ror_id_list, is_consortium=F
     if my_institutions:
         my_institution = my_institutions[0]
         logger.info(u"  *** using existing institution {} ***".format(my_institution))
+
+    if is_consortium:
+        print "SETTING UP AS A CONSORTIUM ACCOUNT"
 
     else:
         my_institution = Institution()

@@ -21,6 +21,7 @@ from util import safe_commit
 
 
 # heroku run --size=performance-l python consortium_recompute.py --package_id=package-3WkCDEZTqo6S -r heroku
+# heroku run --size=performance-l python consortium_recompute.py --scenario_id=tGUVWRiN -r heroku
 # python consortium_recompute.py --package_id=package-X9cgZdJWfmGy
 
 if __name__ == "__main__":
