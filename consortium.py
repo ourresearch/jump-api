@@ -232,18 +232,18 @@ class Consortium(object):
     #     self.apc_journals.sort(key=lambda k: for_sorting(k.cost_apc_historical), reverse=True)
     #     return self.apc_journals
 
-    def to_dict_journals_list_by_institution(self, details=False, member_ids=None):
+    def to_dict_journals_list_by_institution(self, member_ids=None):
+        rows = self.journal_member_data
+
         response = []
-        if member_ids:
+        if (len(member_ids) > 0) and (member_ids[0]):
             members_to_export = member_ids
         else:
             members_to_export = self.member_institution_included_list
 
-        for member_id in members_to_export:
-            for j in self.journals_not_cached([member_id]):
-                my_dict = j.to_dict_journals()
-                my_dict["member_package_id"] = member_id
-                response.append(my_dict)
+        for row in rows:
+            if row["member_package_id"] in members_to_export:
+                response.append(row)
 
         return response
 
@@ -411,25 +411,20 @@ class Consortium(object):
 
     @cached_property
     def journals(self):
-        return self.journals_not_cached(self.member_institution_included_list)
-
-    def journals_not_cached(self, member_institutions_to_use):
-        response = None
-        rows = self.journal_member_data
         start_time = time()
 
         issn_ls = consortium_get_issns(self.scenario_id)
         start_time = time()
         journals_dicts_by_issn_l = defaultdict(list)
         for d in rows:
-            if d["member_package_id"] in member_institutions_to_use:
+            if d["member_package_id"] in self.member_institution_included_list:
                 journals_dicts_by_issn_l[d["issn_l"]].append(d)
 
         start_time = time()
         journal_list = []
         for issn_l in issn_ls:
             if len(journals_dicts_by_issn_l[issn_l]) > 0:
-                journal_list.append(ConsortiumJournal(issn_l, member_institutions_to_use, journals_dicts_by_issn_l[issn_l]))
+                journal_list.append(ConsortiumJournal(issn_l, self.member_institution_included_list, journals_dicts_by_issn_l[issn_l]))
 
         for my_journal in journal_list:
             if my_journal.issn_l in self.scenario_saved_dict.get("subrs", []):
@@ -448,6 +443,7 @@ class Consortium(object):
             my_journal.cpu_rank = rank + 1
 
         return journal_list
+
 
 
     def to_dict_institutions(self):

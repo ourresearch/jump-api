@@ -1312,13 +1312,6 @@ def export_get(table_dicts, include_institution_name=False):
             for my_key in keys:
                 if my_key == "issn_l_prefixed":
                     row.append(u"issn:{}".format(table_dict["issn_l"]))
-                elif my_key == "institution_name":
-                    row.append(u",".join(table_dict["institution_name"]))
-                elif my_key == "institution_id":
-                    if table_dict.get("institution_id", []) and (table_dict["institution_id"] != [None]):
-                        row.append(u",".join(table_dict.get("institution_id", [])))
-                    else:
-                        row.append("")
                 else:
                     row.append(table_dict[my_key])
             csv_writer.writerow(row)
@@ -1352,18 +1345,18 @@ def scenario_id_export_subscriptions_txt_get(scenario_id):
 @app.route("/scenario/<scenario_id>/member-institutions/consortial-scenarios.csv", methods=["GET"])
 @jwt_required
 def scenario_id_member_institutions_export_csv_get(scenario_id):
-    member_ids = request.args.get("only", None)
+    member_ids = request.args.get("only", "")
     my_consortium = Consortium(scenario_id)
-    table_dicts = my_consortium.to_dict_journals_list_by_institution(details=True, member_ids=member_ids)
+    table_dicts = my_consortium.to_dict_journals_list_by_institution(member_ids=member_ids.split(","))
     contents = export_get(table_dicts, include_institution_name=True)
     return Response(contents, mimetype="text/csv")
 
 @app.route("/scenario/<scenario_id>/member-institutions/consortial-scenarios", methods=["GET"])
 @jwt_required
 def scenario_id_member_institutions_export_text_get(scenario_id):
-    member_ids = request.args.get("only", None)
+    member_ids = request.args.get("only", "")
     my_consortium = Consortium(scenario_id)
-    table_dicts = my_consortium.to_dict_journals_list_by_institution(details=True, member_ids=member_ids)
+    table_dicts = my_consortium.to_dict_journals_list_by_institution(member_ids=member_ids.split(","))
     contents = export_get(table_dicts, include_institution_name=True)
     return Response(contents, mimetype="text/text")
 
