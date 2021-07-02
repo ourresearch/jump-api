@@ -428,6 +428,9 @@ class Consortium(object):
         issn_ls = consortium_get_issns(self.scenario_id)
         start_time = time()
         journals_dicts_by_issn_l = defaultdict(list)
+
+        rows = self.journal_member_data
+
         for d in rows:
             if d["member_package_id"] in self.member_institution_included_list:
                 journals_dicts_by_issn_l[d["issn_l"]].append(d)
