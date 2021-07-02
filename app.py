@@ -221,7 +221,10 @@ def get_db_cursor(commit=False, use_realdictcursor=False, use_defaultcursor=Fals
                   connection.commit()
         except Exception as e:
             print u"Error: error in get_db_cursor: {} {}, rolling back".format(e, e.message)
-            connection.rollback()
+            try:
+                connection.rollback()
+            except:
+                pass
         finally:
             cursor.close()
             pass

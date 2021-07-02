@@ -44,7 +44,10 @@ def parse_uploads():
 
         except Exception as e:
             print "Error: exception {} during parse_uploads".format(e)
-            db.session.rollback()
+            try:
+                db.session.rollback()
+            except:
+                pass
 
         try:
             upload_preprocess_bucket = "unsub-file-uploads-preprocess"
@@ -88,7 +91,10 @@ def parse_uploads():
 
         except Exception as e:
             print "Error: exception {} during parse_uploads".format(e)
-            db.session.rollback()
+            try:
+                db.session.rollback()
+            except:
+                pass
 
         sleep( 2 * random.random())
         # print ".",

@@ -215,11 +215,17 @@ def safe_commit(db):
         # let these ones through, don't save anything to db
         raise
     except sqlalchemy.exc.DataError:
-        db.session.rollback()
-        print u"sqlalchemy.exc.DataError on commit.  rolling back."
+        try:
+            print u"sqlalchemy.exc.DataError on commit.  rolling back."
+            db.session.rollback()
+        except:
+            pass
     except Exception:
-        db.session.rollback()
-        print u"generic exception in commit.  rolling back."
+        try:
+            print u"generic exception in commit.  rolling back."
+            db.session.rollback()
+        except:
+            pass
         logging.exception("commit error")
     return False
 
