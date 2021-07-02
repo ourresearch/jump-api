@@ -1278,33 +1278,18 @@ def live_publisher_id_apc_get(publisher_id):
     return response
 
 
-def export_get(table_dicts, include_institution_name=False):
+def export_get(table_dicts, is_main_export=True):
     if not table_dicts:
         return []
 
-    keys_not_to_export = ["package_id",
-                          "institution_short_name",
-                          "use_groups_free_instant",
-                          "use_groups_if_subscribed",
-                          "use_groups_if_not_subscribed",
-                          "use_instant_for_debugging",
-                          "is_hybrid_2019",
-                          "use_social_networks_percent",
-                          "use_green_percent",
-                          "use_hybrid_percent",
-                          "use_bronze_percent",
-                          "use_peer_reviewed_percent",
-                          ]
-
-    if not include_institution_name:
-        keys_not_to_export += ["institution_name", "institution_id"]
+    if is_main_export:
+        keys = ['issn_l_prefixed', 'issn_l', 'title', 'issns', 'subject', 'era_subjects', 'subscribed', 'is_society_journal', 'usage', 'subscription_cost', 'ill_cost', 'cpu', 'cpu_rank', 'cost', 'instant_usage_percent', 'free_instant_usage_percent', 'subscription_minus_ill_cost', 'use_oa_percent', 'use_backfile_percent', 'use_subscription_percent', 'use_ill_percent', 'use_other_delayed_percent', 'perpetual_access_years_text', 'baseline_access_text', 'bronze_oa_embargo_months', 'downloads', 'citations', 'authorships', 'cpu_fuzzed', 'subscription_cost_fuzzed', 'subscription_minus_ill_cost_fuzzed', 'usage_fuzzed', 'downloads_fuzzed', 'citations_fuzzed', 'authorships_fuzzed']
+    else:
+        keys = ['scenario_id', 'institution_code', 'package_id', 'institution_name', 'issn_l_prefixed', 'issn_l', 'subscribed_by_consortium', 'subscribed_by_institution', 'institution_subscription_action', 'title', 'issns',  'subscription_cost', 'ill_cost', 'cpu', 'usage',  'use_oa_percent', 'use_backfile_percent', 'use_subscription_percent', 'use_ill_percent', 'use_other_delayed_percent', 'perpetual_access_years_text', 'bronze_oa_embargo_months', 'downloads', 'citations', 'authorships', 'is_society_journal']
 
     filename = "export.csv"
     with open(filename, "w") as file:
         csv_writer = csv.writer(file, encoding="utf-8")
-
-        keys = [my_key for my_key in table_dicts[0].keys() if my_key not in keys_not_to_export]
-        keys = ["issn_l_prefixed"] + keys
 
         csv_writer.writerow(keys)
         for table_dict in table_dicts:
@@ -1313,7 +1298,7 @@ def export_get(table_dicts, include_institution_name=False):
                 if my_key == "issn_l_prefixed":
                     row.append(u"issn:{}".format(table_dict["issn_l"]))
                 else:
-                    row.append(table_dict[my_key])
+                    row.append(table_dict.get(my_key, None))
             csv_writer.writerow(row)
 
     with open(filename, "r") as file:
@@ -1348,7 +1333,7 @@ def scenario_id_member_institutions_export_csv_get(scenario_id):
     member_ids = request.args.get("only", "")
     my_consortium = Consortium(scenario_id)
     table_dicts = my_consortium.to_dict_journals_list_by_institution(member_ids=member_ids.split(","))
-    contents = export_get(table_dicts, include_institution_name=True)
+    contents = export_get(table_dicts, is_main_export=False)
     return Response(contents, mimetype="text/csv")
 
 @app.route("/scenario/<scenario_id>/member-institutions/consortial-scenarios", methods=["GET"])
@@ -1357,7 +1342,7 @@ def scenario_id_member_institutions_export_text_get(scenario_id):
     member_ids = request.args.get("only", "")
     my_consortium = Consortium(scenario_id)
     table_dicts = my_consortium.to_dict_journals_list_by_institution(member_ids=member_ids.split(","))
-    contents = export_get(table_dicts, include_institution_name=True)
+    contents = export_get(table_dicts, is_main_export=False)
     return Response(contents, mimetype="text/text")
 
 

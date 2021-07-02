@@ -233,6 +233,8 @@ class Consortium(object):
     #     return self.apc_journals
 
     def to_dict_journals_list_by_institution(self, member_ids=None):
+        from journalsdb import all_journal_metadata_flat
+
         rows = self.journal_member_data
 
         response = []
@@ -242,7 +244,17 @@ class Consortium(object):
             members_to_export = self.member_institution_included_list
 
         for row in rows:
+            issn_l = row["issn_l"]
+            journal_metadata = all_journal_metadata_flat[issn_l]
             if row["member_package_id"] in members_to_export:
+                row["title"] = journal_metadata.title
+                row["issns"] = journal_metadata.display_issns
+
+                row["package_id"] = row["member_package_id"]
+                row["institution_code"] = row["package_id"].replace("package-jiscels", "")
+
+                row["subscribed_by_consortium"] = (issn_l in self.scenario_saved_dict.get("subrs", [])) or (issn_l in self.scenario_saved_dict.get("customSubrs", []))
+
                 response.append(row)
 
         return response
