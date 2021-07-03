@@ -59,6 +59,7 @@ from saved_scenario import SavedScenario, default_scenario
 from saved_scenario import get_latest_scenario
 from saved_scenario import save_raw_scenario_to_db
 from saved_scenario import save_raw_member_institutions_included_to_db
+from saved_scenario import save_feedback_on_member_institutions_included_to_db
 from saved_scenario import get_latest_scenario_raw
 from scenario import get_common_package_data
 from scenario import get_clean_package_id
@@ -1109,6 +1110,10 @@ def post_member_institutions_included_guts(scenario_id):
     print "request.get_json()", request.get_json()
     save_raw_member_institutions_included_to_db(scenario_id, request.get_json()["member_institutions"], get_ip(request))
 
+def post_feedback_on_member_institutions_included_guts(scenario_id):
+    print "request.get_json()", request.get_json()
+    save_feedback_on_member_institutions_included_to_db(scenario_id, request.get_json()["member_institutions"], get_ip(request))
+
 
 
 # used for saving scenario contents, also updating scenario name
@@ -1164,7 +1169,6 @@ def subscriptions_scenario_id_post(scenario_id):
 @app.route("/scenario/<scenario_id>/member-institutions", methods=["POST"])
 @jwt_required
 def member_institutions_scenario_id_post(scenario_id):
-
     my_timing = TimingMessages()
     print u"request.get_json()", request.get_json()
     post_member_institutions_included_guts(scenario_id)
@@ -1176,6 +1180,19 @@ def member_institutions_scenario_id_post(scenario_id):
 
     return jsonify_fast_no_sort(response)
 
+@app.route("/scenario/<scenario_id>/member-institutions/consortial-scenarios", methods=["POST"])
+@jwt_required
+def member_institutions_consortial_scenarios_scenario_id_post(scenario_id):
+    my_timing = TimingMessages()
+    print u"request.get_json()", request.get_json()
+    post_feedback_on_member_institutions_included_guts(scenario_id)
+
+    my_timing.log_timing("post_post_feedback_on_member_institutions_included_guts")
+
+    response = {"status": "success"}
+    response["_timing"] = my_timing.to_dict()
+
+    return jsonify_fast_no_sort(response)
 
 
 @app.route("/scenario/<scenario_id>", methods=["GET"])

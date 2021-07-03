@@ -259,6 +259,16 @@ class Consortium(object):
 
         return response
 
+    def to_dict_feedback(self):
+        response = {
+            "member_added_subrs": None,
+			"sent_date": None,
+			"opened_date": None,
+			"last_edited_date": None,
+			"returned_date": None
+        }
+        return response
+
     def to_dict_journals(self):
         my_response = OrderedDict()
         my_response["meta"] = {'publisher_name': self.publisher,
@@ -279,6 +289,7 @@ class Consortium(object):
         my_response["is_locked_pending_update"] = self.is_locked_pending_update
         my_response["update_notification_email"] = self.update_notification_email
         my_response["update_percent_complete"] = self.update_percent_complete
+        my_response["feedback"] = self.to_dict_feedback()
 
         my_response["warnings"] = []  # not applicable for consortia dashboards
 
@@ -462,6 +473,7 @@ class Consortium(object):
 
 
     def to_dict_institutions(self):
+        from saved_scenario import get_latest_scenario_raw
         start_time = time()
 
         command = """with tags as (select institution_id, listagg(tag_string, ', ') as tag_listagg from jump_tag_institution group by institution_id)
@@ -485,10 +497,22 @@ class Consortium(object):
             cursor.execute(command)
             rows = cursor.fetchall()
 
+        command = """select * from jump_consortium_feedback_requests where consortium_scenario_id='{scenario_id}'
+             """.format(scenario_id=self.scenario_id)
+        with get_db_cursor() as cursor:
+            cursor.execute(command)
+            rows_for_feedback = cursor.fetchall()
+
         if self.scenario_id is not None:
             for row in rows:
                 if row["package_id"] in self.member_institution_included_list:
                     row["included"] = True
+                for row_for_feedback in rows_for_feedback:
+                    if row_for_feedback["member_package_id"] == row["package_id"]:
+                        row["sent_date"] = row_for_feedback["sent_date"]
+                        row["return_date"] = row_for_feedback["return_date"]
+                        (updated, scenario_data) = get_latest_scenario_raw(row_for_feedback["member_scenario_id"])
+                        row["last_edited_date"] = updated
 
         return rows
 

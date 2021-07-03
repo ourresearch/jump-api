@@ -40,6 +40,30 @@ def save_raw_member_institutions_included_to_db(scenario_id, member_institutions
         # print command
         cursor.execute(command)
 
+def get_feedback_member_institution_scenario_id(consortium_scenario_id, member_package_id):
+    member_institution_scenario_id = "scenario-feedback{}".format(member_package_id)
+    member_institution_scenario_id = member_institution_scenario_id.replace("package-", "")
+    member_institution_scenario_id = member_institution_scenario_id.replace("publisher-", "")
+    return member_institution_scenario_id
+
+
+
+def save_feedback_on_member_institutions_included_to_db(consortium_scenario_id, member_institutions_list, ip):
+    scenario_members = json.dumps(member_institutions_list)
+
+    with get_db_cursor() as cursor:
+        command = ""
+        for member_package_id in member_institutions_list:
+            member_institution_scenario_id = get_feedback_member_institution_scenario_id(consortium_scenario_id, member_package_id)
+            command += u"""DELETE FROM jump_consortium_feedback_requests WHERE 
+                consortium_scenario_id='{consortium_scenario_id}' and member_scenario_id='{member_institution_scenario_id}';
+                    INSERT INTO jump_consortium_feedback_requests 
+                (consortium_scenario_id, member_package_id, member_scenario_id, sent_date, return_date, ip) 
+                values 
+                ('{consortium_scenario_id}', '{member_package_id}', '{member_institution_scenario_id}', sysdate, null, '{ip}');""".format(
+                consortium_scenario_id=consortium_scenario_id, member_package_id=member_package_id, member_institution_scenario_id=member_institution_scenario_id, ip=ip)
+        print command
+        cursor.execute(command)
 
 def get_latest_scenario_raw(scenario_id):
     updated = None
@@ -268,6 +292,17 @@ class SavedScenario(db.Model):
         response["is_base_scenario"] = self.is_base_scenario
         return response
 
+    def to_dict_feedback(self):
+        response = {
+            "member_added_subrs": None,
+			"sent_date": None,
+			"opened_date": None,
+			"last_edited_date": None,
+			"returned_date": None
+        }
+        return response
+
+
     def to_dict_journals(self):
         self.set_live_scenario()  # in case not done
 
@@ -277,6 +312,9 @@ class SavedScenario(db.Model):
         response["_debug"] = {"summary": self.live_scenario.to_dict_summary_dict()}
 
         response["saved"] = self.to_dict_saved_from_db()
+
+        response["feedback"] = self.to_dict_feedback()
+
         response["journals"] = [j.to_dict_journals() for j in self.live_scenario.journals_sorted_cpu]
 
         # these are used by consortium
