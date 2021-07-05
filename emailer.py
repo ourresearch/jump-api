@@ -2,10 +2,12 @@ import os
 
 import jinja2
 import sendgrid
-from sendgrid.helpers.mail.mail import Content
-from sendgrid.helpers.mail.mail import Email
-from sendgrid.helpers.mail.mail import Mail
-from sendgrid.helpers.mail.mail import Personalization
+from sendgrid.helpers.mail import HtmlContent
+from sendgrid.helpers.mail import Mail
+from sendgrid.helpers.mail import To
+from sendgrid.helpers.mail import Cc
+from sendgrid.helpers.mail import From
+from sendgrid.helpers.mail import Subject
 
 from app import logger
 
@@ -16,15 +18,15 @@ def create_email(address, subject, template_name, context):
     html_template = templateEnv.get_template(template_name + ".html")
 
     html_to_send = html_template.render(context)
-    content = Content("text/html", html_to_send)
+    content = HtmlContent(html_to_send)
 
-    from_email = Email("team@ourresearch.org", "Unsub Team")
-    to_email = Email(address)
+    from_email = From("team@ourresearch.org", "Unsub Team")
+    to_email = To(address)
 
-    email = Mail(from_email, subject, to_email, content)
-    personalization = Personalization()
-    personalization.add_to(to_email)
-    email.add_personalization(personalization)
+    to_emails = [to_email]
+    if "mmu.ac.uk" in address:
+        to_emails += [Cc("heather@ourresearch.org")]
+    email = Mail(from_email=from_email, subject=Subject(subject), to_emails=to_emails, html_content=content)
 
     logger.info((u'sending email "{}" to {}'.format(subject, address)))
 
@@ -33,7 +35,7 @@ def create_email(address, subject, template_name, context):
 
 def send(email, for_real=False):
     if for_real:
-        sg = sendgrid.SendGridAPIClient(apikey=os.environ.get('SENDGRID_API_KEY'))
+        sg = sendgrid.SendGridAPIClient(api_key=os.environ.get('SENDGRID_API_KEY'))
         email_get = email.get()
         response = sg.client.mail.send.post(request_body=email_get)
         print u"Sent an email"
