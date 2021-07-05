@@ -376,6 +376,10 @@ class Package(db.Model):
         return False
 
     @cached_property
+    def is_feedback_package(self):
+        return False
+
+    @cached_property
     def consortia_scenario_ids_who_own_this_package(self):
         q = u"""
         select consortium_package_id, scenario_id as consortium_scenario_id
@@ -653,16 +657,17 @@ class Package(db.Model):
             filename = preprocess_file["Key"]
             filename_base = filename.split(".")[0]
             try:
-                package_id, filetype = filename_base.split("_")
+                preprocess_package_id, preprocess_filetype = filename_base.split("_")
             except ValueError:
                 # not a valid file, skip it
                 continue
             # size = preprocess_file["Size"]
             # age_seconds = (datetime.datetime.utcnow() - preprocess_file["LastModified"].replace(tzinfo=None)).total_seconds()
-            my_dict = data_files_dict[filetype]
-            my_dict["is_uploaded"] = True
-            my_dict["is_parsed"] = False
-            my_dict["is_live"] = False
+            if preprocess_package_id == self.package_id:
+                my_dict = data_files_dict[preprocess_filetype]
+                my_dict["is_uploaded"] = True
+                my_dict["is_parsed"] = False
+                my_dict["is_live"] = False
 
         return data_files_dict
 
@@ -696,6 +701,7 @@ class Package(db.Model):
             "is_owned_by_consortium": self.is_owned_by_consortium,
             "is_consortium": self.institution.is_consortium,
             "is_deleted": self.is_deleted is not None and self.is_deleted,
+            "is_feedback_package": self.is_feedback_package,
         }
         return response
 
