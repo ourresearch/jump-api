@@ -43,7 +43,7 @@ def parse_uploads():
                 # the delete will also delete the raw row which will take it off this queue
 
         except Exception as e:
-            print "Error: exception {} during parse_uploads".format(e)
+            print "Error: exception1 {} during parse_uploads".format(e)
             try:
                 db.session.rollback()
             except:
@@ -90,7 +90,14 @@ def parse_uploads():
                     print "moved"
 
         except Exception as e:
-            print "Error: exception {} during parse_uploads".format(e)
+            print u"Error: exception2 {} during parse_uploads on file {}".format(e, filename)
+            if loader and package_id and filename:
+                load_result = loader.load(package_id, filename, commit=True)
+                print u"because of error, deleting file {}".format(filename)
+                s3_resource = boto3.resource("s3")
+                s3_resource.Object(upload_preprocess_bucket, filename).delete()
+                print u"because of error, deleted {}".format(filename)
+
             try:
                 db.session.rollback()
             except:
