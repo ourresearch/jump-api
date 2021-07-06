@@ -257,6 +257,8 @@ class SavedScenario(db.Model):
         if not self.row_for_feedback:
             return None
         (updated, response) = get_latest_scenario_raw(self.scenario_id)
+        if not "member_added_subrs" in response:
+            updated = None
         return updated
 
     def set_live_scenario(self, my_jwt=None):

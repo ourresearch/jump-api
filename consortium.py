@@ -508,6 +508,8 @@ class Consortium(object):
                         row["sent_date"] = row_for_feedback["sent_date"]
                         row["return_date"] = row_for_feedback["return_date"]
                         (updated, scenario_data) = get_latest_scenario_raw(row_for_feedback["member_scenario_id"])
+                        if not "member_added_subrs" in scenario_data:
+                            updated = None
                         row["last_edited_date"] = updated
 
         return rows
