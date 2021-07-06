@@ -172,13 +172,9 @@ class Consortium(object):
 
         (updated, response) = get_latest_scenario_raw(self.scenario_id)
         if not response:
-            print u"Couldn't find a saved set of parameter settings, so buiding one"
-            my_saved_scenario = SavedScenario.query.get(self.scenario_id)
-            dict_to_save = my_saved_scenario.to_dict_saved_from_db()
-            dict_to_save["name"] = my_saved_scenario.scenario_name
-            save_raw_scenario_to_db(self.scenario_id, dict_to_save, None)
+            print u"Error: Couldn't find a saved set of parameter settings"
+            return None
 
-        (updated, response) = get_latest_scenario_raw(self.scenario_id)
         response["configs"]["cost_bigdeal"] = self.big_deal_cost_for_included_members
         return response
 

@@ -3,8 +3,10 @@ import datetime
 from cached_property import cached_property
 import shortuuid
 from sqlalchemy.orm import relationship
+from collections import OrderedDict
 
 from app import db
+from app import get_db_cursor
 from grid_id import GridId
 from ror_id import RorId
 from permission import UserInstitutionPermission
@@ -37,6 +39,13 @@ class Institution(db.Model):
 
         return permission_dicts
 
+
+    @cached_property
+    def feedback_sets(self):
+        response = [my_package for my_package in self.packages_sorted if my_package.is_feedback_package]
+        return response
+
+
     @cached_property
     def packages_sorted(self):
         packages = self.packages
@@ -53,20 +62,29 @@ class Institution(db.Model):
                 return True
         return False
 
+    @cached_property
+    def is_jisc(self):
+        from app import JISC_INSTITUTION_ID
+        test_institution_id = "institution-testinggWwB9iSCivMt"
+        return ((self.id == JISC_INSTITUTION_ID) or (self.id == test_institution_id))
+
     def to_dict(self):
-        return {
-            'id': self.id,
-            'grid_ids': [g.grid_id for g in self.grid_ids],
-            'ror_ids': [r.ror_id for r in self.ror_ids],
-            'name': self.display_name,
-            'is_demo': self.is_demo_institution,
-            'is_consortium': self.is_consortium,
-            'is_consortium_member': self.is_consortium_member,
-            'user_permissions': self.user_permissions(),
-            'institutions': self.user_permissions(is_consortium=False),
-            'consortia': self.user_permissions(is_consortium=True),
-            'publishers': [p.to_dict_minimal() for p in self.packages_sorted],
-        }
+        return OrderedDict([
+            ("id", self.id),
+            ("grid_ids", [g.grid_id for g in self.grid_ids]),
+            ("ror_ids", [r.ror_id for r in self.ror_ids]),
+            ("name", self.display_name),
+            ("is_demo", self.is_demo_institution),
+            ("is_consortium", self.is_consortium),
+            ("is_consortium_member", self.is_consortium_member),
+            ("user_permissions", self.user_permissions()),
+            ("institutions", self.user_permissions(is_consortium=False)),
+            ("consortia", self.user_permissions(is_consortium=True)),
+            ("publishers", [p.to_dict_minimal() for p in self.packages_sorted]),
+            ("packages", [p.to_dict_minimal() for p in self.packages_sorted]),
+            ("feedback_sets", [f.to_dict_minimal_feedback_set() for f in self.feedback_sets]),
+            ("is_jisc", self.is_jisc)
+        ])
 
     def __init__(self, **kwargs):
         self.id = u'institution-{}'.format(shortuuid.uuid()[0:12])

@@ -172,7 +172,6 @@ def consortium_package_create(consortium_institution_id, consortium_package_disp
     my_scenario_name = u'First Scenario'
     my_scenario = SavedScenario(False, my_scenario_id, None)
     my_scenario.package_id = my_package.package_id
-    my_scenario.scenario_name = my_scenario_name
     my_scenario.created = datetime.datetime.utcnow().isoformat()
     my_scenario.is_base_scenario = True
 

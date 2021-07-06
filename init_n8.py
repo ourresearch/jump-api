@@ -119,7 +119,6 @@ def package_create(jusp_id, institution_id, package_type):
         print u"scenario {} doesn't exist, making".format(scenario_id)
         my_scenario = SavedScenario(False, scenario_id, None)
         my_scenario.package_id = package_id
-        my_scenario.scenario_name = scenario_name
         my_scenario.created = datetime.datetime.utcnow().isoformat()
         db.session.add(my_scenario)
         safe_commit(db)

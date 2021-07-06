@@ -43,6 +43,7 @@ from util import HTTPMethodOverrideMiddleware
 HEROKU_APP_NAME = "jump-api"
 DEMO_PACKAGE_ID = "658349d9"
 JISC_PACKAGE_ID = "package-3WkCDEZTqo6S"
+JISC_INSTITUTION_ID = "institution-Afxc4mAYXoJH"
 USE_PAPER_GROWTH = False
 
 # set up logging

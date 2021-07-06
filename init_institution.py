@@ -34,25 +34,24 @@ from util import read_csv_file
 
 # configuration here
 
-# institution_name = None
-# institution_rows = []
+institution_name = None
+institution_rows = []
 
-institution_name = u"Consortium for Testing"
-
-institution_rows = [{
-    "institution_name": institution_name,
-    "username": u"consortiumtest",
-    # "ror_id_list": ["02nx5r318"]
-    "ror_id_list": []
-    }]
+# institution_name = u"University of Pittsburgh"
+#
+# institution_rows = [{
+#     "institution_name": institution_name,
+#     "username": u"pitt",
+#     "ror_id_list": ["01an3r305"]
+#     }]
 
 
 user_rows = [
     {
         "email": None,
         "name": None,
-        # "jisc_id": "lcs",
-        "email_and_name": "Admin <team+consortiumtest@ourresearch.org>",
+        "jisc_id": "sur",
+        "email_and_name": "Admin <s.hoadley@surrey.ac.uk>",
         "password": u"",
         "institution_name": institution_name,
         "permissions": [u"view", u"modify", u"admin"]  # default is view, modify, admin

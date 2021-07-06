@@ -369,14 +369,45 @@ class Package(db.Model):
             package_id = DEMO_PACKAGE_ID
         return package_id
 
+    @property
+    def feedback_scenario_dicts(self):
+        feedback_scenarios = [s for s in self.saved_scenarios if s.is_feedback_scenario]
+        feedback_scenario_dicts = [s.to_dict_minimal() for s in feedback_scenarios]
+        return feedback_scenario_dicts
+
+    @cached_property
+    def feedback_set_id(self):
+        return self.package_id.replace("package-", "feedback-")
+
+    @cached_property
+    def feedback_set_name(self):
+        return u"Feedback on {} scenarios".format(self.publisher)
+
+    @cached_property
+    def feedback_rows(self):
+        if not self.is_feeder_package:
+            return []
+        command = """select * from jump_consortium_feedback_requests where member_package_id='{member_package_id}'
+             """.format(member_package_id=self.package_id)
+        with get_db_cursor() as cursor:
+            cursor.execute(command)
+            rows_for_feedback = cursor.fetchall()
+        return rows_for_feedback
+
+    @cached_property
+    def is_feedback_package(self):
+        if not self.is_feeder_package:
+            return False
+        return (len(self.feedback_rows) > 0)
+
+    @cached_property
+    def is_feeder_package(self):
+        return self.is_owned_by_consortium
+
     @cached_property
     def is_owned_by_consortium(self):
         if self.consortia_scenario_ids_who_own_this_package:
             return True
-        return False
-
-    @cached_property
-    def is_feedback_package(self):
         return False
 
     @cached_property
@@ -673,7 +704,6 @@ class Package(db.Model):
 
     def to_package_dict(self):
         data_files_list = sorted(self.data_files_dict.values(), key=lambda x: 0 if x["rows_count"]==None else x["rows_count"], reverse=True)
-
         response = OrderedDict([
             ("id", self.package_id),
             ("name", self.package_name),
@@ -681,29 +711,48 @@ class Package(db.Model):
             ("currency", self.currency),
             ("cost_bigdeal", self.returned_big_deal_cost),
             ("cost_bigdeal_increase", self.returned_big_deal_cost_increase),
-            ("is_owned_by_consortium", self.is_owned_by_consortium),
             ("is_consortium", self.institution.is_consortium),
             ("is_deleted", self.is_deleted is not None and self.is_deleted),
             ("is_demo", self.is_demo),
             ("has_complete_counter_data", self.has_complete_counter_data),
             ("data_files", data_files_list),
+            # @todo for testing, show all scenarios even with owned by consortium
+            # ("is_owned_by_consortium", self.is_owned_by_consortium),
+            ("is_owned_by_consortium", False),
+            # ("scenarios", [s.to_dict_minimal() for s in self.saved_scenarios if not s.is_feedback_scenario]),
             ("scenarios", [s.to_dict_minimal() for s in self.saved_scenarios]),
             ("warnings", self.warnings),
         ])
         return response
 
-    def to_dict_minimal(self):
-        response = {
-            "id": self.package_id,
-            "name": self.package_name,
-            "currency": self.currency,
-            "publisher": self.publisher,
-            "is_owned_by_consortium": self.is_owned_by_consortium,
-            "is_consortium": self.institution.is_consortium,
-            "is_deleted": self.is_deleted is not None and self.is_deleted,
-            "is_feedback_package": self.is_feedback_package,
-        }
+    def to_package_dict_feedback_set(self):
+        response = self.to_package_dict()
+        response["id"] = self.feedback_set_id
+        response["name"] = self.feedback_set_name
+        response["scenarios"] = self.feedback_scenario_dicts
         return response
+
+
+    def to_dict_minimal(self):
+        response = OrderedDict([
+            ("id", self.package_id),
+            ("name", self.package_name),
+            ("currency", self.currency),
+            ("publisher", self.publisher),
+            ("is_deleted", self.is_deleted is not None and self.is_deleted),
+            ("is_owned_by_consortium", self.is_owned_by_consortium),
+            ("is_consortium", self.institution.is_consortium),
+            ("is_feedback_package", self.is_feedback_package),
+            ("is_feeder_package", self.is_feeder_package),
+        ])
+        return response
+
+    def to_dict_minimal_feedback_set(self):
+        response = self.to_dict_minimal()
+        response["id"] = self.feedback_set_id
+        response["name"] = self.feedback_set_name
+        return response
+
 
     def __repr__(self):
         return u"<{} ({}) {}>".format(self.__class__.__name__, self.package_id, self.package_name)
@@ -730,7 +779,6 @@ def clone_demo_package(institution):
     for scenario in demo_scenarios:
         new_scenario = SavedScenario(False, "scenario-{}".format(shortuuid.uuid()[0:12]), None)
         new_scenario.package_id = new_package.package_id
-        new_scenario.scenario_name = scenario.scenario_name
         new_scenario.created = now
         new_scenario.is_base_scenario = scenario.is_base_scenario
 

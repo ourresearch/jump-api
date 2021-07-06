@@ -49,20 +49,40 @@ def get_feedback_member_institution_scenario_id(consortium_scenario_id, member_p
 
 
 def save_feedback_on_member_institutions_included_to_db(consortium_scenario_id, member_institutions_list, ip):
+    from saved_scenario import save_raw_scenario_to_db
+
     scenario_members = json.dumps(member_institutions_list)
+    (updated, scenario_raw) = get_latest_scenario_raw(consortium_scenario_id)
+    scenario_json = json.dumps(scenario_raw)
 
     with get_db_cursor() as cursor:
         command = ""
         for member_package_id in member_institutions_list:
             member_institution_scenario_id = get_feedback_member_institution_scenario_id(consortium_scenario_id, member_package_id)
-            command += u"""DELETE FROM jump_consortium_feedback_requests WHERE 
-                consortium_scenario_id='{consortium_scenario_id}' and member_scenario_id='{member_institution_scenario_id}';
-                    INSERT INTO jump_consortium_feedback_requests 
-                (consortium_scenario_id, member_package_id, member_scenario_id, sent_date, return_date, ip) 
+
+            save_raw_scenario_to_db(member_institution_scenario_id, scenario_raw, ip)
+
+            command += u"""
+                DELETE FROM jump_package_scenario WHERE 
+                scenario_id='{member_institution_scenario_id}';
+                
+                INSERT INTO jump_package_scenario 
+                (package_id, scenario_id, scenario_name, created, is_base_scenario)
                 values 
-                ('{consortium_scenario_id}', '{member_package_id}', '{member_institution_scenario_id}', sysdate, null, '{ip}');""".format(
-                consortium_scenario_id=consortium_scenario_id, member_package_id=member_package_id, member_institution_scenario_id=member_institution_scenario_id, ip=ip)
-        print command
+                ('{member_package_id}', '{member_institution_scenario_id}', '', sysdate, False);
+
+                DELETE FROM jump_consortium_feedback_requests WHERE 
+                consortium_scenario_id='{consortium_scenario_id}' and member_scenario_id='{member_institution_scenario_id}';
+                
+                INSERT INTO jump_consortium_feedback_requests 
+                (consortium_scenario_id, scenario_json, member_package_id, member_scenario_id, sent_date, return_date, ip) 
+                values 
+                ('{consortium_scenario_id}', '{scenario_json}', '{member_package_id}', '{member_institution_scenario_id}', sysdate, null, '{ip}');
+                
+                """.format(
+                consortium_scenario_id=consortium_scenario_id, scenario_json=scenario_json, member_package_id=member_package_id, member_institution_scenario_id=member_institution_scenario_id, ip=ip)
+
+        # print command
         cursor.execute(command)
 
 def get_latest_scenario_raw(scenario_id):
@@ -116,7 +136,6 @@ class SavedScenario(db.Model):
     __tablename__ = 'jump_package_scenario'
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"))
     scenario_id = db.Column(db.Text, primary_key=True)
-    scenario_name = db.Column(db.Text)
     created = db.Column(db.DateTime)
     is_base_scenario = db.Column(db.Boolean)
 
@@ -134,6 +153,11 @@ class SavedScenario(db.Model):
     def on_load(self):
         self.timing_messages = [];
         self.section_time = time()
+
+    @property
+    def scenario_name(self):
+        (updated, response) = get_latest_scenario_raw(self.scenario_id)
+        return response["name"]
 
     def log_timing(self, message):
         self.timing_messages.append("{: <30} {: >6}s".format(message, elapsed(self.section_time, 2)))
@@ -203,6 +227,37 @@ class SavedScenario(db.Model):
     def update_percent_complete(self):
         # Always None for individual scenarios, overridden by Consortium object
         return None
+
+    @cached_property
+    def row_for_feedback(self):
+        if not self.is_feedback_scenario:
+            return []
+
+        command = """select * from jump_consortium_feedback_requests where member_scenario_id='{scenario_id}'
+             """.format(scenario_id=self.scenario_id)
+        with get_db_cursor() as cursor:
+            cursor.execute(command)
+            rows_for_feedback = cursor.fetchall()
+            return rows_for_feedback[0]
+
+    @cached_property
+    def feedback_sent_date(self):
+        if not self.row_for_feedback:
+            return None
+        return self.row_for_feedback["sent_date"]
+
+    @cached_property
+    def feedback_return_date(self):
+        if not self.row_for_feedback:
+            return None
+        return self.row_for_feedback["return_date"]
+
+    @cached_property
+    def feedback_last_updated(self):
+        if not self.row_for_feedback:
+            return None
+        (updated, response) = get_latest_scenario_raw(self.scenario_id)
+        return updated
 
     def set_live_scenario(self, my_jwt=None):
         if not hasattr(self, "live_scenario") or not self.live_scenario:
@@ -290,15 +345,19 @@ class SavedScenario(db.Model):
 
         response["scenario_created"] = self.created
         response["is_base_scenario"] = self.is_base_scenario
+        response["is_feedback_scenario"] = self.is_feedback_scenario
+
         return response
+
+    @cached_property
+    def is_feedback_scenario(self):
+        return self.scenario_id.startswith("scenario-feedback")
 
     def to_dict_feedback(self):
         response = {
-            "member_added_subrs": None,
-			"sent_date": None,
-			"opened_date": None,
-			"last_edited_date": None,
-			"returned_date": None
+			"sent_date": self.feedback_sent_date,
+			"last_edited_date": self.feedback_last_updated,
+			"returned_date": self.feedback_return_date
         }
         return response
 
@@ -336,13 +395,4 @@ class SavedScenario(db.Model):
         return u"<{} ({}) {}>".format(self.__class__.__name__, self.scenario_id, self.scenario_name)
 
 
-def default_scenario(package_id, created=None):
-    created = created or datetime.datetime.utcnow().isoformat()
 
-    new_scenario = SavedScenario(False, u'scenario-{}'.format(shortuuid.uuid()[0:12]), None)
-    new_scenario.package_id = package_id
-    new_scenario.scenario_name = u'First Scenario'
-    new_scenario.created = created
-    new_scenario.is_base_scenario = True
-
-    return new_scenario

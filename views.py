@@ -55,7 +55,7 @@ from package import get_ids
 from permission import Permission, UserInstitutionPermission
 from perpetual_access import PerpetualAccess, PerpetualAccessInput
 from ror_id import RorId, RorGridCrosswalk
-from saved_scenario import SavedScenario, default_scenario
+from saved_scenario import SavedScenario
 from saved_scenario import get_latest_scenario
 from saved_scenario import save_raw_scenario_to_db
 from saved_scenario import save_raw_member_institutions_included_to_db
@@ -91,7 +91,7 @@ def s3_cache_get(url):
     return contents_json
 
 
-def authenticate_for_publisher(publisher_id, required_permission):
+def authenticate_for_package(publisher_id, required_permission):
     package = Package.query.get(publisher_id)
 
     if not package:
@@ -744,25 +744,14 @@ def authorize_institution(auth_institution, required_permission):
 
 
 def get_saved_scenario(scenario_id, test_mode=False, required_permission=None):
-    # is_demo_account = scenario_id.startswith("demo")
-    #
-    # if is_demo_account:
-    #     my_saved_scenario = SavedScenario.query.get(scenario_id)
-    #     if not my_saved_scenario:
-    #         my_saved_scenario = SavedScenario.query.get("demo")
-    #         my_saved_scenario.scenario_id = scenario_id
-    # else:
     my_saved_scenario = SavedScenario.query.get(scenario_id)
 
     if not my_saved_scenario:
         abort_json(404, "Scenario {} not found.".format(scenario_id))
 
-    # if not test_mode:
-    #     print "test_mode", test_mode
-    #     print "is_authorized_superuser()", is_authorized_superuser()
     if required_permission:
         if my_saved_scenario.package.institution_id:
-            authenticate_for_publisher(my_saved_scenario.package.package_id, required_permission)
+            authenticate_for_package(my_saved_scenario.package.package_id, required_permission)
         else:
             abort_json(
                 400,
@@ -793,17 +782,29 @@ def get_jwt():
 # @app.route("/publisher/package-3WkCDEZTqo6S", methods=["GET"])
 # @jwt_required
 # def get_package_jisc_package_3WkCDEZTqo6S(package_id="package-3WkCDEZTqo6S"):
-#     authenticate_for_publisher(package_id, Permission.view())
+#     authenticate_for_package(package_id, Permission.view())
 #     print u"in get_package_package_3WkCDEZTqo6S"
 #     response_dict = s3_cache_get("publisher/package-3WkCDEZTqo6S")
 #     return jsonify_fast_no_sort(response_dict)
 
 
+def get_feedback(feedback_id):
+    package_id = feedback_id.replace("feedback-", "package-")
+    authenticate_for_package(package_id, Permission.view())
+    package = Package.query.filter(Package.package_id == package_id).scalar()
+    package_dict = package.to_package_dict_feedback_set()
+    response = jsonify_fast_no_sort(package_dict)
+    return response
+
 @app.route("/publisher/<package_id>", methods=["GET"])
+@app.route("/package/<package_id>", methods=["GET"])
+@app.route("/feedback/<package_id>", methods=["GET"])
 @jwt_required
 def get_package(package_id):
-    authenticate_for_publisher(package_id, Permission.view())
+    if package_id.startswith("feedback"):
+        return get_feedback(package_id)
 
+    authenticate_for_package(package_id, Permission.view())
     package = Package.query.filter(Package.package_id == package_id).scalar()
     package_dict = package.to_package_dict()
     response = jsonify_fast_no_sort(package_dict)
@@ -813,7 +814,7 @@ def get_package(package_id):
 @app.route("/publisher/<publisher_id>", methods=["POST"])
 @jwt_required
 def update_publisher(publisher_id):
-    authenticate_for_publisher(publisher_id, required_permission=Permission.modify())
+    authenticate_for_package(publisher_id, required_permission=Permission.modify())
 
     publisher = Package.query.filter(Package.package_id == publisher_id).scalar()
 
@@ -953,7 +954,7 @@ def _load_package_file(package_id, req, table_class):
 @app.route("/publisher/<package_id>/<data_file_name>/status", methods=["GET"])
 @jwt_required
 def jump_data_file_status(package_id, data_file_name):
-    authenticate_for_publisher(package_id, Permission.view())
+    authenticate_for_package(package_id, Permission.view())
     package = Package.query.filter(Package.package_id == package_id).scalar()
     package_dict = package.to_package_dict()
     data_files_list = package_dict["data_files"]
@@ -970,7 +971,7 @@ def jump_data_file_status(package_id, data_file_name):
 @app.route("/publisher/<package_id>/counter", methods=["GET", "POST", "DELETE"])
 @jwt_required
 def jump_counter(package_id):
-    authenticate_for_publisher(package_id, Permission.view() if request.method == "GET" else Permission.modify())
+    authenticate_for_package(package_id, Permission.view() if request.method == "GET" else Permission.modify())
     url_end = request.base_url.rsplit("/", 1)[1]
     if url_end == "counter":
         url_end = "counter-jr1"
@@ -998,7 +999,7 @@ def jump_counter(package_id):
 # @app.route("/publisher/<package_id>/counter/raw", methods=["GET"])
 # @jwt_required
 # def jump_get_raw_counter(package_id):
-#     authenticate_for_publisher(package_id, Permission.view() if request.method == "GET" else Permission.modify())
+#     authenticate_for_package(package_id, Permission.view() if request.method == "GET" else Permission.modify())
 #
 #     raw = CounterInput.get_raw_upload_object(package_id)
 #
@@ -1011,7 +1012,7 @@ def jump_counter(package_id):
 @app.route("/publisher/<package_id>/perpetual-access", methods=["GET", "POST", "DELETE"])
 @jwt_required
 def jump_perpetual_access(package_id):
-    authenticate_for_publisher(package_id, Permission.view() if request.method == "GET" else Permission.modify())
+    authenticate_for_package(package_id, Permission.view() if request.method == "GET" else Permission.modify())
 
     if request.method == "GET":
         rows = PerpetualAccess.query.filter(PerpetualAccess.package_id == package_id).all()
@@ -1040,7 +1041,7 @@ def jump_perpetual_access(package_id):
 # @app.route("/publisher/<package_id>/perpetual-access/raw", methods=["GET"])
 # @jwt_required
 # def jump_get_raw_perpetual_access(package_id):
-#     authenticate_for_publisher(package_id, Permission.view() if request.method == "GET" else Permission.modify())
+#     authenticate_for_package(package_id, Permission.view() if request.method == "GET" else Permission.modify())
 #
 #     raw = PerpetualAccessInput.get_raw_upload_object(package_id)
 #
@@ -1053,7 +1054,7 @@ def jump_perpetual_access(package_id):
 @app.route("/publisher/<package_id>/price-public", methods=["GET"])
 @jwt_required
 def jump_journal_public_prices(package_id):
-    my_package = authenticate_for_publisher(package_id, Permission.view())
+    my_package = authenticate_for_package(package_id, Permission.view())
     rows = my_package.public_price_rows()
     return jsonify_fast_no_sort({"rows": rows})
 
@@ -1061,7 +1062,7 @@ def jump_journal_public_prices(package_id):
 @app.route("/publisher/<package_id>/price", methods=["GET", "POST", "DELETE"])
 @jwt_required
 def jump_journal_prices(package_id):
-    package = authenticate_for_publisher(package_id, Permission.view() if request.method == "GET" else Permission.modify())
+    package = authenticate_for_package(package_id, Permission.view() if request.method == "GET" else Permission.modify())
 
     if request.method == "GET":
         rows = JournalPrice.query.filter(JournalPrice.package_id == package_id).all()
@@ -1082,7 +1083,7 @@ def jump_journal_prices(package_id):
 # @app.route("/publisher/<package_id>/price/raw", methods=["GET"])
 # @jwt_required
 # def jump_get_raw_journal_prices(package_id):
-#     authenticate_for_publisher(package_id, Permission.view() if request.method == "GET" else Permission.modify())
+#     authenticate_for_package(package_id, Permission.view() if request.method == "GET" else Permission.modify())
 #
 #     raw = JournalPriceInput.get_raw_upload_object(package_id)
 #
@@ -1100,7 +1101,7 @@ def post_subscription_guts(scenario_id, scenario_name=None):
     if scenario_name:
         scenario_name = scenario_name.replace(u'"', u'""')
         scenario_name = scenario_name.replace(u'&', u' ')
-        dict_to_save["scenario_name"] = scenario_name
+        dict_to_save["name"] = scenario_name
         save_raw_scenario_to_db(scenario_id, dict_to_save, get_ip(request))
 
     return
@@ -1150,6 +1151,15 @@ def scenario_id_post(scenario_id):
     return jsonify_fast_no_sort({"status": "success"})
 
 
+@app.route("/scenario/<scenario_id>/notifications/done-editing", methods=["POST"])
+@jwt_required
+def subscriptions_notifications_done_editing_post(scenario_id):
+    with get_db_cursor() as cursor:
+        command = """update jump_consortium_feedback_requests 
+        set return_date=sysdate where member_scenario_id = '{}'""".format(scenario_id)
+        cursor.execute(command)
+    return jsonify_fast_no_sort({"status": "success"})
+
 
 @app.route("/scenario/<scenario_id>/subscriptions", methods=["POST"])
 @jwt_required
@@ -1195,23 +1205,23 @@ def member_institutions_consortial_scenarios_scenario_id_post(scenario_id):
     return jsonify_fast_no_sort(response)
 
 
-@app.route("/scenario/<scenario_id>", methods=["GET"])
-@jwt_required
-def live_scenario_id_get(scenario_id):
-    my_timing = TimingMessages()
-    my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
-    my_timing.log_timing("after setting live scenario")
-    response = my_saved_scenario.to_dict_definition()
-
-    # these are used by consortium
-    response["is_locked_pending_update"] = my_saved_scenario.is_locked_pending_update
-    response["update_notification_email"] = my_saved_scenario.update_notification_email
-    response["update_percent_complete"] = my_saved_scenario.update_percent_complete
-
-    my_timing.log_timing("after to_dict()")
-    response["_timing"] = my_timing.to_dict()
-    response = jsonify_fast(response)
-    return response
+# @app.route("/scenario/<scenario_id>", methods=["GET"])
+# @jwt_required
+# def live_scenario_id_get(scenario_id):
+#     my_timing = TimingMessages()
+#     my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
+#     my_timing.log_timing("after setting live scenario")
+#     response = my_saved_scenario.to_dict_definition()
+#
+#     # these are used by consortium
+#     response["is_locked_pending_update"] = my_saved_scenario.is_locked_pending_update
+#     response["update_notification_email"] = my_saved_scenario.update_notification_email
+#     response["update_percent_complete"] = my_saved_scenario.update_percent_complete
+#
+#     my_timing.log_timing("after to_dict()")
+#     response["_timing"] = my_timing.to_dict()
+#     response = jsonify_fast(response)
+#     return response
 
 
 @app.route("/ror/autocomplete/<path:query>", methods=["GET"])
@@ -1281,7 +1291,7 @@ def scenario_id_details_get(scenario_id):
 @app.route("/publisher/<publisher_id>/apc", methods=["GET"])
 @jwt_required
 def live_publisher_id_apc_get(publisher_id):
-    authenticate_for_publisher(publisher_id, required_permission=Permission.view())
+    authenticate_for_package(publisher_id, required_permission=Permission.view())
 
     my_package = Package.query.get(publisher_id)
 
@@ -1413,7 +1423,6 @@ def scenario_post(package_id):
 
     new_saved_scenario = SavedScenario(False, new_scenario_id, None)
     new_saved_scenario.package_id = package_id
-    new_saved_scenario.scenario_name = new_scenario_name
     new_saved_scenario.is_base_scenario = False
 
     if my_saved_scenario_to_copy_from:
@@ -1449,7 +1458,7 @@ def scenario_post(package_id):
 @app.route("/publisher/<publisher_id>/scenario", methods=["POST"])
 @jwt_required
 def publisher_scenario_post(publisher_id):
-    authenticate_for_publisher(publisher_id, Permission.modify())
+    authenticate_for_package(publisher_id, Permission.modify())
 
     new_scenario_id = request.json.get("id", "scenario-{}".format(shortuuid.uuid()[0:12]))
     new_scenario_name = request.json.get("name", "New Scenario")
@@ -1464,7 +1473,6 @@ def publisher_scenario_post(publisher_id):
 
     new_saved_scenario = SavedScenario(False, new_scenario_id, None)
     new_saved_scenario.package_id = publisher_id
-    new_saved_scenario.scenario_name = new_scenario_name
     new_saved_scenario.is_base_scenario = False
     db.session.add(new_saved_scenario)
     safe_commit(db)
@@ -1624,7 +1632,7 @@ def admin_accounts_get():
 @app.route("/publisher/<package_id>/sign-s3")
 @jwt_required
 def sign_s3(package_id):
-    authenticate_for_publisher(package_id, Permission.modify())
+    authenticate_for_package(package_id, Permission.modify())
 
     upload_bucket = "unsub-file-uploads-preprocess"
     file_name = request.args.get("filename")
