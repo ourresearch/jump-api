@@ -510,6 +510,9 @@ class PackageInput:
                 if normalized:
                     error_rows["headers"].append({"id": normalized, "name": raw})
 
+            if not normalized_rows:
+                raise RuntimeError(u"Error: No rows found")
+
             self.apply_header(normalized_rows, parsed_rows[0:header_index+1])
 
             if not error_rows["rows"]:
