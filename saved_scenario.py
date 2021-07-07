@@ -157,6 +157,8 @@ class SavedScenario(db.Model):
     @property
     def scenario_name(self):
         (updated, response) = get_latest_scenario_raw(self.scenario_id)
+        if not response:
+            return "First Scenario"
         return response["name"]
 
     def log_timing(self, message):
