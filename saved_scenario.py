@@ -275,14 +275,16 @@ class SavedScenario(db.Model):
         (updated, response) = get_latest_scenario_raw(self.scenario_id)
         if not response:
             self.set_live_scenario()  # in case not done
-
             response = {
                 "subrs": [],
+                "member_added_subrs": [],
                 "customSubrs": [],
                 "configs": self.live_scenario.settings.to_dict(),
                 "name": self.scenario_name,
                 "id": self.scenario_id
             }
+        if not "member_added_subrs" in response:
+            response["member_added_subrs"] = []
         return response
 
 
