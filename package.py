@@ -719,6 +719,7 @@ class Package(db.Model):
             # @todo for testing, show all scenarios even with owned by consortium
             # ("is_owned_by_consortium", self.is_owned_by_consortium),
             ("is_owned_by_consortium", False),
+            ("is_consortial_proposal_set", self.is_feedback_package),
             # ("scenarios", [s.to_dict_minimal() for s in self.saved_scenarios if not s.is_feedback_scenario]),
             ("scenarios", [s.to_dict_minimal() for s in self.saved_scenarios]),
             ("warnings", self.warnings),
@@ -740,10 +741,10 @@ class Package(db.Model):
             ("currency", self.currency),
             ("publisher", self.publisher),
             ("is_deleted", self.is_deleted is not None and self.is_deleted),
-            ("is_owned_by_consortium", self.is_owned_by_consortium),
             ("is_consortium", self.institution.is_consortium),
-            ("is_feedback_package", self.is_feedback_package),
+            ("is_owned_by_consortium", self.is_owned_by_consortium),
             ("is_feeder_package", self.is_feeder_package),
+            ("is_consortial_proposal_set", self.is_feedback_package),
         ])
         return response
 

@@ -65,7 +65,7 @@ class Institution(db.Model):
     @cached_property
     def is_jisc(self):
         from app import JISC_INSTITUTION_ID
-        test_institution_id = "institution-testinggWwB9iSCivMt"
+        test_institution_id = "institution-WzH2RdcHUPoR"
         return ((self.id == JISC_INSTITUTION_ID) or (self.id == test_institution_id))
 
     def to_dict(self):
@@ -81,8 +81,6 @@ class Institution(db.Model):
             ("institutions", self.user_permissions(is_consortium=False)),
             ("consortia", self.user_permissions(is_consortium=True)),
             ("publishers", [p.to_dict_minimal() for p in self.packages_sorted]),
-            ("packages", [p.to_dict_minimal() for p in self.packages_sorted]),
-            ("feedback_sets", [f.to_dict_minimal_feedback_set() for f in self.feedback_sets]),
             ("is_jisc", self.is_jisc)
         ])
 

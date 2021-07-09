@@ -351,7 +351,7 @@ class SavedScenario(db.Model):
 
         response["scenario_created"] = self.created
         response["is_base_scenario"] = self.is_base_scenario
-        response["is_feedback_scenario"] = self.is_feedback_scenario
+        response["is_consortial_proposal"] = self.is_feedback_scenario
 
         return response
 
@@ -378,7 +378,7 @@ class SavedScenario(db.Model):
 
         response["saved"] = self.to_dict_saved_from_db()
 
-        response["feedback"] = self.to_dict_feedback()
+        response["consortial_proposal_dates"] = self.to_dict_feedback()
 
         response["journals"] = [j.to_dict_journals() for j in self.live_scenario.journals_sorted_cpu]
 

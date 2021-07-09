@@ -257,9 +257,7 @@ class Consortium(object):
 
     def to_dict_feedback(self):
         response = {
-            "member_added_subrs": None,
 			"sent_date": None,
-			"opened_date": None,
 			"last_edited_date": None,
 			"returned_date": None
         }
@@ -272,6 +270,7 @@ class Consortium(object):
                                           'scenario_id': self.scenario_id,
                                           'institution_id': self.institution_id,
                                           'scenario_created': None,
+                                          'is_consortial_proposal': False,
                                           'is_base_scenario': True,
                                           'scenario_name': self.scenario_saved_dict.get("name", "My Scenario"),
                                           'publisher_id': self.package_id}
@@ -285,7 +284,7 @@ class Consortium(object):
         my_response["is_locked_pending_update"] = self.is_locked_pending_update
         my_response["update_notification_email"] = self.update_notification_email
         my_response["update_percent_complete"] = self.update_percent_complete
-        my_response["feedback"] = self.to_dict_feedback()
+        my_response["consortial_proposal_dates"] = self.to_dict_feedback()
 
         my_response["warnings"] = []  # not applicable for consortia dashboards
 
