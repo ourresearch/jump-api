@@ -734,7 +734,13 @@ class Package(db.Model):
         return response
 
 
+
     def to_dict_minimal(self):
+        if self.is_feedback_package:
+            return self.to_dict_minimal_feedback_set
+        return self.to_dict_minimal_base
+
+    def to_dict_minimal_base(self):
         response = OrderedDict([
             ("id", self.package_id),
             ("name", self.package_name),
@@ -749,7 +755,7 @@ class Package(db.Model):
         return response
 
     def to_dict_minimal_feedback_set(self):
-        response = self.to_dict_minimal()
+        response = self.to_dict_minimal_base()
         response["id"] = self.feedback_set_id
         response["name"] = self.feedback_set_name
         return response
