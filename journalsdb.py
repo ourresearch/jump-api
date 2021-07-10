@@ -352,6 +352,7 @@ def get_journal_metadata_for_publisher_currently_subscription(publisher):
 print u"loading all journal metadata...",
 start_time = time()
 all_journal_metadata_list = JournalMetadata.query.all()
+[db.session.expunge(my_journal_metadata) for my_journal_metadata in all_journal_metadata_list]
 all_journal_metadata = dict(zip([journal_object.issn_l for journal_object in all_journal_metadata_list], all_journal_metadata_list))
 all_journal_metadata_flat = {}
 for issn_l, journal_metadata in all_journal_metadata.iteritems():
