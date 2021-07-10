@@ -66,7 +66,8 @@ class Institution(db.Model):
     def is_jisc(self):
         from app import JISC_INSTITUTION_ID
         test_institution_id = "institution-WzH2RdcHUPoR"
-        return ((self.id == JISC_INSTITUTION_ID) or (self.id == test_institution_id))
+        n8_institution_id = "institution-Tfi2z4svqqkU"
+        return ((self.id == JISC_INSTITUTION_ID) or (self.id == test_institution_id) or (self.id == n8_institution_id))
 
     def to_dict(self):
         return OrderedDict([
