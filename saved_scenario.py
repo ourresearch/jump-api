@@ -263,6 +263,8 @@ class SavedScenario(db.Model):
         if not self.row_for_feedback:
             return None
         (updated, response) = get_latest_scenario_raw(self.scenario_id)
+        if abs((updated - self.feedback_sent_date).total_seconds()) < 60*2.0:
+            return None
         return updated
 
     def set_live_scenario(self, my_jwt=None):
