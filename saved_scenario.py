@@ -100,6 +100,9 @@ def get_latest_scenario_raw(scenario_id):
         updated = rows[0]["updated"]
         scenario_data = json.loads(rows[0]["scenario_json"])
 
+    if not "member_added_subrs" in scenario_data:
+        scenario_data["member_added_subrs"] = []
+
     return (updated, scenario_data)
 
 
@@ -127,6 +130,9 @@ def get_latest_scenario(scenario_id, my_jwt=None):
 
     if rows:
         scenario_data = json.loads(rows[0]["scenario_json"])
+
+    if not "member_added_subrs" in scenario_data:
+        scenario_data["member_added_subrs"] = []
 
     my_scenario = Scenario(package_id, scenario_data, my_jwt=my_jwt)
     return my_scenario
@@ -259,8 +265,6 @@ class SavedScenario(db.Model):
         if not self.row_for_feedback:
             return None
         (updated, response) = get_latest_scenario_raw(self.scenario_id)
-        if not "member_added_subrs" in response:
-            updated = None
         return updated
 
     def set_live_scenario(self, my_jwt=None):
