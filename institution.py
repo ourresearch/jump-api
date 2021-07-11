@@ -68,16 +68,19 @@ class Institution(db.Model):
         if self.id == JISC_INSTITUTION_ID:
             return True
 
-        # test_institution_id
-        if self.id == "institution-WzH2RdcHUPoR":
+        # jisc member institutions
+        if "jisc" in self.id:
             return True
 
         # n8_institution_id
         if self.id == "institution-Tfi2z4svqqkU":
             return True
 
-        # jisc member institutions
-        if "jisc" in self.id:
+        # test_institution_id
+        if self.id == "institution-WzH2RdcHUPoR":
+            return True
+        # our testing instiutions
+        if "institution-testing" in self.id:
             return True
 
         return False
