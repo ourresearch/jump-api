@@ -258,7 +258,7 @@ class Consortium(object):
     def to_dict_feedback(self):
         response = {
 			"sent_date": None,
-			"last_edited_date": None,
+			"changed_date": None,
 			"return_date": None
         }
         return response
@@ -509,7 +509,7 @@ class Consortium(object):
                         (updated, scenario_data) = get_latest_scenario_raw(row_for_feedback["member_scenario_id"])
                         if not "member_added_subrs" in scenario_data:
                             updated = None
-                        row["last_edited_date"] = updated
+                        row["changed_date"] = updated
 
         return rows
 

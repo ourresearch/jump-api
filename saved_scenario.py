@@ -364,7 +364,7 @@ class SavedScenario(db.Model):
     def to_dict_feedback(self):
         response = {
 			"sent_date": self.feedback_sent_date,
-			"last_edited_date": self.feedback_last_updated,
+			"changed_date": self.feedback_last_updated,
 			"return_date": self.feedback_return_date
         }
         return response
