@@ -1161,6 +1161,7 @@ def subscriptions_notifications_done_editing_post(scenario_id):
     return jsonify_fast_no_sort({"status": "success"})
 
 
+@app.route("/scenario/<scenario_id>/member-added-subscriptions", methods=["POST"])
 @app.route("/scenario/<scenario_id>/subscriptions", methods=["POST"])
 @jwt_required
 def subscriptions_scenario_id_post(scenario_id):

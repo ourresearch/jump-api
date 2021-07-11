@@ -65,9 +65,22 @@ class Institution(db.Model):
     @cached_property
     def is_jisc(self):
         from app import JISC_INSTITUTION_ID
-        test_institution_id = "institution-WzH2RdcHUPoR"
-        n8_institution_id = "institution-Tfi2z4svqqkU"
-        return ((self.id == JISC_INSTITUTION_ID) or (self.id == test_institution_id) or (self.id == n8_institution_id))
+        if self.id == JISC_INSTITUTION_ID:
+            return True
+
+        # test_institution_id
+        if self.id == "institution-WzH2RdcHUPoR":
+            return True
+
+        # n8_institution_id
+        if self.id == "institution-Tfi2z4svqqkU":
+            return True
+
+        # jisc member institutions
+        if "jisc" in self.id:
+            return True
+
+        return False
 
     def to_dict(self):
         return OrderedDict([
