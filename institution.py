@@ -31,8 +31,8 @@ class Institution(db.Model):
             UserInstitutionPermission.institution_id == self.id).distinct()
         users = User.query.filter(User.id.in_(user_ids)).all()
 
-        permission_dicts = [u.to_dict_permissions()[self.id] for u in users if (u.email and (not u.email.startswith("team+")))]
-        # permission_dicts = [u.to_dict_permissions()[self.id] for u in users]
+        # permission_dicts = [u.to_dict_permissions()[self.id] for u in users if (u.email and (not u.email.startswith("team+")))]
+        permission_dicts = [u.to_dict_permissions()[self.id] for u in users]
 
         if is_consortium is not None:
             permission_dicts = [d for d in permission_dicts if d["is_consortium"]==is_consortium]
