@@ -365,7 +365,7 @@ class SavedScenario(db.Model):
         response = {
 			"sent_date": self.feedback_sent_date,
 			"last_edited_date": self.feedback_last_updated,
-			"returned_date": self.feedback_return_date
+			"return_date": self.feedback_return_date
         }
         return response
 

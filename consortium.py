@@ -259,7 +259,7 @@ class Consortium(object):
         response = {
 			"sent_date": None,
 			"last_edited_date": None,
-			"returned_date": None
+			"return_date": None
         }
         return response
 
