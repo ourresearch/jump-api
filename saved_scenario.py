@@ -99,9 +99,8 @@ def get_latest_scenario_raw(scenario_id):
     if rows:
         updated = rows[0]["updated"]
         scenario_data = json.loads(rows[0]["scenario_json"])
-
-    if not "member_added_subrs" in scenario_data:
-        scenario_data["member_added_subrs"] = []
+        if not "member_added_subrs" in scenario_data:
+            scenario_data["member_added_subrs"] = []
 
     return (updated, scenario_data)
 
@@ -130,9 +129,8 @@ def get_latest_scenario(scenario_id, my_jwt=None):
 
     if rows:
         scenario_data = json.loads(rows[0]["scenario_json"])
-
-    if not "member_added_subrs" in scenario_data:
-        scenario_data["member_added_subrs"] = []
+        if not "member_added_subrs" in scenario_data:
+            scenario_data["member_added_subrs"] = []
 
     my_scenario = Scenario(package_id, scenario_data, my_jwt=my_jwt)
     return my_scenario
