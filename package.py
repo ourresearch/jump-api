@@ -735,8 +735,6 @@ class Package(db.Model):
 
 
     def to_dict_minimal(self):
-        if self.is_feedback_package:
-            return self.to_dict_minimal_feedback_set()
         return self.to_dict_minimal_base()
 
     def to_dict_minimal_base(self):
@@ -749,7 +747,7 @@ class Package(db.Model):
             ("is_consortium", self.institution.is_consortium),
             ("is_owned_by_consortium", self.is_owned_by_consortium),
             ("is_feeder_package", self.is_feeder_package),
-            ("is_consortial_proposal_set", self.is_feedback_package),
+            ("is_consortial_proposal_set", False),
         ])
         return response
 
@@ -757,6 +755,9 @@ class Package(db.Model):
         response = self.to_dict_minimal_base()
         response["id"] = self.feedback_set_id
         response["name"] = self.feedback_set_name
+        response["is_feeder_package"] = False
+        response["is_owned_by_consortium"] = False
+        response["is_consortial_proposal_set"] = True
         return response
 
 
