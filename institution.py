@@ -100,7 +100,7 @@ class Institution(db.Model):
             ("institutions", self.user_permissions(is_consortium=False)),
             ("consortia", self.user_permissions(is_consortium=True)),
             ("publishers", package_dicts),
-            ("consortial_proposal_sets", [p.to_dict_minimal() for p in self.packages_sorted if p.is_feedback_package]),
+            ("consortial_proposal_sets", [p.to_dict_minimal_feedback_set() for p in self.packages_sorted if p.is_feedback_package]),
             ("is_jisc", self.is_jisc)
         ])
 
