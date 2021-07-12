@@ -508,8 +508,8 @@ class Consortium(object):
                         row["return_date"] = row_for_feedback["return_date"]
                         (updated, scenario_data) = get_latest_scenario_raw(row_for_feedback["member_scenario_id"])
                         row["changed_date"] = updated
-                        if abs((row["changed_date"] - row["sent_date"]).total_seconds()) < 60*2:
-                            row["changed_date"] = None
+                        # if abs((row["changed_date"] - row["sent_date"]).total_seconds()) < 60*2:
+                        #     row["changed_date"] = None
 
         return rows
 
