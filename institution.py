@@ -86,8 +86,6 @@ class Institution(db.Model):
         return False
 
     def to_dict(self):
-        package_dicts = [p.to_dict_minimal() for p in self.packages_sorted]
-        package_dicts += [p.to_dict_minimal_feedback_set() for p in self.packages_sorted if p.is_feedback_package]
         return OrderedDict([
             ("id", self.id),
             ("grid_ids", [g.grid_id for g in self.grid_ids]),
@@ -99,7 +97,7 @@ class Institution(db.Model):
             ("user_permissions", self.user_permissions()),
             ("institutions", self.user_permissions(is_consortium=False)),
             ("consortia", self.user_permissions(is_consortium=True)),
-            ("publishers", package_dicts),
+            ("publishers", [p.to_dict_minimal() for p in self.packages_sorted]),
             ("consortial_proposal_sets", [p.to_dict_minimal_feedback_set() for p in self.packages_sorted if p.is_feedback_package]),
             ("is_jisc", self.is_jisc)
         ])
