@@ -37,9 +37,10 @@ from journal import Journal
 class ConsortiumJournal(Journal):
     years = range(0, 5)
 
-    def __init__(self, issn_l, included_package_ids, all_member_data):
+    def __init__(self, issn_l, included_package_ids, all_member_data, is_jisc):
         start_time = time()
         self.issn_l = issn_l
+        self.is_jisc = is_jisc
         self.included_package_ids = included_package_ids
         self.member_data = all_member_data
         self.meta_data = self.member_data[0]
@@ -180,6 +181,9 @@ class ConsortiumJournal(Journal):
 
     @cached_property
     def subscription_cost(self):
+        if self.is_jisc:
+            if len(self.included_package_ids) == 144:
+                return self.meta_data["subscription_cost"] * 155.0
         return self.meta_data["subscription_cost"] * len(self.included_package_ids)
 
     @cached_property

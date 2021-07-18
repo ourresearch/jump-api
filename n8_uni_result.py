@@ -8,13 +8,14 @@ from saved_scenario import SavedScenario
 
 class N8UniResult(object):
 
-    def __init__(self, jusp_id):
+    def __init__(self, jusp_id, group_pta_name):
         self.jusp_id = jusp_id
         self.scenario_id_ownpta = u"scenario-n8els_{}_ownpta".format(jusp_id)
         self.saved_scenario_ownpta = SavedScenario.query.get(self.scenario_id_ownpta)
         self.saved_scenario_ownpta.set_live_scenario()  # in case not done
 
-        self.scenario_id_grouppta = u"scenario-n8els_{}_grouppta".format(jusp_id)
+        group_pta_name = group_pta_name.replace(" ", "")
+        self.scenario_id_grouppta = u"scenario-n8els_{}_{}".format(jusp_id, group_pta_name)
         self.saved_scenario_grouppta = SavedScenario.query.get(self.scenario_id_grouppta)
         self.saved_scenario_grouppta.set_live_scenario()  # in case not done
 
@@ -90,3 +91,7 @@ class N8UniResult(object):
     def big_deal_cost(self):
         return round(self.saved_scenario_ownpta.live_scenario.cost_bigdeal_projected, 0)
 
+
+# changes
+
+# update jump_account_package set big_deal_cost=437061 where package_id ilike 'package-n8els_yor%'

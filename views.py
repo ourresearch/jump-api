@@ -65,6 +65,7 @@ from scenario import get_common_package_data
 from scenario import get_clean_package_id
 from consortium import get_consortium_ids
 from consortium import Consortium
+from user import User, default_password
 
 from util import jsonify_fast
 from util import jsonify_fast_no_sort
@@ -75,7 +76,7 @@ from util import safe_commit
 from util import TimingMessages
 from util import get_ip
 from util import response_json
-from user import User, default_password
+from util import get_sql_answer
 from app import logger
 
 from app import DEMO_PACKAGE_ID
@@ -1158,6 +1159,23 @@ def subscriptions_notifications_done_editing_post(scenario_id):
         command = """update jump_consortium_feedback_requests 
         set return_date=sysdate where member_scenario_id = '{}'""".format(scenario_id)
         cursor.execute(command)
+
+    institution_name = get_sql_answer("""select distinct jump_institution.display_name 
+            from jump_package_scenario
+            join jump_account_package on jump_package_scenario.package_id=jump_account_package.package_id
+            join jump_institution on jump_institution.id=jump_account_package.institution_id
+             where jump_package_scenario.scenario_id='{}' 
+            """.format(scenario_id))
+
+    # heather here
+    email_for_notification = "heather@ourresearch.org"
+    # email_for_notification = "Mafalda.Marques@jisc.ac.uk"
+    email = create_email(email_for_notification, u"New push/pull submission", "push_pull_done_editing", {"data": {
+        "institution_name": institution_name
+    }})
+
+    send(email, for_real=True)
+
     return jsonify_fast_no_sort({"status": "success"})
 
 
@@ -1313,7 +1331,7 @@ def export_get(table_dicts, is_main_export=True):
     if is_main_export:
         keys = ['issn_l_prefixed', 'issn_l', 'title', 'issns', 'subject', 'era_subjects', 'subscribed', 'is_society_journal', 'usage', 'subscription_cost', 'ill_cost', 'cpu', 'cpu_rank', 'cost', 'instant_usage_percent', 'free_instant_usage_percent', 'subscription_minus_ill_cost', 'use_oa_percent', 'use_backfile_percent', 'use_subscription_percent', 'use_ill_percent', 'use_other_delayed_percent', 'perpetual_access_years_text', 'baseline_access_text', 'bronze_oa_embargo_months', 'downloads', 'citations', 'authorships', 'cpu_fuzzed', 'subscription_cost_fuzzed', 'subscription_minus_ill_cost_fuzzed', 'usage_fuzzed', 'downloads_fuzzed', 'citations_fuzzed', 'authorships_fuzzed']
     else:
-        keys = ['scenario_id', 'institution_code', 'package_id', 'institution_name', 'issn_l_prefixed', 'issn_l', 'subscribed_by_consortium', 'subscribed_by_institution', 'institution_subscription_action', 'title', 'issns',  'subscription_cost', 'ill_cost', 'cpu', 'usage', 'downloads', 'citations', 'authorships', 'use_oa', 'use_backfile', 'use_subscription', 'use_ill', 'use_other_delayed', 'perpetual_access_years', 'bronze_oa_embargo_months',  'is_society_journal']
+        keys = ['scenario_id', 'institution_code', 'package_id', 'institution_name', 'issn_l_prefixed', 'issn_l', 'subscribed_by_consortium', 'subscribed_by_member_institution', 'core_plus_for_member_institution', 'title', 'issns',  'subscription_cost', 'ill_cost', 'cpu', 'usage', 'downloads', 'citations', 'authorships', 'use_oa', 'use_backfile', 'use_subscription', 'use_ill', 'use_other_delayed', 'perpetual_access_years', 'bronze_oa_embargo_months',  'is_society_journal']
 
     filename = "export.csv"
     with open(filename, "w") as file:

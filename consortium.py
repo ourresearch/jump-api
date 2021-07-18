@@ -143,6 +143,10 @@ class Consortium(object):
         self.publisher = my_row["publisher"]
         self.institution_id = my_row["institution_id"]
 
+    @cached_property
+    def is_jisc(self):
+        from app import JISC_INSTITUTION_ID
+        return (self.institution_id == JISC_INSTITUTION_ID)
 
     @cached_property
     def journal_member_data(self):
@@ -167,8 +171,6 @@ class Consortium(object):
     @cached_property
     def scenario_saved_dict(self):
         from saved_scenario import get_latest_scenario_raw
-        from saved_scenario import save_raw_scenario_to_db
-        from saved_scenario import SavedScenario
 
         (updated, response) = get_latest_scenario_raw(self.scenario_id)
         if not response:
@@ -247,9 +249,11 @@ class Consortium(object):
                 row["issns"] = journal_metadata.display_issns
 
                 row["package_id"] = row["member_package_id"]
-                row["institution_code"] = row["package_id"].replace("package-jiscels", "")
+                row["institution_code"] = row["package_id"].replace("package-solojiscels", "")
 
                 row["subscribed_by_consortium"] = (issn_l in self.scenario_saved_dict.get("subrs", [])) or (issn_l in self.scenario_saved_dict.get("customSubrs", []))
+                row["subscribed_by_member_institution"] = (row["member_package_id"], issn_l) in self.all_member_added_subscriptions
+                row["core_plus_for_member_institution"] = row["subscribed_by_consortium"] or row["subscribed_by_member_institution"]
 
                 response.append(row)
 
@@ -445,7 +449,7 @@ class Consortium(object):
         journal_list = []
         for issn_l in issn_ls:
             if len(journals_dicts_by_issn_l[issn_l]) > 0:
-                journal_list.append(ConsortiumJournal(issn_l, self.member_institution_included_list, journals_dicts_by_issn_l[issn_l]))
+                journal_list.append(ConsortiumJournal(issn_l, self.member_institution_included_list, journals_dicts_by_issn_l[issn_l], self.is_jisc))
 
         for my_journal in journal_list:
             if my_journal.issn_l in self.scenario_saved_dict.get("subrs", []):
@@ -465,7 +469,14 @@ class Consortium(object):
 
         return journal_list
 
-
+    @cached_property
+    def all_member_added_subscriptions(self):
+        institution_dicts = self.to_dict_institutions()
+        response = []
+        for my_dict in institution_dicts:
+            for my_issn in my_dict.get("member_added_subrs", []):
+                response.append((my_dict["package_id"], my_issn))
+        return response
 
     def to_dict_institutions(self):
         from saved_scenario import get_latest_scenario_raw
@@ -506,10 +517,11 @@ class Consortium(object):
                     if row_for_feedback["member_package_id"] == row["package_id"]:
                         row["sent_date"] = row_for_feedback["sent_date"]
                         row["return_date"] = row_for_feedback["return_date"]
-                        (updated, scenario_data) = get_latest_scenario_raw(row_for_feedback["member_scenario_id"])
+                        (updated, scenario_data) = get_latest_scenario_raw(row_for_feedback["member_scenario_id"], exclude_added_via_pushpull=True)
                         row["changed_date"] = updated
-                        # if abs((row["changed_date"] - row["sent_date"]).total_seconds()) < 60*2:
-                        #     row["changed_date"] = None
+                        row["member_added_subrs"] = []
+                        if scenario_data:
+                            row["member_added_subrs"] = scenario_data.get("member_added_subrs", [])
 
         return rows
 

@@ -2,7 +2,7 @@
 
 # python backup_tables.py
 if __name__ == "__main__":
-    suffix = "20210620"
+    suffix = "20210716"
     table_names = """
         jump_counter
         jump_journal_prices
@@ -14,6 +14,7 @@ if __name__ == "__main__":
         jump_scenario_details_paid
         jump_package_scenario
         jump_scenario_computed
+        jump_raw_file_upload_object
     """.split()
 
     for table in table_names:

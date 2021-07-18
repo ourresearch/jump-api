@@ -63,6 +63,9 @@ def save_feedback_on_member_institutions_included_to_db(consortium_scenario_id, 
             save_raw_scenario_to_db(member_institution_scenario_id, scenario_raw, ip)
 
             command += u"""
+                UPDATE jump_scenario_details_paid set added_via_pushpull=True WHERE 
+                scenario_id='{member_institution_scenario_id}';
+
                 DELETE FROM jump_package_scenario WHERE 
                 scenario_id='{member_institution_scenario_id}';
                 
@@ -85,13 +88,18 @@ def save_feedback_on_member_institutions_included_to_db(consortium_scenario_id, 
         # print command
         cursor.execute(command)
 
-def get_latest_scenario_raw(scenario_id):
+def get_latest_scenario_raw(scenario_id, exclude_added_via_pushpull=False):
     updated = None
     scenario_data = None
     with get_db_cursor() as cursor:
-        command = u"""select updated, scenario_json from jump_scenario_details_paid where scenario_id='{}' order by updated desc limit 1;""".format(
-            scenario_id
-        )
+        if exclude_added_via_pushpull:
+            # is not True includes false and null, importantly
+            command = u"""select updated, scenario_json from jump_scenario_details_paid where scenario_id='{}' and added_via_pushpull is not True order by updated desc limit 1;""".format(
+                scenario_id)
+        else:
+            command = u"""select updated, scenario_json from jump_scenario_details_paid where scenario_id='{}' order by updated desc limit 1;""".format(
+                scenario_id)
+
         # print command
         cursor.execute(command)
         rows = cursor.fetchall()
@@ -262,9 +270,7 @@ class SavedScenario(db.Model):
     def feedback_last_updated(self):
         if not self.row_for_feedback:
             return None
-        (updated, response) = get_latest_scenario_raw(self.scenario_id)
-        # if abs((updated - self.feedback_sent_date).total_seconds()) < 60*2.0:
-        #     return None
+        (updated, response) = get_latest_scenario_raw(self.scenario_id, exclude_added_via_pushpull=True)
         return updated
 
     def set_live_scenario(self, my_jwt=None):

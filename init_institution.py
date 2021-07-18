@@ -50,8 +50,8 @@ user_rows = [
     {
         "email": None,
         "name": None,
-        "jisc_id": "sur",
-        "email_and_name": "Admin <s.hoadley@surrey.ac.uk>",
+        "jisc_id": "sgu",
+        "email_and_name": "Admin <vallison@sgul.ac.uk>",
         "password": u"",
         "institution_name": institution_name,
         "permissions": [u"view", u"modify", u"admin"]  # default is view, modify, admin

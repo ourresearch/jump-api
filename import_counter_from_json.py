@@ -31,7 +31,7 @@ for filename in filenames:
     report_items = contents_json.get("Report_Items", [])
     print report_type, institution_name, len(report_items)
 
-    input_dict["package_id"] = u"package-jiscels{}".format(filename[0:3])
+    input_dict["package_id"] = u"package-solojiscels{}".format(filename[0:3])
     input_dict["report_year"] = 2020
     input_dict["report_version"] = "5"
     if "tr_j2" in filename:
@@ -85,9 +85,9 @@ for filename in filenames:
         print "db insert done"
 
 with get_db_cursor() as cursor:
-    command = """delete from jump_counter where package_id ilike 'package-jiscels%'"""
+    command = """delete from jump_counter where package_id ilike 'package-solojiscels%'"""
     cursor.execute(command)
-    command = """insert into jump_counter (select * from jump_counter_view where package_id ilike 'package-jiscels%')""".format(input_dict["package_id"])
+    command = """insert into jump_counter (select * from jump_counter_view where package_id ilike 'package-solojiscels%')""".format(input_dict["package_id"])
     cursor.execute(command)
 
 

@@ -935,23 +935,23 @@ def get_common_package_data_specific(package_id):
 
 # from https://medium.com/better-programming/load-fast-load-big-with-compressed-pickles-5f311584507e
 # Pickle a file and then compress it into a file with extension
-# compressed_pickle('example_cp', data)
-def compressed_pickle(title, data):
-    # with bz2.BZ2File(title + ".pbz2", "wb") as f:
+# compressed_json('example_cp', data)
+def compressed_json(title, data):
+    # with bz2.BZ2File(title, "wb") as f:
     #     cPickle.dump(data, f)
 
-    print u"pickling"
-    output = open(title + '.json', 'wb')
+    print u"dumping"
+    output = open(title, 'wb')
     json.dump(data, output)
     output.close()
-    print u"done pickling"
+    print u"done dumping"
 
     # json_zip.dump(data, title + ".json.lzma") # for a lzma file
 
 
 # from https://medium.com/better-programming/load-fast-load-big-with-compressed-pickles-5f311584507e
-# data = decompress_pickle('example_cp')
-def decompress_pickle(file):
+# data = decompress_json('example_cp')
+def decompress_json(file):
     # data = bz2.BZ2File(file + ".pbz2", "rb")
     # data = cPickle.load(data)
 
@@ -963,7 +963,7 @@ def decompress_pickle(file):
     # enable garbage collector again
     # gc.enable()
 
-    output = open(file + '.json', 'rb')
+    output = open(file, 'rb')
     data = json.load(output)
     output.close()
 
@@ -977,9 +977,9 @@ def decompress_pickle(file):
 def get_common_package_data_for_all():
     my_timing = TimingMessages()
     try:
-        # print u"trying to load in pickle"
-        # my_data = decompress_pickle("data/get_common_package_data_for_all")
-        # print u"found pickled, returning"
+        # print u"trying to load in json"
+        # my_data = decompress_json("data/get_common_package_data_for_all_s3.json")
+        # print u"found json, returning"
         # return (my_data, my_timing)
 
         s3_clientobj = s3_client.get_object(Bucket="unsub-cache", Key="get_common_package_data_for_all.json")
@@ -1022,7 +1022,7 @@ def get_common_package_data_for_all():
     my_data["num_papers"] = get_num_papers_from_db()
     my_timing.log_timing("get_num_papers_from_db")
 
-    # compressed_pickle("data/get_common_package_data_for_all", my_data)
+    # compressed_json("data/get_common_package_data_for_all.json", my_data)
     # my_timing.log_timing("pickling")
 
     my_data["_timing_common"] = my_timing.to_dict()

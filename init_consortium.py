@@ -20,7 +20,7 @@ from saved_scenario import save_raw_member_institutions_included_to_db
 from util import safe_commit
 
 publisher = "Elsevier"
-consortium_short_name = "consortiumtest"
+consortium_short_name = "n8"
 member_package_name = "Elsevier"
 
 institution_ids = """
@@ -232,25 +232,25 @@ if __name__ == "__main__":
     # # python init_institution.py --users --institutions --commit --is_consortium
     #
     # if True:
-    #     consortium_institution_id = "institution-WzH2RdcHUPoR"
-    #     consortium_package_display_name = "Elsevier"
+    #     consortium_institution_id = "institution-Tfi2z4svqqkU"
+    #     consortium_package_display_name = "Elsevier n8+scurl consortium"
     #
     # (consortium_package_id, consortium_scenario_id) = consortium_package_create(consortium_institution_id, consortium_package_display_name)
     # print consortium_package_id, consortium_scenario_id
     #
+    # # print 1/0
+    #
     if True:
-        consortium_package_id = "package-X9cgZdJWfmGy"
-        consortium_scenario_id = "scenario-RbUMonByfc4A"
-
-
-
-    command = "select distinct package_id from jump_account_package where institution_id ilike 'institution-testing%'"
-    with get_db_cursor() as cursor:
-        cursor.execute(command)
-        new_package_id_rows = cursor.fetchall()
-        member_package_ids = [row["package_id"] for row in new_package_id_rows]
-
-    print member_package_ids
+        consortium_package_id = "package-h8zXhFQCUoPc"
+        consortium_scenario_id = "scenario-LinS8H8qzTPB"
+    #
+    # command = "select distinct package_id from jump_account_package where package_id ilike 'package-n8els_%_ownpta'"
+    # with get_db_cursor() as cursor:
+    #     cursor.execute(command)
+    #     new_package_id_rows = cursor.fetchall()
+    #     member_package_ids = [row["package_id"] for row in new_package_id_rows]
+    #
+    # print member_package_ids
     #
     # for member_package_id in member_package_ids:
     #     command = """
@@ -261,7 +261,7 @@ if __name__ == "__main__":
     #     with get_db_cursor() as cursor:
     #         cursor.execute(command)
     #     print
-
+    #
     # save_raw_member_institutions_included_to_db(consortium_scenario_id, member_package_ids, None)
 
 
