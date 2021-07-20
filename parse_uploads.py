@@ -91,8 +91,7 @@ def parse_uploads():
 
         except Exception as e:
             print u"Error: exception2 {} during parse_uploads on file {}".format(e, filename)
-            if loader and package_id and filename:
-                load_result = loader.load(package_id, filename, commit=True)
+            if loader and filename:
                 print u"because of error, deleting file {}".format(filename)
                 s3_resource = boto3.resource("s3")
                 s3_resource.Object(upload_preprocess_bucket, filename).delete()
