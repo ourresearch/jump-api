@@ -486,21 +486,26 @@ class Package(db.Model):
     def warnings(self):
         from scenario import get_package_specific_scenario_data_from_db
 
+        if self.institution.is_consortium:
+            return []
+
+        if "jiscels" in self.packaage_id:
+            # don't show warnings for those packages
+            return []
+
         response = []
 
-        if not self.institution.is_consortium:
+        if not self.has_custom_perpetual_access:
+            response += [OrderedDict([
+                ("id", "missing_perpetual_access"),
+                ("journals", None)
+            ])]
 
-            if not self.has_custom_perpetual_access:
-                response += [OrderedDict([
-                    ("id", "missing_perpetual_access"),
-                    ("journals", None)
-                ])]
-
-            if (not self.has_complete_counter_data) or (len(self.journals_missing_prices) > 0):
-                response += [OrderedDict([
-                    ("id", "missing_prices"),
-                    ("journals", self.journals_missing_prices)
-                ])]
+        if (not self.has_complete_counter_data) or (len(self.journals_missing_prices) > 0):
+            response += [OrderedDict([
+                ("id", "missing_prices"),
+                ("journals", self.journals_missing_prices)
+            ])]
 
         return response
 
