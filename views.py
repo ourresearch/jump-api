@@ -1160,7 +1160,7 @@ def subscriptions_notifications_done_editing_post(scenario_id):
         set return_date=sysdate where member_scenario_id = '{}'""".format(scenario_id)
         cursor.execute(command)
 
-    institution_name = get_sql_answer("""select distinct jump_institution.display_name 
+    institution_name = get_sql_answer(db, """select distinct jump_institution.display_name 
             from jump_package_scenario
             join jump_account_package on jump_package_scenario.package_id=jump_account_package.package_id
             join jump_institution on jump_institution.id=jump_account_package.institution_id
