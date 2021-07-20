@@ -489,7 +489,7 @@ class Package(db.Model):
         if self.institution.is_consortium:
             return []
 
-        if "jiscels" in self.packaage_id:
+        if "jiscels" in self.package_id:
             # don't show warnings for those packages
             return []
 
