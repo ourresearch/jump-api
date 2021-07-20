@@ -16,6 +16,7 @@ from app import DEMO_PACKAGE_ID
 from util import elapsed
 
 def save_raw_scenario_to_db(scenario_id, raw_scenario_definition, ip):
+    print "in save_raw_scenario_to_db"
     scenario_json = json.dumps(raw_scenario_definition)
 
     if scenario_id.startswith("demo"):
@@ -27,7 +28,7 @@ def save_raw_scenario_to_db(scenario_id, raw_scenario_definition, ip):
         command = u"""INSERT INTO {} (scenario_id, updated, ip, scenario_json) values ('{}', sysdate, '{}', '{}');""".format(
             tablename, scenario_id, ip, scenario_json
         )
-        # print command
+        print command
         cursor.execute(command)
 
 def save_raw_member_institutions_included_to_db(scenario_id, member_institutions_list, ip):
@@ -55,36 +56,36 @@ def save_feedback_on_member_institutions_included_to_db(consortium_scenario_id, 
     (updated, scenario_raw) = get_latest_scenario_raw(consortium_scenario_id)
     scenario_json = json.dumps(scenario_raw)
 
+    command = ""
+    for member_package_id in member_institutions_list:
+        member_institution_scenario_id = get_feedback_member_institution_scenario_id(consortium_scenario_id, member_package_id)
+
+        save_raw_scenario_to_db(member_institution_scenario_id, scenario_raw, ip)
+
+        command += u"""
+            UPDATE jump_scenario_details_paid set added_via_pushpull=True WHERE 
+            scenario_id='{member_institution_scenario_id}';
+
+            DELETE FROM jump_package_scenario WHERE 
+            scenario_id='{member_institution_scenario_id}';
+            
+            INSERT INTO jump_package_scenario 
+            (package_id, scenario_id, scenario_name, created, is_base_scenario)
+            values 
+            ('{member_package_id}', '{member_institution_scenario_id}', '', sysdate, False);
+
+            DELETE FROM jump_consortium_feedback_requests WHERE 
+            consortium_scenario_id='{consortium_scenario_id}' and member_scenario_id='{member_institution_scenario_id}';
+            
+            INSERT INTO jump_consortium_feedback_requests 
+            (consortium_scenario_id, scenario_json, member_package_id, member_scenario_id, sent_date, return_date, ip) 
+            values 
+            ('{consortium_scenario_id}', '{scenario_json}', '{member_package_id}', '{member_institution_scenario_id}', sysdate, null, '{ip}');
+            
+            """.format(
+            consortium_scenario_id=consortium_scenario_id, scenario_json=scenario_json, member_package_id=member_package_id, member_institution_scenario_id=member_institution_scenario_id, ip=ip)
+
     with get_db_cursor() as cursor:
-        command = ""
-        for member_package_id in member_institutions_list:
-            member_institution_scenario_id = get_feedback_member_institution_scenario_id(consortium_scenario_id, member_package_id)
-
-            save_raw_scenario_to_db(member_institution_scenario_id, scenario_raw, ip)
-
-            command += u"""
-                UPDATE jump_scenario_details_paid set added_via_pushpull=True WHERE 
-                scenario_id='{member_institution_scenario_id}';
-
-                DELETE FROM jump_package_scenario WHERE 
-                scenario_id='{member_institution_scenario_id}';
-                
-                INSERT INTO jump_package_scenario 
-                (package_id, scenario_id, scenario_name, created, is_base_scenario)
-                values 
-                ('{member_package_id}', '{member_institution_scenario_id}', '', sysdate, False);
-
-                DELETE FROM jump_consortium_feedback_requests WHERE 
-                consortium_scenario_id='{consortium_scenario_id}' and member_scenario_id='{member_institution_scenario_id}';
-                
-                INSERT INTO jump_consortium_feedback_requests 
-                (consortium_scenario_id, scenario_json, member_package_id, member_scenario_id, sent_date, return_date, ip) 
-                values 
-                ('{consortium_scenario_id}', '{scenario_json}', '{member_package_id}', '{member_institution_scenario_id}', sysdate, null, '{ip}');
-                
-                """.format(
-                consortium_scenario_id=consortium_scenario_id, scenario_json=scenario_json, member_package_id=member_package_id, member_institution_scenario_id=member_institution_scenario_id, ip=ip)
-
         # print command
         cursor.execute(command)
 
