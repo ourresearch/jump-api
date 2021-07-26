@@ -491,6 +491,7 @@ class Package(db.Model):
 
         if "jiscels" in self.package_id:
             # don't show warnings for those packages
+            # maybe best thing is don't show warnings for any feedback packages?
             return []
 
         response = []

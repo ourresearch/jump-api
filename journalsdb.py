@@ -199,8 +199,9 @@ class JournalMetadata(db.Model):
                 response = float(self.subscription_price_gbp)
 
         if not response:
-            if use_high_price_if_unknown:
-                response = 9999999999
+            if use_high_price_if_unknown and currency == "GBP":
+                JISC_DEFAULT_PRICE_IN_GBP = 3775
+                response = JISC_DEFAULT_PRICE_IN_GBP
         return response
 
     def get_apc_price(self, currency="USD"):

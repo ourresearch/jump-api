@@ -182,7 +182,7 @@ class ConsortiumJournal(Journal):
     @cached_property
     def subscription_cost(self):
         if self.is_jisc:
-            if len(self.included_package_ids) == 144:
+            if len(self.included_package_ids) >= 144:
                 return self.meta_data["subscription_cost"] * 155.0
         return self.meta_data["subscription_cost"] * len(self.included_package_ids)
 
