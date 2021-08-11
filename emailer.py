@@ -20,7 +20,7 @@ def create_email(address, subject, template_name, context):
     html_to_send = html_template.render(context)
     content = HtmlContent(html_to_send)
 
-    from_email = From("team@ourresearch.org", "Unsub Team")
+    from_email = From("support@unsub.org", "Unsub Team")
     to_email = To(address)
 
     to_emails = [to_email]
