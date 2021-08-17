@@ -22,8 +22,8 @@ class Assumptions(object):
         self.include_submitted_version = True
         self.include_social_networks = True
         self.include_backfile = True
-        self.description = u""
-        self.notes = u""
+        self.description = ""
+        self.notes = ""
         # self.consortium_name = None  # for consortium?
         # self.min_bundle_size = True
 
@@ -61,5 +61,5 @@ class Assumptions(object):
         return my_dict
 
     def __repr__(self):
-        return u"{}".format(self.__class__.__name__)
+        return "{}".format(self.__class__.__name__)
 

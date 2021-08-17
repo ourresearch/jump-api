@@ -30,11 +30,11 @@ def purge_all_caches(package_id):
         # my_package.clear_package_counter_breakdown_cache() # not used anymore
         pass
     else:
-        print u"package not found: {}".format(package_id)
+        print("package not found: {}".format(package_id))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('package_id', help='package_id', type=str)
 
     purge_all_caches(parser.parse_args().package_id)
-    print "done"
+    print("done")

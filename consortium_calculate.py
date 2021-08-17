@@ -31,16 +31,16 @@ def consortium_calculate():
 
         for row in rows:
             start_time = time()
-            print "in consortium_calculate, starting recompute_journal_dicts for scenario_id {}".format(
-                row["scenario_id"])
+            print("in consortium_calculate, starting recompute_journal_dicts for scenario_id {}".format(
+                row["scenario_id"]))
 
             my_consortium = Consortium(row["scenario_id"])
             my_consortium.recompute_journal_dicts()
 
-            print "in consortium_calculate, done recompute_journal_dicts for scenario_id {} took {}s".format(
-                row["scenario_id"], elapsed(start_time))
+            print("in consortium_calculate, done recompute_journal_dicts for scenario_id {} took {}s".format(
+                row["scenario_id"], elapsed(start_time)))
 
-            print "updating jump_scenario_computed_update_queue with completed"
+            print("updating jump_scenario_computed_update_queue with completed")
 
             command = "update jump_scenario_computed_update_queue set completed=sysdate where scenario_id='{}' and completed is null".format(
                 row["scenario_id"])
@@ -50,8 +50,8 @@ def consortium_calculate():
                 cursor.execute(command)
 
             if row["email"]:
-                print "SENDING EMAIL"
-                done_email = create_email(row["email"], u'Unsub update complete', 'update_done', {
+                print("SENDING EMAIL")
+                done_email = create_email(row["email"], 'Unsub update complete', 'update_done', {
                                 'data': {
                                      'consortium_name': row.get("consortium_name", ""),
                                      'package_name': row.get("package_name", ""),
@@ -62,9 +62,9 @@ def consortium_calculate():
                                      'scenario_id': row["scenario_id"]
                                  }})
                 send(done_email, for_real=True)
-                print "SENT EMAIL DONE"
+                print("SENT EMAIL DONE")
 
-            print "DONE UPDATING", row["scenario_id"]
+            print("DONE UPDATING", row["scenario_id"])
 
         sleep( 2 * random.random())
 

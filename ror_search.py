@@ -21,7 +21,7 @@ def _read_ror_csv_rows():
     with open('data/ror-metrics.csv') as ror_csv:
         reader = csv.DictReader(ror_csv)
         for row in reader:
-            row['aliases'] = row['aliases'].split(u'###') if row['aliases'] else []
+            row['aliases'] = row['aliases'].split('###') if row['aliases'] else []
             row['num_students'] = int(row['num_students']) if row['num_students'] else None
             row['citation_score'] = float(row['citation_score']) if row['citation_score'] else None
             rows.append(row)
@@ -43,7 +43,7 @@ def _create_index():
             name=row['name'],
             num_students=row['num_students'] or 0,
             citation_score=int(100 * float(row['citation_score'] or 0.0)),
-            aliases=u' '.join(row['aliases']).lower().replace('university', ''),
+            aliases=' '.join(row['aliases']).lower().replace('university', ''),
         )
 
     index_writer.commit()
@@ -68,7 +68,7 @@ _analyzer = StandardAnalyzer()
 
 
 def autocomplete(query_str, results=10):
-    query_str = u' '.join([t.text for t in _analyzer(query_str) if not 'university'.startswith(t.text)])
+    query_str = ' '.join([t.text for t in _analyzer(query_str) if not 'university'.startswith(t.text)])
 
     q = _query_parser.parse(query_str)
     return [

@@ -13,7 +13,7 @@ import tempfile
 import time
 import traceback
 import unicodedata
-import urlparse
+import urllib.parse
 from codecs import BOM_UTF8, BOM_UTF16_BE, BOM_UTF16_LE, BOM_UTF32_BE, BOM_UTF32_LE
 import chardet
 
@@ -83,7 +83,7 @@ def read_csv_file(filename, sep=","):
 
 # from http://stackoverflow.com/a/3233356/596939
 def update_recursive_sum(d, u):
-    for k, v in u.iteritems():
+    for k, v in u.items():
         if isinstance(v, collections.Mapping):
             r = update_recursive_sum(d.get(k, {}), v)
             d[k] = r
@@ -100,7 +100,7 @@ def as_proportion(my_dict):
         return {}
     total = sum(my_dict.values())
     resp = {}
-    for k, v in my_dict.iteritems():
+    for k, v in my_dict.items():
         resp[k] = round(float(v)/total, 2)
     return resp
 
@@ -115,40 +115,40 @@ def calculate_percentile(refset, value):
     return percentile
 
 def clean_html(raw_html):
-  cleanr = re.compile(u'<.*?>')
-  cleantext = re.sub(cleanr, u'', raw_html)
+  cleanr = re.compile('<.*?>')
+  cleantext = re.sub(cleanr, '', raw_html)
   return cleantext
 
 # good for deduping strings.  warning: output removes spaces so isn't readable.
 def normalize(text):
     response = text.lower()
-    response = unidecode(unicode(response))
+    response = unidecode(str(response))
     response = clean_html(response)  # has to be before remove_punctuation
     response = remove_punctuation(response)
-    response = re.sub(ur"\b(a|an|the)\b", u"", response)
-    response = re.sub(ur"\b(and)\b", u"", response)
-    response = re.sub(u"\s+", u"", response)
+    response = re.sub(r"\b(a|an|the)\b", "", response)
+    response = re.sub(r"\b(and)\b", "", response)
+    response = re.sub("\s+", "", response)
     return response
 
 def normalize_simple(text):
     response = text.lower()
     response = remove_punctuation(response)
-    response = re.sub(ur"\b(a|an|the)\b", u"", response)
-    response = re.sub(u"\s+", u"", response)
+    response = re.sub(r"\b(a|an|the)\b", "", response)
+    response = re.sub("\s+", "", response)
     return response
 
 def remove_everything_but_alphas(input_string):
     # from http://stackoverflow.com/questions/265960/best-way-to-strip-punctuation-from-a-string-in-python
     only_alphas = input_string
     if input_string:
-        only_alphas = u"".join(e for e in input_string if (e.isalpha()))
+        only_alphas = "".join(e for e in input_string if (e.isalpha()))
     return only_alphas
 
 def remove_punctuation(input_string):
     # from http://stackoverflow.com/questions/265960/best-way-to-strip-punctuation-from-a-string-in-python
     no_punc = input_string
     if input_string:
-        no_punc = u"".join(e for e in input_string if (e.isalnum() or e.isspace()))
+        no_punc = "".join(e for e in input_string if (e.isalnum() or e.isspace()))
     return no_punc
 
 # from http://stackoverflow.com/a/11066579/596939
@@ -160,7 +160,7 @@ def replace_punctuation(text, sub):
             chars.append(sub)
         else:
             chars.append(my_char)
-    return u"".join(chars)
+    return "".join(chars)
 
 
 # from http://stackoverflow.com/a/22238613/596939
@@ -216,13 +216,13 @@ def safe_commit(db):
         raise
     except sqlalchemy.exc.DataError:
         try:
-            print u"sqlalchemy.exc.DataError on commit.  rolling back."
+            print("sqlalchemy.exc.DataError on commit.  rolling back.")
             db.session.rollback()
         except:
             pass
     except Exception:
         try:
-            print u"generic exception in commit.  rolling back."
+            print("generic exception in commit.  rolling back.")
             db.session.rollback()
         except:
             pass
@@ -231,7 +231,7 @@ def safe_commit(db):
 
 
 def is_pmc(url):
-    return u"ncbi.nlm.nih.gov/pmc" in url or u"europepmc.org/articles/" in url
+    return "ncbi.nlm.nih.gov/pmc" in url or "europepmc.org/articles/" in url
 
 
 def is_doi(text):
@@ -267,7 +267,7 @@ def is_doi_url(url):
     return False
 
 def is_ip(ip):
-    if re.match(u"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip):
+    if re.match("^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip):
         return True
     return False
 
@@ -282,7 +282,7 @@ def clean_doi(dirty_doi, return_none_if_error=False):
     dirty_doi = dirty_doi.lower()
 
     # test cases for this regex are at https://regex101.com/r/zS4hA0/1
-    p = re.compile(ur'(10\.\d+\/[^\s]+)')
+    p = re.compile(r'(10\.\d+\/[^\s]+)')
 
     matches = re.findall(p, dirty_doi)
     if len(matches) == 0:
@@ -295,19 +295,19 @@ def clean_doi(dirty_doi, return_none_if_error=False):
     match = remove_nonprinting_characters(match)
 
     try:
-        resp = unicode(match, "utf-8")  # unicode is valid in dois
+        resp = str(match, "utf-8")  # unicode is valid in dois
     except (TypeError, UnicodeDecodeError):
         resp = match
 
     # remove any url fragments
-    if u"#" in resp:
-        resp = resp.split(u"#")[0]
+    if "#" in resp:
+        resp = resp.split("#")[0]
 
     # remove double quotes, they shouldn't be there as per http://www.doi.org/syntax.html
     resp = resp.replace('"', '')
 
     # remove trailing period, comma -- it is likely from a sentence or citation
-    if resp.endswith(u",") or resp.endswith(u"."):
+    if resp.endswith(",") or resp.endswith("."):
         resp = resp[:-1]
 
     return resp
@@ -336,7 +336,7 @@ def date_as_iso_utc(datetime_object):
     if datetime_object is None:
         return None
 
-    date_string = u"{}{}".format(datetime_object, "+00:00")
+    date_string = "{}{}".format(datetime_object, "+00:00")
     return date_string
 
 
@@ -344,7 +344,7 @@ def dict_from_dir(obj, keys_to_ignore=None, keys_to_show="all"):
 
     if keys_to_ignore is None:
         keys_to_ignore = []
-    elif isinstance(keys_to_ignore, basestring):
+    elif isinstance(keys_to_ignore, str):
         keys_to_ignore = [keys_to_ignore]
 
     ret = {}
@@ -407,14 +407,14 @@ def chunks(l, n):
 
     from http://stackoverflow.com/a/312464
     """
-    for i in xrange(0, len(l), n):
+    for i in range(0, len(l), n):
         yield l[i:i+n]
 
 def page_query(q, page_size=1000):
     offset = 0
     while True:
         r = False
-        print "util.page_query() retrieved {} things".format(page_query())
+        print("util.page_query() retrieved {} things".format(page_query()))
         for elem in q.limit(page_size).offset(offset):
             r = True
             yield elem
@@ -429,7 +429,7 @@ def elapsed(since, round_places=2):
 
 def truncate(str, max=100):
     if len(str) > max:
-        return str[0:max] + u"..."
+        return str[0:max] + "..."
     else:
         return str
 
@@ -447,15 +447,15 @@ ordinal = lambda n: "%d%s" % (n,"tsnrhtdd"[(n/10%10!=1)*(n%10<4)*n%10::4])
 
 #from http://farmdev.com/talks/unicode/
 def to_unicode_or_bust(obj, encoding='utf-8'):
-    if isinstance(obj, basestring):
-        if not isinstance(obj, unicode):
-            obj = unicode(obj, encoding)
+    if isinstance(obj, str):
+        if not isinstance(obj, str):
+            obj = str(obj, encoding)
     return obj
 
 def remove_nonprinting_characters(input, encoding='utf-8'):
     input_was_unicode = True
-    if isinstance(input, basestring):
-        if not isinstance(input, unicode):
+    if isinstance(input, str):
+        if not isinstance(input, str):
             input_was_unicode = False
 
     unicode_input = to_unicode_or_bust(input)
@@ -463,7 +463,7 @@ def remove_nonprinting_characters(input, encoding='utf-8'):
     # see http://www.fileformat.info/info/unicode/category/index.htm
     char_classes_to_remove = ["C", "M", "Z"]
 
-    response = u''.join(c for c in unicode_input if unicodedata.category(c)[0] not in char_classes_to_remove)
+    response = ''.join(c for c in unicode_input if unicodedata.category(c)[0] not in char_classes_to_remove)
 
     if not input_was_unicode:
         response = response.encode(encoding)
@@ -511,14 +511,14 @@ def get_random_dois(n, from_date=None, only_journal_articles=True):
     while len(dois) < n:
         # api takes a max of 100
         number_this_round = min(n, 100)
-        url = u"https://api.crossref.org/works?sample={}".format(number_this_round)
+        url = "https://api.crossref.org/works?sample={}".format(number_this_round)
         if only_journal_articles:
-            url += u"&filter=type:journal-article"
+            url += "&filter=type:journal-article"
         if from_date:
-            url += u",from-pub-date:{}".format(from_date)
-        print url
-        print "calling crossref, asking for {} dois, so far have {} of {} dois".format(
-            number_this_round, len(dois), n)
+            url += ",from-pub-date:{}".format(from_date)
+        print(url)
+        print("calling crossref, asking for {} dois, so far have {} of {} dois".format(
+            number_this_round, len(dois), n))
         r = requests.get(url)
         items = r.json()["message"]["items"]
         dois += [item["DOI"].lower() for item in items]
@@ -552,14 +552,14 @@ def is_the_same_url(url1, url2):
     return False
 
 def strip_jsessionid_from_url(url):
-    url = re.sub(ur";jsessionid=\w+", "", url)
+    url = re.sub(r";jsessionid=\w+", "", url)
     return url
 
 def get_link_target(url, base_url, strip_jsessionid=True):
     if strip_jsessionid:
         url = strip_jsessionid_from_url(url)
     if base_url:
-        url = urlparse.urljoin(base_url, url)
+        url = urllib.parse.urljoin(base_url, url)
     return url
 
 def sql_escape_string(value):
@@ -645,14 +645,14 @@ def normalize_title(title):
     response = response.lower()
 
     # deal with unicode
-    response = unidecode(unicode(response))
+    response = unidecode(str(response))
 
     # has to be before remove_punctuation
     # the kind in titles are simple <i> etc, so this is simple
     response = clean_html(response)
 
     # remove articles and common prepositions
-    response = re.sub(ur"\b(the|a|an|of|to|in|for|on|by|with|at|from)\b", u"", response)
+    response = re.sub(r"\b(the|a|an|of|to|in|for|on|by|with|at|from)\b", "", response)
 
     # remove everything except alphas
     response = remove_everything_but_alphas(response)
@@ -663,7 +663,7 @@ def normalize_title(title):
 # from https://gist.github.com/douglasmiranda/5127251
 # deletes a key from nested dict
 def delete_key_from_dict(dictionary, key):
-    for k, v in dictionary.iteritems():
+    for k, v in dictionary.items():
         if k == key:
             yield v
         elif isinstance(v, dict):
@@ -682,7 +682,7 @@ def restart_dynos(app_name, dyno_prefix):
     for dyno in dynos:
         if dyno.name.startswith(dyno_prefix):
             dyno.restart()
-            print u"restarted {} on {}!".format(dyno.name, app_name)
+            print("restarted {} on {}!".format(dyno.name, app_name))
 
 def is_same_publisher(publisher1, publisher2):
     if publisher1 and publisher2:
@@ -716,7 +716,7 @@ def jsonify_fast_no_sort(*args, **kwargs):
               default=myconverter,
               indent=None,
               # separators=None,
-              sort_keys=sort_keys) + u'\n', mimetype=current_app.config['JSONIFY_MIMETYPE']
+              sort_keys=sort_keys) + '\n', mimetype=current_app.config['JSONIFY_MIMETYPE']
     )
 
 
@@ -742,7 +742,7 @@ def jsonify_fast(*args, **kwargs):
               default=myconverter,
               indent=None,
               # separators=None,
-              sort_keys=sort_keys) + u'\n', mimetype=current_app.config['JSONIFY_MIMETYPE']
+              sort_keys=sort_keys) + '\n', mimetype=current_app.config['JSONIFY_MIMETYPE']
     )
 
 def find_normalized_license(text):
@@ -798,7 +798,7 @@ def find_normalized_license(text):
         if lookup in normalized_text:
             if license=="pd":
                 try:
-                    if u"worksnotinthepublicdomain" in normalized_text.decode(errors='ignore'):
+                    if "worksnotinthepublicdomain" in normalized_text.decode(errors='ignore'):
                         return None
                 except:
                     # some kind of unicode exception
@@ -844,7 +844,7 @@ def format_percent(amount, num_decimals=0):
     if amount == None:
         return None
 
-    my_string = u"{:0." + str(num_decimals) + u"f}%"
+    my_string = "{:0." + str(num_decimals) + "f}%"
     my_string = my_string.format(amount)
     return my_string
 
@@ -853,11 +853,11 @@ def format_with_commas(amount, num_decimals=0):
         return None
 
     try:
-        my_string = u"{:0,." + str(num_decimals) + u"f}"
+        my_string = "{:0,." + str(num_decimals) + "f}"
         my_string = my_string.format(amount)
         return my_string
     except:
-        return locale.format(u'%d', amount, True)
+        return locale.format('%d', amount, True)
 
 def get_ip(request):
     # from http://stackoverflow.com/a/12771438/596939
@@ -973,7 +973,7 @@ def convert_to_utf_8(file_name):
             except UnicodeDecodeError:
                 continue
 
-    raise UnicodeError(u"Can't determine text encoding (tried {}).".format(possible_encodings))
+    raise UnicodeError("Can't determine text encoding (tried {}).".format(possible_encodings))
 
 
 def write_to_tempfile(file_contents, strip=False):

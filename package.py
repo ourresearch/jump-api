@@ -40,7 +40,7 @@ def get_ids():
     return rows
 
 def get_fresh_apc_journal_list(issn_ls, apc_df_dict, my_package):
-    print "in get_fresh_apc_journal_list"
+    print("in get_fresh_apc_journal_list")
 
     from journalsdb import get_journal_metadata
     apc_journals = []
@@ -131,7 +131,7 @@ class Package(db.Model):
         if not self.has_core_journal_list:
             return my_list
         core_rows = get_core_list_from_db(self.package_id)
-        core_issnls = core_rows.keys()
+        core_issnls = list(core_rows.keys())
         return [row for row in my_list if row["issn_l"] in core_issnls]
 
     @cached_property
@@ -287,7 +287,7 @@ class Package(db.Model):
         for row in self.get_core_journal_rows:
             if row["issn_l"] not in remove:
                 response_dict[row["issn_l"]] = row
-        response = sorted(response_dict.values(), key=lambda x: x["issn_l"], reverse=True)
+        response = sorted(list(response_dict.values()), key=lambda x: x["issn_l"], reverse=True)
         return response
 
     @cached_property
@@ -308,7 +308,7 @@ class Package(db.Model):
         for row in self.get_counter_unique_rows:
             if row["issn_l"] not in remove:
                 response_dict[row["issn_l"]] = row
-        response = sorted(response_dict.values(), key=lambda x: x["num_2018_downloads"], reverse=True)
+        response = sorted(list(response_dict.values()), key=lambda x: x["num_2018_downloads"], reverse=True)
         return response
 
     @cached_property
@@ -318,7 +318,7 @@ class Package(db.Model):
         for row in self.get_published_in_2019:
             if row["issn_l"] not in remove:
                 response_dict[row["issn_l"]] = row
-        response = sorted(response_dict.values(), key=lambda x: x["num_2018_downloads"], reverse=True)
+        response = sorted(list(response_dict.values()), key=lambda x: x["num_2018_downloads"], reverse=True)
         return response
 
     @cached_property
@@ -328,7 +328,7 @@ class Package(db.Model):
         for row in self.get_published_toll_access_in_2019:
             if row["issn_l"] not in remove:
                 response_dict[row["issn_l"]] = row
-        response = sorted(response_dict.values(), key=lambda x: x["num_2018_downloads"], reverse=True)
+        response = sorted(list(response_dict.values()), key=lambda x: x["num_2018_downloads"], reverse=True)
         return response
 
     @cached_property
@@ -338,7 +338,7 @@ class Package(db.Model):
         for row in self.get_published_toll_access_in_2019_with_publisher:
             if row["issn_l"] not in remove:
                 response_dict[row["issn_l"]] = row
-        response = sorted(response_dict.values(), key=lambda x: x["num_2018_downloads"], reverse=True)
+        response = sorted(list(response_dict.values()), key=lambda x: x["num_2018_downloads"], reverse=True)
         return response
 
     @cached_property
@@ -348,7 +348,7 @@ class Package(db.Model):
         for row in self.get_published_toll_access_in_2019_with_publisher_have_price:
             if row["issn_l"] not in remove:
                 response_dict[row["issn_l"]] = row
-        response = sorted(response_dict.values(), key=lambda x: x["num_2018_downloads"], reverse=True)
+        response = sorted(list(response_dict.values()), key=lambda x: x["num_2018_downloads"], reverse=True)
         return response
 
     @cached_property
@@ -358,7 +358,7 @@ class Package(db.Model):
         for row in self.get_in_scenario:
             if row["issn_l"] not in remove:
                 response_dict[row["issn_l"]] = row
-        response = response_dict.values()
+        response = list(response_dict.values())
         # response = sorted(response_dict.values(), key=lambda x: x["num_2018_downloads"], reverse=True)
         return response
 
@@ -381,7 +381,7 @@ class Package(db.Model):
 
     @cached_property
     def feedback_set_name(self):
-        return u"Feedback on {} scenarios".format(self.publisher)
+        return "Feedback on {} scenarios".format(self.publisher)
 
     @cached_property
     def feedback_rows(self):
@@ -412,7 +412,7 @@ class Package(db.Model):
 
     @cached_property
     def consortia_scenario_ids_who_own_this_package(self):
-        q = u"""
+        q = """
         select consortium_package_id, scenario_id as consortium_scenario_id
             from jump_consortium_members cm
             join jump_package_scenario ps on cm.consortium_package_id=ps.package_id
@@ -443,7 +443,7 @@ class Package(db.Model):
         prices_uploaded_raw = get_custom_prices(self.package_id)
         journals_missing_prices = []
 
-        for my_journal_metadata in all_journal_metadata.values():
+        for my_journal_metadata in list(all_journal_metadata.values()):
             if my_journal_metadata.publisher_code == self.publisher:
                 if my_journal_metadata.is_current_subscription_journal:
                     issn_l = my_journal_metadata.issn_l
@@ -513,7 +513,7 @@ class Package(db.Model):
     def public_price_rows(self):
         prices_rows = []
         from journalsdb import all_journal_metadata
-        for my_journal_metadata in all_journal_metadata.values():
+        for my_journal_metadata in list(all_journal_metadata.values()):
             if my_journal_metadata.publisher_code == self.publisher:
                 if my_journal_metadata.is_current_subscription_journal:
                     my_price = my_journal_metadata.get_subscription_price(self.currency, use_high_price_if_unknown=False)
@@ -558,7 +558,7 @@ class Package(db.Model):
 
     @cached_property
     def years(self):
-        return range(0, 5)
+        return list(range(0, 5))
 
     @cached_property
     def cost_apc_historical_by_year(self):
@@ -611,7 +611,7 @@ class Package(db.Model):
                     select * from jump_apc_authorships_view
                     where package_id = '{}' and issn_l in (select issn_l from journalsdb_computed rj where {}))
             """.format(self.package_id, self.publisher_where)
-        print insert_q
+        print(insert_q)
         with get_db_cursor() as cursor:
             cursor.execute(delete_q)
             rows_inserted = cursor.execute(insert_q)
@@ -645,7 +645,7 @@ class Package(db.Model):
 
     @cached_property
     def data_files_dict(self):
-        command = u"""select * from jump_raw_file_upload_object where package_id = '{}'""".format(self.package_id)
+        command = """select * from jump_raw_file_upload_object where package_id = '{}'""".format(self.package_id)
         with get_db_cursor() as cursor:
             cursor.execute(command)
             raw_file_upload_rows = cursor.fetchall()
@@ -709,7 +709,7 @@ class Package(db.Model):
         return data_files_dict
 
     def to_package_dict(self):
-        data_files_list = sorted(self.data_files_dict.values(), key=lambda x: 0 if x["rows_count"]==None else x["rows_count"], reverse=True)
+        data_files_list = sorted(list(self.data_files_dict.values()), key=lambda x: 0 if x["rows_count"]==None else x["rows_count"], reverse=True)
         response = OrderedDict([
             ("id", self.package_id),
             ("name", self.package_name),
@@ -768,7 +768,7 @@ class Package(db.Model):
 
 
     def __repr__(self):
-        return u"<{} ({}) {}>".format(self.__class__.__name__, self.package_id, self.package_name)
+        return "<{} ({}) {}>".format(self.__class__.__name__, self.package_id, self.package_name)
 
 
 def clone_demo_package(institution):
@@ -871,7 +871,7 @@ def clone_demo_package(institution):
 
 
 def check_if_to_delete(package_id, file):
-    command = u"""select * from jump_raw_file_upload_object where package_id = '{}' and to_delete_date is not null""".format(package_id)
+    command = """select * from jump_raw_file_upload_object where package_id = '{}' and to_delete_date is not null""".format(package_id)
     with get_db_cursor() as cursor:
         cursor.execute(command)
         rows_to_delete = cursor.fetchall()
@@ -887,7 +887,7 @@ def get_custom_prices(package_id):
     if check_if_to_delete(package_id, "price"):
         return package_dict
 
-    command = u"select issn_l, price from jump_journal_prices where (package_id = '{}')".format(package_id)
+    command = "select issn_l, price from jump_journal_prices where (package_id = '{}')".format(package_id)
     # print "command", command
     with get_db_cursor() as cursor:
         cursor.execute(command)

@@ -16,7 +16,7 @@ from app import DEMO_PACKAGE_ID
 from util import elapsed
 
 def save_raw_scenario_to_db(scenario_id, raw_scenario_definition, ip):
-    print "in save_raw_scenario_to_db"
+    print("in save_raw_scenario_to_db")
     scenario_json = json.dumps(raw_scenario_definition)
 
     if scenario_id.startswith("demo"):
@@ -25,17 +25,17 @@ def save_raw_scenario_to_db(scenario_id, raw_scenario_definition, ip):
         tablename = "jump_scenario_details_paid"
     scenario_json = scenario_json.replace("'", "''")
     with get_db_cursor() as cursor:
-        command = u"""INSERT INTO {} (scenario_id, updated, ip, scenario_json) values ('{}', sysdate, '{}', '{}');""".format(
+        command = """INSERT INTO {} (scenario_id, updated, ip, scenario_json) values ('{}', sysdate, '{}', '{}');""".format(
             tablename, scenario_id, ip, scenario_json
         )
-        print command
+        print(command)
         cursor.execute(command)
 
 def save_raw_member_institutions_included_to_db(scenario_id, member_institutions_list, ip):
     scenario_members = json.dumps(member_institutions_list)
 
     with get_db_cursor() as cursor:
-        command = u"""INSERT INTO jump_consortium_member_institutions (scenario_id, updated, ip, scenario_members) values ('{}', sysdate, '{}', '{}');""".format(
+        command = """INSERT INTO jump_consortium_member_institutions (scenario_id, updated, ip, scenario_members) values ('{}', sysdate, '{}', '{}');""".format(
             scenario_id, ip, scenario_members
         )
         # print command
@@ -62,7 +62,7 @@ def save_feedback_on_member_institutions_included_to_db(consortium_scenario_id, 
 
         save_raw_scenario_to_db(member_institution_scenario_id, scenario_raw, ip)
 
-        command += u"""
+        command += """
             UPDATE jump_scenario_details_paid set added_via_pushpull=True WHERE 
             scenario_id='{member_institution_scenario_id}';
 
@@ -95,10 +95,10 @@ def get_latest_scenario_raw(scenario_id, exclude_added_via_pushpull=False):
     with get_db_cursor() as cursor:
         if exclude_added_via_pushpull:
             # is not True includes false and null, importantly
-            command = u"""select updated, scenario_json from jump_scenario_details_paid where scenario_id='{}' and added_via_pushpull is not True order by updated desc limit 1;""".format(
+            command = """select updated, scenario_json from jump_scenario_details_paid where scenario_id='{}' and added_via_pushpull is not True order by updated desc limit 1;""".format(
                 scenario_id)
         else:
-            command = u"""select updated, scenario_json from jump_scenario_details_paid where scenario_id='{}' order by updated desc limit 1;""".format(
+            command = """select updated, scenario_json from jump_scenario_details_paid where scenario_id='{}' order by updated desc limit 1;""".format(
                 scenario_id)
 
         # print command
@@ -127,7 +127,7 @@ def get_latest_scenario(scenario_id, my_jwt=None):
         tablename = "jump_scenario_details_paid"
     rows = None
     with get_db_cursor() as cursor:
-        command = u"""select scenario_json from {} where scenario_id='{}' order by updated desc limit 1;""".format(
+        command = """select scenario_json from {} where scenario_id='{}' order by updated desc limit 1;""".format(
             tablename, scenario_id
         )
         # print command
@@ -184,21 +184,21 @@ class SavedScenario(db.Model):
         else:
             tablename = "jump_scenario_details_paid"
         scenario_json = json.dumps(self.to_dict_definition())
-        print "got json"
+        print("got json")
         scenario_json = scenario_json.replace("'", "''")
         # print "\n\n scenario_json", scenario_json
         with get_db_cursor() as cursor:
-            print "got cursor"
-            command = u"""INSERT INTO {} (scenario_id, updated, ip, scenario_json) values ('{}', sysdate, '{}', '{}');""".format(
+            print("got cursor")
+            command = """INSERT INTO {} (scenario_id, updated, ip, scenario_json) values ('{}', sysdate, '{}', '{}');""".format(
                 tablename, self.scenario_id, ip, scenario_json
             )
             # print command
             cursor.execute(command)
-        print "done with execute"
+        print("done with execute")
 
 
     def set_unique_id(self, unique_id):
-        self.scenario_id = u"demo-scenario-{}".format(unique_id)
+        self.scenario_id = "demo-scenario-{}".format(unique_id)
 
     @property
     def is_demo_account(self):
@@ -409,7 +409,7 @@ class SavedScenario(db.Model):
         return response
 
     def __repr__(self):
-        return u"<{} ({}) {}>".format(self.__class__.__name__, self.scenario_id, self.scenario_name)
+        return "<{} ({}) {}>".format(self.__class__.__name__, self.scenario_id, self.scenario_name)
 
 
 

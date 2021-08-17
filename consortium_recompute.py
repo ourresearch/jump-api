@@ -38,7 +38,7 @@ if __name__ == "__main__":
     if consortium_scenario_id:
         new_consortia = Consortium(consortium_scenario_id)
         new_consortia.recompute_journal_dicts()
-        print u"recomputing {}".format(new_consortia)
+        print("recomputing {}".format(new_consortia))
 
     elif consortium_package_id:
         from consortium import get_consortium_ids
@@ -46,7 +46,7 @@ if __name__ == "__main__":
         for d in consortium_ids:
             # print d["package_id"]
             if consortium_package_id == d["package_id"]:
-                print "starting to recompute row {}".format(d)
+                print("starting to recompute row {}".format(d))
                 new_consortia = Consortium(d["scenario_id"])
                 new_consortia.recompute_journal_dicts()
-                print u"recomputing {}".format(new_consortia)
+                print("recomputing {}".format(new_consortia))

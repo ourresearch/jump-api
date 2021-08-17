@@ -3,7 +3,7 @@
 from time import time
 from simplejson import dumps
 import gzip
-import StringIO
+import io
 import datetime
 
 
@@ -238,7 +238,7 @@ def jsonify_fast_no_sort_simple(*args, **kwargs):
 
 
 def refresh_data_for_consortium_scenario(scenario_id):
-    print "scenario_id", scenario_id
+    print("scenario_id", scenario_id)
 
     my_consortium = Consortium(scenario_id)
     my_consortium.recompute_journal_dicts()
@@ -272,5 +272,5 @@ if __name__ == "__main__":
 
             start_time = time()
             refresh_data_for_consortium_scenario(scenario_id)
-            print u"done refresh_data_for_consortium_scenario for {} in {}s".format(scenario_id, elapsed(start_time))
+            print("done refresh_data_for_consortium_scenario for {} in {}s".format(scenario_id, elapsed(start_time)))
 

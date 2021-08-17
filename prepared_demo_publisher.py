@@ -26,11 +26,11 @@ def prepare_publishers():
     num_prepared = len(prepared_publishers)
     to_prepare = 10 - num_prepared
 
-    logger.info(u'Found {} prepared demo publishers. Creating {}.'.format(num_prepared, to_prepare))
+    logger.info('Found {} prepared demo publishers. Creating {}.'.format(num_prepared, to_prepare))
     if to_prepare > 0:
         for i in range(0, to_prepare):
             new_publisher = clone_demo_package(institution)
-            logger.info(u'Created demo publisher {} ({}).'.format(new_publisher.package_id, institution.id))
+            logger.info('Created demo publisher {} ({}).'.format(new_publisher.package_id, institution.id))
 
 
 def get_demo_publisher(institution, use_prepared=True):
@@ -40,11 +40,11 @@ def get_demo_publisher(institution, use_prepared=True):
 
         if prepared_publisher:
             prepared_publisher.institution_id = institution.id
-            logger.info(u'Got prepared demo publisher {} ({}).'.format(prepared_publisher.package_id, institution.id))
+            logger.info('Got prepared demo publisher {} ({}).'.format(prepared_publisher.package_id, institution.id))
             return prepared_publisher
 
     new_publisher = clone_demo_package(institution)
-    logger.info(u'Created demo publisher {} ({}).'.format(new_publisher.package_id, institution.id))
+    logger.info('Created demo publisher {} ({}).'.format(new_publisher.package_id, institution.id))
     return new_publisher
 
 

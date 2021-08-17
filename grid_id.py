@@ -9,4 +9,4 @@ class GridId(db.Model):
     grid_id = db.Column(db.Text, primary_key=True)
 
     def __repr__(self):
-        return u"<{} {}, {}>".format(self.__class__.__name__, self.institution_id, self.grid_id)
+        return "<{} {}, {}>".format(self.__class__.__name__, self.institution_id, self.grid_id)

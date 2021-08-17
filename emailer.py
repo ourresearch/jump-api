@@ -28,7 +28,7 @@ def create_email(address, subject, template_name, context):
         to_emails += [Cc("heather@ourresearch.org")]
     email = Mail(from_email=from_email, subject=Subject(subject), to_emails=to_emails, html_content=content)
 
-    logger.info((u'sending email "{}" to {}'.format(subject, address)))
+    logger.info(('sending email "{}" to {}'.format(subject, address)))
 
     return email
 
@@ -38,9 +38,9 @@ def send(email, for_real=False):
         sg = sendgrid.SendGridAPIClient(api_key=os.environ.get('SENDGRID_API_KEY'))
         email_get = email.get()
         response = sg.client.mail.send.post(request_body=email_get)
-        print u"Sent an email"
+        print("Sent an email")
     else:
-        print u"Didn't really send"
+        print("Didn't really send")
 
 
 

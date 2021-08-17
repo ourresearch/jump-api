@@ -78,7 +78,7 @@ class PerpetualAccessInput(db.Model, PackageInput):
         return PerpetualAccess.__tablename__
 
     def file_type_label(self):
-        return u"perpetual-access"
+        return "perpetual-access"
 
     def issn_columns(self):
         return ["issn"]
@@ -87,18 +87,18 @@ class PerpetualAccessInput(db.Model, PackageInput):
         return {
             "start_date": {
                 "normalize": lambda date, warn_if_blank=False: self.normalize_date(date, default=datetime(1970, 1, 1), warn_if_blank=warn_if_blank),
-                "name_snippets": [u"start", u"begin"],
+                "name_snippets": ["start", "begin"],
                 "required": True
             },
             "end_date": {
                 "normalize": lambda date, warn_if_blank=False: self.normalize_date(date, default=datetime(1970, 12, 31), warn_if_blank=warn_if_blank),
-                "name_snippets": [u"end"],
+                "name_snippets": ["end"],
                 "required": True
             },
             "issn": {
                 "normalize": self.normalize_issn,
-                "name_snippets": [u"issn"],
-                "excluded_name_snippets": [u"online", u"e-", u"eissn"],
+                "name_snippets": ["issn"],
+                "excluded_name_snippets": ["online", "e-", "eissn"],
                 "required": True,
                 "warn_if_blank": True,
             }

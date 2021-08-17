@@ -24,7 +24,7 @@ def parse_uploads():
 
     while True:
         try:
-            command = u"""select * from jump_raw_file_upload_object where to_delete_date is not null"""
+            command = """select * from jump_raw_file_upload_object where to_delete_date is not null"""
             with get_db_cursor() as cursor:
                 cursor.execute(command)
                 raw_file_upload_rows_to_delete = cursor.fetchall()
@@ -43,7 +43,7 @@ def parse_uploads():
                 # the delete will also delete the raw row which will take it off this queue
 
         except Exception as e:
-            print "Error: exception1 {} during parse_uploads".format(e)
+            print("Error: exception1 {} during parse_uploads".format(e))
             try:
                 db.session.rollback()
             except:
@@ -62,7 +62,7 @@ def parse_uploads():
                     # not a valid file, skip it
                     continue
 
-                print u"loading {} {}".format(package_id, filetype)
+                print("loading {} {}".format(package_id, filetype))
                 size = preprocess_file["Size"]
                 age_seconds = (datetime.datetime.utcnow() - preprocess_file["LastModified"].replace(tzinfo=None)).total_seconds()
 
@@ -82,20 +82,20 @@ def parse_uploads():
                 if loader:
                     load_result = loader.load(package_id, filename, commit=True)
 
-                    print u"moving file {}".format(filename)
+                    print("moving file {}".format(filename))
                     s3_resource = boto3.resource("s3")
                     copy_source = {"Bucket": upload_preprocess_bucket, "Key": filename}
                     s3_resource.meta.client.copy(copy_source, upload_finished_bucket, filename)
                     s3_resource.Object(upload_preprocess_bucket, filename).delete()
-                    print "moved"
+                    print("moved")
 
         except Exception as e:
-            print u"Error: exception2 {} during parse_uploads on file {}".format(e, filename)
+            print("Error: exception2 {} during parse_uploads on file {}".format(e, filename))
             if loader and filename:
-                print u"because of error, deleting file {}".format(filename)
+                print("because of error, deleting file {}".format(filename))
                 s3_resource = boto3.resource("s3")
                 s3_resource.Object(upload_preprocess_bucket, filename).delete()
-                print u"because of error, deleted {}".format(filename)
+                print("because of error, deleted {}".format(filename))
 
             try:
                 db.session.rollback()

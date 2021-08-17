@@ -35,12 +35,12 @@ def warm_the_cache():
             start_time = time.time()
             display_url = url.split("?")[0]
             sleep_time = 3
-            print "warm_cache: requesting {}".format(display_url)
+            print("warm_cache: requesting {}".format(display_url))
             r = requests.get(url)
             if (r.status_code > 200) and (r.status_code != 404):
                 display_url = url
                 sleep_time = 60
-            print u"warm_cache: finished {} in {}s with status {}".format(display_url, elapsed(start_time), r.status_code)
+            print("warm_cache: finished {} in {}s with status {}".format(display_url, elapsed(start_time), r.status_code))
             time.sleep(sleep_time)
 
 

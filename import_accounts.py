@@ -27,7 +27,7 @@ def convert_from_utf16_to_utf8(filename):
     # https://stackoverflow.com/a/10300007/596939
     BLOCKSIZE = 1048576 # or some other, desired size in bytes
     with codecs.open(filename, "r", "utf-16") as sourceFile:
-        new_filename = u"{}_utf8".format(filename)
+        new_filename = "{}_utf8".format(filename)
         with codecs.open(new_filename, "w", "utf-8") as targetFile:
             while True:
                 contents = sourceFile.read(BLOCKSIZE)
@@ -40,7 +40,7 @@ def convert_date_spaces_to_dashes(filename):
     # https://stackoverflow.com/a/10300007/596939
     BLOCKSIZE = 1048576 # or some other, desired size in bytes
     with codecs.open(filename, "r", "utf-8") as sourceFile:
-        new_filename = u"{}_dashes".format(filename)
+        new_filename = "{}_dashes".format(filename)
         with codecs.open(new_filename, "w", "utf-8") as targetFile:
             while True:
                 contents = sourceFile.read(BLOCKSIZE)
@@ -60,7 +60,7 @@ def import_consortium_counter_xls(xls_filename):
 
     for sheetname in sheetnames:
         university = sheetname.replace("JR1 ", "")
-        print university
+        print(university)
 
         sheet = workbook[sheetname]
 
@@ -94,7 +94,7 @@ def import_perpetual_access_files():
     my_files = glob.glob("/Users/hpiwowar/Downloads/wvu_perpetual_access.csv")
     my_files.reverse()
     for my_file in my_files:
-        print my_file
+        print(my_file)
         if False:
             xlsx_file = open(my_file, "rb")
             workbook = openpyxl.load_workbook(xlsx_file, read_only=True)
@@ -121,11 +121,11 @@ def import_perpetual_access_files():
                         }
                         results.append(new_dict)
                         # print new_dict
-                        print ".",
+                        print(".", end=' ')
         else:
             rows = read_csv_file(my_file)
             for row in rows:
-                print row
+                print(row)
                 new_dict = {
                     "username": "wvu",
                     "issn": row["issn"],
@@ -134,7 +134,7 @@ def import_perpetual_access_files():
                 }
                 results.append(new_dict)
                 # print new_dict
-                print ".",
+                print(".", end=' ')
 
     with open("/Users/hpiwowar/Downloads/perpetual_access_cleaned.csv", "w") as csv_file:
         csv_writer = csv.writer(csv_file, encoding="utf-8")
@@ -142,7 +142,7 @@ def import_perpetual_access_files():
         csv_writer.writerow(header)
         for my_dict in results:
             csv_writer.writerow([my_dict[k] for k in header])
-    print "/Users/hpiwowar/Downloads/perpetual_access_cleaned.csv"
+    print("/Users/hpiwowar/Downloads/perpetual_access_cleaned.csv")
 
 
 
@@ -161,7 +161,7 @@ if __name__ == "__main__":
     # build_counter_import_file(filename=parsed_vars["filename"], username=parsed_vars["username"])
 
 
-    crkn_ids = read_csv_file(u"/Users/hpiwowar/Documents/Projects/tiv2/jump-api/data/crkn_lookup.csv")
+    crkn_ids = read_csv_file("/Users/hpiwowar/Documents/Projects/tiv2/jump-api/data/crkn_lookup.csv")
     institution_for_all_these_packages = "institution-fVnPvXK9iBYA"
 
     # report_name = "trj2"
@@ -175,19 +175,19 @@ if __name__ == "__main__":
     # all_in_one_data_rows = read_csv_file(u"/Users/hpiwowar/Documents/Projects/tiv2/jump-api/data/counter5_crkn/2 TR_J4 SUSHI Harvester CRKN_Wiley-2019.csv")
 
     report_name = "trj4"
-    all_in_one_data_rows = read_csv_file(u" /Users/hpiwowar/Dropbox/companywide/unsub_customer_data/learn_counter5/raw_from_unis/crkn/elsevier/COP5_TR_J4_2019_UIR.xlsx")
+    all_in_one_data_rows = read_csv_file(" /Users/hpiwowar/Dropbox/companywide/unsub_customer_data/learn_counter5/raw_from_unis/crkn/elsevier/COP5_TR_J4_2019_UIR.xlsx")
 
     for row in crkn_ids:
-        print u"row: {}".format(row.values())
+        print("row: {}".format(list(row.values())))
 
-        publisher_name = u"Elseiver"
+        publisher_name = "Elseiver"
         crkn_institution_id = row["crkn_elsevier"]
 
 
 
         institution_number = row["institution_id"].replace("institution-", "")
-        package_id = u"package-CRKNcounter5{}{}".format(publisher_name, institution_number)
-        package_name = u"CRKN COUNTER5 {} {}".format(publisher_name, row["name"])
+        package_id = "package-CRKNcounter5{}{}".format(publisher_name, institution_number)
+        package_name = "CRKN COUNTER5 {} {}".format(publisher_name, row["name"])
 
         from counter import CounterInput
         my_counter_test = CounterInput.query.filter(CounterInput.package_id == package_id,
@@ -195,12 +195,12 @@ if __name__ == "__main__":
         has_counter_data_to_load = False
 
         if my_counter_test:
-            print u"counter already loaded for {}".format(report_name)
+            print("counter already loaded for {}".format(report_name))
         else:
             temp_filename = "data/temp.csv"
             with open(temp_filename, "w") as csv_file:
                 csv_writer = csv.writer(csv_file, encoding="utf-8")
-                header = all_in_one_data_rows[0].keys()
+                header = list(all_in_one_data_rows[0].keys())
                 csv_writer.writerow(header)
                 for row in all_in_one_data_rows:
                     if row["Customer ID"] == crkn_institution_id:
@@ -208,9 +208,9 @@ if __name__ == "__main__":
                         csv_writer.writerow([row[k] for k in header])
                         has_counter_data_to_load = True
 
-            print u"now loading in counter data"
+            print("now loading in counter data")
             if not has_counter_data_to_load:
-                print u"has no counter data to load"
+                print("has no counter data to load")
             else:
                 # see if package exists:
                 my_package = Package.query.get(package_id)
@@ -226,9 +226,9 @@ if __name__ == "__main__":
                     db.session.add(my_package)
                     safe_commit(db)
                 else:
-                    print "package already created"
+                    print("package already created")
 
-                print u"{}".format(my_package)
+                print("{}".format(my_package))
 
                 CounterInput().load(package_id, temp_filename, commit=True)
 
