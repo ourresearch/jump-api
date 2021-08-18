@@ -1,4 +1,5 @@
-import unicodecsv as csv
+# import unicodecsv as csv
+import csv
 from whoosh import index, sorting
 from whoosh.analysis import StandardAnalyzer
 from whoosh.fields import Schema, STORED, NGRAMWORDS, NUMERIC
