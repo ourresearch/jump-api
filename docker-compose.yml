@@ -1,0 +1,11 @@
+version: "3.8"
+services:
+  app:
+    build: .
+    command: python views.py
+    ports:
+      - "5004:5004"
+    volumes:
+      - .:/python-flask
+    env_file:
+      - .env
