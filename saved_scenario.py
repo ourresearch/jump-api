@@ -4,7 +4,7 @@ from cached_property import cached_property
 import simplejson as json
 import datetime
 import shortuuid
-from flask_jwt_extended import jwt_required, jwt_optional, create_access_token, get_jwt_identity
+from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
 from collections import OrderedDict
 from time import time
 from sqlalchemy import orm
