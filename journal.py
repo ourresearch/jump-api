@@ -740,7 +740,7 @@ class Journal(object):
     @cached_property
     def downloads_scaled_by_counter_by_year(self):
         # TODO is flat right now
-        downloads_total_before_counter_correction_by_year = [max(1.0, self.my_scenario_data_row.get("downloads_total", 0.0)) for year in self.years]
+        downloads_total_before_counter_correction_by_year = [max(1.0, self.my_scenario_data_row.get("downloads_total", 0.0) or 0.0) for year in self.years]
         downloads_total_before_counter_correction_by_year = [val if val else 0.0 for val in downloads_total_before_counter_correction_by_year]
         downloads_total_scaled_by_counter = [num * self.downloads_counter_multiplier for num in downloads_total_before_counter_correction_by_year]
         return downloads_total_scaled_by_counter
