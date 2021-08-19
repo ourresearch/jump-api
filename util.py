@@ -16,6 +16,7 @@ import unicodedata
 import urllib.parse
 from codecs import BOM_UTF8, BOM_UTF16_BE, BOM_UTF16_LE, BOM_UTF32_BE, BOM_UTF32_LE
 import chardet
+import numpy as np
 
 import heroku3
 import requests
@@ -692,6 +693,8 @@ def is_same_publisher(publisher1, publisher2):
 def myconverter(o):
     if isinstance(o, datetime.datetime):
         return o.isoformat()
+    if isinstance(o, np.int64):
+        return int(o)
     raise TypeError(repr(o) + " is not JSON serializable")
 
 # from https://stackoverflow.com/a/50762571/596939
