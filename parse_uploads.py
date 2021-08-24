@@ -68,7 +68,7 @@ def parse_uploads():
 
                 s3_clientobj = s3_client.get_object(Bucket="unsub-file-uploads-preprocess", Key=filename)
                 contents_string = s3_clientobj["Body"].read()
-                with open(filename, "wb", encoding='utf-8') as temp_file:
+                with open(filename, "wb") as temp_file:
                     temp_file.write(contents_string)
 
                 loader = None
