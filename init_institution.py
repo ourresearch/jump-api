@@ -37,11 +37,11 @@ from util import read_csv_file
 institution_name = None
 institution_rows = []
 
-# institution_name = u"University of Pittsburgh"
+# institution_name = "University of Pittsburgh"
 #
 # institution_rows = [{
 #     "institution_name": institution_name,
-#     "username": u"pitt",
+#     "username": "pitt",
 #     "ror_id_list": ["01an3r305"]
 #     }]
 
@@ -50,7 +50,7 @@ user_rows = [
     {
         "email": None,
         "name": None,
-        "jisc_id": "sgu",
+        "jisc_id": "sg",
         "email_and_name": "Admin <vallison@sgul.ac.uk>",
         "password": "",
         "institution_name": institution_name,
@@ -59,10 +59,10 @@ user_rows = [
     # ,{
     #     "email": None,
     #     "name": None,
-    #     "email_and_name": u"Admin <team+abc@ourresearch.org>",
-    #     "password": u"",
+    #     "email_and_name": "Admin <team+abc@ourresearch.org>",
+    #     "password": "",
     #     "institution_name": institution_name,
-    #     "permissions": [u"view", u"modify", u"admin", ]  # default is view, modify, admin
+    #     "permissions": ["view", "modify", "admin", ]  # default is view, modify, admin
     # },
 ]
 
@@ -70,9 +70,9 @@ user_rows = [
 
 # files can be xls, xlsx, or csv
 files = {
-    "prices": None,             # u"/path/to/journal-prices.xlsx",
-    "perpetual_access": None,   # u"/path/to/perpetual-access.xls",
-    "counter": None,            # u"/path/to/counter.csv",
+    "prices": None,             # "/path/to/journal-prices.xlsx",
+    "perpetual_access": None,   # "/path/to/perpetual-access.xls",
+    "counter": None,            # "/path/to/counter.csv",
 }
 
 # configuration above

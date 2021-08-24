@@ -40,7 +40,7 @@ ror_ids_string = ",".join(["'{}'".format(ror_id) for ror_id in ror_ids])
 # package-2D9eQK57aKVET
 # package-2Ye75MtF7KDom
 # """.split()
-# member_package_id_string = u",".join(["'{}'".format(package_id) for package_id in member_package_ids])
+# member_package_id_string = ",".join(["'{}'".format(package_id) for package_id in member_package_ids])
 
 def copy_package(old_package_id, new_package_id, new_institution_id):
     command = """
@@ -177,7 +177,7 @@ def consortium_package_create(consortium_institution_id, consortium_package_disp
 
     db.session.add(my_scenario)
     safe_commit(db)
-    print("made consortium package {} and scenario {}".format(my_package, my_scenario))
+    print(("made consortium package {} and scenario {}".format(my_package, my_scenario)))
 
     dict_to_save = my_scenario.to_dict_saved_from_db()
     dict_to_save["name"] = my_scenario_name

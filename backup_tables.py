@@ -18,5 +18,5 @@ if __name__ == "__main__":
     """.split()
 
     for table in table_names:
-        print("create table {table}_{suffix} as (select * from {table});".format(table=table, suffix=suffix))
+        print(("create table {table}_{suffix} as (select * from {table});".format(table=table, suffix=suffix)))
 
