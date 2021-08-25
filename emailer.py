@@ -26,6 +26,8 @@ def create_email(address, subject, template_name, context):
     to_emails = [to_email]
     if ("mmu.ac.uk" in address) or ("unimelb.edu.au" in address) or ("cardiff.ac.uk" in address):
         to_emails += [Cc("heather@ourresearch.org")]
+    if "southwales.ac.uk" in address:
+        to_emails += [Cc("scott@ourresearch.org")]
     email = Mail(from_email=from_email, subject=Subject(subject), to_emails=to_emails, html_content=content)
 
     logger.info(('sending email "{}" to {}'.format(subject, address)))
