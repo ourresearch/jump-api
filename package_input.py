@@ -362,7 +362,7 @@ class PackageInput:
                 # ignore header row when determining dialect
                 # data rows should be more consistent with each other
                 if i > 0:
-                    dialect_sample = dialect_sample + next_line
+                    dialect_sample = str(dialect_sample) + str(next_line)
                 if not next_line:
                     break
 
