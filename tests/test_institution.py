@@ -1,8 +1,9 @@
 # import pytest
 
+# # import helpers
 # from response_test import ResponseTest, dev_request_url, assert_schema
 
-# #  heroku local:run nosetests test/test_institution.py
+# # #  heroku local:run nosetests test/test_institution.py
 
 
 # institutions_to_check = {
@@ -13,7 +14,7 @@
 # }
 
 
-# def test_institutions(self):
+# def test_institutions():
 #     schema = {
 #         'definitions': {
 #             'user_permissions': {
@@ -99,5 +100,5 @@
 
 #     for institution_name, institution_id in institutions_to_check.items():
 #         url = dev_request_url('/institution/{}'.format(institution_id))
-#         response = self.json_response(url)
+#         response = json_response(url)
 #         assert_schema(response, schema, institution_name)

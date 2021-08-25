@@ -1,5 +1,4 @@
 # coding: utf-8
-# -*- coding: utf-8 -*-
 
 import pytest
 
@@ -81,8 +80,5 @@ def test_imports_counter_4_samples():
 #     assert file_rows['counter4_jr1_2018_00.csv'] == rows
 
 # def test_rejects_counter5():
-#     self.assertRaisesRegexp(
-#         RuntimeError,
-#         '.*COUNTER 5.*',
-#         lambda: CounterInput().normalize_rows(file_name='tests/test_files/counter/counter5_tr_j1_2019_00.csv')
-#     )
+#     with pytest.raises(RuntimeError, match=r".*COUNTER 5.*"):
+#         CounterInput().normalize_rows(file_name='tests/test_files/counter/counter5_tr_j1_2019_00.csv')
