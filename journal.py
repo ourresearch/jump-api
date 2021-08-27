@@ -409,7 +409,6 @@ class Journal(object):
         #   if not there, then no perpetual access
 
         data_dict = self._scenario_data["perpetual_access"]
-        logger.info("data_dict: {} of class {}".format(data_dict, type(data_dict)))
 
         # if not data_dict:
         #     return self.year_by_perpetual_access_years
