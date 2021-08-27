@@ -1167,10 +1167,11 @@ def subscriptions_notifications_done_editing_post(scenario_id):
              where jump_package_scenario.scenario_id='{}' 
             """.format(scenario_id))
 
-    # heather here
-    # email_for_notification = "heather@ourresearch.org"
-    email_for_notification = "Mafalda.Marques@jisc.ac.uk"
-    email = create_email(email_for_notification, "New push/pull submission", "push_pull_done_editing", {"data": {
+    # by default send email to consortium test email. if JISC, send to Mafalda
+    email_for_notification = "team+consortiumtest@ourresearch.org"
+    if 'jisc' in scenario_id:
+        email_for_notification = "Mafalda.Marques@jisc.ac.uk"
+    email = create_email(email_for_notification, u"New push/pull submission", "push_pull_done_editing", {"data": {
         "institution_name": institution_name
     }})
 
