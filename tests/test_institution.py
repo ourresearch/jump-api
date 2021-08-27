@@ -1,17 +1,13 @@
-# import pytest
+import pytest
 
-# # import helpers
-# from response_test import ResponseTest, dev_request_url, assert_schema
+from .helpers.response_test import ResponseTest, dev_request_url, assert_schema
 
-# # #  heroku local:run nosetests test/test_institution.py
-
-
-# institutions_to_check = {
-#     'suny': 'institution-2h4YWhLmGQSy',
-#     'suny_poly': 'institution-iRFuoxgDGH5z',
-#     'suny_a': 'institution-ZPY8mUmpK2gM',
-#     'uva': 'institution-xFFDfqtaBXik',
-# }
+institutions_to_check = {
+    'suny': 'institution-2h4YWhLmGQSy',
+    'suny_poly': 'institution-iRFuoxgDGH5z',
+    'suny_a': 'institution-ZPY8mUmpK2gM',
+    'uva': 'institution-xFFDfqtaBXik',
+}
 
 
 # def test_institutions():

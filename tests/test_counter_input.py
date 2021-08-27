@@ -1,8 +1,6 @@
 # coding: utf-8
 
 import pytest
-
-# TODO: separate file input table classes from ingestion logic to remove import cycles
 import package
 from counter import CounterInput
 
