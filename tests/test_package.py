@@ -1,3 +1,6 @@
+# FIXME
+# this test just hangs, not sure why
+
 # import pytest
 
 # from package import Package
