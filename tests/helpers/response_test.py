@@ -9,8 +9,13 @@ import urllib.parse
 from urllib.parse import urlencode
 
 
+def testget(url):
+    client = app.test_client()
+    client.testing = True
+    return json.loads(client.get(url).get_data(as_text=True))
+
 class ResponseTest(unittest.TestCase):
-    def setUp(self):
+    def __init__(self):
         self.client = app.test_client()
         self.client.testing = True
 
@@ -28,7 +33,7 @@ def assert_schema(obj, schema, test_name):
 def dev_request_url(path, params=None):
     params = params.copy() if params else {}
     params.update({
-        'secret': os.getenv("JWT_SECRET_KEY")
+        'jwt': os.environ["UNSUB_USER1_JWT"]
     })
 
     return urllib.parse.urlunparse([

@@ -5,15 +5,10 @@ import os
 import re
 # import heroku3
 
+from .helpers.http import url_base, skip_if_down, fetch_jwt
 from schemas import user_schema, user_permissions_schema
 from response_test import ResponseTest, dev_request_url, assert_schema
 from views import app
-
-url_base = os.environ["UNSUB_TEST_URL_STAGING"]
-
-def skip_if_down():
-    if not requests.get(url_base):
-        pytest.skip("Unsub Staging API is down")
 
 # def staging_conn():
 #     # create client
@@ -31,18 +26,6 @@ def skip_if_down():
 # def staging_off(con):
 #     con.scale(0)
 #     return print("Unsub staging off")
-
-@pytest.fixture
-def fetch_jwt():
-    skip_if_down()
-    res = requests.post(
-        url_base + "/user/login",
-        json={
-            "password": os.environ["UNSUB_USER1_PWD"],
-            "email": os.environ["UNSUB_USER1_EMAIL"],
-        },
-    )
-    return res.json()["access_token"]
 
 # con = staging_conn()
 # staging_on(con)
