@@ -2,7 +2,7 @@ import pytest
 import requests
 from marshmallow import Schema, fields, ValidationError 
 from .helpers.http import url_base, skip_if_down, fetch_jwt
-from schemas import ScenarioMetaSchema, ScenarioSavedSchema
+from .helpers.schemas import ScenarioMetaSchema, ScenarioSavedSchema
 
 def test_scenario_journals(fetch_jwt):
 	res = requests.get(

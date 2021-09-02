@@ -1,5 +1,126 @@
 from marshmallow import Schema, fields
 
+class ScenarioMetaSchema(Schema):
+    scenario_id = fields.Str(required=True)
+    scenario_name = fields.Str(required=True, allow_none=True)
+    scenario_description = fields.Str(allow_none=True)
+    scenario_notes = fields.Str(allow_none=True)
+    publisher_id = fields.Str(required=True)
+    publisher_name = fields.Str(required=True)
+    institution_id = fields.Str(required=True)
+    institution_name = fields.Str(required=True)
+    cost_bigdeal = fields.Number(required=True)
+    cost_bigdeal_increase = fields.Number(required=True)
+    scenario_created = fields.Str(required=True)
+    is_base_scenario = fields.Boolean(required=True)
+    is_consortial_proposal = fields.Boolean(required=True)
+
+class ScenarioSettings(Schema):
+    include_submitted_version = fields.Boolean()
+    include_bronze = fields.Boolean()
+    cost_alacart_increase = fields.Str()
+    weight_citation = fields.Str()
+    cost_content_fee_percent = fields.Str()
+    ill_request_percent_of_delayed = fields.Str()
+    cost_bigdeal_increase = fields.Number()
+    description = fields.Str()
+    notes = fields.Str()
+    cost_ill = fields.Str()
+    include_backfile = fields.Boolean()
+    backfile_contribution = fields.Number()
+    cost_bigdeal = fields.Number()
+    include_social_networks = fields.Boolean()
+    weight_authorship = fields.Number()
+
+class ScenarioSavedSchema(Schema):
+    subrs = fields.List(fields.Str(), required=True)
+    configs = fields.Nested(ScenarioSettings, required=True)
+    id = fields.Str(required=True)
+    name = fields.Str(required=True)
+    customSubrs = fields.List(fields.Str(), required=True)
+    member_added_subrs = fields.List(fields.Str(), required=True)
+
+class InstitutionSchema(Schema):
+    id = fields.Str()
+    grid_ids = fields.List(fields.Str())
+    ror_ids = fields.List(fields.Str())
+    name = fields.Str()
+    is_demo = fields.Boolean()
+    is_consortium = fields.Boolean()
+    is_consortium_member = fields.Boolean()
+    user_permissions = fields.List(fields.Dict())
+    institutions = fields.List(fields.Dict())
+    consortia = fields.List(fields.Dict())
+    publishers = fields.List(fields.Dict())
+    consortial_proposal_sets = fields.List(fields.Dict())
+    is_jisc = fields.Boolean()
+
+# used in test_journal.py
+class Top(Schema):
+    title = fields.Str()
+    cpu = fields.Str()
+    use_instant_percent = fields.Number()
+    cost_subscription_minus_ill = fields.Str()
+    num_papers = fields.Number()
+    ill_cost = fields.Str()
+    issn_l = fields.Str()
+    cost_actual = fields.Str()
+    subscription_cost = fields.Str()
+    subject = fields.Str()
+    is_society_journal = fields.Boolean()
+    subscribed = fields.Boolean()
+    era_subjects = fields.List(fields.List(fields.Str))
+
+class FullfillmentUse(Schema):
+    total = fields.List(fields.Number)
+    oa_plus_social_networks = fields.List(fields.Number)
+    backfile = fields.List(fields.Number)
+    subscription = fields.List(fields.Number)
+    other_delayed = fields.List(fields.Number)
+    ill = fields.List(fields.Number)
+
+class Fullfillment(Schema):
+    data = fields.List(fields.Dict)
+    use_actual_by_year = fields.Nested(FullfillmentUse)
+    perpetual_access_years = fields.List(fields.Str)
+    has_perpetual_access = fields.Boolean()
+    headers = fields.List(fields.Dict)
+    downloads_per_paper_by_age = fields.List(fields.Number)
+    perpetual_access_years_text = fields.Str()
+
+class JournalDetails(Schema):
+    apc = fields.Dict(required=True)
+    cost = fields.Dict(required=True)
+    debug = fields.Dict(required=True)
+    fulfillment = fields.Nested(Fullfillment, required=True)
+    impact = fields.Dict(required=True)
+    num_papers = fields.Dict(required=True)
+    num_papers_forecast = fields.Dict(required=True)
+    oa = fields.Dict(required=True)
+    top = fields.Nested(Top, required=True)
+
+class JournalSettings(Schema):
+    notes = fields.Str()
+    cost_ill = fields.Number()
+    cost_content_fee_percent = fields.Number()
+    cost_alacart_increase = fields.Number()
+    weight_authorship = fields.Number()
+    cost_bigdeal_increase = fields.Number()
+    ill_request_percent_of_delayed = fields.Number()
+    include_backfile = fields.Boolean()
+    description = fields.Str()
+    include_submitted_version = fields.Boolean()
+    weight_citation = fields.Number()
+    include_bronze = fields.Boolean()
+    include_social_networks = fields.Boolean()
+    cost_bigdeal = fields.Number()
+    backfile_contribution = fields.Number()
+
+class JournalSchema(Schema):
+    journal = fields.Nested(JournalDetails, required=True)
+    _settings = fields.Nested(JournalSettings, required=True)
+
+
 # FIXME: double check this, I'm not actually sure these fields are required
 user_schema = {
     "type": "object",
@@ -262,132 +383,3 @@ journal_to_dict_raw_schema = {
 
     'additionalProperties': False,
 }
-
-# scenario_meta_schema = {
-#     'type': 'object',
-
-#     'required': [
-#         'scenario_id',
-#         'scenario_name',
-#         'publisher_id',
-#         'publisher_name',
-#         'institution_id',
-#         'institution_name',
-#         'scenario_created',
-#         'is_base_scenario',
-#     ],
-
-#     'properties': {
-#         'scenario_id': {'type': 'string'},
-#         'scenario_name': {'type': ['string', 'null']},
-#         'publisher_id': {'type': 'string'},
-#         'publisher_name': {'type': 'string'},
-#         'institution_id': {'type': 'string'},
-#         'institution_name': {'type': 'string'},
-#         'scenario_created': {'type': 'string'},
-#         'is_base_scenario': {'type': 'boolean'},
-#     },
-
-#     'additionalProperties': False,
-# }
-
-class ScenarioMetaSchema(Schema):
-    scenario_id = fields.Str(required=True)
-    scenario_name = fields.Str(required=True, allow_none=True)
-    scenario_description = fields.Str(allow_none=True)
-    scenario_notes = fields.Str(allow_none=True)
-    publisher_id = fields.Str(required=True)
-    publisher_name = fields.Str(required=True)
-    institution_id = fields.Str(required=True)
-    institution_name = fields.Str(required=True)
-    cost_bigdeal = fields.Number(required=True)
-    cost_bigdeal_increase = fields.Number(required=True)
-    scenario_created = fields.Str(required=True)
-    is_base_scenario = fields.Boolean(required=True)
-    is_consortial_proposal = fields.Boolean(required=True)
-
-# scenario_settings = {
-#     'type': 'object',
-
-#     'required': [
-#         'cost_bigdeal',
-#         'include_social_networks',
-#         'include_bronze',
-#         'include_submitted_version',
-#         'cost_ill',
-#         'cost_bigdeal_increase',
-#         'cost_content_fee_percent',
-#         'ill_request_percent_of_delayed',
-#         'cost_alacart_increase',
-#         'backfile_contribution',
-#         'weight_authorship',
-#         'weight_citation',
-#         'include_backfile',
-#     ],
-
-#     'properties': {
-#         'cost_bigdeal': {'type': 'number'},
-#         'include_social_networks': {'type': 'boolean'},
-#         'include_bronze': {'type': 'boolean'},
-#         'include_submitted_version': {'type': 'boolean'},
-#         'cost_ill': {'type': 'number'},
-#         'cost_bigdeal_increase': {'type': 'number'},
-#         'cost_content_fee_percent': {'type': 'number'},
-#         'ill_request_percent_of_delayed': {'type': 'number'},
-#         'cost_alacart_increase': {'type': 'number'},
-#         'backfile_contribution': {'type': 'number'},
-#         'weight_authorship': {'type': 'number'},
-#         'weight_citation': {'type': 'number'},
-#         'include_backfile': {'type': 'boolean'},
-#         'package': {'type': 'string'},
-#     },
-
-#     'additionalProperties': False,
-# }
-
-class ScenarioSettings(Schema):
-    include_submitted_version = fields.Boolean()
-    include_bronze = fields.Boolean()
-    cost_alacart_increase = fields.Str()
-    weight_citation = fields.Str()
-    cost_content_fee_percent = fields.Str()
-    ill_request_percent_of_delayed = fields.Str()
-    cost_bigdeal_increase = fields.Number()
-    description = fields.Str()
-    notes = fields.Str()
-    cost_ill = fields.Str()
-    include_backfile = fields.Boolean()
-    backfile_contribution = fields.Number()
-    cost_bigdeal = fields.Number()
-    include_social_networks = fields.Boolean()
-    weight_authorship = fields.Number()
-
-# scenario_saved_schema = {
-#     'type': 'object',
-
-#     'required': [
-#         'subrs',
-#         'customSubrs',
-#         'configs',
-#         'name',
-#         'id',
-#     ],
-
-#     'properties': {
-#         'subrs': {'type': 'array', 'items': {'type': 'string'}},
-#         'customSubrs': {'type': 'array', 'items': {'type': 'string'}},
-#         'configs': scenario_settings,
-#         'name': {'type': 'string'},
-#         'id': {'type': 'string'},
-#     },
-
-#     'additionalProperties': False,
-# }
-
-class ScenarioSavedSchema(Schema):
-    subrs = fields.List(fields.Str(), required=True)
-    configs = fields.Nested(ScenarioSettings, required=True)
-    id = fields.Str(required=True)
-    name = fields.Str(required=True)
-    customSubrs = fields.List(fields.Str(), required=True)
-    member_added_subrs = fields.List(fields.Str(), required=True)
