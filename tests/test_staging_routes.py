@@ -7,7 +7,7 @@ import re
 
 from .helpers.http import url_base, skip_if_down, fetch_jwt
 from schemas import user_schema, user_permissions_schema
-from response_test import ResponseTest, dev_request_url, assert_schema
+from .helpers.response_test import assert_schema
 from views import app
 
 # def staging_conn():
