@@ -379,8 +379,8 @@ class Journal(object):
 
     @cached_property
     def display_perpetual_access_years(self):
-        logger.info("self.perpetual_access_years: {} of class {}".format(self.perpetual_access_years, type(self.perpetual_access_years)))
-        logger.info("self.year_by_perpetual_access_years: {} of class {}".format(self.year_by_perpetual_access_years, type(self.year_by_perpetual_access_years)))
+        # logger.info("self.perpetual_access_years: {} of class {}".format(self.perpetual_access_years, type(self.perpetual_access_years)))
+        # logger.info("self.year_by_perpetual_access_years: {} of class {}".format(self.year_by_perpetual_access_years, type(self.year_by_perpetual_access_years)))
         if not self.perpetual_access_years:
             return ""
         if min(self.perpetual_access_years) < min(self.year_by_perpetual_access_years):

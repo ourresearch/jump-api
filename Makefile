@@ -7,3 +7,5 @@ test:
 ipython:
 	heroku local:run ipython
 
+run:
+	heroku local:run python views.py
