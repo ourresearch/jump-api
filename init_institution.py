@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import argparse
+import textwrap
 import logging
 from datetime import datetime
 import re
@@ -260,20 +261,44 @@ def add_user(user_info):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=textwrap.dedent('''\
+            Examples of use
+            ---------------
+
+            Notes:
+                - Python version: use python or python2, python3, etc. as needed
+                - heroku local:run required to make sure environment variables are loaded
+
+            # Show this help
+            heroku local:run python2 init_institution.py -h
+
+            # Associated a ROR ID with an institution ID, adding citations and authorships
+            ## --commit isn't needed here because add_ror() does the commit internally
+            heroku local:run python2 init_institution.py --ror_id 0293rh119 --inst_id institution-tetA3UnAr3dV
+
+            # Requires editing init_institution.py and requires --commit to commit changes
+            ## Add a new user
+            heroku local:run python2 init_institution.py --users --commit
+            ## Add a new user and institution
+            heroku local:run python2 init_institution.py --users --institutions --commit
+
+            # Run this script on Heroku staging (assumes you have a git remote called "staging")
+            heroku local:run python2 init_institution.py --remote staging
+            '''))
     parser.add_argument("--commit", help="Commit changes.", action="store_true", default=False)
     parser.add_argument("--institutions", help="true if want to add institutions", action="store_true", default=False)
     parser.add_argument("--users", help="true if want to add users", action="store_true", default=False)
     parser.add_argument("--is_consortium", help="true if is a consortium", action="store_true", default=False)
+    parser.add_argument("--ror_id", help="A ROR ID", type=str)
+    parser.add_argument("--inst_id", help="An institution ID", type=str)
     parsed_args = parser.parse_args()
     commit = parsed_args.commit
-
-    # ror_id = "00xmkp704"
-    # institution_id = "institution-dbnbdwsYditg"
-    # add_ror(ror_id, institution_id)
-    # print 1/0
-
-
+    just_add_ror = False
+    if parsed_args.ror_id and parsed_args.inst_id:
+        just_add_ror = True
+    
     if parsed_args.institutions:
 
         for row in institution_rows:
@@ -302,7 +327,10 @@ if __name__ == "__main__":
         logger.info("commit")
         db.session.commit()
     else:
-        logger.info("rollback, run with --commit to commit")
-        db.session.rollback()
+        if not just_add_ror:
+            logger.info("rollback, run with --commit to commit")
+            db.session.rollback()
 
+    if parsed_args.ror_id and parsed_args.inst_id:
 
+        add_ror(parsed_args.ror_id, parsed_args.inst_id)
