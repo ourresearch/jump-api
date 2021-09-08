@@ -91,7 +91,10 @@ class ConsortiumJournal(Journal):
     def perpetual_access_years(self):
         for my_member_dict in self.member_data:
             if my_member_dict.get("perpetual_access_years"):
-                return my_member_dict.get("perpetual_access_years")
+                if isinstance(my_member_dict.get("perpetual_access_years"), str) :
+                    return [int(z) for z in my_member_dict.get("perpetual_access_years").split("-") if len(z)]
+                else:
+                    return my_member_dict.get("perpetual_access_years")
         return []
 
     @cached_property
