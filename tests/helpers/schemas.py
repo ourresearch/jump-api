@@ -1,5 +1,16 @@
 from marshmallow import Schema, fields
 
+class ScenarioDetailsJournalsSchema(Schema):
+    top = fields.Dict()
+    fulfillment = fields.Dict()
+    apc = fields.Dict()
+    cost = fields.Dict()
+    debug = fields.Dict()
+    impact = fields.Dict()
+    num_papers = fields.Dict()
+    num_papers_forecast = fields.Dict()
+    oa = fields.Dict()
+
 class ScenarioMetaSchema(Schema):
     scenario_id = fields.Str(required=True)
     scenario_name = fields.Str(required=True, allow_none=True)
