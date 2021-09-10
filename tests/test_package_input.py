@@ -138,10 +138,9 @@ issn,int
         {'int': 2, 'issn': '0024-3205'},
     ] == rows
 
-    # FIXME: this was failing
-    # assert [{'id': 'issn', 'name': 'issn'},
-    #         {'id': 'int', 'name': 'int'},
-    #         {'id': 'row_id', 'name': 'Row Number'},] == warnings['headers']
+    assert [{'id': 'row_id', 'name': 'Row Number'},
+            {'id': 'issn', 'name': 'issn'},
+            {'id': 'int', 'name': 'int'},] == warnings['headers']
 
     assert [
             {
@@ -182,68 +181,68 @@ def test_required_field():
 
     assert warnings is None
 
-#  def test_warn_invalid_fields():
-#     test_file = write_to_tempfile("""
-# int,price,issn
-# 5,$100.00,2093-968X
-# 6,a few bucks,1749-8155
-# 7,555,
-# 8,500,FS66-6666
-# 9,,1990-7478
-#     """.strip())
+def test_warn_invalid_fields():
+    test_file = write_to_tempfile("""
+int,price,issn
+5,$100.00,2093-968X
+6,a few bucks,1749-8155
+7,555,
+8,500,FS66-6666
+9,,1990-7478
+    """.strip())
 
-#     rows, warnings = TestInputFormat().normalize_rows(file_name=test_file)
+    rows, warnings = TestInputFormat().normalize_rows(file_name=test_file)
 
-#     assert [
-#         {'int': 5, 'price': 100, 'issn': '2093-968X'},
-#         {'int': 9, 'price': None, 'issn': '1990-7478'},
-#     ] == rows
+    assert [
+        {'int': 5, 'price': 100, 'issn': '2093-968X'},
+        {'int': 9, 'price': None, 'issn': '1990-7478'},
+    ] == rows
 
-#     assert [
-#             {'id': 'int', 'name': 'int'},
-#             {'id': 'price', 'name': 'price'},
-#             {'id': 'issn', 'name': 'issn'},
-#             {'id': 'row_id', 'name': 'Row Number'},
-#         ] == warnings['headers']
+    assert [
+            {'id': 'row_id', 'name': 'Row Number'},
+            {'id': 'int', 'name': 'int'},
+            {'id': 'price', 'name': 'price'},
+            {'id': 'issn', 'name': 'issn'},
+        ] == warnings['headers']
 
-#     assert [
-#             {
-#                 'int': {'value': '6', 'error': None},
-#                 'row_id': {'value': 3, 'error': None},
-#                 'issn': {'value': '1749-8155', 'error': None},
-#                 'price': {
-#                     'value': 'a few bucks',
-#                     'error': {
-#                         'message': 'Unrecognized USD format.',
-#                         'label': 'bad_usd_price'
-#                     }
-#                 }
-#             },
-#             {
-#                 'int': {'value': '7', 'error': None},
-#                 'row_id': {'value': 4, 'error': None},
-#                 'issn': {
-#                     'value': '',
-#                     'error': {
-#                         'message': 'No ISSN here.',
-#                         'label': 'no_issn'
-#                     }
-#                 },
-#                 'price': {'value': '555', 'error': None}
-#             },
-#             {
-#                 'int': {'value': '8', 'error': None},
-#                 'row_id': {'value': 5, 'error': None},
-#                 'issn': {
-#                     'value': 'FS66-6666',
-#                     'error': {
-#                         'message': 'ISSN represents a bundle of journals, not a single journal.',
-#                         'label': 'bundle_issn'
-#                     }
-#                 },
-#                 'price': {'value': '500', 'error': None}
-#             }
-#         ] == warnings['rows']
+    assert [
+            {
+                'int': {'value': '6', 'error': None},
+                'row_id': {'value': 3, 'error': None},
+                'issn': {'value': '1749-8155', 'error': None},
+                'price': {
+                    'value': 'a few bucks',
+                    'error': {
+                        'message': 'Unrecognized USD format.',
+                        'label': 'bad_usd_price'
+                    }
+                }
+            },
+            {
+                'int': {'value': '7', 'error': None},
+                'row_id': {'value': 4, 'error': None},
+                'issn': {
+                    'value': '',
+                    'error': {
+                        'message': 'No ISSN here.',
+                        'label': 'no_issn'
+                    }
+                },
+                'price': {'value': '555', 'error': None}
+            },
+            {
+                'int': {'value': '8', 'error': None},
+                'row_id': {'value': 5, 'error': None},
+                'issn': {
+                    'value': 'FS66-6666',
+                    'error': {
+                        'message': 'ISSN represents a bundle of journals, not a single journal.',
+                        'label': 'bundle_issn'
+                    }
+                },
+                'price': {'value': '500', 'error': None}
+            }
+        ] == warnings['rows']
 
 def test_excluded_name_snippet():
     class PickyInputFormat(TestInputFormat):
@@ -300,13 +299,13 @@ def test_issn_columns():
 
     rows, warnings = MultipleIssnFormat().normalize_rows(file_name=test_file)
 
-    # FIXME: not passing
-    # assert [
-    #     {'integer': 1, 'issn': '0010-9355'},
-    #     {'integer': 2, 'issn': '2311-5459'},
-    #     {'integer': 3, 'issn': '0009-2363'},
-    #     {'integer': 4, 'issn': '1935-1194'},
-    # ] == rows
+    assert [
+        {'integer': 1, 'issn': '0010-9355'},
+        {'integer': 2, 'issn': '2311-5459'},
+        {'integer': 3, 'issn': '0009-2363'},
+        {'integer': 4, 'issn': '1935-1194'},
+        {'integer': 7, 'issn': '1111-1111'},
+    ] == rows
 
     assert [
             {'id': 'row_id', 'name': 'Row Number'},
@@ -315,62 +314,43 @@ def test_issn_columns():
             {'id': 'secondary_issn', 'name': 'Secondary'},
         ] == warnings['headers']
 
-    # FIXME: not passing
-    # assert [
-    # {
-    #     'integer': {'value': '5', 'error': None},
-    #     'row_id': {'value': 6, 'error': None},
-    #     'primary_issn': {
-    #         'value': '',
-    #         'error': {
-    #             'message': 'No ISSN here.',
-    #             'label': 'no_issn'
-    #         }
-    #     },
-    #     'secondary_issn': {
-    #         'value': 'xxxx-xxxx',
-    #         'error': {
-    #             'message': "This doesn't look like an ISSN.",
-    #             'label': 'bad_issn'
-    #         }
-    #     },
-    # },
-    # {
-    #     'integer': {'value': '6', 'error': None},
-    #     'row_id': {'value': 7, 'error': None},
-    #     'primary_issn': {
-    #         'value': '',
-    #         'error': {
-    #             'message': 'No ISSN here.',
-    #             'label': 'no_issn'
-    #         }
-    #     },
-    #     'secondary_issn': {
-    #         'value': '',
-    #         'error': {
-    #             'message': 'No ISSN here.',
-    #             'label': 'no_issn'
-    #         }
-    #     },
-    # },
-    # {
-    #     'integer': {'value': '7', 'error': None},
-    #     'row_id': {'value': 8, 'error': None},
-    #     'primary_issn': {
-    #         'value': 'FS00-0000',
-    #         'error': {
-    #             'message': 'ISSN represents a bundle of journals, not a single journal.',
-    #             'label': 'bundle_issn'
-    #         }
-    #     },
-    #     'secondary_issn': {
-    #         'value': '1111-1111',
-    #         'error': {
-    #             'message': "This looks like an ISSN, but it isn't one we recognize.",
-    #             'label': 'unknown_issn'
-    #         }
-    #     },
-    # },] == warnings['rows']
+    assert [
+    {
+        'integer': {'value': '5', 'error': None},
+        'row_id': {'value': 6, 'error': None},
+        'primary_issn': {
+            'value': '',
+            'error': {
+                'message': 'No ISSN here.',
+                'label': 'no_issn'
+            }
+        },
+        'secondary_issn': {
+            'value': 'xxxx-xxxx',
+            'error': {
+                'message': "This doesn't look like an ISSN.",
+                'label': 'bad_issn'
+            }
+        },
+    },
+    {
+        'integer': {'value': '6', 'error': None},
+        'row_id': {'value': 7, 'error': None},
+        'primary_issn': {
+            'value': '',
+            'error': {
+                'message': 'No ISSN here.',
+                'label': 'no_issn'
+            }
+        },
+        'secondary_issn': {
+            'value': '',
+            'error': {
+                'message': 'No ISSN here.',
+                'label': 'no_issn'
+            }
+        },
+    },] == warnings['rows']
 
 
 class TestInputFormat(PackageInput):
