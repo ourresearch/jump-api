@@ -37,7 +37,7 @@ def test_scenario_journals(fetch_jwt):
 # def test_scenario(fetch_jwt):
 #     pass
 
-# NOTE: from logs appears this route is never or rarely used
+# NOTE: from logs appears this route is never or rarely used, so doing minimal testing
 def test_scenario_details(fetch_jwt):
 	res = requests.get(
 		url_base + f"/scenario/{scenario_id}/details",
