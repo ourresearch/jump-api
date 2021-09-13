@@ -128,14 +128,14 @@ def normalize(text):
     response = remove_punctuation(response)
     response = re.sub(r"\b(a|an|the)\b", "", response)
     response = re.sub(r"\b(and)\b", "", response)
-    response = re.sub("\s+", "", response)
+    response = re.sub(r"\s+", "", response)
     return response
 
 def normalize_simple(text):
     response = text.lower()
     response = remove_punctuation(response)
     response = re.sub(r"\b(a|an|the)\b", "", response)
-    response = re.sub("\s+", "", response)
+    response = re.sub(r"\s+", "", response)
     return response
 
 def remove_everything_but_alphas(input_string):
@@ -249,7 +249,7 @@ def is_issn(text):
         return False
 
     # include X and F
-    p = re.compile("[\dxf]{4}-[\dxf]{4}")
+    p = re.compile(r"[\dxf]{4}-[\dxf]{4}")
     matches = re.findall(p, text.lower())
     if len(matches) > 0:
         return True
@@ -261,14 +261,14 @@ def is_doi_url(url):
         return False
 
     # test urls at https://regex101.com/r/yX5cK0/2
-    p = re.compile("https?:\/\/(?:dx.)?doi.org\/(.*)")
+    p = re.compile(r"https?:\/\/(?:dx.)?doi.org\/(.*)")
     matches = re.findall(p, url.lower())
     if len(matches) > 0:
         return True
     return False
 
 def is_ip(ip):
-    if re.match("^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip):
+    if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", ip):
         return True
     return False
 
