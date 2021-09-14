@@ -1,5 +1,7 @@
 import pytest
 import requests
+from io import StringIO
+import pandas as pd
 from marshmallow import Schema, fields, ValidationError 
 from .helpers.http import url_base, skip_if_down, fetch_jwt
 from .helpers.schemas import ScenarioMetaSchema, ScenarioSavedSchema, ScenarioDetailsJournalsSchema
@@ -60,8 +62,59 @@ def test_scenario_details(fetch_jwt):
 		ScenarioDetailsSchema().load({"meta": 5})
 		ScenarioDetailsSchema().load({"_stuff": 5})
 
-def test_scenario_subscriptions(fetch_jwt):
-	pass
+# FIXME: this route depends on current state, so need to do account for that somehow
+#   If run without doing so, it ends up inserting a `null` into scenario_json field 
+#   in jump_scenario_details_paid table
+# def test_scenario_subscriptions(fetch_jwt):
+# 	res = requests.post(
+# 		url_base + f"/scenario/{scenario_id}/subscriptions",
+# 		headers={"Authorization": "Bearer " + fetch_jwt},
+# 	)
+# 	data = res.json()
+# 	assert res.status_code == 200
+# 	assert isinstance(data, dict)
+# 	assert list(data.keys()) == ['status','_timing',]
+# 	assert data['status'] == 'success'
+# 	assert any(['post_subscription_guts' in x for x in data['_timing']])
 
 def test_scenario_export(fetch_jwt):
-	pass
+	res = requests.get(
+		url_base + f"/scenario/{scenario_id}/export",
+		headers={"Authorization": "Bearer " + fetch_jwt},
+	)
+	data = res.text
+	assert res.status_code == 200
+	assert 'text/text' in res.headers['Content-Type']
+	assert isinstance(data, str)
+
+	f = StringIO(data)
+	x = pd.read_csv(f)
+	assert isinstance(x, pd.core.frame.DataFrame)
+	assert isinstance(x.iloc[0], pd.core.series.Series)
+
+def test_scenario_export_csv(fetch_jwt):
+	res = requests.get(
+		url_base + f"/scenario/{scenario_id}/export.csv",
+		headers={"Authorization": "Bearer " + fetch_jwt},
+	)
+	data = res.text
+	assert res.status_code == 200
+	assert 'text/csv' in res.headers['Content-Type']
+	assert isinstance(data, str)
+
+	f = StringIO(data)
+	x = pd.read_csv(f)
+	assert isinstance(x, pd.core.frame.DataFrame)
+	assert isinstance(x.iloc[0], pd.core.series.Series)
+
+# FIXME: appears to not be used at all, skipping tests
+# def test_scenario_summary(fetch_jwt):
+#     pass
+
+def test_scenario_member_institutions(fetch_jwt):
+    # scenario id that's not part of a consortium
+    with pytest.raises(ValidationError) as err:
+        InstitutionSchema().load({"id": 5})
+        assert "Not a valid string" in str(err.value)
+    
+    # scenario id that is part of a consortium
