@@ -7,9 +7,17 @@ from app import s3_client
 # filenames = [key["Key"] for key in s3_client.list_objects(Bucket="unsub-jisc")["Contents"]]
 # filenames.reverse()
 
-filenames = ["smu_SD_tr_j2_2020-01_2020-12.json",
-             "smu_SD_tr_j3_2020-01_2020-12.json",
-             "smu_SD_tr_j4_2020-01_2020-12.json"]
+
+filenames = ["nr1_SD_tr_j2_2020-01_2020-12.json",
+             "nr1_SD_tr_j3_2020-01_2020-12.json",
+             "nr1_SD_tr_j4_2020-01_2020-12.json",
+             "nr2_SD_tr_j2_2020-01_2020-12.json",
+             "nr2_SD_tr_j3_2020-01_2020-12.json",
+             "nr2_SD_tr_j4_2020-01_2020-12.json",
+             "nr3_SD_tr_j2_2020-01_2020-12.json",
+             "nr3_SD_tr_j3_2020-01_2020-12.json",
+             "nr3_SD_tr_j4_2020-01_2020-12.json"]
+
 
 print filenames
 print len(filenames)
@@ -31,7 +39,7 @@ for filename in filenames:
     report_items = contents_json.get("Report_Items", [])
     print report_type, institution_name, len(report_items)
 
-    input_dict["package_id"] = u"package-solojiscels{}".format(filename[0:3])
+    input_dict["package_id"] = u"package-jiscels{}".format(filename[0:3])
     input_dict["report_year"] = 2020
     input_dict["report_version"] = "5"
     if "tr_j2" in filename:
@@ -80,15 +88,10 @@ for filename in filenames:
                 insert into jump_counter_input (issn, total, package_id, report_year, report_name, report_version, metric_type, yop, access_type) 
                 values {}
             """.format(input_strings)
+
         # print command
         cursor.execute(command)
         print "db insert done"
-
-with get_db_cursor() as cursor:
-    command = """delete from jump_counter where package_id ilike 'package-solojiscels%'"""
-    cursor.execute(command)
-    command = """insert into jump_counter (select * from jump_counter_view where package_id ilike 'package-solojiscels%')""".format(input_dict["package_id"])
-    cursor.execute(command)
 
 
 
