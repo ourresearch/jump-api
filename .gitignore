@@ -92,3 +92,10 @@ README_cache
 
 # raw doaj files (added by heather)
 data/doaj_20*.csv
+
+# local testing files/dirs (added by scott)
+email-testing-data.py
+test_old_ones
+
+# generated if app run locallly (added by scott)
+export.csv
