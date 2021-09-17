@@ -267,7 +267,7 @@ if __name__ == "__main__":
     parsed_args = parser.parse_args()
     parsed_vars = vars(parsed_args)
 
-    from init_n8_subscriptions import ncl_subs, cam_subs, she_subs, ucl_subs, lee_subs, dur_subs, icl_subs
+    from init_n8_subscriptions import ncl_subs, cam_subs, she_subs, ucl_subs, lee_subs, dur_subs, icl_subs, abd_subs, ews_subs, edi_subs, sti_subs, gla_subs
     group_jusp_data = OrderedDict()
     group_jusp_data["lan"] = {"institution_id": "institution-4QK9FfFudHii", "orig_scenario_id": "5QiKNg5m"} #lancaster
     group_jusp_data["liv"] = {"institution_id": "institution-D9TtsdbRs6du", "orig_scenario_id": "eAj75CHL"} #liverpool
@@ -283,11 +283,11 @@ if __name__ == "__main__":
     group_jusp_data["oxf"] = {"institution_id": "institution-jiscoxf"} #oxford
     group_jusp_data["icl"] = {"institution_id": "institution-jiscicl", "subrs": icl_subs} #oxford
 
-    group_jusp_data["abd"] = {"institution_id": "institution-cH6ZGAAtwkyy", "orig_scenario_id": "RWWimCyz"} #Aberdeen
-    group_jusp_data["ews"] = {"institution_id": "institution-jiscews"} #St Andrews
-    group_jusp_data["edi"] = {"institution_id": "institution-jiscedi"} #Edinburgh
-    group_jusp_data["sti"] = {"institution_id": "institution-jiscsti"} #Stirling
-    group_jusp_data["gla"] = {"institution_id": "institution-jiscgla"} #Glasgow
+    group_jusp_data["abd"] = {"institution_id": "institution-cH6ZGAAtwkyy", "subrs": abd_subs} #Aberdeen
+    group_jusp_data["ews"] = {"institution_id": "institution-jiscews", "subrs": ews_subs} #St Andrews
+    group_jusp_data["edi"] = {"institution_id": "institution-jiscedi", "subrs": edi_subs} #Edinburgh
+    group_jusp_data["sti"] = {"institution_id": "institution-jiscsti", "subrs": sti_subs} #Stirling
+    group_jusp_data["gla"] = {"institution_id": "institution-jiscgla", "subrs": gla_subs} #Glasgow
 
 
     groups = {}
@@ -297,10 +297,10 @@ if __name__ == "__main__":
 
     institution_id = "institution-Tfi2z4svqqkU"
 
+
     if True:
         for group_name, group_jusp_id_list in list(groups.items()):
             pass
-
 
             for jusp_id in group_jusp_id_list:
                 print((jusp_id, group_name, group_jusp_id_list))
@@ -311,7 +311,7 @@ if __name__ == "__main__":
             #
             #     package_create(jusp_id, institution_id, get_group_pta_name(group_name))
             #
-                update_group_pta(jusp_id, group_jusp_id_list, get_group_pta_name(group_name))
+            #     update_group_pta(jusp_id, group_jusp_id_list, get_group_pta_name(group_name))
 
 
             for jusp_id in group_jusp_id_list:
@@ -347,17 +347,16 @@ if __name__ == "__main__":
 
 
     print("gathering results")
-    for group_name, group_jusp_id_list in list(groups.items()):
-        print(group_name)
-        print("\n")
 
-        results = []
-        for jusp_id in group_jusp_id_list:
-            results.append(N8UniResult(jusp_id, get_group_pta_name(group_name)).to_list())
+    # just pint out "n8+ now
+    group_name = "n8+scurl"
+    group_jusp_id_list = groups[group_name]
 
-        for result_number in range(0, len(results[0])):
-            print((";".join([str(results[column_number][result_number]) for column_number in range(0, len(results))])))
+    results = []
+    for jusp_id in group_jusp_id_list:
+        results.append(N8UniResult(jusp_id, get_group_pta_name(group_name)).to_list())
 
-        print("\n\n\n")
+    for result_number in range(0, len(results[0])):
+        print(";".join([str(results[column_number][result_number]) for column_number in range(0, len(results))]))
 
-
+    print("\n\n\n")
