@@ -6,7 +6,7 @@ Frontend is at https://github.com/ourresearch/get-unsub
 
 Live production at https://unsub.org
 
-See [jump-api-mapping.md][] for a high level overview of what all the files are
+See [the mapping file](jump-api-mapping.md) for a high level overview of what all the files are
 
 
 ## Unsub and Open Source
