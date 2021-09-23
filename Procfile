@@ -1,9 +1,4 @@
-# see https://elements.heroku.com/buildpacks/jessefulton/buildpack-procfile-select
-# can be chosen by setting:
-# heroku config:set PROCFILE=Procfile.dev
-# ---> has just one web worker to help with profiling
-
-web: PRELOAD_LARGE_TABLES=True gunicorn -w 1 views:app --reload
+web: PRELOAD_LARGE_TABLES=True NEW_RELIC_CONFIG_FILE=newrelic.ini newrelic-admin run-program gunicorn -w 4 views:app --reload
 parse_uploads: python parse_uploads.py
 consortium_calculate: python consortium_calculate.py
 warm_cache: python warm_cache.py
