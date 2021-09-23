@@ -223,47 +223,40 @@ class Scenario(object):
     def subscribed_custom(self):
         return [j for j in self.journals_sorted_cpu if j.subscribed_custom]
 
+    def fuzzed_lookup(self, var):
+        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [getattr(j, var) for j in self.journals]})
+        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
+        if (len(df) == 1):
+            return dict(list(zip(df["issn_l"], "-")))
+        return dict(list(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"]))))
+
     @cached_property
     def cost_subscription_fuzzed_lookup(self):
-        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.subscription_cost for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
-        return dict(list(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"]))))
+        return self.fuzzed_lookup('subscription_cost')
 
     @cached_property
     def cost_subscription_minus_ill_fuzzed_lookup(self):
-        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.cost_subscription_minus_ill for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
-        return dict(list(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"]))))
+        return self.fuzzed_lookup('cost_subscription_minus_ill')
 
     @cached_property
     def num_citations_fuzzed_lookup(self):
-        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.num_citations for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
-        return dict(list(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"]))))
+        return self.fuzzed_lookup('num_citations')
 
     @cached_property
     def num_authorships_fuzzed_lookup(self):
-        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.num_authorships for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
-        return dict(list(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"]))))
+        return self.fuzzed_lookup('num_authorships')
 
     @cached_property
     def use_total_fuzzed_lookup(self):
-        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.use_total for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
-        return dict(list(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"]))))
+        return self.fuzzed_lookup('use_total')
 
     @cached_property
     def downloads_fuzzed_lookup(self):
-        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.downloads_total for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
-        return dict(list(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"]))))
+        return self.fuzzed_lookup('downloads_total')
 
     @cached_property
     def cpu_fuzzed_lookup(self):
-        df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.cpu for j in self.journals]})
-        df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
-        return dict(list(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"]))))
+        return self.fuzzed_lookup('cpu')
 
     @cached_property
     def cpu_rank_lookup(self):
