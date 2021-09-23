@@ -93,6 +93,10 @@ README_cache
 # raw doaj files (added by heather)
 data/doaj_20*.csv
 
+# docker files (added by Scott)
+Dockerfile
+docker-compose.yml
+
 # local testing files/dirs (added by scott)
 email-testing-data.py
 test_old_ones

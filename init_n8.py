@@ -101,7 +101,7 @@ def copy_into_n8_package(old_package_id, new_package_id, copy_counter=True, copy
            where package_id = '{old_package_id}'
         );""".format(new_package_id=new_package_id, old_package_id=old_package_id)
 
-    print command
+    print(command)
     with get_db_cursor() as cursor:
         cursor.execute(command)
 
@@ -109,18 +109,18 @@ def copy_into_n8_package(old_package_id, new_package_id, copy_counter=True, copy
 
 def package_create(jusp_id, institution_id, package_type):
 
-    jisc_package_id = u"package-solojiscels{}".format(jusp_id)
-    package_id = u"package-n8els_{}_{}".format(jusp_id, package_type.replace(" ", ""))
-    package_name = u"Elsevier n8 ({})".format(package_type)
-    scenario_id = u"scenario-n8els_{}_{}".format(jusp_id, package_type.replace(" ", ""))
-    scenario_name = u"n8 ({})".format(package_type)
+    jisc_package_id = "package-solojiscels{}".format(jusp_id)
+    package_id = "package-n8els_{}_{}".format(jusp_id, package_type.replace(" ", ""))
+    package_name = "Elsevier n8 ({})".format(package_type)
+    scenario_id = "scenario-n8els_{}_{}".format(jusp_id, package_type.replace(" ", ""))
+    scenario_name = "n8 ({})".format(package_type)
 
     big_deal_cost = get_sql_answer(db, "select big_deal_cost from jump_account_package where package_id = '{}';".format(jisc_package_id))
 
     my_package = Package.query.get(package_id)
 
     if not my_package:
-        print u"package {} doesn't exist, making".format(package_id)
+        print(("package {} doesn't exist, making".format(package_id)))
         my_package = Package(
             package_id=package_id,
             publisher="Elsevier",
@@ -133,7 +133,7 @@ def package_create(jusp_id, institution_id, package_type):
             big_deal_cost_increase=2.0
         )
         db.session.add(my_package)
-        print my_package
+        print(my_package)
         safe_commit(db)
 
         if package_type == "own pta":
@@ -143,14 +143,14 @@ def package_create(jusp_id, institution_id, package_type):
 
     my_scenario = SavedScenario.query.get(scenario_id)
     if not my_scenario:
-        print u"scenario {} doesn't exist, making".format(scenario_id)
+        print(("scenario {} doesn't exist, making".format(scenario_id)))
         my_scenario = SavedScenario(False, scenario_id, None)
         my_scenario.package_id = package_id
         my_scenario.created = datetime.datetime.utcnow().isoformat()
         db.session.add(my_scenario)
         safe_commit(db)
 
-        print u"updating scenario {}".format(scenario_id)
+        print(("updating scenario {}".format(scenario_id)))
 
         dict_to_save = my_scenario.to_dict_saved_from_db()
         dict_to_save["name"] = scenario_name
@@ -161,11 +161,11 @@ def package_create(jusp_id, institution_id, package_type):
 
 
 def update_group_pta(jusp_id, group_jusp_ids, package_type):
-    print u"in update_group_pta with {} {}".format(jusp_id, group_name)
+    print(("in update_group_pta with {} {}".format(jusp_id, group_name)))
 
-    package_id = u"package-n8els_{}_{}".format(jusp_id, package_type.replace(" ", ""))
-    jisc_package_ids = [u"package-solojiscels{}".format(b) for b in group_jusp_ids]
-    jisc_package_ids_string = ", ".join([u"'{}'".format(a) for a in jisc_package_ids])
+    package_id = "package-n8els_{}_{}".format(jusp_id, package_type.replace(" ", ""))
+    jisc_package_ids = ["package-solojiscels{}".format(b) for b in group_jusp_ids]
+    jisc_package_ids_string = ", ".join(["'{}'".format(a) for a in jisc_package_ids])
 
     command = """        
         delete from jump_perpetual_access where package_id = '{package_id}';
@@ -190,14 +190,14 @@ def update_group_pta(jusp_id, group_jusp_ids, package_type):
             group by issn_l
         );""".format(package_id=package_id, jisc_package_ids_string=jisc_package_ids_string)
 
-    print command
+    print(command)
     with get_db_cursor() as cursor:
         cursor.execute(command)
 
 
 
 def set_lowest_cpu_subscriptions(jusp_id, package_type, big_deal_cost_proportion=0.5):
-    scenario_id = u"scenario-n8els_{}_{}".format(jusp_id, package_type.replace(" ", ""))
+    scenario_id = "scenario-n8els_{}_{}".format(jusp_id, package_type.replace(" ", ""))
 
     my_scenario = SavedScenario.query.get(scenario_id)
     my_scenario.set_live_scenario()
@@ -205,7 +205,7 @@ def set_lowest_cpu_subscriptions(jusp_id, package_type, big_deal_cost_proportion
     big_deal_cost = float(my_scenario.package.big_deal_cost)
     subscriptions = []
     cost_so_far = 0
-    print "max cost {}".format(big_deal_cost_proportion * big_deal_cost)
+    print(("max cost {}".format(big_deal_cost_proportion * big_deal_cost)))
     for my_journal in my_scenario.live_scenario.journals_sorted_cpu:
         cost_so_far += my_journal.subscription_cost
         # print "cost so far {}".format(cost_so_far)
@@ -213,13 +213,13 @@ def set_lowest_cpu_subscriptions(jusp_id, package_type, big_deal_cost_proportion
             subscriptions += [my_journal]
         else:
             break
-    print "got it with {} journals".format(len(subscriptions))
+    print(("got it with {} journals".format(len(subscriptions))))
     dict_to_save["subrs"] = [j.issn_l for j in subscriptions]
     save_raw_scenario_to_db(scenario_id, dict_to_save, None)
 
 
 def copy_subscriptions(jusp_id, subscriptions, package_type):
-    scenario_id = u"scenario-n8els_{}_{}".format(jusp_id, package_type.replace(" ", ""))
+    scenario_id = "scenario-n8els_{}_{}".format(jusp_id, package_type.replace(" ", ""))
 
     my_scenario = SavedScenario.query.get(scenario_id)
     dict_to_save = my_scenario.to_dict_saved_from_db()
@@ -228,18 +228,18 @@ def copy_subscriptions(jusp_id, subscriptions, package_type):
 
 
 def set_non_own_subscriptions(main_jusp_id, group_jusp_ids, package_type):
-    main_scenario_id = u"scenario-n8els_{}_ownpta".format(main_jusp_id)
+    main_scenario_id = "scenario-n8els_{}_ownpta".format(main_jusp_id)
     (updated, main_scenario_dict) = get_latest_scenario_raw(main_scenario_id)
     main_subscriptions = main_scenario_dict["subrs"]
 
     all_subscriptions = []
 
     for jusp_id in group_jusp_ids:
-        scenario_id = u"scenario-n8els_{}_ownpta".format(jusp_id)
+        scenario_id = "scenario-n8els_{}_ownpta".format(jusp_id)
         (updated, my_source_scenario_dict) = get_latest_scenario_raw(scenario_id)
-        print "subscriptions: ", jusp_id, len(my_source_scenario_dict["subrs"])
+        print(("subscriptions: ", jusp_id, len(my_source_scenario_dict["subrs"])))
         all_subscriptions += my_source_scenario_dict["subrs"]
-        print "len all_subscriptions: ", len(list(set(all_subscriptions)))
+        print(("len all_subscriptions: ", len(list(set(all_subscriptions)))))
 
     all_subscriptions = [sub for sub in all_subscriptions if sub not in main_subscriptions]
     all_subscriptions_dedup = list(set(all_subscriptions))
@@ -299,11 +299,11 @@ if __name__ == "__main__":
 
 
     if True:
-        for group_name, group_jusp_id_list in groups.iteritems():
+        for group_name, group_jusp_id_list in list(groups.items()):
             pass
 
             for jusp_id in group_jusp_id_list:
-                print jusp_id, group_name, group_jusp_id_list
+                print((jusp_id, group_name, group_jusp_id_list))
             #
             #
             #     package_create(jusp_id, institution_id, "own pta")
@@ -315,30 +315,30 @@ if __name__ == "__main__":
 
 
             for jusp_id in group_jusp_id_list:
-                print "setting subscriptions for ", jusp_id, group_name
+                print(("setting subscriptions for ", jusp_id, group_name))
                 data = group_jusp_data[jusp_id]
                 if "orig_scenario_id" in data:
-                    print "getting subscriptions from unsub scenario for ", jusp_id, group_name
+                    print(("getting subscriptions from unsub scenario for ", jusp_id, group_name))
                     (updated, my_source_scenario_dict) = get_latest_scenario_raw(data["orig_scenario_id"])
                     subscriptions = my_source_scenario_dict["subrs"]
                     copy_subscriptions(jusp_id, subscriptions, "own pta")
                 elif "subrs" in data:
-                    print "getting subscriptions from python file for ", jusp_id, group_name
+                    print(("getting subscriptions from python file for ", jusp_id, group_name))
                     subscriptions = get_issnls(data.get("subrs", None))
                     # print jusp_id, len(subscriptions), len(data["subrs"])
                     copy_subscriptions(jusp_id, subscriptions, "own pta")
                 else:
-                    print "calculating best subscriptions for ", jusp_id, group_name
+                    print(("calculating best subscriptions for ", jusp_id, group_name))
                     set_lowest_cpu_subscriptions(jusp_id, "own pta", 0.5)
 
-            print "calculating best subscriptions for ", "liv", "own pta"
+            print(("calculating best subscriptions for ", "liv", "own pta"))
             set_lowest_cpu_subscriptions("liv", "own pta", 0.425)  # set to make instant be 60%
 
             # don't let it cache
             db.session.expire_all()
 
             for jusp_id in group_jusp_id_list:
-                print "setting group subscriptions for ", jusp_id, group_name
+                print(("setting group subscriptions for ", jusp_id, group_name))
                 data = group_jusp_data[jusp_id]
                 set_non_own_subscriptions(jusp_id, group_jusp_id_list, get_group_pta_name(group_name))
 
@@ -346,7 +346,7 @@ if __name__ == "__main__":
     db.session.expire_all()
 
 
-    print "gathering results"
+    print("gathering results")
 
     # just pint out "n8+ now
     group_name = "n8+scurl"
@@ -357,8 +357,6 @@ if __name__ == "__main__":
         results.append(N8UniResult(jusp_id, get_group_pta_name(group_name)).to_list())
 
     for result_number in range(0, len(results[0])):
-        print ";".join([str(results[column_number][result_number]) for column_number in range(0, len(results))])
+        print(";".join([str(results[column_number][result_number]) for column_number in range(0, len(results))]))
 
-    print "\n\n\n"
-
-
+    print("\n\n\n")

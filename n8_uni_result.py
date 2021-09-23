@@ -10,12 +10,12 @@ class N8UniResult(object):
 
     def __init__(self, jusp_id, group_pta_name):
         self.jusp_id = jusp_id
-        self.scenario_id_ownpta = u"scenario-n8els_{}_ownpta".format(jusp_id)
+        self.scenario_id_ownpta = "scenario-n8els_{}_ownpta".format(jusp_id)
         self.saved_scenario_ownpta = SavedScenario.query.get(self.scenario_id_ownpta)
         self.saved_scenario_ownpta.set_live_scenario()  # in case not done
 
         group_pta_name = group_pta_name.replace(" ", "")
-        self.scenario_id_grouppta = u"scenario-n8els_{}_{}".format(jusp_id, group_pta_name)
+        self.scenario_id_grouppta = "scenario-n8els_{}_{}".format(jusp_id, group_pta_name)
         self.saved_scenario_grouppta = SavedScenario.query.get(self.scenario_id_grouppta)
         self.saved_scenario_grouppta.set_live_scenario()  # in case not done
 
@@ -36,7 +36,7 @@ class N8UniResult(object):
         response += [self.usage()]
         response += [self.subscription_cost()]
         response += [self.big_deal_cost()]
-        print response
+        print(response)
         return response
 
     def num_own_subscriptions(self):

@@ -28,7 +28,7 @@ class JournalsDBRaw(db.Model):
     open_access = db.Column(db.Text)
 
     def __repr__(self):
-        return u"<{} ({}) '{}' {}>".format(self.__class__.__name__, self.issn_l, self.title, self.publisher)
+        return "<{} ({}) '{}' {}>".format(self.__class__.__name__, self.issn_l, self.title, self.publisher)
 
 
 class JournalMetadata(db.Model):
@@ -65,11 +65,11 @@ class JournalMetadata(db.Model):
 
     @cached_property
     def display_issns(self):
-        return u",".join(self.issns)
+        return ",".join(self.issns)
 
     @cached_property
     def display_issn_l(self):
-        return u"issn:{}".format(self.issn_l)
+        return "issn:{}".format(self.issn_l)
 
     @cached_property
     def is_hybrid(self):
@@ -90,7 +90,7 @@ class JournalMetadata(db.Model):
         return self.publisher
 
     def get_insert_values(self):
-        response = u"""(
+        response = """(
                     '{created}', 
                     '{issn_l}', 
                     '{issns_string}', 
@@ -215,17 +215,17 @@ class JournalMetadata(db.Model):
         return response
 
     def __repr__(self):
-        return u"<{} ({}) '{}' {}>".format(self.__class__.__name__, self.issn_l, self.title, self.publisher)
+        return "<{} ({}) '{}' {}>".format(self.__class__.__name__, self.issn_l, self.title, self.publisher)
 
 
 
 def recompute_journal_metadata():
     journals_raw = JournalsDBRaw.query.all()
-    print len(journals_raw)
+    print(len(journals_raw))
 
     new_computed_journals = []
 
-    print "making backups and getting tables ready to run"
+    print("making backups and getting tables ready to run")
     with get_db_cursor() as cursor:
         cursor.execute("drop table journalsdb_raw_bak_yesterday;")
         cursor.execute("drop table journalsdb_computed_bak_yesterday;")
@@ -237,39 +237,39 @@ def recompute_journal_metadata():
         # don't truncate raw!  is populated by xplenty.
         # further more truncate hangs, so do truncation this way instead
         cursor.execute("delete from journalsdb_computed;")
-    print "tables ready for insertion"
+    print("tables ready for insertion")
 
     for journal_raw in journals_raw:
         new_journal_metadata = JournalMetadata(journal_raw)
         new_computed_journals.append(new_journal_metadata)
 
-    print "starting commits"
+    print("starting commits")
     start_time = time()
     insert_values_list = [j.get_insert_values() for j in new_computed_journals]
-    command_start = u"""INSERT INTO journalsdb_computed ({}) VALUES """.format(
+    command_start = """INSERT INTO journalsdb_computed ({}) VALUES """.format(
         ",".join(JournalMetadata.get_insert_column_names()))
 
     with get_db_cursor() as cursor:
         i = 0
         for short_values_list in chunks(insert_values_list, 1000):
-            values_list_string = u",".join(short_values_list)
-            q = u"{} {};".format(command_start, values_list_string)
+            values_list_string = ",".join(short_values_list)
+            q = "{} {};".format(command_start, values_list_string)
             cursor.execute(q)
             i += 1
-            print i
-    print u"done committing journals, took {} seconds total".format(elapsed(start_time))
-    print u"now refreshing flat view"
+            print(i)
+    print("done committing journals, took {} seconds total".format(elapsed(start_time)))
+    print("now refreshing flat view")
 
     with get_db_cursor() as cursor:
         cursor.execute("refresh materialized view journalsdb_computed_flat;")
         cursor.execute("analyze journalsdb_computed;")
 
-    print u"done writing to db, took {} seconds total".format(elapsed(start_time))
+    print("done writing to db, took {} seconds total".format(elapsed(start_time)))
 
 class MissingJournalMetadata(object):
     def __init__(self, issn_l):
         self.issn_l = issn_l
-        print u"in MissingJournalMetadata missing journal {} from journalsdb:  https://api.journalsdb.org/journals/{}".format(issn_l, issn_l)
+        print("in MissingJournalMetadata missing journal {} from journalsdb:  https://api.journalsdb.org/journals/{}".format(issn_l, issn_l))
         # r = requests.post("https://api.journalsdb.org/missing_journal", json={"issn": issn_l})
         # if r.status_code == 200:
         #     print u"Error: in MissingJournalMetadata Response posting about missing journal {}: previously reported missing".format(issn_l)
@@ -281,7 +281,7 @@ class MissingJournalMetadata(object):
 
     @cached_property
     def display_issn_l(self):
-        return u"issn:{}".format(self.issn_l)
+        return "issn:{}".format(self.issn_l)
 
     @cached_property
     def issns(self):
@@ -293,15 +293,15 @@ class MissingJournalMetadata(object):
 
     @cached_property
     def display_issns(self):
-        return u",".join(self.issns)
+        return ",".join(self.issns)
 
     @cached_property
     def title(self):
-        return u"Unrecognized Journal"
+        return "Unrecognized Journal"
 
     @cached_property
     def publisher(self):
-        return u"Unrecognized Journal"
+        return "Unrecognized Journal"
 
     def get_apc_price(self, currency):
         return None
@@ -336,7 +336,7 @@ def get_journal_metadata_for_publisher(publisher):
     global all_journal_metadata
 
     response = {}
-    for issn_l, journal_metadata in all_journal_metadata.iteritems():
+    for issn_l, journal_metadata in all_journal_metadata.items():
         if journal_metadata.publisher == publisher_normalized:
             response[issn_l] = journal_metadata
     return response
@@ -344,24 +344,24 @@ def get_journal_metadata_for_publisher(publisher):
 def get_journal_metadata_for_publisher_currently_subscription(publisher):
     my_journals = get_journal_metadata_for_publisher(publisher)
     response = {}
-    for issn_l, journal_metadata in my_journals.iteritems():
+    for issn_l, journal_metadata in my_journals.items():
         if journal_metadata.is_current_subscription_journal:
             response[issn_l] = journal_metadata
     return response
 
 
-print u"loading all journal metadata...",
+print("loading all journal metadata...", end=' ')
 start_time = time()
 all_journal_metadata_list = JournalMetadata.query.all()
 [db.session.expunge(my_journal_metadata) for my_journal_metadata in all_journal_metadata_list]
-all_journal_metadata = dict(zip([journal_object.issn_l for journal_object in all_journal_metadata_list], all_journal_metadata_list))
+all_journal_metadata = dict(list(zip([journal_object.issn_l for journal_object in all_journal_metadata_list], all_journal_metadata_list)))
 all_journal_metadata_flat = {}
-for issn_l, journal_metadata in all_journal_metadata.iteritems():
+for issn_l, journal_metadata in all_journal_metadata.items():
     for issn in journal_metadata.issns:
         all_journal_metadata_flat[issn] = journal_metadata
 
 
-print u"loaded all journal metadata in {} seconds.".format(elapsed(start_time))
+print("loaded all journal metadata in {} seconds.".format(elapsed(start_time)))
 
 # python journalsdb.py --recompute
 # heroku run --size=performance-l python journalsdb.py --recompute -r heroku

@@ -72,24 +72,24 @@ class JournalPriceInput(db.Model, PackageInput):
         return {
             "issn": {
                 "normalize": self.normalize_issn,
-                "name_snippets": [u"issn"],
+                "name_snippets": ["issn"],
                 "required": True,
                 "warn_if_blank": True,
             },
             "price": {
                 "normalize": self.normalize_price,
-                "name_snippets": [u"price", u"usd", u"cost"],
+                "name_snippets": ["price", "usd", "cost"],
                 "warn_if_blank": True,
             },
             "year": {
                 "normalize": self.normalize_year,
-                "name_snippets": [u"year"],
+                "name_snippets": ["year"],
                 "required": False,
             }
         }
 
     def file_type_label(self):
-        return u"price"
+        return "price"
 
     def clear_caches(self, my_package):
         super(JournalPriceInput, self).clear_caches(my_package)

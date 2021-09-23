@@ -8,7 +8,7 @@ from collections import OrderedDict
 import pandas as pd
 
 class ApcJournal(object):
-    years = range(0, 5)
+    years = list(range(0, 5))
 
     def __init__(self, issn_l, apc_data, df_dict, currency):
         self.issn_l = issn_l
@@ -114,7 +114,7 @@ class ApcJournal(object):
 
     @cached_property
     def historical_years_by_year(self):
-        return range(2014, 2019)
+        return list(range(2014, 2019))
 
     def to_dict(self):
         response = OrderedDict()
@@ -137,6 +137,6 @@ class ApcJournal(object):
         return response
 
     def __repr__(self):
-        return u"<{} ({}) {}>".format(self.__class__.__name__, self.issn_l, self.title)
+        return "<{} ({}) {}>".format(self.__class__.__name__, self.issn_l, self.title)
 
 

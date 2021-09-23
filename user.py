@@ -23,7 +23,7 @@ class User(db.Model):
     email = db.Column(db.Text, unique=True)
 
     def __init__(self, **kwargs):
-        self.id = u'user-{}'.format(shortuuid.uuid()[0:12])
+        self.id = 'user-{}'.format(shortuuid.uuid()[0:12])
         self.created = datetime.datetime.utcnow().isoformat()
         super(User, self).__init__(**kwargs)
 
@@ -34,7 +34,7 @@ class User(db.Model):
             'email': self.email,
             'username': self.username,
             'is_demo': self.is_demo_user,
-            'is_password_set': not check_password_hash(self.password_hash, u''),
+            'is_password_set': not check_password_hash(self.password_hash, ''),
             'user_permissions': self.permissions_list(),
             'institutions': self.permissions_list(is_consortium=False),
             'consortia': self.permissions_list(is_consortium=True)
@@ -43,8 +43,8 @@ class User(db.Model):
     def permissions_list(self, is_consortium=None):
         dicts = self.to_dict_permissions()
         permission_dicts = sorted(
-                dicts.values(),
-                key=lambda x: (x['is_demo_institution'], unidecode(unicode(x['institution_name'] or ''))))
+                list(dicts.values()),
+                key=lambda x: (x['is_demo_institution'], unidecode(str(x['institution_name'] or ''))))
         if is_consortium is not None:
             permission_dicts = [d for d in permission_dicts if d["is_consortium"]==is_consortium]
         return permission_dicts
@@ -74,9 +74,9 @@ class User(db.Model):
         return permission.name in self.to_dict_permissions().get(institution_id, {}).get('permissions', [])
 
     def __repr__(self):
-        return u"<{} ({}) {}, {}>".format(self.__class__.__name__, self.id, self.email, self.display_name)
+        return "<{} ({}) {}, {}>".format(self.__class__.__name__, self.id, self.email, self.display_name)
 
 
 def default_password():
     chars = string.ascii_letters + string.digits
-    return u''.join([secrets.choice(chars) for x in range(16)])
+    return ''.join([secrets.choice(chars) for x in range(16)])

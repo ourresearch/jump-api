@@ -26,7 +26,7 @@ class Permission(db.Model):
         return Permission.get('admin')
 
     def __repr__(self):
-        return u"<{} ({}) {}>".format(self.__class__.__name__, self.id, self.name)
+        return "<{} ({}) {}>".format(self.__class__.__name__, self.id, self.name)
 
 
 class UserInstitutionPermission(db.Model):
@@ -40,4 +40,4 @@ class UserInstitutionPermission(db.Model):
     permission = relationship(Permission, lazy='subquery')
 
     def __repr__(self):
-        return u'<{} ({}, {}) {}>'.format(self.__class__.__name__, self.user, self.institution, self.permission.name)
+        return '<{} ({}, {}) {}>'.format(self.__class__.__name__, self.user, self.institution, self.permission.name)

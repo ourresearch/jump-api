@@ -30,10 +30,10 @@ def display_cpu(value):
     if value and str(value).lower() != "nan":
         return value
     else:
-        return u"-"
+        return "-"
 
 class Journal(object):
-    years = range(0, 5)
+    years = list(range(0, 5))
 
     def __init__(self, issn_l, scenario=None, scenario_data=None, package_id=None):
         self.set_scenario(scenario)
@@ -107,7 +107,7 @@ class Journal(object):
         # return float(self.my_scenario_data_row.get("price", 0)) * (1 + self.settings.cost_content_fee_percent/float(100))
         my_lookup = self._scenario_data["prices"]
         if my_lookup.get(self.issn_l, None) is None:
-            print u"no price for {}".format(self.issn_l)
+            print("no price for {}".format(self.issn_l))
             return None
         # print "my price", self.issn_l, float(my_lookup.get(self.issn_l)) * (1 + self.settings.cost_content_fee_percent/float(100))
         return float(my_lookup.get(self.issn_l)) * (1 + self.settings.cost_content_fee_percent/float(100))
@@ -127,7 +127,7 @@ class Journal(object):
             # print "key error in num_citations_historical_by_year for {}".format(self.issn_l)
             return [0 for year in self.years]
         # the year is a string key alas
-        if my_dict and isinstance(my_dict.keys()[0], int):
+        if my_dict and isinstance(list(my_dict.keys())[0], int):
             return [my_dict.get(year, 0) for year in self.historical_years_by_year]
         else:
             return [my_dict.get(str(year), 0) for year in self.historical_years_by_year]
@@ -145,7 +145,7 @@ class Journal(object):
             return [0 for year in self.years]
 
         # the year is a string key alas
-        if my_dict and isinstance(my_dict.keys()[0], int):
+        if my_dict and isinstance(list(my_dict.keys())[0], int):
             return [my_dict.get(year, 0) for year in self.historical_years_by_year]
         else:
             return [my_dict.get(str(year), 0) for year in self.historical_years_by_year]
@@ -193,7 +193,7 @@ class Journal(object):
     @cached_property
     def historical_years_by_year(self):
         # used for citation, authorship lookup
-        return range(2015, 2019+1)
+        return list(range(2015, 2019+1))
 
     @cached_property
     def cost_actual_by_year(self):
@@ -394,7 +394,7 @@ class Journal(object):
 
     @cached_property
     def year_by_perpetual_access_years(self):
-        return range(min(self.historical_years_by_year)-5, max(self.historical_years_by_year)+1)
+        return list(range(min(self.historical_years_by_year)-5, max(self.historical_years_by_year)+1))
 
     @cached_property
     def perpetual_access_years(self):
@@ -740,7 +740,7 @@ class Journal(object):
     @cached_property
     def downloads_scaled_by_counter_by_year(self):
         # TODO is flat right now
-        downloads_total_before_counter_correction_by_year = [max(1.0, self.my_scenario_data_row.get("downloads_total", 0.0)) for year in self.years]
+        downloads_total_before_counter_correction_by_year = [max(1.0, self.my_scenario_data_row.get("downloads_total", 0.0) or 0.0) for year in self.years]
         downloads_total_before_counter_correction_by_year = [val if val else 0.0 for val in downloads_total_before_counter_correction_by_year]
         downloads_total_scaled_by_counter = [num * self.downloads_counter_multiplier for num in downloads_total_before_counter_correction_by_year]
         return downloads_total_scaled_by_counter
@@ -1104,12 +1104,12 @@ class Journal(object):
             # yeah this is ugly depends on whether cached or not yuck
             from app import USE_PAPER_GROWTH
             if USE_PAPER_GROWTH:
-                if isinstance(my_raw_numbers.keys()[0], int):
+                if isinstance(list(my_raw_numbers.keys())[0], int):
                     response = [my_raw_numbers.get(year, 0) for year in self.historical_years_by_year]
                 else:
                     response = [my_raw_numbers.get(str(year), 0) for year in self.historical_years_by_year]
             else:
-                if isinstance(my_raw_numbers.keys()[0], int):
+                if isinstance(list(my_raw_numbers.keys())[0], int):
                     response = [my_raw_numbers.get(year-1, 0) for year in self.historical_years_by_year]
                 else:
                     response = [my_raw_numbers.get(str(year-1), 0) for year in self.historical_years_by_year]
@@ -1170,7 +1170,7 @@ class Journal(object):
 
         my_dict = defaultdict(dict)
 
-        key = u"{}_{}".format(submitted, bronze)
+        key = "{}_{}".format(submitted, bronze)
         my_rows = self._scenario_data["oa"][key].get(self.issn_l, [])
         my_recent_rows = self._scenario_data["oa_recent"][key].get(self.issn_l, [])
 
@@ -1729,7 +1729,7 @@ class Journal(object):
 
 
     def __repr__(self):
-        return u"<{} ({}) {}>".format(self.__class__.__name__, self.issn_l, self.title)
+        return "<{} ({}) {}>".format(self.__class__.__name__, self.issn_l, self.title)
 
 
 

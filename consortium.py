@@ -31,7 +31,7 @@ from app import memorycache
 def get_latest_member_institutions_raw(scenario_id):
     scenario_members = []
     with get_db_cursor() as cursor:
-        command = u"""select scenario_members from jump_consortium_member_institutions where scenario_id='{}' order by updated desc limit 1;""".format(
+        command = """select scenario_members from jump_consortium_member_institutions where scenario_id='{}' order by updated desc limit 1;""".format(
             scenario_id
         )
         # print command
@@ -174,7 +174,7 @@ class Consortium(object):
 
         (updated, response) = get_latest_scenario_raw(self.scenario_id)
         if not response:
-            print u"Error: Couldn't find a saved set of parameter settings"
+            print("Error: Couldn't find a saved set of parameter settings")
             return None
 
         response["configs"]["cost_bigdeal"] = self.big_deal_cost_for_included_members
@@ -217,7 +217,7 @@ class Consortium(object):
             my_journals = self.journals
             my_journals.sort(key=lambda k: for_sorting(k.cpu), reverse=False)
         except KeyError as e:
-            print u"error", e
+            print("error", e)
         return my_journals
 
     @cached_property
@@ -296,7 +296,7 @@ class Consortium(object):
 
     def copy_computed_journal_dicts(self, new_scenario_id):
         values_column_names = """member_package_id, scenario_id, updated, issn_l, usage, cpu, package_id, consortium_name, institution_name, institution_short_name, institution_id, subject, era_subjects, is_society_journal, subscription_cost, ill_cost, use_instant_for_debugging, use_social_networks, use_oa, use_backfile, use_subscription, use_other_delayed, use_ill, perpetual_access_years, baseline_access, use_social_networks_percent, use_green_percent, use_hybrid_percent, use_bronze_percent, use_peer_reviewed_percent, bronze_oa_embargo_months, is_hybrid_2019, downloads, citations, authorships"""
-        values_column_names_with_sub = values_column_names.replace("scenario_id", u"'{}'".format(self.scenario_id))
+        values_column_names_with_sub = values_column_names.replace("scenario_id", "'{}'".format(self.scenario_id))
 
         q = """
                 insert into jump_scenario_computed 
@@ -310,13 +310,13 @@ class Consortium(object):
                        values_column_names=values_column_names,
                        values_column_names_with_sub=values_column_names_with_sub)
         with get_db_cursor() as cursor:
-            print q
+            print(q)
             cursor.execute(q)
 
 
     @cached_property
     def all_member_package_ids(self):
-        q = u"select member_package_id from jump_consortium_members where consortium_package_id='{}'".format(self.package_id)
+        q = "select member_package_id from jump_consortium_members where consortium_package_id='{}'".format(self.package_id)
         with get_db_cursor() as cursor:
             cursor.execute(q)
             rows = cursor.fetchall()
@@ -331,11 +331,11 @@ class Consortium(object):
 
     def queue_for_recompute(self, email):
         num_member_institutions = len(self.all_member_package_ids)
-        command = u"""insert into jump_scenario_computed_update_queue (
+        command = """insert into jump_scenario_computed_update_queue (
             consortium_name, consortium_short_name, package_name, institution_id, package_id, scenario_id, email, num_member_institutions, created, completed) 
             values ('{}', '{}', '{}', '{}', '{}', '{}', '{}', {}, sysdate, null)""".format(
             self.consortium_name, self.consortium_short_name, self.publisher, self.institution_id, self.package_id, self.scenario_id, email, num_member_institutions)
-        print "command queue_for_recompute\n", command
+        print("command queue_for_recompute\n", command)
         with get_db_cursor() as cursor:
             cursor.execute(command)
 
@@ -343,9 +343,9 @@ class Consortium(object):
     def recompute_journal_dicts(self):
 
         # delete everything with this scenario_id first
-        q = u"delete from jump_scenario_computed where scenario_id='{}'".format(self.scenario_id)
+        q = "delete from jump_scenario_computed where scenario_id='{}'".format(self.scenario_id)
         with get_db_cursor() as cursor:
-            print q
+            print(q)
             cursor.execute(q)
 
         from scenario import Scenario
@@ -354,42 +354,42 @@ class Consortium(object):
             threading.current_thread()._children = weakref.WeakKeyDictionary()
         my_thread_pool = ThreadPool(1)
 
-        print "starting threads"
+        print("starting threads")
 
         def get_insert_rows_for_member(member_package_id):
             command_list = []
-            print "in get_insert_rows_for_member with", member_package_id, self.scenario_id
+            print("in get_insert_rows_for_member with", member_package_id, self.scenario_id)
             try:
                 with app.app_context():
-                    print "len(app.my_memorycache_dict)", len(app.my_memorycache_dict)
+                    print("len(app.my_memorycache_dict)", len(app.my_memorycache_dict))
 
                     my_live_scenario = Scenario(member_package_id, self.scenario_saved_dict, my_jwt=None)
                     command_list = [my_journal.to_values_journals_for_consortium() for my_journal in my_live_scenario.journals]
 
                     # save all of these in the db
-                    print "now writing to db", member_package_id, self.scenario_id
+                    print("now writing to db", member_package_id, self.scenario_id)
 
                     start_time = time()
 
                     values_column_names = """member_package_id, scenario_id, updated, issn_l, usage, cpu, package_id, consortium_name, institution_name, institution_short_name, institution_id, subject, era_subjects, is_society_journal, subscription_cost, ill_cost, use_instant_for_debugging, use_social_networks, use_oa, use_backfile, use_subscription, use_other_delayed, use_ill, perpetual_access_years, baseline_access, use_social_networks_percent, use_green_percent, use_hybrid_percent, use_bronze_percent, use_peer_reviewed_percent, bronze_oa_embargo_months, is_hybrid_2019, downloads, citations, authorships"""
 
-                    command_start = u"""INSERT INTO jump_scenario_computed 
+                    command_start = """INSERT INTO jump_scenario_computed 
                         ({values_column_names}) 
                         values """.format(values_column_names=values_column_names)
                     with get_db_cursor() as cursor:
                         for short_command_list in chunks(command_list, 1000):
-                            command_list_string = u",".join(short_command_list)
+                            command_list_string = ",".join(short_command_list)
                             command_list_string = command_list_string.replace("{package_id}", self.package_id)
                             command_list_string = command_list_string.replace("{scenario_id}", self.scenario_id)
                             command_list_string = command_list_string.replace("{consortium_name}", self.consortium_name)
-                            q = u"{} {};".format(command_start, command_list_string)
+                            q = "{} {};".format(command_start, command_list_string)
                             cursor.execute(q)
-                            print ".",
-                    print(elapsed(start_time))
-                    print "done writing to db", member_package_id, self.scenario_id
+                            print(".", end=' ')
+                    print((elapsed(start_time)))
+                    print("done writing to db", member_package_id, self.scenario_id)
 
             except Exception as e:
-                print u"In get_insert_rows_for_member with Error: ", e
+                print("In get_insert_rows_for_member with Error: ", e)
                 raise
             return command_list
 
@@ -397,12 +397,12 @@ class Consortium(object):
         my_thread_pool.close()
         my_thread_pool.join()
         my_thread_pool.terminate()
-        print "done with threads"
+        print("done with threads")
 
         # clear cache
-        print "clearing cache"
+        print("clearing cache")
         reset_cache("consortium", "consortium_get_computed_data", self.scenario_id)
-        print "cache clear set"
+        print("cache clear set")
 
     def to_dict_journal_zoom(self, issn_l):
         start_time = time()
@@ -461,7 +461,7 @@ class Consortium(object):
             journal_list = sorted(journal_list, key=lambda x: float('inf') if x.cpu==None else x.cpu, reverse=False)
         except KeyError as e:
             # happens when I change keys, before reset in consortium
-            print u"KeyError in journal_list", e
+            print("KeyError in journal_list", e)
             pass
 
         for rank, my_journal in enumerate(journal_list):
@@ -527,5 +527,5 @@ class Consortium(object):
 
 
     def __repr__(self):
-        return u"<{} ({})>".format(self.__class__.__name__, self.package_id)
+        return "<{} ({})>".format(self.__class__.__name__, self.package_id)
 

@@ -35,7 +35,7 @@ from journal import Journal
 
 
 class ConsortiumJournal(Journal):
-    years = range(0, 5)
+    years = list(range(0, 5))
 
     def __init__(self, issn_l, included_package_ids, all_member_data, is_jisc):
         start_time = time()
@@ -56,7 +56,7 @@ class ConsortiumJournal(Journal):
     @cached_property
     def historical_years_by_year(self):
         # used for citation, authorship lookup
-        return range(2015, 2019+1)
+        return list(range(2015, 2019+1))
 
     def sum_attribute(self, attribute_name, nesting_key=None):
         response = 0

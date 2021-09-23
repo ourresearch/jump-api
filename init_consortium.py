@@ -28,7 +28,7 @@ institution_ids = """
 
 ror_ids = """
         """.split()
-ror_ids_string = u",".join(["'{}'".format(ror_id) for ror_id in ror_ids])
+ror_ids_string = ",".join(["'{}'".format(ror_id) for ror_id in ror_ids])
 
 # member_package_ids = """
 # package-2gFXGTxiHdg3y
@@ -40,7 +40,7 @@ ror_ids_string = u",".join(["'{}'".format(ror_id) for ror_id in ror_ids])
 # package-2D9eQK57aKVET
 # package-2Ye75MtF7KDom
 # """.split()
-# member_package_id_string = u",".join(["'{}'".format(package_id) for package_id in member_package_ids])
+# member_package_id_string = ",".join(["'{}'".format(package_id) for package_id in member_package_ids])
 
 def copy_package(old_package_id, new_package_id, new_institution_id):
     command = """
@@ -99,7 +99,7 @@ def copy_package(old_package_id, new_package_id, new_institution_id):
             where package_id = '{old_package_id}'
         );
     """.format(new_package_id=new_package_id, old_package_id=old_package_id, new_institution_id=new_institution_id)
-    print command
+    print(command)
     with get_db_cursor() as cursor:
         cursor.execute(command)
 
@@ -123,7 +123,7 @@ def copy_institution(old_institution_id, new_institution_id, publisher=None, old
             where institution_id = '{old_institution_id}'
         );
     """.format(old_institution_id=old_institution_id, new_institution_id=new_institution_id)
-    print command
+    print(command)
     with get_db_cursor() as cursor:
         cursor.execute(command)
 
@@ -134,7 +134,7 @@ def copy_institution(old_institution_id, new_institution_id, publisher=None, old
             where institution_id = '{old_institution_id}'
             and publisher='{}' and not is_deleted
             """.format(publisher=publisher, old_institution_id=old_institution_id)
-        print command
+        print(command)
         with get_db_cursor() as cursor:
             cursor.execute(command)
             rows = cursor.fetchall()
@@ -143,7 +143,7 @@ def copy_institution(old_institution_id, new_institution_id, publisher=None, old
     # copy them
     for old_package_id in old_package_ids:
         new_package_id = old_package_id.replace("package-", "package-testing")
-        print new_package_id
+        print(new_package_id)
         copy_package(old_package_id, new_package_id, new_institution_id)
 
 
@@ -153,7 +153,7 @@ def consortium_package_create(consortium_institution_id, consortium_package_disp
     # my_scenario_id = "scenario-QC2kbHfUhj9W"
 
     # create a package for this
-    consortium_package_id = u'package-{}'.format(shortuuid.uuid()[0:12])
+    consortium_package_id = 'package-{}'.format(shortuuid.uuid()[0:12])
     my_package = Package(
         package_id=consortium_package_id,
         publisher=publisher,
@@ -168,8 +168,8 @@ def consortium_package_create(consortium_institution_id, consortium_package_disp
     db.session.add(my_package)
     db.session.flush()
 
-    my_scenario_id = u'scenario-{}'.format(shortuuid.uuid()[0:12])
-    my_scenario_name = u'First Scenario'
+    my_scenario_id = 'scenario-{}'.format(shortuuid.uuid()[0:12])
+    my_scenario_name = 'First Scenario'
     my_scenario = SavedScenario(False, my_scenario_id, None)
     my_scenario.package_id = my_package.package_id
     my_scenario.created = datetime.datetime.utcnow().isoformat()
@@ -177,7 +177,7 @@ def consortium_package_create(consortium_institution_id, consortium_package_disp
 
     db.session.add(my_scenario)
     safe_commit(db)
-    print u"made consortium package {} and scenario {}".format(my_package, my_scenario)
+    print(("made consortium package {} and scenario {}".format(my_package, my_scenario)))
 
     dict_to_save = my_scenario.to_dict_saved_from_db()
     dict_to_save["name"] = my_scenario_name
@@ -266,11 +266,11 @@ if __name__ == "__main__":
 
 
     # now kick off the computing
-    print "recomputing"
+    print("recomputing")
     new_consortia = Consortium(consortium_scenario_id)
     new_consortia.recompute_journal_dicts()
 
-    print "done"
+    print("done")
 
 
 # heroku run --size=performance-l python init_consortium.py

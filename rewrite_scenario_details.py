@@ -101,7 +101,7 @@ from util import elapsed
 start_time = time()
 from package import Package
 all_packages = Package.query.all()
-print u"got all packages in {} seconds".format(elapsed(start_time))
+print("got all packages in {} seconds".format(elapsed(start_time)))
 package_ids_to_change = []
 for my_package in all_packages:
 
@@ -126,7 +126,7 @@ for my_package in all_packages:
                 data += [new_data]
     if data:
         data = sorted(data, key=lambda x: x["updated"], reverse=True)
-        print data
+        print(data)
         command = ""
         if my_package.big_deal_cost == None:
             package_ids_to_change += [my_package.package_id]
@@ -137,12 +137,12 @@ for my_package in all_packages:
 
         if command:
             with get_db_cursor() as cursor:
-                print command
+                print(command)
                 cursor.execute(command)
 
-        print my_package
-        print "deduplicated: {}".format(len(list(set(package_ids_to_change))))
-        print
+        print(my_package)
+        print("deduplicated: {}".format(len(list(set(package_ids_to_change)))))
+        print()
 
 
     #

@@ -11,7 +11,7 @@ import hashlib
 import pickle
 import random
 import warnings
-import urlparse
+import urllib.parse
 from time import time
 import numpy
 from random import shuffle
@@ -34,7 +34,7 @@ from sqlalchemy import exc
 from sqlalchemy import event
 from sqlalchemy.pool import NullPool
 from sqlalchemy.pool import Pool
-import bmemcached
+# import bmemcached # Scott: AFAICT this package isn't used anywhere
 
 from util import safe_commit
 from util import elapsed
@@ -95,7 +95,7 @@ for a_library in libraries_to_mum_error:
     the_logger.propagate = True
     warnings.filterwarnings("ignore", category=UserWarning, module=a_library)
 
-for name in logging.Logger.manager.loggerDict.keys():
+for name in list(logging.Logger.manager.loggerDict.keys()):
     if ('boto' in name) or ('urllib3' in name) or ('s3transfer' in name) or ('boto3' in name) or ('botocore' in name):
         logging.getLogger(name).setLevel(logging.ERROR)
 
@@ -163,7 +163,7 @@ compress_json = os.getenv("COMPRESS_DEBUG", "True")=="True"
 
 # set up Flask-DebugToolbar
 if (os.getenv("FLASK_DEBUG", False) == "True"):
-    logger.info(u"Setting app.debug=True; Flask-DebugToolbar will display")
+    logger.info("Setting app.debug=True; Flask-DebugToolbar will display")
     compress_json = False
     app.debug = True
     app.config['DEBUG'] = True
@@ -177,7 +177,7 @@ Compress(app)
 app.config["COMPRESS_DEBUG"] = compress_json
 
 
-redshift_url = urlparse.urlparse(os.getenv("DATABASE_URL_REDSHIFT"))
+redshift_url = urllib.parse.urlparse(os.getenv("DATABASE_URL_REDSHIFT"))
 app.config['postgreSQL_pool'] = ThreadedConnectionPool(2, 200,
                                   database=redshift_url.path[1:],
                                   user=redshift_url.username,
@@ -221,7 +221,7 @@ def get_db_cursor(commit=False, use_realdictcursor=False, use_defaultcursor=Fals
               if commit:
                   connection.commit()
         except Exception as e:
-            print u"Error: error in get_db_cursor: {} {}, rolling back".format(e, e.message)
+            print("Error: error in get_db_cursor: {} {}, rolling back".format(e, e.message))
             try:
                 connection.rollback()
             except:
@@ -239,7 +239,7 @@ def get_db_cursor(commit=False, use_realdictcursor=False, use_defaultcursor=Fals
 ## my_memcached.flush_all()
 
 s3_client = boto3.client("s3")
-print "made s3_client"
+print("made s3_client")
 
 use_groups_lookup = OrderedDict()
 use_groups_lookup["oa_plus_social_networks"] = {"display": "OA", "free_instant": True}
@@ -249,8 +249,8 @@ use_groups_lookup["subscription"] = {"display": "Subscription", "free_instant": 
 use_groups_lookup["ill"] = {"display": "ILL", "free_instant": False}
 use_groups_lookup["other_delayed"] = {"display": "Other", "free_instant": False}
 use_groups_lookup["total"] = {"display": "*Total*", "free_instant": False}
-use_groups = use_groups_lookup.keys()
-use_groups_free_instant = [k for k, v in use_groups_lookup.iteritems() if v["free_instant"]]
+use_groups = list(use_groups_lookup.keys())
+use_groups_free_instant = [k for k, v in use_groups_lookup.items() if v["free_instant"]]
 
 suny_consortium_package_ids = ["P2NFgz7B", "PN3juRC5", "2k4Qs74v", "uwdhDaJ2"]
 
@@ -281,10 +281,10 @@ def memorycache(func):
             # print "cache hit on", cache_key
             return result
 
-        print "cache miss on", cache_key
+        print("cache miss on", cache_key)
 
         # Generate output
-        print u"> calling {}.{} with {}".format(func.__module__, func.__name__, args)
+        print("> calling {}.{} with {}".format(func.__module__, func.__name__, args))
         result = func(*args)
 
         # Cache output if allowed
@@ -301,9 +301,9 @@ def memorycache(func):
 def reset_cache(module_name, function_name, *args):
     # global my_memorycache_dict
 
-    print "args", args
+    print("args", args)
     cache_key = build_cache_key(module_name, function_name, *args)
-    print "cache_key", cache_key
+    print("cache_key", cache_key)
 
     if cache_key in app.my_memorycache_dict:
         del app.my_memorycache_dict[cache_key]
@@ -319,7 +319,7 @@ cached_consortium_scenario_ids = ["tGUVWRiN", "scenario-QC2kbHfUhj9W", "EcUvEELe
 
 
 def warm_cache():
-    print u"warming cache"
+    print("warming cache")
 
     start_time = time()
 
@@ -346,11 +346,11 @@ def warm_cache():
     scenario.get_common_package_data_for_all()
     # scenario.get_common_package_data_specific(DEMO_PACKAGE_ID)
 
-    print u"done warming the cache in {}s".format(elapsed(start_time))
+    print("done warming the cache in {}s".format(elapsed(start_time)))
 
 
 if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
-    print u"warming caches"
+    print("warming caches")
     start_time = time()
 
     import threading
@@ -359,15 +359,15 @@ if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
     t = threading.Thread(target=warm_cache)
     t.daemon = True  # so it doesn't block
     t.start()
-    print u"done start warm_cache"
+    print("done start warm_cache")
 
     # from views import start_cache_thread
     # start_cache_thread()
     # print u"done start_cache_thread"
 
-    print u"done loading to cache in {}s".format(elapsed(start_time))
+    print("done loading to cache in {}s".format(elapsed(start_time)))
 else:
-    print u"not warming caches"
+    print("not warming caches")
 
 #
 # print "clearing cache"

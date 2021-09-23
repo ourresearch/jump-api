@@ -19,14 +19,14 @@ filenames = ["nr1_SD_tr_j2_2020-01_2020-12.json",
              "nr3_SD_tr_j4_2020-01_2020-12.json"]
 
 
-print filenames
-print len(filenames)
+print(filenames)
+print((len(filenames)))
 
 for filename in filenames:
     input_string_list = []
     input_dict = {}
 
-    print filename
+    print(filename)
 
     s3_clientobj = s3_client.get_object(Bucket="unsub-jisc", Key=filename)
     contents_string = s3_clientobj["Body"].read().decode("utf-8")
@@ -37,9 +37,9 @@ for filename in filenames:
     institution_name = contents_json["Report_Header"]["Institution_Name"]
 
     report_items = contents_json.get("Report_Items", [])
-    print report_type, institution_name, len(report_items)
+    print((report_type, institution_name, len(report_items)))
 
-    input_dict["package_id"] = u"package-jiscels{}".format(filename[0:3])
+    input_dict["package_id"] = "package-solojiscels{}".format(filename[0:3])
     input_dict["report_year"] = 2020
     input_dict["report_version"] = "5"
     if "tr_j2" in filename:
@@ -78,12 +78,12 @@ for filename in filenames:
                 '{access_type}' ) """.format(**input_dict)  # must be in same order as "insert into jump_counter_input" below
         input_string_list += [input_string]
 
-    input_strings = u",".join(input_string_list)
+    input_strings = ",".join(input_string_list)
     input_strings = input_strings.replace("'None'", "null")
     input_strings = input_strings.replace("None", "null")
 
     with get_db_cursor() as cursor:
-        print "starting db insert"
+        print("starting db insert")
         command = """
                 insert into jump_counter_input (issn, total, package_id, report_year, report_name, report_version, metric_type, yop, access_type) 
                 values {}
@@ -91,7 +91,7 @@ for filename in filenames:
 
         # print command
         cursor.execute(command)
-        print "db insert done"
+        print("db insert done")
 
 
 

@@ -15,7 +15,7 @@ from random import random
 from time import sleep
 import bz2
 import pickle
-import cPickle
+import pickle
 import gc
 import simplejson as json
 
@@ -55,15 +55,15 @@ def get_fresh_journal_list(scenario, my_jwt):
     my_package = Package.query.filter(Package.package_id == scenario.package_id).scalar()
 
     journals_to_exclude = ["0370-2693"]
-    issn_ls = scenario.data["unpaywall_downloads_dict"].keys()
+    issn_ls = list(scenario.data["unpaywall_downloads_dict"].keys())
     issnls_to_build = [issn_l for issn_l in issn_ls if issn_l not in journals_to_exclude]
 
     # only include things in the counter file
     if my_package.is_demo:
-        issnls_to_build = [issn_l for issn_l in issnls_to_build if issn_l in scenario.data[DEMO_PACKAGE_ID]["counter_dict"].keys()]
+        issnls_to_build = [issn_l for issn_l in issnls_to_build if issn_l in list(scenario.data[DEMO_PACKAGE_ID]["counter_dict"].keys())]
         package_id = DEMO_PACKAGE_ID
     else:
-        issnls_to_build = [issn_l for issn_l in issnls_to_build if issn_l in scenario.data[scenario.package_id]["counter_dict"].keys()]
+        issnls_to_build = [issn_l for issn_l in issnls_to_build if issn_l in list(scenario.data[scenario.package_id]["counter_dict"].keys())]
         package_id = scenario.package_id
 
     journals = [Journal(issn_l, package_id=package_id) for issn_l in issnls_to_build if issn_l]
@@ -76,7 +76,7 @@ def get_fresh_journal_list(scenario, my_jwt):
 
 
 class Scenario(object):
-    years = range(0, 5)
+    years = list(range(0, 5))
     
     def log_timing(self, message):
         self.timing_messages.append("{: <30} {: >6}s".format(message, elapsed(self.section_time, 2)))
@@ -155,7 +155,7 @@ class Scenario(object):
 
         publisher_journals = get_journal_metadata_for_publisher_currently_subscription(self.publisher_name)
 
-        for my_issn_l, my_journal_metadata in publisher_journals.iteritems():
+        for my_issn_l, my_journal_metadata in publisher_journals.items():
             # print u"{} {}".format(my_issn_l, my_journal_metadata)
             prices_dict[my_issn_l] = prices_uploaded_raw.get(my_issn_l, None)
             if prices_dict[my_issn_l] == None:
@@ -163,14 +163,14 @@ class Scenario(object):
         self.data["prices"] = prices_dict
 
         clean_dict = {}
-        for issn_l, price_row in self.data["prices"].iteritems():
+        for issn_l, price_row in self.data["prices"].items():
             include_this_journal = True
 
             if self.data["prices"][issn_l] == None:
                 include_this_journal = False
 
             if "core_list" in self.data and self.data["core_list"]:
-                if issn_l not in self.data["core_list"].keys():
+                if issn_l not in list(self.data["core_list"].keys()):
                     include_this_journal = False
 
             if include_this_journal:
@@ -262,13 +262,13 @@ class Scenario(object):
     def cpu_rank_lookup(self):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.cpu for j in self.journals]})
         df["rank"] = df.lookup_value.rank(method='first', na_option="keep")
-        return dict(zip(df.issn_l, df["rank"]))
+        return dict(list(zip(df.issn_l, df["rank"])))
 
     @cached_property
     def old_school_cpu_rank_lookup(self):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [j.old_school_cpu for j in self.journals]})
         df["rank"] = df.lookup_value.rank(method='first', na_option="keep")
-        return dict(zip(df.issn_l, df["rank"]))
+        return dict(list(zip(df.issn_l, df["rank"])))
 
 
     @cached_property
@@ -447,7 +447,7 @@ class Scenario(object):
 
     @cached_property
     def historical_years_by_year(self):
-        return range(2014, 2019)
+        return list(range(2014, 2019))
 
     @cached_property
     def num_citations(self):
@@ -587,7 +587,7 @@ class Scenario(object):
         return response
 
     def __repr__(self):
-        return u"<{} (n={})>".format(self.__class__.__name__, len(self.journals))
+        return "<{} (n={})>".format(self.__class__.__name__, len(self.journals))
 
 
 @cache
@@ -721,7 +721,7 @@ def get_apc_data_from_db(input_package_id):
 
 def get_perpetual_access_from_cache(package_id, unused_publisher_name=None):
     command = text(
-        u'select * from jump_perpetual_access where package_id = :package_id'
+        'select * from jump_perpetual_access where package_id = :package_id'
     ).bindparams(package_id=package_id)
 
     rows = db.engine.execute(command).fetchall()
@@ -933,11 +933,11 @@ def compressed_json(title, data):
     # with bz2.BZ2File(title, "wb") as f:
     #     cPickle.dump(data, f)
 
-    print u"dumping"
+    print("dumping")
     output = open(title, 'wb')
     json.dump(data, output)
     output.close()
-    print u"done dumping"
+    print("done dumping")
 
     # json_zip.dump(data, title + ".json.lzma") # for a lzma file
 
@@ -981,7 +981,7 @@ def get_common_package_data_for_all():
         return (contents_json, my_timing)
 
     except Exception as e:
-        print u"no pickle data, so computing.  Error message: ", e
+        print("no pickle data, so computing.  Error message: ", e)
         pass
 
     my_data = {}
@@ -1019,8 +1019,8 @@ def get_common_package_data_for_all():
     # my_timing.log_timing("pickling")
 
     my_data["_timing_common"] = my_timing.to_dict()
-    print "my timing"
-    print my_timing.to_dict()
+    print("my timing")
+    print(my_timing.to_dict())
 
     return (my_data, my_timing)
 

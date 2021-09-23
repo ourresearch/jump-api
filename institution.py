@@ -103,9 +103,9 @@ class Institution(db.Model):
         ])
 
     def __init__(self, **kwargs):
-        self.id = u'institution-{}'.format(shortuuid.uuid()[0:12])
+        self.id = 'institution-{}'.format(shortuuid.uuid()[0:12])
         self.created = datetime.datetime.utcnow().isoformat()
         super(Institution, self).__init__(**kwargs)
 
     def __repr__(self):
-        return u"<{} ({}) {}>".format(self.__class__.__name__, self.id, self.display_name)
+        return "<{} ({}) {}>".format(self.__class__.__name__, self.id, self.display_name)

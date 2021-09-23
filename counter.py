@@ -56,9 +56,9 @@ class CounterInput(db.Model, PackageInput):
 
     def calculate_file_type_label(self, report_name):
         if not report_name or (report_name == "jr1"):
-            return u"counter"
+            return "counter"
         else:
-            return u"counter-{}".format(report_name.lower())
+            return "counter-{}".format(report_name.lower())
 
     def set_file_type_label(self, report_name):
         self.stored_file_type_label = self.calculate_file_type_label(report_name)
@@ -66,7 +66,7 @@ class CounterInput(db.Model, PackageInput):
     def file_type_label(self):
         if hasattr(self, "stored_file_type_label"):
             return self.stored_file_type_label
-        return u"counter"
+        return "counter"
 
     def import_view_name(self):
         return "jump_counter_view"
@@ -79,44 +79,44 @@ class CounterInput(db.Model, PackageInput):
         columns = {
             "print_issn": {
                 "normalize": self.normalize_issn,
-                "name_snippets": [u"print issn", u"print_issn", u"issn"],
-                "excluded_name_snippets": [u"online", u"e-", u"eissn"],
+                "name_snippets": ["print issn", "print_issn", "issn"],
+                "excluded_name_snippets": ["online", "e-", "eissn"],
                 "warn_if_blank": True,
             },
             "online_issn": {
                 "normalize": self.normalize_issn,
-                "name_snippets": [u"online issn", u"online_issn", u"eissn"],
+                "name_snippets": ["online issn", "online_issn", "eissn"],
                 "exact_name": True,
                 "required": False,
                 "warn_if_blank": True,
             },
             "total": {
                 "normalize": self.normalize_int,
-                "name_snippets": [u"total"],
+                "name_snippets": ["total"],
                 "warn_if_blank": True,
                 "required": True,
             },
             "journal_name": {
                 "normalize": self.strip_text,
-                "name_snippets": [u"title", u"journal", u"journal_name"],
+                "name_snippets": ["title", "journal", "journal_name"],
                 "exact_name": True,
                 "required": False,
             },
             "metric_type": {
                 "normalize": self.strip_text,
-                "name_snippets": [u"metric_type"],
+                "name_snippets": ["metric_type"],
                 "exact_name": True,
                 "required": False,
             },
             "yop": {
                 "normalize": self.normalize_int,
-                "name_snippets": [u"yop"],
+                "name_snippets": ["yop"],
                 "exact_name": True,
                 "required": False,
             },
             "access_type": {
                 "normalize": self.strip_text,
-                "name_snippets": [u"access_type"],
+                "name_snippets": ["access_type"],
                 "exact_name": True,
                 "required": False,
             },
@@ -133,8 +133,8 @@ class CounterInput(db.Model, PackageInput):
         return columns
 
     def ignore_row(self, row):
-        journal_name = (row.get("journal_name", u"") or u"").lower()
-        if (not journal_name or u"all journals" in journal_name) and row.get("print_issn", None) is None:
+        journal_name = (row.get("journal_name", "") or "").lower()
+        if (not journal_name or "all journals" in journal_name) and row.get("print_issn", None) is None:
             return True
 
         return False
@@ -169,9 +169,9 @@ class CounterInput(db.Model, PackageInput):
 
         assigned_label = None
 
-        normalized_header_text = u"".join([re.sub(ur"\s*", u"", u"".join(row)).lower() for row in header_rows])
+        normalized_header_text = "".join([re.sub(r"\s*", "", "".join(row)).lower() for row in header_rows])
         for label in version_labels:
-            normalized_label = re.sub(ur"\s*", "", label).lower()
+            normalized_label = re.sub(r"\s*", "", label).lower()
             if normalized_label in normalized_header_text:
                 assigned_label = label
 
@@ -187,11 +187,11 @@ class CounterInput(db.Model, PackageInput):
                 assigned_label = "TR_J3"
 
         if assigned_label:
-            print u"Recognized the file type as {}".format(version_labels[assigned_label])
+            print("Recognized the file type as {}".format(version_labels[assigned_label]))
             report_version = version_labels[assigned_label]["report_version"]
             report_name = version_labels[assigned_label]["report_name"]
         else:
-            print u"Warning: Didn't recognize the counter file type"
+            print("Warning: Didn't recognize the counter file type")
             report_version = "4"
             report_name = "jr1"
 
@@ -200,11 +200,11 @@ class CounterInput(db.Model, PackageInput):
         # Mar/18, 2017-12-01 00:00:00
         header_years = []
         for cell in header_rows[-1]:
-            matches = re.findall(ur"\b(\d{4})\b", cell)
+            matches = re.findall(r"\b(\d{4})\b", cell)
             if len(matches) == 1:
                 header_years.append(int(matches[0]))
             else:
-                matches = re.findall(ur"\b(\d{2})\b", cell)
+                matches = re.findall(r"\b(\d{2})\b", cell)
                 if len(matches) == 1:
                     header_years.append(2000 + int(matches[0]))
 
@@ -212,7 +212,7 @@ class CounterInput(db.Model, PackageInput):
         report_year = sorted(header_years)[len(header_years)/2] if header_years else None
 
         if report_year is None:
-            logger.warn(u"Couldn't guess a year from column headers: {}".format(header_rows[-1]))
+            logger.warn("Couldn't guess a year from column headers: {}".format(header_rows[-1]))
 
 
         for row in normalized_rows:
@@ -232,10 +232,10 @@ class CounterInput(db.Model, PackageInput):
         with get_db_cursor() as cursor:
             command = "update jump_raw_file_upload_object set to_delete_date=sysdate where package_id = '{}' and file = '{}'".format(
                 package_id, self.calculate_file_type_label(report_name))
-            print command
+            print(command)
             cursor.execute(command)
 
-        return u"Queued to delete"
+        return "Queued to delete"
 
 
     def delete(self, package_id, report_name=None):
@@ -276,6 +276,6 @@ class CounterInput(db.Model, PackageInput):
         if my_package:
             self.clear_caches(my_package)
 
-        message = u"Deleted {} rows for package {}.".format(self.__class__.__name__, package_id)
-        print message
+        message = "Deleted {} rows for package {}.".format(self.__class__.__name__, package_id)
+        print(message)
         return message
