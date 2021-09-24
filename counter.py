@@ -209,7 +209,7 @@ class CounterInput(db.Model, PackageInput):
                     header_years.append(2000 + int(matches[0]))
 
         # sort them and take the one in the middle to be the year
-        report_year = sorted(header_years)[len(header_years)/2] if header_years else None
+        report_year = sorted(header_years)[int(len(header_years)/2)] if header_years else None
 
         if report_year is None:
             logger.warn("Couldn't guess a year from column headers: {}".format(header_rows[-1]))
