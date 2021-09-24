@@ -12,7 +12,7 @@ import requests
 import babel.numbers
 import dateutil.parser
 import shortuuid
-import unicodecsv as csv
+import csv
 from enum import Enum
 from sqlalchemy.sql import text
 from kids.cache import cache
@@ -354,7 +354,7 @@ class PackageInput:
         # file_name = convert_to_utf_8(file_name)
         # logger.info("converted file: {}".format(file_name))
 
-        with open(file_name, "rb") as csv_file:
+        with open(file_name, "r", encoding="utf-8") as csv_file:
             # determine the csv format
             dialect_sample = ""
             for i in range(0, 20):
@@ -392,7 +392,7 @@ class PackageInput:
             #     chardet_result = chardet.detect(rawdata.read(1000000))
             # print chardet_result
 
-            for line in csv.reader(csv_file, dialect=dialect, encoding="ISO-8859-1", **reader_params):
+            for line in csv.reader(csv_file, dialect=dialect, **reader_params):
                 absolute_line_no += 1
                 if not any([cell.strip() for cell in line]):
                     continue
@@ -573,8 +573,8 @@ class PackageInput:
             sorted_fields = sorted(normalized_rows[0].keys())
             normalized_csv_filename = tempfile.mkstemp()[1]
             num_rows = 0
-            with open(normalized_csv_filename, "w") as normalized_csv_file:
-                writer = csv.DictWriter(normalized_csv_file, delimiter=",", encoding="utf-8", fieldnames=sorted_fields)
+            with open(normalized_csv_filename, "w", encoding="utf-8") as normalized_csv_file:
+                writer = csv.DictWriter(normalized_csv_file, delimiter=",", fieldnames=sorted_fields)
                 for row in normalized_rows:
                     num_rows += 1
                     writer.writerow(row)
