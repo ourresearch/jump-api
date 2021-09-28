@@ -432,7 +432,7 @@ def register_new_user():
             for permission_name in permission_request["permissions"]:
                 permissions_by_institution[permission_request["institution_id"]].add(permission_name)
         except KeyError as e:
-            return abort_json(400, "Missing key in user_permissions object: {}".format(e.message))
+            return abort_json(400, "Missing key in user_permissions object: {}".format(str(e)))
 
     safe_commit(db)
 

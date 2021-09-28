@@ -468,7 +468,7 @@ class PackageInput:
                                 normalized_row.setdefault(normalized_name, normalized_value)
                         except Exception as e:
                             cell_errors[normalized_name] = self.make_package_file_warning(
-                                ParseWarning.unknown, additional_msg="message: {}".format(e.message)
+                                ParseWarning.unknown, additional_msg="message: {}".format(str(e))
                             )
 
                 if self.ignore_row(normalized_row):
@@ -532,9 +532,9 @@ class PackageInput:
             self._copy_raw_to_s3(file_name, package_id, num_rows=None, error="error_reading_file")
             return {"success": False, "message": "error_reading_file", "warnings": []}
         except RuntimeError as e:
-            print("Runtime Error processing file {}".format(e.message))
-            self._copy_raw_to_s3(file_name, package_id, num_rows=None, error="parsing_error", error_details=e.message)
-            return {"success": False, "message": e.message, "warnings": []}
+            print("Runtime Error processing file {}".format(str(e)))
+            self._copy_raw_to_s3(file_name, package_id, num_rows=None, error="parsing_error", error_details=str(e))
+            return {"success": False, "message": str(e), "warnings": []}
 
         # save normalized rows
 
