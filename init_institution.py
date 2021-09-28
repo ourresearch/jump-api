@@ -268,24 +268,23 @@ if __name__ == "__main__":
             ---------------
 
             Notes:
-                - Python version: use python or python2, python3, etc. as needed
                 - heroku local:run required to make sure environment variables are loaded
 
             # Show this help
-            heroku local:run python2 init_institution.py -h
+            heroku local:run python init_institution.py -h
 
             # Associated a ROR ID with an institution ID, adding citations and authorships
             ## --commit isn't needed here because add_ror() does the commit internally
-            heroku local:run python2 init_institution.py --ror_id 0293rh119 --inst_id institution-tetA3UnAr3dV
+            heroku local:run python init_institution.py --ror_id 0293rh119 --inst_id institution-tetA3UnAr3dV
 
             # Requires editing init_institution.py and requires --commit to commit changes
             ## Add a new user
-            heroku local:run python2 init_institution.py --users --commit
+            heroku local:run python init_institution.py --users --commit
             ## Add a new user and institution
-            heroku local:run python2 init_institution.py --users --institutions --commit
+            heroku local:run python init_institution.py --users --institutions --commit
 
             # Run this script on Heroku staging (assumes you have a git remote called "staging")
-            heroku local:run python2 init_institution.py --remote staging
+            heroku local:run python init_institution.py --remote staging
             '''))
     parser.add_argument("--commit", help="Commit changes.", action="store_true", default=False)
     parser.add_argument("--institutions", help="true if want to add institutions", action="store_true", default=False)
