@@ -27,6 +27,7 @@ openpyxl==3.0.7
 psycopg2==2.9.1
 pyexcel==0.6.6
 pyexcel-xls==0.6.2
+pyexcel-xlsx==0.6.0
 python_dateutil==2.8.2
 scipy==1.7.1
 sendgrid==6.8.0
