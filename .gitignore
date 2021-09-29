@@ -99,6 +99,7 @@ docker-compose.yml
 
 # local testing files/dirs (added by scott)
 email-testing-data.py
+test.csv
 test_old_ones
 
 # generated if app run locallly (added by scott)
