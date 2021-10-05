@@ -107,12 +107,14 @@ def copy_into_n8_package(old_package_id, new_package_id, copy_counter=True, copy
 
 
 
-def package_create(jusp_id, institution_id, package_type):
+def package_create(jusp_id, institution_id, package_type, coreplus):
 
-    jisc_package_id = "package-solojiscels{}".format(jusp_id)
-    package_id = "package-n8els_{}_{}".format(jusp_id, package_type.replace(" ", ""))
+    jisc_package_id_prefix = "package-jiscels{}" if coreplus else "package-solojiscels{}"
+    jisc_package_id = jisc_package_id_prefix.format(jusp_id)
+    n8_id_prefix = "n8els_coreplus" if coreplus else "n8els"
+    package_id = "package-{}_{}_{}".format(n8_id_prefix, jusp_id, package_type.replace(" ", ""))
     package_name = "Elsevier n8 ({})".format(package_type)
-    scenario_id = "scenario-n8els_{}_{}".format(jusp_id, package_type.replace(" ", ""))
+    scenario_id = "scenario-{}_{}_{}".format(n8_id_prefix, jusp_id, package_type.replace(" ", ""))
     scenario_name = "n8 ({})".format(package_type)
 
     big_deal_cost = get_sql_answer(db, "select big_deal_cost from jump_account_package where package_id = '{}';".format(jisc_package_id))
@@ -157,14 +159,18 @@ def package_create(jusp_id, institution_id, package_type):
         dict_to_save["configs"]["include_social_networks"] = True # set to true
         dict_to_save["configs"]["weight_authorship"] = 0 # 100
         dict_to_save["configs"]["weight_citation"] = 0 # 10
+        dict_to_save["configs"]["cost_alacart_increase"] = 0 # 8%
+        dict_to_save["configs"]["cost_content_fee_percent"] = 0 # 5.7%
         save_raw_scenario_to_db(scenario_id, dict_to_save, None)
 
 
-def update_group_pta(jusp_id, group_jusp_ids, package_type):
+def update_group_pta(jusp_id, group_jusp_ids, package_type, coreplus):
     print(("in update_group_pta with {} {}".format(jusp_id, group_name)))
 
-    package_id = "package-n8els_{}_{}".format(jusp_id, package_type.replace(" ", ""))
-    jisc_package_ids = ["package-solojiscels{}".format(b) for b in group_jusp_ids]
+    n8_id_prefix = "n8els_coreplus" if coreplus else "n8els"
+    package_id = "package-{}_{}_{}".format(n8_id_prefix, jusp_id, package_type.replace(" ", ""))
+    jisc_package_ids_prefix = "package-jiscels{}" if coreplus else "package-solojiscels{}"
+    jisc_package_ids = [jisc_package_ids_prefix.format(b) for b in group_jusp_ids]
     jisc_package_ids_string = ", ".join(["'{}'".format(a) for a in jisc_package_ids])
 
     command = """        
@@ -196,8 +202,9 @@ def update_group_pta(jusp_id, group_jusp_ids, package_type):
 
 
 
-def set_lowest_cpu_subscriptions(jusp_id, package_type, big_deal_cost_proportion=0.5):
-    scenario_id = "scenario-n8els_{}_{}".format(jusp_id, package_type.replace(" ", ""))
+def set_lowest_cpu_subscriptions(jusp_id, package_type, big_deal_cost_proportion=0.5, coreplus):
+    n8_id_prefix = "n8els_coreplus" if coreplus else "n8els"
+    scenario_id = "scenario-{}_{}_{}".format(n8_id_prefix, jusp_id, package_type.replace(" ", ""))
 
     my_scenario = SavedScenario.query.get(scenario_id)
     my_scenario.set_live_scenario()
@@ -218,8 +225,9 @@ def set_lowest_cpu_subscriptions(jusp_id, package_type, big_deal_cost_proportion
     save_raw_scenario_to_db(scenario_id, dict_to_save, None)
 
 
-def copy_subscriptions(jusp_id, subscriptions, package_type):
-    scenario_id = "scenario-n8els_{}_{}".format(jusp_id, package_type.replace(" ", ""))
+def copy_subscriptions(jusp_id, subscriptions, package_type, coreplus):
+    n8_id_prefix = "n8els_coreplus" if coreplus else "n8els"
+    scenario_id = "scenario-{}_{}_{}".format(n8_id_prefix, jusp_id, package_type.replace(" ", ""))
 
     my_scenario = SavedScenario.query.get(scenario_id)
     dict_to_save = my_scenario.to_dict_saved_from_db()
@@ -227,15 +235,16 @@ def copy_subscriptions(jusp_id, subscriptions, package_type):
     save_raw_scenario_to_db(scenario_id, dict_to_save, None)
 
 
-def set_non_own_subscriptions(main_jusp_id, group_jusp_ids, package_type):
-    main_scenario_id = "scenario-n8els_{}_ownpta".format(main_jusp_id)
+def set_non_own_subscriptions(main_jusp_id, group_jusp_ids, package_type, coreplus):
+    n8_id_prefix = "n8els_coreplus" if coreplus else "n8els"
+    main_scenario_id = "scenario-{}_{}_ownpta".format(n8_id_prefix, main_jusp_id)
     (updated, main_scenario_dict) = get_latest_scenario_raw(main_scenario_id)
     main_subscriptions = main_scenario_dict["subrs"]
 
     all_subscriptions = []
 
     for jusp_id in group_jusp_ids:
-        scenario_id = "scenario-n8els_{}_ownpta".format(jusp_id)
+        scenario_id = "scenario-{}_{}_ownpta".format(n8_id_prefix, jusp_id)
         (updated, my_source_scenario_dict) = get_latest_scenario_raw(scenario_id)
         print(("subscriptions: ", jusp_id, len(my_source_scenario_dict["subrs"])))
         all_subscriptions += my_source_scenario_dict["subrs"]
@@ -263,11 +272,18 @@ def get_group_pta_name(group_name):
 # python init_n8.py
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run stuff :)")
+    parser.add_argument("--coreplus", help="True if want to do N8+ CorePlus calcluations", action="store_true", default=False)
 
     parsed_args = parser.parse_args()
     parsed_vars = vars(parsed_args)
 
-    from init_n8_subscriptions import ncl_subs, cam_subs, she_subs, ucl_subs, lee_subs, dur_subs, icl_subs, abd_subs, ews_subs, edi_subs, sti_subs, gla_subs
+    if parsed_args.coreplus:
+        from init_n8_coreplus_subscriptions import *
+        import init_n8_coreplus_subscriptions as cps
+        for x in cps:
+            print(x)
+    else:
+        from init_n8_subscriptions import ncl_subs, cam_subs, she_subs, ucl_subs, lee_subs, dur_subs, icl_subs, abd_subs, ews_subs, edi_subs, sti_subs, gla_subs
     group_jusp_data = OrderedDict()
     group_jusp_data["lan"] = {"institution_id": "institution-4QK9FfFudHii", "orig_scenario_id": "5QiKNg5m"} #lancaster
     group_jusp_data["liv"] = {"institution_id": "institution-D9TtsdbRs6du", "orig_scenario_id": "eAj75CHL"} #liverpool
@@ -282,6 +298,7 @@ if __name__ == "__main__":
     group_jusp_data["ucl"] = {"institution_id": "institution-jiscucl", "subrs": ucl_subs} #university college london, not an unsub subscriber
     group_jusp_data["oxf"] = {"institution_id": "institution-jiscoxf"} #oxford
     group_jusp_data["icl"] = {"institution_id": "institution-jiscicl", "subrs": icl_subs} #oxford
+    group_jusp_data["kcl"] = {"institution_id": "institution-jisckcl", "subrs": kcl_subs} #King's College London
 
     group_jusp_data["abd"] = {"institution_id": "institution-cH6ZGAAtwkyy", "subrs": abd_subs} #Aberdeen
     group_jusp_data["ews"] = {"institution_id": "institution-jiscews", "subrs": ews_subs} #St Andrews
@@ -292,13 +309,17 @@ if __name__ == "__main__":
 
     groups = {}
     groups["n8"] = """lan	liv	man	yor	ncl	dur	lee	she	cam	ucl oxf icl""".split()
-    groups["scurl"] = ['abd', 'ews', 'gla', 'sti', 'edi']
+    if parsed_args.coreplus:
+        groups["n8"] += ['kcl']
+    groups["scurl"] = ['abd', 'ews', 'gla', 'edi']
+    if not parsed_args.coreplus:
+        groups["scurl"] += ['sti']
     groups["n8+scurl"] = groups["n8"] + groups["scurl"]
 
     institution_id = "institution-Tfi2z4svqqkU"
 
 
-    if True:
+    if False:
         for group_name, group_jusp_id_list in list(groups.items()):
             pass
 
@@ -306,10 +327,10 @@ if __name__ == "__main__":
                 print((jusp_id, group_name, group_jusp_id_list))
             #
             #
-            #     package_create(jusp_id, institution_id, "own pta")
+            #     package_create(jusp_id, institution_id, "own pta", parsed_args.coreplus)
             #     # pta copied over in package_create from own jisc package
             #
-            #     package_create(jusp_id, institution_id, get_group_pta_name(group_name))
+            #     package_create(jusp_id, institution_id, get_group_pta_name(group_name), parsed_args.coreplus)
             #
             #     update_group_pta(jusp_id, group_jusp_id_list, get_group_pta_name(group_name))
 
