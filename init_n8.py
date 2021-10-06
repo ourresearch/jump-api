@@ -8,6 +8,7 @@ from time import time
 from time import sleep
 from collections import OrderedDict
 import shortuuid
+import pandas as pd
 
 import argparse
 
@@ -202,7 +203,7 @@ def update_group_pta(jusp_id, group_jusp_ids, package_type, coreplus):
 
 
 
-def set_lowest_cpu_subscriptions(jusp_id, package_type, big_deal_cost_proportion=0.5, coreplus):
+def set_lowest_cpu_subscriptions(jusp_id, package_type, coreplus, big_deal_cost_proportion=0.5):
     n8_id_prefix = "n8els_coreplus" if coreplus else "n8els"
     scenario_id = "scenario-{}_{}_{}".format(n8_id_prefix, jusp_id, package_type.replace(" ", ""))
 
@@ -253,7 +254,7 @@ def set_non_own_subscriptions(main_jusp_id, group_jusp_ids, package_type, corepl
     all_subscriptions = [sub for sub in all_subscriptions if sub not in main_subscriptions]
     all_subscriptions_dedup = list(set(all_subscriptions))
 
-    copy_subscriptions(main_jusp_id, all_subscriptions_dedup, package_type)
+    copy_subscriptions(main_jusp_id, all_subscriptions_dedup, package_type, coreplus)
 
 
 # lan lancaster institution-4QK9FfFudHii https://unsub.org/i/institution-4QK9FfFudHii/p/package-oiajkfDidZWB/s/5QiKNg5m
@@ -269,6 +270,13 @@ def get_issnls(issns):
 def get_group_pta_name(group_name):
     return "{} pta".format(group_name)
 
+def fetch_inst_subs(path):
+    x = pd.read_csv(path, sep=",")
+    issns_by_inst={}
+    for a,b in x.groupby('Institution'):
+        issns_by_inst[b['Institution'].to_list()[0]]=b['ISSN'].to_list()
+    return issns_by_inst
+
 # python init_n8.py
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run stuff :)")
@@ -278,33 +286,47 @@ if __name__ == "__main__":
     parsed_vars = vars(parsed_args)
 
     if parsed_args.coreplus:
-        from init_n8_coreplus_subscriptions import *
-        import init_n8_coreplus_subscriptions as cps
-        for x in cps:
-            print(x)
+        core = pd.read_csv("n8data/subscriptions_n8_core.csv", sep=",")["ISSN"].to_list()
+        subs = fetch_inst_subs("n8data/subscriptions_n8_coreplus.csv")
+        for x in subs:
+            subs[x] += core
     else:
-        from init_n8_subscriptions import ncl_subs, cam_subs, she_subs, ucl_subs, lee_subs, dur_subs, icl_subs, abd_subs, ews_subs, edi_subs, sti_subs, gla_subs
+        subs = fetch_inst_subs("n8data/subscriptions_n8.csv")
+    
     group_jusp_data = OrderedDict()
-    group_jusp_data["lan"] = {"institution_id": "institution-4QK9FfFudHii", "orig_scenario_id": "5QiKNg5m"} #lancaster
-    group_jusp_data["liv"] = {"institution_id": "institution-D9TtsdbRs6du", "orig_scenario_id": "eAj75CHL"} #liverpool
-    group_jusp_data["man"] = {"institution_id": "institution-3BGTjKioPdiZ", "orig_scenario_id": "scenario-ijURRDqV"} #manchester
-    group_jusp_data["yor"] = {"institution_id": "institution-3pQc7HbKgqYD", "orig_scenario_id": "hPWVrTDf"} #york
+    if parsed_args.coreplus:
+        group_jusp_data["lan"] = {"institution_id": "institution-4QK9FfFudHii", "subrs": subs['lan']} #lancaster
+        group_jusp_data["liv"] = {"institution_id": "institution-D9TtsdbRs6du", "subrs": subs['liv']} #liverpool
+        group_jusp_data["man"] = {"institution_id": "institution-3BGTjKioPdiZ", "subrs": subs['man']} #manchester
+        group_jusp_data["yor"] = {"institution_id": "institution-3pQc7HbKgqYD", "subrs": subs['yor']} #york
+    else:
+        group_jusp_data["lan"] = {"institution_id": "institution-4QK9FfFudHii", "orig_scenario_id": "5QiKNg5m"} #lancaster
+        group_jusp_data["liv"] = {"institution_id": "institution-D9TtsdbRs6du", "orig_scenario_id": "eAj75CHL"} #liverpool
+        group_jusp_data["man"] = {"institution_id": "institution-3BGTjKioPdiZ", "orig_scenario_id": "scenario-ijURRDqV"} #manchester
+        group_jusp_data["yor"] = {"institution_id": "institution-3pQc7HbKgqYD", "orig_scenario_id": "hPWVrTDf"} #york
+    
+    group_jusp_data["ncl"] = {"institution_id": "institution-rNFhQD3woQaT", "subrs": subs['ncl']} #newcastle
+    group_jusp_data["dur"] = {"institution_id": "institution-PpAFKbC7p7e5", "subrs": subs['dur']} #durham
+    group_jusp_data["lee"] = {"institution_id": "institution-iW8e2beWGxsi", "subrs": subs['lee']} #leeds
+    group_jusp_data["she"] = {"institution_id": "institution-3bpqX3Wzkd7e", "subrs": subs['she']} #sheffield
+    group_jusp_data["cam"] = {"institution_id": "institution-N68ARB5Hr4AM", "subrs": subs['cam']} #cambridge
+    group_jusp_data["ucl"] = {"institution_id": "institution-jiscucl", "subrs": subs['ucl']} #university college london, not an unsub subscriber
+    
+    if parsed_args.coreplus:
+        group_jusp_data["oxf"] = {"institution_id": "institution-jiscoxf", "subrs": subs['oxf']} #oxford
+    else:
+        group_jusp_data["oxf"] = {"institution_id": "institution-jiscoxf"} #oxford
+    
+    group_jusp_data["icl"] = {"institution_id": "institution-jiscicl", "subrs": subs['icl']} #imperial college
+    if parsed_args.coreplus:
+        group_jusp_data["kcl"] = {"institution_id": "institution-jisckcl", "subrs": subs['kcl']} #King's College London
 
-    group_jusp_data["ncl"] = {"institution_id": "institution-rNFhQD3woQaT", "subrs": ncl_subs} #newcastle
-    group_jusp_data["dur"] = {"institution_id": "institution-PpAFKbC7p7e5", "subrs": dur_subs} #durham
-    group_jusp_data["lee"] = {"institution_id": "institution-iW8e2beWGxsi", "subrs": lee_subs} #leeds
-    group_jusp_data["she"] = {"institution_id": "institution-3bpqX3Wzkd7e", "subrs": she_subs} #sheffield
-    group_jusp_data["cam"] = {"institution_id": "institution-N68ARB5Hr4AM", "subrs": cam_subs} #cambridge
-    group_jusp_data["ucl"] = {"institution_id": "institution-jiscucl", "subrs": ucl_subs} #university college london, not an unsub subscriber
-    group_jusp_data["oxf"] = {"institution_id": "institution-jiscoxf"} #oxford
-    group_jusp_data["icl"] = {"institution_id": "institution-jiscicl", "subrs": icl_subs} #oxford
-    group_jusp_data["kcl"] = {"institution_id": "institution-jisckcl", "subrs": kcl_subs} #King's College London
-
-    group_jusp_data["abd"] = {"institution_id": "institution-cH6ZGAAtwkyy", "subrs": abd_subs} #Aberdeen
-    group_jusp_data["ews"] = {"institution_id": "institution-jiscews", "subrs": ews_subs} #St Andrews
-    group_jusp_data["edi"] = {"institution_id": "institution-jiscedi", "subrs": edi_subs} #Edinburgh
-    group_jusp_data["sti"] = {"institution_id": "institution-jiscsti", "subrs": sti_subs} #Stirling
-    group_jusp_data["gla"] = {"institution_id": "institution-jiscgla", "subrs": gla_subs} #Glasgow
+    group_jusp_data["abd"] = {"institution_id": "institution-cH6ZGAAtwkyy", "subrs": subs['abd']} #Aberdeen
+    group_jusp_data["ews"] = {"institution_id": "institution-jiscews", "subrs": subs['ews']} #St Andrews
+    group_jusp_data["edi"] = {"institution_id": "institution-jiscedi", "subrs": subs['edi']} #Edinburgh
+    if not parsed_args.coreplus:
+        group_jusp_data["sti"] = {"institution_id": "institution-jiscsti", "subrs": subs['sti']} #Stirling
+    group_jusp_data["gla"] = {"institution_id": "institution-jiscgla", "subrs": subs['gla']} #Glasgow
 
 
     groups = {}
@@ -318,21 +340,20 @@ if __name__ == "__main__":
 
     institution_id = "institution-Tfi2z4svqqkU"
 
-
-    if False:
+    if True:
         for group_name, group_jusp_id_list in list(groups.items()):
             pass
 
             for jusp_id in group_jusp_id_list:
                 print((jusp_id, group_name, group_jusp_id_list))
-            #
-            #
-            #     package_create(jusp_id, institution_id, "own pta", parsed_args.coreplus)
-            #     # pta copied over in package_create from own jisc package
-            #
-            #     package_create(jusp_id, institution_id, get_group_pta_name(group_name), parsed_args.coreplus)
-            #
-            #     update_group_pta(jusp_id, group_jusp_id_list, get_group_pta_name(group_name))
+            
+            
+                # package_create(jusp_id, institution_id, "own pta", parsed_args.coreplus)
+                # # pta copied over in package_create from own jisc package
+            
+                # package_create(jusp_id, institution_id, get_group_pta_name(group_name), parsed_args.coreplus)
+            
+                # update_group_pta(jusp_id, group_jusp_id_list, get_group_pta_name(group_name), parsed_args.coreplus)
 
 
             for jusp_id in group_jusp_id_list:
@@ -342,18 +363,18 @@ if __name__ == "__main__":
                     print(("getting subscriptions from unsub scenario for ", jusp_id, group_name))
                     (updated, my_source_scenario_dict) = get_latest_scenario_raw(data["orig_scenario_id"])
                     subscriptions = my_source_scenario_dict["subrs"]
-                    copy_subscriptions(jusp_id, subscriptions, "own pta")
+                    copy_subscriptions(jusp_id, subscriptions, "own pta", parsed_args.coreplus)
                 elif "subrs" in data:
                     print(("getting subscriptions from python file for ", jusp_id, group_name))
                     subscriptions = get_issnls(data.get("subrs", None))
                     # print jusp_id, len(subscriptions), len(data["subrs"])
-                    copy_subscriptions(jusp_id, subscriptions, "own pta")
+                    copy_subscriptions(jusp_id, subscriptions, "own pta", parsed_args.coreplus)
                 else:
                     print(("calculating best subscriptions for ", jusp_id, group_name))
-                    set_lowest_cpu_subscriptions(jusp_id, "own pta", 0.5)
+                    set_lowest_cpu_subscriptions(jusp_id, "own pta", parsed_args.coreplus, 0.5)
 
             print(("calculating best subscriptions for ", "liv", "own pta"))
-            set_lowest_cpu_subscriptions("liv", "own pta", 0.425)  # set to make instant be 60%
+            set_lowest_cpu_subscriptions("liv", "own pta", parsed_args.coreplus, 0.425)  # set to make instant be 60%
 
             # don't let it cache
             db.session.expire_all()
@@ -361,7 +382,7 @@ if __name__ == "__main__":
             for jusp_id in group_jusp_id_list:
                 print(("setting group subscriptions for ", jusp_id, group_name))
                 data = group_jusp_data[jusp_id]
-                set_non_own_subscriptions(jusp_id, group_jusp_id_list, get_group_pta_name(group_name))
+                set_non_own_subscriptions(jusp_id, group_jusp_id_list, get_group_pta_name(group_name), parsed_args.coreplus)
 
     # don't let it cache
     db.session.expire_all()
@@ -375,7 +396,7 @@ if __name__ == "__main__":
 
     results = []
     for jusp_id in group_jusp_id_list:
-        results.append(N8UniResult(jusp_id, get_group_pta_name(group_name)).to_list())
+        results.append(N8UniResult(jusp_id, get_group_pta_name(group_name), parsed_args.coreplus).to_list())
 
     for result_number in range(0, len(results[0])):
         print(";".join([str(results[column_number][result_number]) for column_number in range(0, len(results))]))

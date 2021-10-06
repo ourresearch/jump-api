@@ -8,14 +8,15 @@ from saved_scenario import SavedScenario
 
 class N8UniResult(object):
 
-    def __init__(self, jusp_id, group_pta_name):
+    def __init__(self, jusp_id, group_pta_name, coreplus):
+        n8_id_prefix = "n8els_coreplus" if coreplus else "n8els"
         self.jusp_id = jusp_id
-        self.scenario_id_ownpta = "scenario-n8els_{}_ownpta".format(jusp_id)
+        self.scenario_id_ownpta = "scenario-{}_{}_ownpta".format(n8_id_prefix, jusp_id)
         self.saved_scenario_ownpta = SavedScenario.query.get(self.scenario_id_ownpta)
         self.saved_scenario_ownpta.set_live_scenario()  # in case not done
 
         group_pta_name = group_pta_name.replace(" ", "")
-        self.scenario_id_grouppta = "scenario-n8els_{}_{}".format(jusp_id, group_pta_name)
+        self.scenario_id_grouppta = "scenario-{}_{}_{}".format(n8_id_prefix, jusp_id, group_pta_name)
         self.saved_scenario_grouppta = SavedScenario.query.get(self.scenario_id_grouppta)
         self.saved_scenario_grouppta.set_live_scenario()  # in case not done
 
