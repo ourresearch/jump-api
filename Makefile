@@ -5,7 +5,7 @@ test:
 	heroku local:run pytest -v
 
 ipython:
-	heroku local:run ipython
+	heroku local:run python3 -m IPython
 
 run:
 	heroku local:run python views.py
