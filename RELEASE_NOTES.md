@@ -5,6 +5,7 @@ both its appearance and its underlying data.
 This means you will often see changes in the UI/UX, and sometimes in the presented data.  
 Most of these changes are too small to note, but we'll keep a record of the larger ones here:
 
+- 2021/10/14 Fixed a bug due to some journal titles having incorrect titles, in particular titles staring with "Nature Reviews"
 - 2021/06/20 Fix bug in authorships and citations that has been live for the last ten days
 - 2021/05/17 Many updates, including COUNTER 5 support, GBP support, Perpetual Access (PTA) changes, and more.  See [Release Notes](http://help.unsub.org/en/articles/5238375-release-notes-may-2021). 
 - 2021/05/12 Updating Unsub's journal lists (publicly available prices, which journals are published by which publishers, which journals have flipped to OA, which journals are new, etc).  The forecasts and APC calculations on your dashboards may update slightly as a result.  
