@@ -54,6 +54,7 @@
 - n8_uni_result.py
 - import_counter_from_json.py
 - import_accounts.py
+- user_delete.py
 
 ## Heroku config
 
