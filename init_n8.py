@@ -11,6 +11,7 @@ import shortuuid
 import pandas as pd
 
 import argparse
+import textwrap
 
 from app import db
 from app import get_db_cursor
@@ -279,8 +280,33 @@ def fetch_inst_subs(path):
 
 # python init_n8.py
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run stuff :)")
-    parser.add_argument("--coreplus", help="True if want to do N8+ CorePlus calcluations", action="store_true", default=False)
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=textwrap.dedent('''\
+            Examples of use
+            ---------------
+
+            Notes:
+                - heroku local:run required to make sure environment variables are loaded
+
+            # Show this help
+            heroku local:run python init_n8.py -h
+            # Run classic model WITHOUT recalculating
+            heroku local:run python init_n8.py
+            # Run classic model WITH recalculating
+            heroku local:run python init_n8.py --recalculate 
+            # Run classic model WITH recalculating AND create packages
+            heroku local:run python init_n8.py --recalculate --createpkgs  
+            # Run coreplus model WITHOUT recalculating
+            heroku local:run python init_n8.py --coreplus
+            # Run coreplus model WITH recalculating
+            heroku local:run python init_n8.py --coreplus --recalculate
+            # Run coreplus model WITH recalculating AND create packages
+            heroku local:run python init_n8.py --coreplus --recalculate --createpkgs   
+            '''))
+    parser.add_argument("--coreplus", help="True if want to run the N8+ CorePlus model - otherwise classic", action="store_true", default=False)
+    parser.add_argument("--recalculate", help="True if want to recalculate - otherwise not", action="store_true", default=False)
+    parser.add_argument("--createpkgs", help="True if want to create packages - otherwise not. If --recalculate is False, this flag is ignored", action="store_true", default=False)
 
     parsed_args = parser.parse_args()
     parsed_vars = vars(parsed_args)
@@ -342,21 +368,20 @@ if __name__ == "__main__":
 
     institution_id = "institution-Tfi2z4svqqkU"
 
-    if True:
+    if parsed_args.recalculate:
         for group_name, group_jusp_id_list in list(groups.items()):
             pass
 
             for jusp_id in group_jusp_id_list:
                 print((jusp_id, group_name, group_jusp_id_list))
             
-            
-                # package_create(jusp_id, institution_id, "own pta", parsed_args.coreplus)
-                # # pta copied over in package_create from own jisc package
-            
-                # package_create(jusp_id, institution_id, get_group_pta_name(group_name), parsed_args.coreplus)
-            
-                # update_group_pta(jusp_id, group_jusp_id_list, get_group_pta_name(group_name), parsed_args.coreplus)
-
+                if parsed.createpkgs:
+                    package_create(jusp_id, institution_id, "own pta", parsed_args.coreplus)
+                    # pta copied over in package_create from own jisc package
+                
+                    package_create(jusp_id, institution_id, get_group_pta_name(group_name), parsed_args.coreplus)
+                
+                    update_group_pta(jusp_id, group_jusp_id_list, get_group_pta_name(group_name), parsed_args.coreplus)
 
             for jusp_id in group_jusp_id_list:
                 print(("setting subscriptions for ", jusp_id, group_name))
