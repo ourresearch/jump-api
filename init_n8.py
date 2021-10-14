@@ -285,6 +285,8 @@ if __name__ == "__main__":
     parsed_args = parser.parse_args()
     parsed_vars = vars(parsed_args)
 
+    print("Running the '{}' model\n".format("coreplus" if parsed_args.coreplus else "classic"))
+
     if parsed_args.coreplus:
         core = pd.read_csv("n8data/subscriptions_n8_core.csv", sep=",")["ISSN"].to_list()
         subs = fetch_inst_subs("n8data/subscriptions_n8_coreplus.csv")
@@ -373,8 +375,9 @@ if __name__ == "__main__":
                     print(("calculating best subscriptions for ", jusp_id, group_name))
                     set_lowest_cpu_subscriptions(jusp_id, "own pta", parsed_args.coreplus, 0.5)
 
-            print(("calculating best subscriptions for ", "liv", "own pta"))
-            set_lowest_cpu_subscriptions("liv", "own pta", parsed_args.coreplus, 0.425)  # set to make instant be 60%
+            if not parsed_args.coreplus:
+                print(("calculating best subscriptions for ", "liv", "own pta"))
+                set_lowest_cpu_subscriptions("liv", "own pta", parsed_args.coreplus, 0.425)  # set to make instant be 60%
 
             # don't let it cache
             db.session.expire_all()
