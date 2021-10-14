@@ -50,11 +50,11 @@
 - init_consortium.py
 - init_institution.py
 - init_n8.py
-- init_n8_subscriptions.py
 - n8_uni_result.py
 - import_counter_from_json.py
 - import_accounts.py
 - user_delete.py
+- change_subs.py
 
 ## Heroku config
 
