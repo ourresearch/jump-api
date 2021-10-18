@@ -9,7 +9,7 @@ from app import logger
 from app import get_db_cursor
 from views import lookup_user
 
-def user_delete(email=None, id=None):
+def user_delete(email=None, id=None, perm_only=False):
     if email:
         email = email.strip()
     if id:
@@ -27,11 +27,12 @@ def user_delete(email=None, id=None):
         with get_db_cursor() as cursor:
             cursor.execute(query)
     
-    logger.info("  deleting user from `jump_user` table")
-    query = "delete from jump_user where id = '{}';".format(user.id)
-    with app.app_context():
-        with get_db_cursor() as cursor:
-            cursor.execute(query)
+    if not perm_only:
+        logger.info("  deleting user from `jump_user` table")
+        query = "delete from jump_user where id = '{}';".format(user.id)
+        with app.app_context():
+            with get_db_cursor() as cursor:
+                cursor.execute(query)
 
     logger.info("  commit")
     db.session.commit()
@@ -56,10 +57,15 @@ if __name__ == "__main__":
 
             # Delete a user by user id
             heroku local:run python user_delete.py --id user-x8g019bx7s9
+
+            # Delete a user by email - delete jump_user_institution_permission entry only (leave jump_user)
+            heroku local:run python user_delete.py --email foo@bar.org --perm_only
             '''))
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--email", help="An Unsub user email", type=str)
     group.add_argument("--id", help="An Unsub user ID", type=str)
+    parser.add_argument("--perm_only", help="Only delete entries from permissions table? (default False)", 
+        action="store_true", default=False)
     args = parser.parse_args()
 
-    user_delete(email = args.email, id = args.id)
+    user_delete(email = args.email, id = args.id, perm_only = args.perm_only)
