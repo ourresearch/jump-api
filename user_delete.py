@@ -40,6 +40,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=textwrap.dedent('''\
+            Delete user from Unsub: deletes user from tables jump_user and jump_user_institution_permission
+
             Examples
             --------
 
