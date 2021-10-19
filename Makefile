@@ -8,4 +8,4 @@ ipython:
 	heroku local:run python3 -m IPython
 
 run:
-	heroku local:run python views.py
+	heroku local:run python3 views.py
