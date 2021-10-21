@@ -314,12 +314,12 @@ if __name__ == "__main__":
     print("Running the '{}' model\n".format("coreplus" if parsed_args.coreplus else "classic"))
 
     if parsed_args.coreplus:
-        core = pd.read_csv("n8data/subscriptions_n8_core.csv", sep=",")["ISSN"].to_list()
-        subs = fetch_inst_subs("n8data/subscriptions_n8_coreplus.csv")
+        core = pd.read_csv("data/n8data/subscriptions_n8_core.csv", sep=",")["ISSN"].to_list()
+        subs = fetch_inst_subs("data/n8data/subscriptions_n8_coreplus.csv")
         for x in subs:
             subs[x] += core
     else:
-        subs = fetch_inst_subs("n8data/subscriptions_n8.csv")
+        subs = fetch_inst_subs("data/n8data/subscriptions_n8.csv")
     
     group_jusp_data = OrderedDict()
     if parsed_args.coreplus:
