@@ -9,7 +9,7 @@ from app import logger
 from app import get_db_cursor
 from views import lookup_user
 
-def user_delete(email=None, id=None, perm_only=False):
+def user_delete(email=None, id=None, inst=None, perm_only=False):
     if email:
         email = email.strip()
     if id:
@@ -22,7 +22,10 @@ def user_delete(email=None, id=None, perm_only=False):
         return
 
     logger.info("  deleting user permissions from `jump_user_institution_permission` table")
-    query = "delete from jump_user_institution_permission where user_id = '{}';".format(user.id)
+    if inst:
+        query = "delete from jump_user_institution_permission where user_id = '{}' and institution_id = '{}';".format(user.id, inst)
+    else:    
+        query = "delete from jump_user_institution_permission where user_id = '{}';".format(user.id)
     with app.app_context():
         with get_db_cursor() as cursor:
             cursor.execute(query)
@@ -58,14 +61,24 @@ if __name__ == "__main__":
             # Delete a user by user id
             heroku local:run python user_delete.py --id user-x8g019bx7s9
 
-            # Delete a user by email - delete jump_user_institution_permission entry only (leave jump_user)
-            heroku local:run python user_delete.py --email foo@bar.org --perm_only
+            # Delete a user by email and institution id - delete jump_user_institution_permission entry only (leave jump_user)
+            heroku local:run python user_delete.py --email foo@bar.org --inst institution-a79a8 --perm_only
             '''))
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--email", help="An Unsub user email", type=str)
     group.add_argument("--id", help="An Unsub user ID", type=str)
+    parser.add_argument("--inst", help="An Unsub institution ID", type=str)
     parser.add_argument("--perm_only", help="Only delete entries from permissions table? (default False)", 
         action="store_true", default=False)
     args = parser.parse_args()
 
-    user_delete(email = args.email, id = args.id, perm_only = args.perm_only)
+    user_delete(email = args.email, id = args.id, inst = args.inst, perm_only = args.perm_only)
+
+# # deleting users within a Pyton REPL
+# # first get csv of user info from unsub-scripts/lookup_by.py script
+# from user_delete import user_delete
+# import pandas as pd
+# df = pd.read_csv("final.csv")
+# for index, row in df.iterrows():
+#     print("deleting permissions for user '{}' at institution '{}'".format(row['user_id'], row["institution_display_name"]))
+#     user_delete(id = row['user_id'], inst = row['institution_id'], perm_only = True)
