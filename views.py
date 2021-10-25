@@ -17,6 +17,7 @@ from sqlalchemy import or_
 from sqlalchemy import func as sql_func
 from werkzeug.security import safe_str_cmp
 from werkzeug.security import generate_password_hash, check_password_hash
+from psycopg2 import sql
 
 import os
 import sys
@@ -1133,9 +1134,9 @@ def scenario_id_post(scenario_id):
     if scenario_name:
         scenario_name = scenario_name.replace('"', '""')
         scenario_name = scenario_name.replace('&', ' ')
-        command = "update jump_package_scenario set scenario_name = '{}' where scenario_id = '{}'".format(scenario_name, scenario_id)
         with get_db_cursor() as cursor:
-            cursor.execute(command)
+            qry = sql.SQL("UPDATE jump_package_scenario SET scenario_name = (%s) where scenario_id = (%s)")
+            cursor.execute(qry, (scenario_name, scenario_id))
 
     my_timing = TimingMessages()
     post_subscription_guts(scenario_id, scenario_name)
@@ -1448,9 +1449,9 @@ def scenario_post(package_id):
     if my_saved_scenario_to_copy_from:
         dict_to_save = my_saved_scenario_to_copy_from.to_dict_saved_from_db()
         dict_to_save["id"] = new_scenario_id
-        dict_to_save["name"] = new_scenario_name
     else:
         dict_to_save = new_saved_scenario.to_dict_saved_from_db()
+    dict_to_save["name"] = new_scenario_name
 
     save_raw_scenario_to_db(new_scenario_id, dict_to_save, get_ip(request))
 
