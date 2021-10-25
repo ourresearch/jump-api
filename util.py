@@ -616,6 +616,12 @@ def get_sql_dict_rows(q):
         rows = cursor.fetchall()
     return rows
 
+def get_sql_dict_rows2(query, values):
+    with get_db_cursor() as cursor:
+        cursor.execute(query, values)
+        rows = cursor.fetchall()
+    return rows
+
 # https://github.com/psycopg/psycopg2/issues/897
 def build_row_dict(columns, row):
     index = 0

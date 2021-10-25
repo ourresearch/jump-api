@@ -169,6 +169,22 @@ class Package(db.Model):
         return get_sql_dict_rows(q)
 
     def get_base(self, and_where=""):
+        # q = """
+        #     select 
+        #     rj.issn_l, 
+        #     listagg(rj.issn, ',') as issns,
+        #     listagg(title, ',') as title, 
+        #     sum(total::int) as num_2018_downloads, 
+        #     count(*) as num_journals_with_issn_l
+        #     from jump_counter counter
+        #     left outer join journalsdb_computed_flat rj on counter.issn_l = rj.issn
+        #     where package_id='{package_id}' 
+        #     {and_where}
+        #     group by rj.issn_l
+        #     order by num_2018_downloads desc
+        #     """.format(package_id=package_id, and_where=and_where)
+            # """.format(package_id=self.package_id_for_db, and_where=and_where)
+        # rows = get_sql_dict_rows(q)
         q = """
             select 
             rj.issn_l, 
@@ -178,12 +194,12 @@ class Package(db.Model):
             count(*) as num_journals_with_issn_l
             from jump_counter counter
             left outer join journalsdb_computed_flat rj on counter.issn_l = rj.issn
-            where package_id='{package_id}' 
-            {and_where}
+            where package_id=%(package_id)s 
+            %(and_where)s
             group by rj.issn_l
             order by num_2018_downloads desc
-            """.format(package_id=self.package_id_for_db, and_where=and_where)
-        rows = get_sql_dict_rows(q)
+            """
+        rows = get_sql_dict_rows2(q, {'package_id': self.package_id_for_db, 'and_where': and_where})
         return rows
 
     @cached_property
