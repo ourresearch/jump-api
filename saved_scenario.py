@@ -15,21 +15,26 @@ from scenario import Scenario
 from app import DEMO_PACKAGE_ID
 from util import elapsed
 
+from psycopg2 import sql
+from psycopg2.extras import Json
+from psycopg2.extensions import register_adapter
+register_adapter(dict, Json)
+
 def save_raw_scenario_to_db(scenario_id, raw_scenario_definition, ip):
     print("in save_raw_scenario_to_db")
-    scenario_json = json.dumps(raw_scenario_definition)
-
     if scenario_id.startswith("demo"):
         tablename = "jump_scenario_details_demo"
     else:
         tablename = "jump_scenario_details_paid"
-    scenario_json = scenario_json.replace("'", "''")
+    cols = ['scenario_id', 'updated', 'ip', 'scenario_json']
+    values = (scenario_id, datetime.datetime.now(), ip, Json(raw_scenario_definition), )
     with get_db_cursor() as cursor:
-        command = """INSERT INTO {} (scenario_id, updated, ip, scenario_json) values ('{}', sysdate, '{}', '{}');""".format(
-            tablename, scenario_id, ip, scenario_json
-        )
-        print(command)
-        cursor.execute(command)
+        qry = sql.SQL("INSERT INTO {} ({}) values ({})").format( 
+            sql.Identifier(tablename),
+            sql.SQL(', ').join(map(sql.Identifier, cols)),
+            sql.SQL(', ').join(sql.Placeholder() * len(cols)))
+        print(cursor.mogrify(qry, values))
+        cursor.execute(qry, values)
 
 def save_raw_member_institutions_included_to_db(scenario_id, member_institutions_list, ip):
     scenario_members = json.dumps(member_institutions_list)
