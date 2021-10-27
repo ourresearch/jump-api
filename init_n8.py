@@ -339,16 +339,15 @@ if __name__ == "__main__":
     group_jusp_data["she"] = {"institution_id": "institution-3bpqX3Wzkd7e", "subrs": subs['she']} #sheffield
     group_jusp_data["cam"] = {"institution_id": "institution-N68ARB5Hr4AM", "subrs": subs['cam']} #cambridge
     group_jusp_data["ucl"] = {"institution_id": "institution-jiscucl", "subrs": subs['ucl']} #university college london, not an unsub subscriber
-    
-    if parsed_args.coreplus:
-        group_jusp_data["oxf"] = {"institution_id": "institution-jiscoxf", "subrs": subs['oxf']} #oxford
-    else:
-        group_jusp_data["oxf"] = {"institution_id": "institution-jiscoxf"} #oxford
-    
     group_jusp_data["icl"] = {"institution_id": "institution-jiscicl", "subrs": subs['icl']} #imperial college
-    if parsed_args.coreplus:
-        group_jusp_data["kcl"] = {"institution_id": "institution-jisckcl", "subrs": subs['kcl']} #King's College London
-
+    
+    if parsed_args.coreplus: # Oxford & King's College London
+        group_jusp_data["oxf"] = {"institution_id": "institution-jiscoxf", "subrs": subs['oxf']}
+        group_jusp_data["kcl"] = {"institution_id": "institution-jisckcl", "subrs": subs['kcl']}
+    else:
+        group_jusp_data["oxf"] = {"institution_id": "institution-jiscoxf"}
+        group_jusp_data["kcl"] = {"institution_id": "institution-jisckcl"}
+    
     group_jusp_data["abd"] = {"institution_id": "institution-cH6ZGAAtwkyy", "subrs": subs['abd']} #Aberdeen
     group_jusp_data["ews"] = {"institution_id": "institution-jiscews", "subrs": subs['ews']} #St Andrews
     group_jusp_data["edi"] = {"institution_id": "institution-jiscedi", "subrs": subs['edi']} #Edinburgh
