@@ -30,7 +30,7 @@ from scenario import get_perpetual_access_from_cache
 from scenario import get_apc_data_from_db
 from util import get_sql_answers
 from util import get_sql_rows
-from util import get_sql_dict_rows
+from util import get_sql_dict_rows, get_sql_dict_rows2
 from util import safe_commit
 from util import for_sorting
 
@@ -168,23 +168,7 @@ class Package(db.Model):
            """.format(package_id=self.package_id_for_db)
         return get_sql_dict_rows(q)
 
-    def get_base(self, and_where=""):
-        # q = """
-        #     select 
-        #     rj.issn_l, 
-        #     listagg(rj.issn, ',') as issns,
-        #     listagg(title, ',') as title, 
-        #     sum(total::int) as num_2018_downloads, 
-        #     count(*) as num_journals_with_issn_l
-        #     from jump_counter counter
-        #     left outer join journalsdb_computed_flat rj on counter.issn_l = rj.issn
-        #     where package_id='{package_id}' 
-        #     {and_where}
-        #     group by rj.issn_l
-        #     order by num_2018_downloads desc
-        #     """.format(package_id=package_id, and_where=and_where)
-            # """.format(package_id=self.package_id_for_db, and_where=and_where)
-        # rows = get_sql_dict_rows(q)
+    def get_base(self, and_where="", extrakv={}):
         q = """
             select 
             rj.issn_l, 
@@ -194,12 +178,12 @@ class Package(db.Model):
             count(*) as num_journals_with_issn_l
             from jump_counter counter
             left outer join journalsdb_computed_flat rj on counter.issn_l = rj.issn
-            where package_id=%(package_id)s 
-            %(and_where)s
+            where package_id=%(package_id_for_db)s 
+            {}
             group by rj.issn_l
             order by num_2018_downloads desc
-            """
-        rows = get_sql_dict_rows2(q, {'package_id': self.package_id_for_db, 'and_where': and_where})
+            """.format(and_where)
+        rows = get_sql_dict_rows2(q, {'package_id_for_db': self.package_id_for_db} | extrakv)
         return rows
 
     @cached_property
@@ -221,19 +205,34 @@ class Package(db.Model):
         return self.filter_by_core_list(rows)
 
     @cached_property
-    def publisher_where(self):
+    def publisher_name(self):
         if self.publisher == "Elsevier":
-            return "(rj.publisher = 'Elsevier')"
+            return "Elsevier"
         elif self.publisher == "Wiley":
-            return "(rj.publisher = 'Wiley')"
+            return "Wiley"
         elif self.publisher == "SpringerNature":
-            return "(rj.publisher = 'Springer Nature')"
+            return "Springer Nature"
         elif self.publisher == "Sage":
-            return "(rj.publisher = 'SAGE')"
+            return "SAGE"
         elif self.publisher == "TaylorFrancis":
-            return "(rj.publisher = 'Taylor & Francis')"
+            return "Taylor & Francis"
         else:
             return "false"
+    
+    # @cached_property
+    # def publisher_where(self):
+    #     if self.publisher == "Elsevier":
+    #         return "(rj.publisher = 'Elsevier')"
+    #     elif self.publisher == "Wiley":
+    #         return "(rj.publisher = 'Wiley')"
+    #     elif self.publisher == "SpringerNature":
+    #         return "(rj.publisher = 'Springer Nature')"
+    #     elif self.publisher == "Sage":
+    #         return "(rj.publisher = 'SAGE')"
+    #     elif self.publisher == "TaylorFrancis":
+    #         return "(rj.publisher = 'Taylor & Francis')"
+    #     else:
+    #         return "false"
 
     @property
     def publisher_name_snippets(self):
@@ -257,8 +256,8 @@ class Package(db.Model):
 	            from unpaywall u 
 	            join journalsdb_computed_flat rj on u.journal_issn_l=rj.issn
 	            where year=2019 and journal_is_oa='false'
-	            and {publisher_where}
-	            ) """.format(publisher_where=self.publisher_where))
+	            and rj.publisher = %{publisher}s
+	            ) """, extrakv={'publisher': self.publisher_name})
         return self.filter_by_core_list(rows)
 
     @cached_property
@@ -268,12 +267,12 @@ class Package(db.Model):
 	            from unpaywall u 
 	            join journalsdb_computed_flat rj on u.journal_issn_l=rj.issn
 	            where year=2019 and journal_is_oa='false'
-	            and {publisher_where}
+	            and rj.publisher = %{publisher}s
 	            )
 	            and rj.issn_l in 
                 (select distinct issn_l from jump_journal_prices 
-                    where price > 0 and package_id in('658349d9', '{package_id}') 
-                ) """.format(package_id=self.package_id, publisher_where=self.publisher_where))
+                    where price > 0 and package_id in('658349d9', %{package_id}s) 
+                ) """, extrakv={'package_id': self.package_id, 'publisher': self.publisher_name})
         return self.filter_by_core_list(rows)
 
     @cached_property
@@ -403,10 +402,9 @@ class Package(db.Model):
     def feedback_rows(self):
         if not self.is_feeder_package:
             return []
-        command = """select * from jump_consortium_feedback_requests where member_package_id='{member_package_id}'
-             """.format(member_package_id=self.package_id)
+        command = 'select * from jump_consortium_feedback_requests where member_package_id=%s'
         with get_db_cursor() as cursor:
-            cursor.execute(command)
+            cursor.execute(command, (self.package_id,))
             rows_for_feedback = cursor.fetchall()
         return rows_for_feedback
 
@@ -432,10 +430,10 @@ class Package(db.Model):
         select consortium_package_id, scenario_id as consortium_scenario_id
             from jump_consortium_members cm
             join jump_package_scenario ps on cm.consortium_package_id=ps.package_id
-            where member_package_id='{}'
-        """.format(self.package_id)
+            where member_package_id=%s
+        """
         with get_db_cursor() as cursor:
-            cursor.execute(q)
+            cursor.execute(q, (self.package_id,))
             rows = cursor.fetchall()
         return [row["consortium_scenario_id"] for row in rows]
 
@@ -621,16 +619,17 @@ class Package(db.Model):
             return 0
 
     def update_apc_authorships(self):
-        delete_q = """ delete from jump_apc_authorships where package_id = '{}' """.format(self.package_id)
+        delete_q = 'delete from jump_apc_authorships where package_id = %s'
         insert_q = """
                 insert into jump_apc_authorships (
                     select * from jump_apc_authorships_view
-                    where package_id = '{}' and issn_l in (select issn_l from journalsdb_computed rj where {}))
-            """.format(self.package_id, self.publisher_where)
-        print(insert_q)
+                    where package_id = %s and issn_l in 
+                    (select issn_l from journalsdb_computed rj where rj.publisher = %s))
+            """
         with get_db_cursor() as cursor:
-            cursor.execute(delete_q)
-            rows_inserted = cursor.execute(insert_q)
+            cursor.execute(delete_q, (self.package_id,))
+            print(cursor.mogrify(insert_q, (self.package_id, self.publisher_name,)))
+            rows_inserted = cursor.execute(insert_q, (self.package_id, self.publisher_name,))
         return rows_inserted
 
     def to_dict_apc(self):
