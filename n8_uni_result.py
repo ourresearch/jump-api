@@ -71,8 +71,13 @@ class N8UniResult(object):
         return round(self.saved_scenario_grouppta.live_scenario.use_subscription_percent/100.0, 3)
 
     def percent_group_backfile(self):
-        total_plus_group = round(self.saved_scenario_grouppta.live_scenario.use_backfile/self.saved_scenario_grouppta.live_scenario.use_total, 3)
-        return round(total_plus_group - self.percent_own_backfile(), 3)
+        own_subscriptions = [j.issn_l for j in self.saved_scenario_ownpta.journals if j.subscribed]
+        own_use_backfile = sum(j.use_backfile for j in self.saved_scenario_ownpta.live_scenario.journals if j.issn_l not in own_subscriptions)
+        group_use_backfile = sum(j.use_backfile for j in self.saved_scenario_grouppta.live_scenario.journals if j.issn_l not in own_subscriptions)
+        own_backfile_percent = round(own_use_backfile/self.saved_scenario_grouppta.live_scenario.use_total, 3)
+        total_plus_group_backfile_percent = round(group_use_backfile/self.saved_scenario_grouppta.live_scenario.use_total, 3)
+        response = round(total_plus_group_backfile_percent - own_backfile_percent, 3)
+        return response
 
     def usage(self):
         return round(self.saved_scenario_ownpta.live_scenario.use_total, 0)
