@@ -3,6 +3,7 @@
 from collections import defaultdict
 from collections import OrderedDict
 from time import time
+import pandas as pd
 
 from saved_scenario import SavedScenario
 
@@ -37,7 +38,8 @@ class N8UniResult(object):
         response += [self.usage()]
         response += [self.subscription_cost()]
         response += [self.big_deal_cost()]
-        print(response)
+        response += [self.num_ill_requests_by_journal()]
+        # print(response) # don't print anymore b/c num_ill_requests_by_journal is large
         return response
 
     def num_own_subscriptions(self):
@@ -97,6 +99,15 @@ class N8UniResult(object):
     def big_deal_cost(self):
         return round(self.saved_scenario_ownpta.live_scenario.cost_bigdeal_projected, 0)
 
+    def num_ill_requests_by_journal(self):
+        results = []
+        for journal in self.saved_scenario_ownpta.journals:
+            results.append(
+                {'jusp_id': self.jusp_id,
+                'issn_l': journal.issn_l,
+                'downloads_ill': round(journal.downloads_ill, 3),
+                'title': journal.title})
+        return pd.concat([pd.DataFrame([i]) for i in results])
 
 # changes
 
