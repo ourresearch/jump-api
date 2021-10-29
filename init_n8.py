@@ -452,14 +452,17 @@ if __name__ == "__main__":
         num_univ_subscribing = sum(univ_subscribing)
         # print("    univ's subscribing: {}".format(num_univ_subscribing))
         if num_univ_subscribing > 0:
-            num_ill_requests_split = row['downloads_ill'] / num_univ_subscribing
+            num_ill_requests_split_evenly = row['downloads_ill'] / num_univ_subscribing
             univ_to_assign_to = list(compress(group_jusp_id_list, univ_subscribing))
             # print("    univ's: {}".format((*univ_to_assign_to,)))
             for univ in univ_to_assign_to:
-                each_univ[univ] += num_ill_requests_split
+                each_univ[univ] += num_ill_requests_split_evenly
 
     # combine ill requests for sister universities into output list
-    [x.append(round(each_univ[x[0]])) for x in results]
+    for uni in results:
+        uni_jusp_id = uni[0] # jusp is first element in the list
+        num_ill_requests_by_journal = round(each_univ[uni_jusp_id]) # round to 0 sig digits
+        uni.append(num_ill_requests_by_journal) # append to the results list for each univ
 
     for result_number in range(0, len(results[0])):
         print(";".join([str(results[column_number][result_number]) for column_number in range(0, len(results))]))
