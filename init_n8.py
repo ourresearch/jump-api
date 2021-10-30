@@ -69,7 +69,7 @@ def copy_into_n8_package(old_package_id, new_package_id, copy_counter=True, copy
         command += """
             delete from jump_journal_prices where package_id = '{new_package_id}';
 
-            insert into jump_journal_prices (package_id, publisher, title, issn_l, price, created) (
+            insert into jump_journal_prices (package_id, publisher, title,  issn_l, price, created) (
                 select '{new_package_id}', publisher, title, issn_l, price, created
                 from jump_journal_prices
                 where package_id = '{old_package_id}'
@@ -358,9 +358,7 @@ if __name__ == "__main__":
 
 
     groups = {}
-    groups["n8"] = """lan	liv	man	yor	ncl	dur	lee	she	cam	ucl oxf icl""".split()
-    if parsed_args.coreplus:
-        groups["n8"] += ['kcl']
+    groups["n8"] = """lan	liv	man	yor	ncl	dur	lee	she	cam	ucl oxf icl kcl""".split()
     groups["scurl"] = ['abd', 'ews', 'gla', 'edi']
     if not parsed_args.coreplus:
         groups["scurl"] += ['sti']
