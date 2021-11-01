@@ -53,7 +53,8 @@ def test_staging_api_login():
 
 def test_staging_api_user_me(fetch_jwt):
     res = requests.get(
-        url_base + "/user/me", headers={"Authorization": "Bearer " + fetch_jwt}
+        url_base + "/user/me", 
+        headers={"Authorization": "Bearer " + fetch_jwt(os.environ["UNSUB_USER1_PWD"], os.environ["UNSUB_USER1_EMAIL"])}
     )
     assert res.status_code == 200
     assert isinstance(res.json(), dict)
@@ -64,7 +65,8 @@ def test_staging_api_user_me(fetch_jwt):
 
 def test_staging_api_user_permissions(fetch_jwt):
     res = requests.get(
-        url_base + "/user-permissions", headers={"Authorization": "Bearer " + fetch_jwt},
+        url_base + "/user-permissions",
+        headers={"Authorization": "Bearer " + fetch_jwt(os.environ["UNSUB_USER1_PWD"], os.environ["UNSUB_USER1_EMAIL"])},
         json={
             "user_id": os.environ["UNSUB_USER1_ID"],
             "institution_id": os.environ["UNSUB_USER1_INSTITUTION_ID"],
@@ -80,7 +82,8 @@ def test_staging_api_user_permissions(fetch_jwt):
 
 def test_staging_api_account(fetch_jwt):
     res = requests.get(
-        url_base + "/account", headers={"Authorization": "Bearer " + fetch_jwt},
+        url_base + "/account", 
+        headers={"Authorization": "Bearer " + fetch_jwt(os.environ["UNSUB_USER1_PWD"], os.environ["UNSUB_USER1_EMAIL"])},
     )
     assert res.status_code == 404
     assert re.match("Removed. Use /user/me", res.json()["message"])

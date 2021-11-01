@@ -1,5 +1,6 @@
 import pytest
 import requests
+import os
 from marshmallow import Schema, fields, ValidationError
 from .helpers.http import url_base, skip_if_down, fetch_jwt
 from .helpers.schemas import Top, FullfillmentUse, Fullfillment, JournalDetails, JournalSettings, JournalSchema
@@ -7,7 +8,7 @@ from .helpers.schemas import Top, FullfillmentUse, Fullfillment, JournalDetails,
 def test_journal(fetch_jwt):
     res = requests.get(
         url_base + "/scenario/Jrofb6CY/journal/0892-1997",
-        headers={"Authorization": "Bearer " + fetch_jwt},
+        headers={"Authorization": "Bearer " + fetch_jwt(os.environ["UNSUB_USER1_PWD"], os.environ["UNSUB_USER1_EMAIL"])},
     )
     assert res.status_code == 200
     assert isinstance(res.json(), dict)

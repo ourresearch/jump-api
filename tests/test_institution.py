@@ -1,5 +1,6 @@
 import pytest
 import requests
+import os
 from marshmallow import Schema, fields, ValidationError 
 from .helpers.http import url_base, skip_if_down, fetch_jwt
 from .helpers.schemas import InstitutionSchema
@@ -13,7 +14,7 @@ def test_institutions(fetch_jwt):
     for institution_name, institution_id in institutions_to_check.items():
         res = requests.get(
             url_base + f"/institution/{institution_id}",
-            headers={"Authorization": "Bearer " + fetch_jwt},
+            headers={"Authorization": "Bearer " + fetch_jwt(os.environ["UNSUB_USER1_PWD"], os.environ["UNSUB_USER1_EMAIL"])},
         )
         assert res.status_code == 200
         
