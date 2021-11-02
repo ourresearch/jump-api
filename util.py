@@ -619,7 +619,6 @@ def get_sql_dict_rows(q):
 def get_sql_dict_rows2(query, values):
     from app import get_db_cursor
     with get_db_cursor() as cursor:
-        # print(cursor.mogrify(query, values))
         cursor.execute(query, values)
         rows = cursor.fetchall()
     return rows
