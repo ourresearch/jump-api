@@ -609,7 +609,6 @@ class Package(db.Model):
             """
         with get_db_cursor() as cursor:
             cursor.execute(delete_q, (self.package_id,))
-            print(cursor.mogrify(insert_q, (self.package_id, self.publisher_name,)))
             rows_inserted = cursor.execute(insert_q, (self.package_id, self.publisher_name,))
         return rows_inserted
 
@@ -641,9 +640,9 @@ class Package(db.Model):
 
     @cached_property
     def data_files_dict(self):
-        command = """select * from jump_raw_file_upload_object where package_id = '{}'""".format(self.package_id)
+        command = "select * from jump_raw_file_upload_object where package_id=%s"
         with get_db_cursor() as cursor:
-            cursor.execute(command)
+            cursor.execute(command, (self.package_id,))
             raw_file_upload_rows = cursor.fetchall()
 
         data_files_dict = {}
@@ -867,9 +866,9 @@ def clone_demo_package(institution):
 
 
 def check_if_to_delete(package_id, file):
-    command = """select * from jump_raw_file_upload_object where package_id = '{}' and to_delete_date is not null""".format(package_id)
+    command = "select * from jump_raw_file_upload_object where package_id=%s and to_delete_date is not null"
     with get_db_cursor() as cursor:
-        cursor.execute(command)
+        cursor.execute(command, (package_id,))
         rows_to_delete = cursor.fetchall()
     for row in rows_to_delete:
         if (row["package_id"] == package_id) and (row["file"] == file):
@@ -883,10 +882,9 @@ def get_custom_prices(package_id):
     if check_if_to_delete(package_id, "price"):
         return package_dict
 
-    command = "select issn_l, price from jump_journal_prices where (package_id = '{}')".format(package_id)
-    # print "command", command
+    command = "select issn_l, price from jump_journal_prices where (package_id=%s)"
     with get_db_cursor() as cursor:
-        cursor.execute(command)
+        cursor.execute(command, (package_id,))
         rows = cursor.fetchall()
 
     for row in rows:
