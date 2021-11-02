@@ -52,7 +52,6 @@ from scenario import Scenario
 from institution import Institution
 from journal_price import JournalPrice, JournalPriceInput
 from package import Package
-from package import get_ids
 from permission import Permission, UserInstitutionPermission
 from perpetual_access import PerpetualAccess, PerpetualAccessInput
 from ror_id import RorId, RorGridCrosswalk

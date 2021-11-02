@@ -35,10 +35,6 @@ from util import safe_commit
 from util import for_sorting
 
 
-def get_ids():
-    rows = get_sql_dict_rows("""select * from jump_account_package_scenario_view order by username""")
-    return rows
-
 def get_fresh_apc_journal_list(issn_ls, apc_df_dict, my_package):
     print("in get_fresh_apc_journal_list")
 
