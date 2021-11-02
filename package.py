@@ -218,21 +218,6 @@ class Package(db.Model):
             return "Taylor & Francis"
         else:
             return "false"
-    
-    # @cached_property
-    # def publisher_where(self):
-    #     if self.publisher == "Elsevier":
-    #         return "(rj.publisher = 'Elsevier')"
-    #     elif self.publisher == "Wiley":
-    #         return "(rj.publisher = 'Wiley')"
-    #     elif self.publisher == "SpringerNature":
-    #         return "(rj.publisher = 'Springer Nature')"
-    #     elif self.publisher == "Sage":
-    #         return "(rj.publisher = 'SAGE')"
-    #     elif self.publisher == "TaylorFrancis":
-    #         return "(rj.publisher = 'Taylor & Francis')"
-    #     else:
-    #         return "false"
 
     @property
     def publisher_name_snippets(self):

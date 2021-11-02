@@ -33,6 +33,19 @@ def test_update_apc_authorships():
     rows = package_small.update_apc_authorships()
     assert rows is None
 
-def test_xxx():
-    pass
+def test_methods_that_use_get_base():
+    '''
+    Test that properties work with bind variables
+    '''
+    pub2019 = package_small.get_published_in_2019
+    pubtoll2019 = package_small.get_published_toll_access_in_2019
+    pubtoll2019wpub = package_small.get_published_toll_access_in_2019_with_publisher
+    pubtoll2019wpubprice = package_small.get_published_toll_access_in_2019_with_publisher_have_price
+    counteruniqrows = package_small.get_counter_unique_rows
 
+    assert isinstance(pub2019, list)
+    assert isinstance(pubtoll2019, list)
+    assert isinstance(pubtoll2019wpub, list)
+    assert isinstance(pubtoll2019wpubprice, list)
+    assert isinstance(counteruniqrows, list)
+    
