@@ -609,14 +609,7 @@ def get_sql_rows(db, q):
         return []
     return rows
 
-def get_sql_dict_rows(q):
-    from app import get_db_cursor
-    with get_db_cursor() as cursor:
-        cursor.execute(q)
-        rows = cursor.fetchall()
-    return rows
-
-def get_sql_dict_rows2(query, values):
+def get_sql_dict_rows(query, values):
     from app import get_db_cursor
     with get_db_cursor() as cursor:
         cursor.execute(query, values)

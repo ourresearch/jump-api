@@ -30,7 +30,7 @@ from scenario import get_perpetual_access_from_cache
 from scenario import get_apc_data_from_db
 from util import get_sql_answers
 from util import get_sql_rows
-from util import get_sql_dict_rows, get_sql_dict_rows2
+from util import get_sql_dict_rows
 from util import safe_commit
 from util import for_sorting
 
@@ -138,10 +138,10 @@ class Package(db.Model):
             title as title
             from jump_core_journals core
             left outer join journalsdb_computed on core.issn_l = journalsdb_computed.issn_l
-            where package_id='{package_id}' 
+            where package_id=%(package_id_for_db)s
             order by title desc
-            """.format(package_id=self.package_id_for_db)
-        rows = get_sql_dict_rows(q)
+            """
+        rows = get_sql_dict_rows(q, {'package_id_for_db': self.package_id_for_db})
         return rows
 
     @cached_property
@@ -158,11 +158,11 @@ class Package(db.Model):
            sum(total::int) as num_2018_downloads
            from jump_counter counter
            left outer join journalsdb_computed_flat rj on counter.issn_l = rj.issn
-           where package_id='{package_id}'
+           where package_id=%(package_id_for_db)s
            group by rj.issn_l           
            order by num_2018_downloads desc
-           """.format(package_id=self.package_id_for_db)
-        return get_sql_dict_rows(q)
+           """
+        return get_sql_dict_rows(q, {'package_id_for_db': self.package_id_for_db})
 
     def get_base(self, and_where="", extrakv={}):
         q = """
@@ -179,7 +179,7 @@ class Package(db.Model):
             group by rj.issn_l
             order by num_2018_downloads desc
             """.format(and_where)
-        rows = get_sql_dict_rows2(q, {'package_id_for_db': self.package_id_for_db} | extrakv)
+        rows = get_sql_dict_rows(q, {'package_id_for_db': self.package_id_for_db} | extrakv)
         return rows
 
     @cached_property
