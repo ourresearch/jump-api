@@ -256,7 +256,7 @@ class Package(db.Model):
 	            from unpaywall u 
 	            join journalsdb_computed_flat rj on u.journal_issn_l=rj.issn
 	            where year=2019 and journal_is_oa='false'
-	            and rj.publisher = %{publisher}s
+	            and rj.publisher = %(publisher)s
 	            ) """, extrakv={'publisher': self.publisher_name})
         return self.filter_by_core_list(rows)
 
@@ -267,11 +267,11 @@ class Package(db.Model):
 	            from unpaywall u 
 	            join journalsdb_computed_flat rj on u.journal_issn_l=rj.issn
 	            where year=2019 and journal_is_oa='false'
-	            and rj.publisher = %{publisher}s
+	            and rj.publisher = %(publisher)s
 	            )
 	            and rj.issn_l in 
                 (select distinct issn_l from jump_journal_prices 
-                    where price > 0 and package_id in('658349d9', %{package_id}s) 
+                    where price > 0 and package_id in('658349d9', %(package_id)s) 
                 ) """, extrakv={'package_id': self.package_id, 'publisher': self.publisher_name})
         return self.filter_by_core_list(rows)
 
