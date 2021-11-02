@@ -9,6 +9,7 @@ from time import sleep
 from collections import OrderedDict
 import shortuuid
 import pandas as pd
+from itertools import compress
 
 import argparse
 import textwrap
@@ -68,7 +69,7 @@ def copy_into_n8_package(old_package_id, new_package_id, copy_counter=True, copy
         command += """
             delete from jump_journal_prices where package_id = '{new_package_id}';
 
-            insert into jump_journal_prices (package_id, publisher, title, issn_l, price, created) (
+            insert into jump_journal_prices (package_id, publisher, title,  issn_l, price, created) (
                 select '{new_package_id}', publisher, title, issn_l, price, created
                 from jump_journal_prices
                 where package_id = '{old_package_id}'
@@ -339,16 +340,15 @@ if __name__ == "__main__":
     group_jusp_data["she"] = {"institution_id": "institution-3bpqX3Wzkd7e", "subrs": subs['she']} #sheffield
     group_jusp_data["cam"] = {"institution_id": "institution-N68ARB5Hr4AM", "subrs": subs['cam']} #cambridge
     group_jusp_data["ucl"] = {"institution_id": "institution-jiscucl", "subrs": subs['ucl']} #university college london, not an unsub subscriber
-    
-    if parsed_args.coreplus:
-        group_jusp_data["oxf"] = {"institution_id": "institution-jiscoxf", "subrs": subs['oxf']} #oxford
-    else:
-        group_jusp_data["oxf"] = {"institution_id": "institution-jiscoxf"} #oxford
-    
     group_jusp_data["icl"] = {"institution_id": "institution-jiscicl", "subrs": subs['icl']} #imperial college
-    if parsed_args.coreplus:
-        group_jusp_data["kcl"] = {"institution_id": "institution-jisckcl", "subrs": subs['kcl']} #King's College London
-
+    
+    if parsed_args.coreplus: # Oxford & King's College London
+        group_jusp_data["oxf"] = {"institution_id": "institution-jiscoxf", "subrs": subs['oxf']}
+        group_jusp_data["kcl"] = {"institution_id": "institution-jisckcl", "subrs": subs['kcl']}
+    else:
+        group_jusp_data["oxf"] = {"institution_id": "institution-jiscoxf"}
+        # group_jusp_data["kcl"] = {"institution_id": "institution-jisckcl"}
+    
     group_jusp_data["abd"] = {"institution_id": "institution-cH6ZGAAtwkyy", "subrs": subs['abd']} #Aberdeen
     group_jusp_data["ews"] = {"institution_id": "institution-jiscews", "subrs": subs['ews']} #St Andrews
     group_jusp_data["edi"] = {"institution_id": "institution-jiscedi", "subrs": subs['edi']} #Edinburgh
@@ -358,10 +358,11 @@ if __name__ == "__main__":
 
 
     groups = {}
-    groups["n8"] = """lan	liv	man	yor	ncl	dur	lee	she	cam	ucl oxf icl""".split()
+    # groups["n8"] = """lan	liv	man	yor	ncl	dur	lee	she	cam	ucl oxf icl kcl""".split()
+    groups["n8"] = """lan   liv man yor ncl dur lee she cam ucl oxf icl""".split()
+    groups["scurl"] = ['abd', 'ews', 'gla', 'edi']
     if parsed_args.coreplus:
         groups["n8"] += ['kcl']
-    groups["scurl"] = ['abd', 'ews', 'gla', 'edi']
     if not parsed_args.coreplus:
         groups["scurl"] += ['sti']
     groups["n8+scurl"] = groups["n8"] + groups["scurl"]
@@ -375,7 +376,7 @@ if __name__ == "__main__":
             for jusp_id in group_jusp_id_list:
                 print((jusp_id, group_name, group_jusp_id_list))
             
-                if parsed.createpkgs:
+                if parsed_args.createpkgs:
                     package_create(jusp_id, institution_id, "own pta", parsed_args.coreplus)
                     # pta copied over in package_create from own jisc package
                 
@@ -422,9 +423,48 @@ if __name__ == "__main__":
     group_name = "n8+scurl"
     group_jusp_id_list = groups[group_name]
 
+    universities = {}
     results = []
+    results_ill = []
     for jusp_id in group_jusp_id_list:
-        results.append(N8UniResult(jusp_id, get_group_pta_name(group_name), parsed_args.coreplus).to_list())
+        uni = N8UniResult(jusp_id, get_group_pta_name(group_name), parsed_args.coreplus)
+        universities[jusp_id] = uni
+        tmp_res = uni.to_list()
+        ill = tmp_res.pop() # pop() fetches the last list element & removes it
+        results_ill.append(ill)
+        results.append(tmp_res)
+
+    if not parsed_args.coreplus:
+        # do ill calculations; add result back to results list
+        print("calculating ill requests for sister universities ...\n")
+        ill_sum_by_issnl = pd.concat(results_ill).groupby('issn_l').sum()
+        ill_sum_by_issnl.reset_index(inplace=True) # make issn_l a column
+        each_univ = dict.fromkeys(group_jusp_id_list, 0)
+        for index, row in ill_sum_by_issnl.iterrows():
+            issn = row['issn_l']
+            # print("issn: {}".format(issn))
+            univ_subscribing = []
+            for jusp_id in group_jusp_id_list:
+                journals = universities[jusp_id].saved_scenario_ownpta.journals
+                issns = [x.issn_l for x in journals]
+                if issn in issns:
+                    univ_subscribing.append(journals[issns.index(issn)].subscribed)
+                else:
+                    univ_subscribing.append(False)
+            num_univ_subscribing = sum(univ_subscribing)
+            # print("    univ's subscribing: {}".format(num_univ_subscribing))
+            if num_univ_subscribing > 0:
+                num_ill_requests_split_evenly = row['downloads_ill'] / num_univ_subscribing
+                univ_to_assign_to = list(compress(group_jusp_id_list, univ_subscribing))
+                # print("    univ's: {}".format((*univ_to_assign_to,)))
+                for univ in univ_to_assign_to:
+                    each_univ[univ] += num_ill_requests_split_evenly
+
+        # combine ill requests for sister universities into output list
+        for uni in results:
+            uni_jusp_id = uni[0] # jusp is first element in the list
+            num_ill_requests_by_journal = round(each_univ[uni_jusp_id]) # round to 0 sig digits
+            uni.append(num_ill_requests_by_journal) # append to the results list for each univ
 
     for result_number in range(0, len(results[0])):
         print(";".join([str(results[column_number][result_number]) for column_number in range(0, len(results))]))

@@ -1,5 +1,6 @@
 import pytest
 import requests
+import os
 from io import StringIO
 import pandas as pd
 from marshmallow import Schema, fields, ValidationError
@@ -20,7 +21,7 @@ consortium_scenario_id = "e5tqtgQQ"
 def test_scenario_journals(fetch_jwt):
     res = requests.get(
         url_base + f"/scenario/{scenario_id}/journals",
-        headers={"Authorization": "Bearer " + fetch_jwt},
+        headers={"Authorization": "Bearer " + fetch_jwt(os.environ["UNSUB_USER1_PWD"], os.environ["UNSUB_USER1_EMAIL"])},
     )
     assert res.status_code == 200
     assert isinstance(res.json(), dict)
@@ -53,7 +54,7 @@ def test_scenario_journals(fetch_jwt):
 def test_scenario_details(fetch_jwt):
     res = requests.get(
         url_base + f"/scenario/{scenario_id}/details",
-        headers={"Authorization": "Bearer " + fetch_jwt},
+        headers={"Authorization": "Bearer " + fetch_jwt(os.environ["UNSUB_USER1_PWD"], os.environ["UNSUB_USER1_EMAIL"])},
     )
     data = res.json()
     assert res.status_code == 200
@@ -92,7 +93,7 @@ def test_scenario_details(fetch_jwt):
 def test_scenario_export(fetch_jwt):
     res = requests.get(
         url_base + f"/scenario/{scenario_id}/export",
-        headers={"Authorization": "Bearer " + fetch_jwt},
+        headers={"Authorization": "Bearer " + fetch_jwt(os.environ["UNSUB_USER1_PWD"], os.environ["UNSUB_USER1_EMAIL"])},
     )
     data = res.text
     assert res.status_code == 200
@@ -108,7 +109,7 @@ def test_scenario_export(fetch_jwt):
 def test_scenario_export_csv(fetch_jwt):
     res = requests.get(
         url_base + f"/scenario/{scenario_id}/export.csv",
-        headers={"Authorization": "Bearer " + fetch_jwt},
+        headers={"Authorization": "Bearer " + fetch_jwt(os.environ["UNSUB_USER1_PWD"], os.environ["UNSUB_USER1_EMAIL"])},
     )
     data = res.text
     assert res.status_code == 200
@@ -127,10 +128,11 @@ def test_scenario_export_csv(fetch_jwt):
 
 
 def test_scenario_member_institutions(fetch_jwt):
+    jwt = fetch_jwt(os.environ["UNSUB_USER1_PWD"], os.environ["UNSUB_USER1_EMAIL"])
     # scenario id that's not part of a consortium
     res = requests.get(
         url_base + f"/scenario/{scenario_id}/member-institutions",
-        headers={"Authorization": "Bearer " + fetch_jwt},
+        headers={"Authorization": "Bearer " + jwt},
     )
     assert res.status_code == 404
     assert res.json()["message"] == "not a consortium scenario_id"
@@ -138,7 +140,7 @@ def test_scenario_member_institutions(fetch_jwt):
     # scenario id that is part of a consortium
     res = requests.get(
         url_base + f"/scenario/{consortium_scenario_id}/member-institutions",
-        headers={"Authorization": "Bearer " + fetch_jwt},
+        headers={"Authorization": "Bearer " + jwt},
     )
     data = res.json()
     assert res.status_code == 200

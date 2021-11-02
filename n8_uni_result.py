@@ -3,6 +3,7 @@
 from collections import defaultdict
 from collections import OrderedDict
 from time import time
+import pandas as pd
 
 from saved_scenario import SavedScenario
 
@@ -37,7 +38,8 @@ class N8UniResult(object):
         response += [self.usage()]
         response += [self.subscription_cost()]
         response += [self.big_deal_cost()]
-        print(response)
+        response += [self.num_ill_requests_by_journal()]
+        # print(response) # don't print anymore b/c num_ill_requests_by_journal is large
         return response
 
     def num_own_subscriptions(self):
@@ -71,8 +73,13 @@ class N8UniResult(object):
         return round(self.saved_scenario_grouppta.live_scenario.use_subscription_percent/100.0, 3)
 
     def percent_group_backfile(self):
-        total_plus_group = round(self.saved_scenario_grouppta.live_scenario.use_backfile/self.saved_scenario_grouppta.live_scenario.use_total, 3)
-        return round(total_plus_group - self.percent_own_backfile(), 3)
+        own_subscriptions = [j.issn_l for j in self.saved_scenario_ownpta.journals if j.subscribed]
+        own_use_backfile = sum(j.use_backfile for j in self.saved_scenario_ownpta.live_scenario.journals if j.issn_l not in own_subscriptions)
+        group_use_backfile = sum(j.use_backfile for j in self.saved_scenario_grouppta.live_scenario.journals if j.issn_l not in own_subscriptions)
+        own_backfile_percent = round(own_use_backfile/self.saved_scenario_grouppta.live_scenario.use_total, 3)
+        total_plus_group_backfile_percent = round(group_use_backfile/self.saved_scenario_grouppta.live_scenario.use_total, 3)
+        response = round(total_plus_group_backfile_percent - own_backfile_percent, 3)
+        return response
 
     def usage(self):
         return round(self.saved_scenario_ownpta.live_scenario.use_total, 0)
@@ -92,6 +99,15 @@ class N8UniResult(object):
     def big_deal_cost(self):
         return round(self.saved_scenario_ownpta.live_scenario.cost_bigdeal_projected, 0)
 
+    def num_ill_requests_by_journal(self):
+        results = []
+        for journal in self.saved_scenario_ownpta.journals:
+            results.append(
+                {'jusp_id': self.jusp_id,
+                'issn_l': journal.issn_l,
+                'downloads_ill': round(journal.downloads_ill, 3),
+                'title': journal.title})
+        return pd.concat([pd.DataFrame([i]) for i in results])
 
 # changes
 

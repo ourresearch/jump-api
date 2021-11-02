@@ -104,3 +104,7 @@ test_old_ones
 
 # generated if app run locallly (added by scott)
 export.csv
+
+# ignore n8 files
+data/n8data/*
+
