@@ -622,7 +622,7 @@ def get_counter_totals_from_db(package_id):
     counter_dict = defaultdict(int)
     command = """select issn_l, total::float, report_version, report_name, metric_type 
         from jump_counter 
-        where package_id='{}'
+        where package_id=%s
         and (report_name is null or report_name != 'trj4')
         """
     rows = None
@@ -662,7 +662,7 @@ def get_package_specific_scenario_data_from_db(package_id):
         group by citing.issn_l, year"""
     citation_rows = None
     with get_db_cursor() as cursor:
-        cursor.execute(command, (package_id,))
+        cursor.execute(command, {'package_id': package_id})
         citation_rows = cursor.fetchall()
     citation_dict = defaultdict(dict)
     for row in citation_rows:
@@ -682,7 +682,7 @@ def get_package_specific_scenario_data_from_db(package_id):
         group by authorship.issn_l, year"""
     authorship_rows = None
     with get_db_cursor() as cursor:
-        cursor.execute(command, (package_id,))
+        cursor.execute(command, {'package_id': package_id})
         authorship_rows = cursor.fetchall()
     authorship_dict = defaultdict(dict)
     for row in authorship_rows:
