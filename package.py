@@ -26,7 +26,6 @@ from apc_journal import ApcJournal
 from saved_scenario import SavedScenario # used in relationship
 from institution import Institution  # used in relationship
 from scenario import get_core_list_from_db
-from scenario import get_perpetual_access_from_cache
 from scenario import get_apc_data_from_db
 from util import get_sql_answers
 from util import get_sql_rows
