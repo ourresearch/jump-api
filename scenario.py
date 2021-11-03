@@ -723,7 +723,7 @@ def get_perpetual_access_from_cache(package_id):
     with get_db_cursor() as cursor:
         cursor.execute(command, (package_id,))
         rows = cursor.fetchall()
-    package_dict = dict([(a["issn_l"], tuple(a)) for a in rows])
+    package_dict = dict([(a["issn_l"], a) for a in rows])
     return package_dict
 
 
