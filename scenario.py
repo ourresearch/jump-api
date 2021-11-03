@@ -597,10 +597,10 @@ def get_parent_consortium_package_id(package_id):
 
 @cache
 def get_consortium_package_ids(package_id):
-    command = """select package_id from jump_account_package where consortium_package_id = '{}'""".format(package_id)
+    command = "select package_id from jump_account_package where consortium_package_id=%s"
     rows = None
     with get_db_cursor() as cursor:
-        cursor.execute(command)
+        cursor.execute(command, (package_id,))
         rows = cursor.fetchall()
     package_ids = [row["package_id"] for row in rows]
     return package_ids
@@ -611,9 +611,9 @@ def get_counter_journals_by_report_name_from_db(package_id):
         from jump_counter 
         where package_id='{}'
         group by report_version, report_name
-        """.format(package_id)
+        """
     with get_db_cursor() as cursor:
-        cursor.execute(command)
+        cursor.execute(command, (package_id,))
         rows = cursor.fetchall()
     return rows
 
@@ -624,10 +624,10 @@ def get_counter_totals_from_db(package_id):
         from jump_counter 
         where package_id='{}'
         and (report_name is null or report_name != 'trj4')
-        """.format(package_id)
+        """
     rows = None
     with get_db_cursor() as cursor:
-        cursor.execute(command)
+        cursor.execute(command, (package_id,))
         rows = cursor.fetchall()
     if rows:
         is_counter5 = (rows[0]["report_version"] == "5")
@@ -657,12 +657,12 @@ def get_package_specific_scenario_data_from_db(package_id):
         join jump_grid_id institution_grid on citing.grid_id = institution_grid.grid_id
         join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id
         where citing.year < 2019 
-        and institution_package.package_id='{package_id}'
-        and (citing.issn_l in (select distinct issn_l from jump_counter where package_id='{package_id}'))        
-        group by citing.issn_l, year""".format(package_id=package_id)
+        and institution_package.package_id=%(package_id)s
+        and (citing.issn_l in (select distinct issn_l from jump_counter where package_id=%(package_id)s))
+        group by citing.issn_l, year"""
     citation_rows = None
     with get_db_cursor() as cursor:
-        cursor.execute(command)
+        cursor.execute(command, (package_id,))
         citation_rows = cursor.fetchall()
     citation_dict = defaultdict(dict)
     for row in citation_rows:
@@ -677,12 +677,12 @@ def get_package_specific_scenario_data_from_db(package_id):
         join jump_grid_id institution_grid on authorship.grid_id = institution_grid.grid_id
         join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id
         where authorship.year < 2019 
-        and institution_package.package_id='{package_id}'
-        and (authorship.issn_l in (select distinct issn_l from jump_counter where package_id='{package_id}'))
-        group by authorship.issn_l, year""".format(package_id=package_id)
+        and institution_package.package_id=%(package_id)s
+        and (authorship.issn_l in (select distinct issn_l from jump_counter where package_id=%(package_id)s))
+        group by authorship.issn_l, year"""
     authorship_rows = None
     with get_db_cursor() as cursor:
-        cursor.execute(command)
+        cursor.execute(command, (package_id,))
         authorship_rows = cursor.fetchall()
     authorship_dict = defaultdict(dict)
     for row in authorship_rows:
@@ -707,33 +707,31 @@ def get_apc_data_from_db(input_package_id):
     consortium_package_ids = get_consortium_package_ids(input_package_id)
     if not consortium_package_ids:
         consortium_package_ids = [input_package_id]
-    consortium_package_ids_string = ",".join(["'{}'".format(package_id) for package_id in consortium_package_ids])
 
-    command = """select * from jump_apc_authorships where package_id in ({})
-                    """.format(consortium_package_ids_string)
+    command = "select * from jump_apc_authorships where package_id in %s"
+    consortium_package_ids = tuple(consortium_package_ids) # values have to be in a tuple beforehand
     with get_db_cursor(use_realdictcursor=True) as cursor:
-        cursor.execute(command)
+        cursor.execute(command, (consortium_package_ids,))
         rows = cursor.fetchall()
 
     return rows
 
 
 
-def get_perpetual_access_from_cache(package_id, unused_publisher_name=None):
-    command = text(
-        'select * from jump_perpetual_access where package_id = :package_id'
-    ).bindparams(package_id=package_id)
-
-    rows = db.engine.execute(command).fetchall()
-    package_dict = dict([(a["issn_l"], a) for a in rows])
+def get_perpetual_access_from_cache(package_id):
+    command = "select * from jump_perpetual_access where package_id=%s"
+    with get_db_cursor() as cursor:
+        cursor.execute(command, (package_id,))
+        rows = cursor.fetchall()
+    package_dict = dict([(a["issn_l"], tuple(a)) for a in rows])
     return package_dict
 
 
 @cache
 def get_core_list_from_db(input_package_id):
-    command = "select issn_l, baseline_access from jump_core_journals where package_id='{}'".format(input_package_id)
+    command = "select issn_l, baseline_access from jump_core_journals where package_id=%s"
     with get_db_cursor() as cursor:
-        cursor.execute(command)
+        cursor.execute(command, (input_package_id,))
         rows = cursor.fetchall()
     my_dict = dict([(a["issn_l"], a) for a in rows])
     return my_dict
