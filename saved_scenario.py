@@ -37,14 +37,13 @@ def save_raw_scenario_to_db(scenario_id, raw_scenario_definition, ip):
         cursor.execute(qry, values)
 
 def save_raw_member_institutions_included_to_db(scenario_id, member_institutions_list, ip):
-    scenario_members = json.dumps(member_institutions_list)
-
     with get_db_cursor() as cursor:
-        command = """INSERT INTO jump_consortium_member_institutions (scenario_id, updated, ip, scenario_members) values ('{}', sysdate, '{}', '{}');""".format(
-            scenario_id, ip, scenario_members
-        )
-        # print command
-        cursor.execute(command)
+        cols = ['scenario_id', 'updated', 'ip', 'scenario_members']
+        values = (scenario_id, datetime.datetime.now(), ip, Json(member_institutions_list), )
+        qry = sql.SQL("INSERT INTO jump_consortium_member_institutions ({}) values ({})").format(
+            sql.SQL(', ').join(map(sql.Identifier, cols)),
+            sql.SQL(', ').join(sql.Placeholder() * len(cols)))
+        cursor.execute(qry, values)
 
 def get_feedback_member_institution_scenario_id(consortium_scenario_id, member_package_id):
     member_institution_scenario_id = "scenario-feedback{}".format(member_package_id)
@@ -182,19 +181,14 @@ class SavedScenario(db.Model):
             tablename = "jump_scenario_details_demo"
         else:
             tablename = "jump_scenario_details_paid"
-        scenario_json = json.dumps(self.to_dict_definition())
-        print("got json")
-        scenario_json = scenario_json.replace("'", "''")
-        # print "\n\n scenario_json", scenario_json
         with get_db_cursor() as cursor:
-            print("got cursor")
-            command = """INSERT INTO {} (scenario_id, updated, ip, scenario_json) values ('{}', sysdate, '{}', '{}');""".format(
-                tablename, self.scenario_id, ip, scenario_json
-            )
-            # print command
-            cursor.execute(command)
-        print("done with execute")
-
+            cols = ['scenario_id', 'updated', 'ip', 'scenario_json']
+            values = (self.scenario_id, datetime.datetime.now(), ip, Json(self.to_dict_definition()), )
+            qry = sql.SQL("INSERT INTO {} ({}) values ({})").format(
+                sql.Identifier(tablename),
+                sql.SQL(', ').join(map(sql.Identifier, cols)),
+                sql.SQL(', ').join(sql.Placeholder() * len(cols)))
+            cursor.execute(qry, values)
 
     def set_unique_id(self, unique_id):
         self.scenario_id = "demo-scenario-{}".format(unique_id)
@@ -247,10 +241,9 @@ class SavedScenario(db.Model):
         if not self.is_feedback_scenario:
             return []
 
-        command = """select * from jump_consortium_feedback_requests where member_scenario_id='{scenario_id}'
-             """.format(scenario_id=self.scenario_id)
+        command = "select * from jump_consortium_feedback_requests where member_scenario_id=%s"
         with get_db_cursor() as cursor:
-            cursor.execute(command)
+            cursor.execute(command, (self.scenario_id,))
             rows_for_feedback = cursor.fetchall()
             return rows_for_feedback[0]
 
