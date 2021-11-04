@@ -100,14 +100,10 @@ def get_latest_scenario_raw(scenario_id, exclude_added_via_pushpull=False):
     with get_db_cursor() as cursor:
         if exclude_added_via_pushpull:
             # is not True includes false and null, importantly
-            command = """select updated, scenario_json from jump_scenario_details_paid where scenario_id='{}' and added_via_pushpull is not True order by updated desc limit 1;""".format(
-                scenario_id)
+            command = "select updated,scenario_json from jump_scenario_details_paid where scenario_id=%s and added_via_pushpull is not True order by updated desc limit 1;"
         else:
-            command = """select updated, scenario_json from jump_scenario_details_paid where scenario_id='{}' order by updated desc limit 1;""".format(
-                scenario_id)
-
-        # print command
-        cursor.execute(command)
+            command = "select updated,scenario_json from jump_scenario_details_paid where scenario_id=%s order by updated desc limit 1;"
+        cursor.execute(command, (scenario_id,))
         rows = cursor.fetchall()
 
     if rows:
@@ -132,11 +128,9 @@ def get_latest_scenario(scenario_id, my_jwt=None):
         tablename = "jump_scenario_details_paid"
     rows = None
     with get_db_cursor() as cursor:
-        command = """select scenario_json from {} where scenario_id='{}' order by updated desc limit 1;""".format(
-            tablename, scenario_id
-        )
-        # print command
-        cursor.execute(command)
+        qry = sql.SQL("select scenario_json from {} where scenario_id=%s order by updated desc limit 1").format( 
+            sql.Identifier(tablename))
+        cursor.execute(qry, (scenario_id,))
         rows = cursor.fetchall()
 
     scenario_data = None
