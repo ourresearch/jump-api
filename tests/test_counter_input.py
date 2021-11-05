@@ -1,8 +1,6 @@
-# coding: utf-8
-
 import pytest
-import package
 from counter import CounterInput
+from app import get_db_cursor
 
 file_rows = {
     'counter4_jr1_2018_00.csv': [
@@ -32,51 +30,39 @@ file_rows = {
 }
 
 
-# class TestCounterInput(unittest.TestCase):
-#     def setUp():
-#         self.maxDiff = 5000
-
 def test_imports_counter_4_samples():
     for file_name, expected_rows in file_rows.items():
         rows, warnings = CounterInput().normalize_rows(file_name='tests/test_files/counter/{}'.format(file_name))
         assert expected_rows == rows
 
-# def test_imports_utf_16le():
-#     rows, warnings = CounterInput().normalize_rows(file_name='tests/test_files/counter/counter4_jr1_2018_00_utf_16le.csv')
-#     assert file_rows['counter4_jr1_2018_00.csv'] == rows
+def test_set_to_delete():
+    package_id = 'package-55BdKPno2uX5'
+    report_name = "jr1"
+    res = CounterInput().set_to_delete(package_id, report_name)
+    assert res == "Queued to delete"
+    with get_db_cursor() as cursor:
+        command = "select * from jump_raw_file_upload_object where package_id=%(package_id)s and file=%(file)s"
+        values = {'package_id': package_id, 'file': report_name}
+        print(cursor.mogrify(command, values))
+        cursor.execute(command, values)
+        rows = cursor.fetchall()
+    assert len(rows) == 0
 
-# def test_imports_utf_16be():
-#     rows, warnings = CounterInput().normalize_rows(file_name='tests/test_files/counter/counter4_jr1_2018_00_utf_16be.csv')
-#     assert file_rows['counter4_jr1_2018_00.csv'] == rows
+# def test_delete():
+#     # add counter files
+#     # FIXME, add this step - There's no way to programatically upload a COUNTER file
+#     #   Upload to S3 is done on the front end - we can only run /publisher/<package_id>/sign-s3 route here
+#     #   - but maybe I can run /publisher/<package_id>/sign-s3 and then get back the url and upload from here?
+# 
+#     # try to delete counter files for which they exist
+#     package_id = 'package-55BdKPno2uX5'
+#     res = CounterInput().delete(package_id = package_id)
+#     assert isinstance(res, str)
+#     assert 'Deleted CounterInput' in res
+#     assert package_id in res
 
-# def test_imports_utf_16le_bom():
-#     rows, warnings = CounterInput().normalize_rows(file_name='tests/test_files/counter/counter4_jr1_2018_00_utf_16le_bom.csv')
-#     assert file_rows['counter4_jr1_2018_00.csv'] == rows
-
-# def test_imports_utf_16be_bom():
-#     rows, warnings = CounterInput().normalize_rows(file_name='tests/test_files/counter/counter4_jr1_2018_00_utf_16be_bom.csv')
-#     assert file_rows['counter4_jr1_2018_00.csv'] == rows
-
-# def test_imports_utf_32le():
-#     rows, warnings = CounterInput().normalize_rows(file_name='tests/test_files/counter/counter4_jr1_2018_00_utf_32le.csv')
-#     assert file_rows['counter4_jr1_2018_00.csv'] == rows
-
-# def test_imports_utf_32be():
-#     rows, warnings = CounterInput().normalize_rows(file_name='tests/test_files/counter/counter4_jr1_2018_00_utf_32be.csv')
-#     assert file_rows['counter4_jr1_2018_00.csv'] == rows
-
-# def test_imports_utf_32le_bom():
-#     rows, warnings = CounterInput().normalize_rows(file_name='tests/test_files/counter/counter4_jr1_2018_00_utf_32le_bom.csv')
-#     assert file_rows['counter4_jr1_2018_00.csv'] == rows
-
-# def test_imports_utf_132be_bom():
-#     rows, warnings = CounterInput().normalize_rows(file_name='tests/test_files/counter/counter4_jr1_2018_00_utf_32be_bom.csv')
-#     assert file_rows['counter4_jr1_2018_00.csv'] == rows
-
-# def test_imports_windows_1252():
-#     rows, warnings = CounterInput().normalize_rows(file_name='tests/test_files/counter/counter4_jr1_2018_00_windows_1252.csv')
-#     assert file_rows['counter4_jr1_2018_00.csv'] == rows
-
-# def test_rejects_counter5():
-#     with pytest.raises(RuntimeError, match=r".*COUNTER 5.*"):
-#         CounterInput().normalize_rows(file_name='tests/test_files/counter/counter5_tr_j1_2019_00.csv')
+#     # try to delete counter files when they don't exist
+#     res2 = CounterInput().delete(package_id = package_id)
+#     assert isinstance(res2, str)
+#     assert 'Deleted CounterInput' in res
+#     assert package_id in res

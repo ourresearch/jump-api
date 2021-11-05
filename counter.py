@@ -10,6 +10,7 @@ from app import db
 from app import logger
 from app import get_db_cursor
 from package_input import PackageInput
+from psycopg2.extensions import AsIs
 
 class Counter(db.Model):
     __tablename__ = "jump_counter"
@@ -230,13 +231,16 @@ class CounterInput(db.Model, PackageInput):
             report_name = "jr1"
 
         with get_db_cursor() as cursor:
-            command = "update jump_raw_file_upload_object set to_delete_date=sysdate where package_id = '{}' and file = '{}'".format(
-                package_id, self.calculate_file_type_label(report_name))
-            print(command)
-            cursor.execute(command)
+            command = "update jump_raw_file_upload_object set to_delete_date=sysdate where package_id=%(package_id)s and file=%(file)s"
+            values = {'package_id': package_id, 'file': self.calculate_file_type_label(report_name)}
+            print(cursor.mogrify(command, values))
+            cursor.execute(command, values)
 
         return "Queued to delete"
 
+    def sql_delete(self, cursor, sql_str, tablename, package_id, report_or_file):
+        values = {'table': AsIs(tablename), 'id': package_id, 'rname_or_file': report_or_file}
+        cursor.execute(sql_str, values)
 
     def delete(self, package_id, report_name=None):
         # DELETE to /publisher/<publisher_id>/counter/trj2  (or trj3, trj4)
@@ -250,26 +254,20 @@ class CounterInput(db.Model, PackageInput):
             report_name = "jr1"
 
         # delete select files if counter 5, else delete all counter data of all report names, including null
+        command_delete_or = "DELETE FROM %(table)s where package_id=%(id)s and ((report_name is null) or (report_name=%(rname_or_file)s))"
+        command_delete = "DELETE FROM %(table)s where package_id=%(id)s and file=%(rname_or_file)s"
+        command_delete_report = "DELETE FROM %(table)s where package_id=%(id)s and report_name=%(rname_or_file)s"
         if report_name == "jr1":
             with get_db_cursor() as cursor:
-                cursor.execute("delete from {} where package_id = '{}' and ((report_name is null) or (report_name = '{}'))".format(
-                    self.__tablename__, package_id, report_name))
-                cursor.execute("delete from {} where package_id = '{}' and ((report_name is null) or (report_name = '{}'))".format(
-                    self.destination_table(), package_id, report_name))
-                cursor.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
-                    package_id, self.calculate_file_type_label(report_name)))
-                cursor.execute("delete from jump_file_import_error_rows where package_id = '{}' and file = '{}'".format(
-                    package_id, self.calculate_file_type_label(report_name)))
+                self.sql_delete(cursor, command_delete_or, self.__tablename__, package_id, report_name)
+                self.sql_delete(cursor, command_delete_or, self.destination_table(), package_id, report_name)
+                self.sql_delete(cursor, command_delete, 'jump_raw_file_upload_object', package_id, self.calculate_file_type_label(report_name))
+                self.sql_delete(cursor, command_delete, 'jump_file_import_error_rows', package_id, self.calculate_file_type_label(report_name))
         else:
             with get_db_cursor() as cursor:
-                cursor.execute("delete from {} where package_id = '{}' and report_name = '{}'".format(
-                    self.__tablename__, package_id, report_name))
-                cursor.execute("delete from {} where package_id = '{}' and report_name = '{}'".format(
-                    self.destination_table(), package_id, report_name))
-                cursor.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
-                    package_id, self.calculate_file_type_label(report_name), report_name))
-
-        # safe_commit(db)
+                self.sql_delete(cursor, command_delete_report, self.__tablename__, package_id, report_name)
+                self.sql_delete(cursor, command_delete_report, self.destination_table(), package_id, report_name)
+                self.sql_delete(cursor, command_delete, 'jump_raw_file_upload_object', package_id, self.calculate_file_type_label(report_name))
 
         from package import Package
         my_package = db.session.query(Package).filter(Package.package_id == package_id).scalar()
