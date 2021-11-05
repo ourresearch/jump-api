@@ -18,10 +18,6 @@ from app import DEMO_PACKAGE_ID
 from app import s3_client
 
 # from app import my_memcached # disable memcached
-from assumptions import Assumptions
-from counter import CounterInput
-from journal_price import JournalPriceInput
-from perpetual_access import PerpetualAccessInput
 from apc_journal import ApcJournal
 from saved_scenario import SavedScenario # used in relationship
 from institution import Institution  # used in relationship
