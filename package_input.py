@@ -185,9 +185,8 @@ class PackageInput:
         s3_client.upload_file(filename, bucket_name, object_name)
 
         with get_db_cursor() as cursor:
-            command = "delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
-                package_id, self.file_type_label())
-            cursor.execute(command)
+            command = "delete from jump_raw_file_upload_object where package_id=%s and file=%s"
+            cursor.execute(command, (package_id, self.file_type_label(),))
 
         if error and not error_details:
             error_details_dict = {
@@ -236,10 +235,8 @@ class PackageInput:
 
     def set_to_delete(self, package_id, report_name=None):
         with get_db_cursor() as cursor:
-            command = "update jump_raw_file_upload_object set to_delete_date=sysdate where package_id = '{}' and file = '{}'".format(
-                package_id, self.file_type_label())
-            print(command)
-            cursor.execute(command)
+            command = "update jump_raw_file_upload_object set to_delete_date=sysdate where package_id=%s and file=%s"
+            cursor.execute(command, (package_id, self.file_type_label(),))
         return "Queued to delete"
 
 
