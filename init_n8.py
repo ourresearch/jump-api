@@ -23,7 +23,7 @@ from saved_scenario import get_latest_scenario_raw
 from n8_uni_result import N8UniResult
 from util import safe_commit
 from util import get_sql_answer
-
+from change_subs import issn_to_issnl
 
 
 def copy_into_n8_package(old_package_id, new_package_id, copy_counter=True, copy_prices=True, copy_perpetual_access=True, copy_apcs=False):
@@ -274,6 +274,7 @@ def get_group_pta_name(group_name):
 
 def fetch_inst_subs(path):
     x = pd.read_csv(path, sep=",")
+    x['issnl'] = issn_to_issnl(x['ISSN'].to_list())
     issns_by_inst={}
     for a,b in x.groupby('Institution'):
         issns_by_inst[b['Institution'].to_list()[0]]=b['ISSN'].to_list()
@@ -315,7 +316,7 @@ if __name__ == "__main__":
     print("Running the '{}' model\n".format("coreplus" if parsed_args.coreplus else "classic"))
 
     if parsed_args.coreplus:
-        core = pd.read_csv("data/n8data/subscriptions_n8_core.csv", sep=",")["ISSN"].to_list()
+        core = issn_to_issnl(pd.read_csv("data/n8data/subscriptions_n8_core.csv", sep=",")["ISSN"].to_list())
         subs = fetch_inst_subs("data/n8data/subscriptions_n8_coreplus.csv")
         for x in subs:
             subs[x] += core
