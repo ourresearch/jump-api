@@ -277,7 +277,7 @@ def fetch_inst_subs(path):
     x['issnl'] = issn_to_issnl(x['ISSN'].to_list())
     issns_by_inst={}
     for a,b in x.groupby('Institution'):
-        issns_by_inst[b['Institution'].to_list()[0]]=b['ISSN'].to_list()
+        issns_by_inst[b['Institution'].to_list()[0]]=b['issnl'].to_list()
     return issns_by_inst
 
 # python init_n8.py
