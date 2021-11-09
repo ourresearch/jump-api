@@ -25,8 +25,12 @@ from util import safe_commit
 from util import get_sql_answer
 from change_subs import issn_to_issnl
 
+# JUSP IDs for which we do not want to re-create their pkgs using the --createpkgs and the package_create() method
+# {'jusp_id': 'reason for not doing so'}
+dont_create_package_list = {'ncl': 'custom PTA used',
+'kcl': 'different price list'}
 
-def copy_into_n8_package(old_package_id, new_package_id, copy_counter=True, copy_prices=True, copy_perpetual_access=True, copy_apcs=False):
+def copy_into_n8_package(old_package_id, new_package_id, copy_counter=True, copy_prices=True, copy_perpetual_access=True, copy_apcs=False, coreplus=False):
     command = ""
 
     if copy_counter:
@@ -81,7 +85,7 @@ def copy_into_n8_package(old_package_id, new_package_id, copy_counter=True, copy
                 select '{new_package_id}', publisher, issn, price
                 from jump_journal_prices_input
                 where package_id = '{old_package_id}'
-            );""".format(new_package_id=new_package_id, old_package_id=old_package_id)
+            );""".format(new_package_id=new_package_id, old_package_id=old_package_id if coreplus else 'package-n8els_lee_ownpta')
 
     if copy_apcs:
         command += """
@@ -111,9 +115,10 @@ def copy_into_n8_package(old_package_id, new_package_id, copy_counter=True, copy
 
 
 def package_create(jusp_id, institution_id, package_type, coreplus):
+    if jusp_id in list(dont_create_package_list.keys()) and package_type == "own pta":
+        raise ValueError("jusp_id '{}' in list of institutions to NOT create packages for, see top of init_n8.py file".format(jusp_id))
 
-    jisc_package_id_prefix = "package-jiscels{}" if coreplus else "package-solojiscels{}"
-    jisc_package_id = jisc_package_id_prefix.format(jusp_id)
+    jisc_package_id = "package-jiscels{}".format(jusp_id)
     n8_id_prefix = "n8els_coreplus" if coreplus else "n8els"
     package_id = "package-{}_{}_{}".format(n8_id_prefix, jusp_id, package_type.replace(" ", ""))
     package_name = "Elsevier n8 ({})".format(package_type)
@@ -142,9 +147,9 @@ def package_create(jusp_id, institution_id, package_type, coreplus):
         safe_commit(db)
 
         if package_type == "own pta":
-            copy_into_n8_package(old_package_id=jisc_package_id, new_package_id=package_id, copy_perpetual_access=True)
+            copy_into_n8_package(old_package_id=jisc_package_id, new_package_id=package_id, copy_perpetual_access=True, coreplus=coreplus)
         else:
-            copy_into_n8_package(old_package_id=jisc_package_id, new_package_id=package_id, copy_perpetual_access=False)
+            copy_into_n8_package(old_package_id=jisc_package_id, new_package_id=package_id, copy_perpetual_access=False, coreplus=coreplus)
 
     my_scenario = SavedScenario.query.get(scenario_id)
     if not my_scenario:
@@ -172,8 +177,7 @@ def update_group_pta(jusp_id, group_jusp_ids, package_type, coreplus):
 
     n8_id_prefix = "n8els_coreplus" if coreplus else "n8els"
     package_id = "package-{}_{}_{}".format(n8_id_prefix, jusp_id, package_type.replace(" ", ""))
-    jisc_package_ids_prefix = "package-jiscels{}" if coreplus else "package-solojiscels{}"
-    jisc_package_ids = [jisc_package_ids_prefix.format(b) for b in group_jusp_ids]
+    jisc_package_ids = ["package-jiscels{}".format(b) for b in group_jusp_ids]
     jisc_package_ids_string = ", ".join(["'{}'".format(a) for a in jisc_package_ids])
 
     command = """        
@@ -348,7 +352,7 @@ if __name__ == "__main__":
         group_jusp_data["kcl"] = {"institution_id": "institution-jisckcl", "subrs": subs['kcl']}
     else:
         group_jusp_data["oxf"] = {"institution_id": "institution-jiscoxf"}
-        # group_jusp_data["kcl"] = {"institution_id": "institution-jisckcl"}
+        group_jusp_data["kcl"] = {"institution_id": "institution-jisckcl"}
     
     group_jusp_data["abd"] = {"institution_id": "institution-cH6ZGAAtwkyy", "subrs": subs['abd']} #Aberdeen
     group_jusp_data["ews"] = {"institution_id": "institution-jiscews", "subrs": subs['ews']} #St Andrews
@@ -359,8 +363,7 @@ if __name__ == "__main__":
 
 
     groups = {}
-    # groups["n8"] = """lan	liv	man	yor	ncl	dur	lee	she	cam	ucl oxf icl kcl""".split()
-    groups["n8"] = """lan   liv man yor ncl dur lee she cam ucl oxf icl""".split()
+    groups["n8"] = """lan	liv	man	yor	ncl	dur	lee	she	cam	ucl oxf icl kcl""".split()
     groups["scurl"] = ['abd', 'ews', 'gla', 'edi']
     if parsed_args.coreplus:
         groups["n8"] += ['kcl']
