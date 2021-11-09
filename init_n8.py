@@ -28,8 +28,8 @@ from change_subs import issn_to_issnl
 
 # JUSP IDs for which we do not want to re-create their pkgs using the --createpkgs and the package_create() method
 # {'jusp_id': 'reason for not doing so'}
-dont_create_package_list = {'ncl': 'custom PTA used',
-'kcl': 'different price list'}
+dont_create_package_dict = {'ncl': 'custom PTA used',
+'kcl': 'using a different price list from other institutions'}
 
 def copy_into_n8_package(old_package_id, new_package_id, copy_counter=True, copy_prices=True, copy_perpetual_access=True, copy_apcs=False, coreplus=False):
     command = ""
@@ -116,7 +116,7 @@ def copy_into_n8_package(old_package_id, new_package_id, copy_counter=True, copy
 
 
 def package_create(jusp_id, institution_id, package_type, coreplus):
-    if jusp_id in list(dont_create_package_list.keys()) and package_type == "own pta":
+    if jusp_id in list(dont_create_package_dict.keys()) and package_type == "own pta":
         raise ValueError("jusp_id '{}' in list of institutions to NOT create packages for, see top of init_n8.py file".format(jusp_id))
 
     jisc_package_id = "package-jiscels{}".format(jusp_id)
@@ -322,7 +322,8 @@ if __name__ == "__main__":
     if not parsed_args.coreplus:
         if parsed_args.createpkgs:
             parsed_args.createpkgs = False
-            warnings.warn("Running the 'classic' model; forcing --createpkgs to False")
+            warnings.warn("Running the 'classic' model; forcing --createpkgs to False\n" + 
+                "  We don't want to use JISC packages (e.g., package-jiscelsncl) b/c those have Coreplus title prices\n", stacklevel=2)
 
     if parsed_args.coreplus:
         core = issn_to_issnl(pd.read_csv("data/n8data/subscriptions_n8_core.csv", sep=",")["ISSN"].to_list())
