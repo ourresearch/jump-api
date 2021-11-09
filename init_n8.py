@@ -370,8 +370,6 @@ if __name__ == "__main__":
     groups = {}
     groups["n8"] = """lan	liv	man	yor	ncl	dur	lee	she	cam	ucl oxf icl kcl""".split()
     groups["scurl"] = ['abd', 'ews', 'gla', 'edi']
-    if parsed_args.coreplus:
-        groups["n8"] += ['kcl']
     if not parsed_args.coreplus:
         groups["scurl"] += ['sti']
     groups["n8+scurl"] = groups["n8"] + groups["scurl"]
