@@ -10,6 +10,7 @@ from collections import OrderedDict
 import shortuuid
 import pandas as pd
 from itertools import compress
+import warnings
 
 import argparse
 import textwrap
@@ -319,8 +320,9 @@ if __name__ == "__main__":
 
     print("Running the '{}' model\n".format("coreplus" if parsed_args.coreplus else "classic"))
     if not parsed_args.coreplus:
-        parsed_args.createpkgs = False
-        raise ValueError("Running the 'classic' model; forcing --createpkgs to False")
+        if parsed_args.createpkgs:
+            parsed_args.createpkgs = False
+            warnings.warn("Running the 'classic' model; forcing --createpkgs to False")
 
     if parsed_args.coreplus:
         core = issn_to_issnl(pd.read_csv("data/n8data/subscriptions_n8_core.csv", sep=",")["ISSN"].to_list())
