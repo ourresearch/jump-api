@@ -21,7 +21,6 @@
 - package.py
 - package_file_error_rows.py
 - package_input.py
-- parse_uploads.py
 - password_reset.py
 - permission.py
 - perpetual_access.py
@@ -40,6 +39,7 @@
 
 - consortium_calculate.py
 - warm_cache.py
+- parse_uploads.py
 
 ## Scripts
 
