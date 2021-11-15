@@ -308,12 +308,11 @@ def reset_cache(module_name, function_name, *args):
     if cache_key in app.my_memorycache_dict:
         del app.my_memorycache_dict[cache_key]
 
-    delete_command = """delete from jump_cache_status where cache_call = '{}';""".format(cache_key)
-    insert_command = """insert into jump_cache_status (cache_call, updated)
-        values ('{}', sysdate) """.format(cache_key)
+    delete_command = "delete from jump_cache_status where cache_call = %s"
+    insert_command = "insert into jump_cache_status (cache_call, updated) values (%s, sysdate)"
     with get_db_cursor() as cursor:
-        cursor.execute(delete_command)
-        cursor.execute(insert_command)
+        cursor.execute(delete_command, (cache_key,))
+        cursor.execute(insert_command, (cache_key,))
 
 cached_consortium_scenario_ids = ["tGUVWRiN", "scenario-QC2kbHfUhj9W", "EcUvEELe", "CBy9gUC3", "6it6ajJd", "GcAsm5CX", "aAFAuovt"]
 

@@ -441,10 +441,9 @@ def register_new_user():
     for institution_id, permission_names in list(permissions_by_institution.items()):
         if auth_user.has_permission(institution_id, Permission.admin()):
 
-            command = "delete from jump_user_institution_permission where user_id = '{}' and institution_id = '{}'".format(
-                req_user.id, institution_id)
+            command = "delete from jump_user_institution_permission where user_id=%s and institution_id=%s"
             with get_db_cursor() as cursor:
-                cursor.execute(command)
+                cursor.execute(command, (req_user.id, institution_id,))
 
             safe_commit(db)
 
@@ -594,10 +593,9 @@ def user_permissions():
         if query_user.id == auth_user.id and Permission.admin().name not in permission_names:
             return abort_json(400, "Cannot revoke own admin permission.")
 
-        command = "delete from jump_user_institution_permission where user_id = '{}' and institution_id = '{}'".format(
-            query_user.id, institution_id)
+        command = "delete from jump_user_institution_permission where user_id=%s and institution_id=%s"
         with get_db_cursor() as cursor:
-            cursor.execute(command)
+            cursor.execute(command, (query_user.id, institution_id,))
 
         for permission_name in permission_names:
             permission = Permission.get(permission_name)
@@ -688,16 +686,14 @@ def institution_ror_id(institution_id, ror_id):
             db.session.merge(GridId(institution_id=inst.id, grid_id=grid_id))
     elif request.method == "DELETE":
 
-        command = "delete from jump_ror_id where ror_id = '{}' and institution_id = '{}'".format(
-            ror_id, institution_id)
+        command = "delete from jump_ror_id where ror_id=%s and institution_id=%s"
         with get_db_cursor() as cursor:
-            cursor.execute(command)
+            cursor.execute(command, (ror_id, institution_id,))
 
         for grid_id in grid_ids:
-            command = "delete from jump_grid_id where grid_id = '{}' and institution_id = '{}'".format(
-                grid_id, institution_id)
+            command = "delete from jump_grid_id where grid_id=%s and institution_id=%s"
             with get_db_cursor() as cursor:
-                cursor.execute(command)
+                cursor.execute(command, (grid_id, institution_id,))
 
     db.session.commit()
 
@@ -1156,9 +1152,8 @@ def scenario_id_post(scenario_id):
 @jwt_required()
 def subscriptions_notifications_done_editing_post(scenario_id):
     with get_db_cursor() as cursor:
-        command = """update jump_consortium_feedback_requests 
-        set return_date=sysdate where member_scenario_id = '{}'""".format(scenario_id)
-        cursor.execute(command)
+        command = "update jump_consortium_feedback_requests set return_date=sysdate where member_scenario_id=%s"
+        cursor.execute(command, (scenario_id,))
 
     institution_name = get_sql_answer(db, """select distinct jump_institution.display_name 
             from jump_package_scenario
@@ -1529,10 +1524,10 @@ def scenario_delete(scenario_id):
     # doing it this way makes sure we have permission to acces and therefore delete the scenario
     get_saved_scenario(scenario_id, required_permission=Permission.modify())
 
-    command = "delete from jump_package_scenario where scenario_id = '{}'".format(scenario_id)
+    command = "delete from jump_package_scenario where scenario_id=%s"
     print(command)
     with get_db_cursor() as cursor:
-        cursor.execute(command)
+        cursor.execute(command, (scenario_id,))
 
     return jsonify_fast_no_sort({"response": "success"})
 
@@ -1600,9 +1595,9 @@ def reset_password():
         return abort_json(404, "Unrecognized user id {}.".format(reset_request.user_id))
 
     reset_user.password_hash = generate_password_hash(password)
-    command = "delete from jump_password_reset_request where user_id = '{}'".format(reset_user.id)
+    command = "delete from jump_password_reset_request where user_id=%s"
     with get_db_cursor() as cursor:
-        cursor.execute(command)
+        cursor.execute(command, (reset_user.id,))
 
     safe_commit(db)
 
@@ -1679,10 +1674,9 @@ def start_cache_thread():
         global cache_last_updated
 
         while True:
-            command = "select cache_call, updated from jump_cache_status where updated > '{}'::timestamp".format(cache_last_updated)
-            # print command
+            command = "select cache_call, updated from jump_cache_status where updated > %s::timestamp"
             with get_db_cursor() as cursor:
-                cursor.execute(command)
+                cursor.execute(command, (cache_last_updated,))
                 rows = cursor.fetchall()
                 random.shuffle(rows)
 
