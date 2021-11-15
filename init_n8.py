@@ -178,14 +178,13 @@ def update_group_pta(jusp_id, group_jusp_ids, package_type, coreplus):
 
     n8_id_prefix = "n8els_coreplus" if coreplus else "n8els"
     package_id = "package-{}_{}_{}".format(n8_id_prefix, jusp_id, package_type.replace(" ", ""))
-    jisc_package_ids = ["package-jiscels{}".format(b) for b in group_jusp_ids]
-    jisc_package_ids_string = ", ".join(["'{}'".format(a) for a in jisc_package_ids])
+    other_package_ids = ["package-{}_{}_ownpta".format(n8_id_prefix, b) for b in group_jusp_ids]
+    other_package_ids_string = ", ".join(["'{}'".format(a) for a in other_package_ids])
 
     command = """        
         delete from jump_perpetual_access where package_id = '{package_id}';
         delete from jump_perpetual_access_input where package_id = '{package_id}';
         """.format(package_id=package_id)
-    # print command
     with get_db_cursor() as cursor:
         cursor.execute(command)
 
@@ -193,16 +192,16 @@ def update_group_pta(jusp_id, group_jusp_ids, package_type, coreplus):
         insert into jump_perpetual_access (package_id, issn_l, start_date, end_date) (
             select '{package_id}', issn_l, coalesce(min(start_date), '1850-01-01'::timestamp) as start_date, coalesce(max(coalesce(end_date, '2050-01-01'::timestamp)), max(coalesce(end_date, '2050-01-01'::timestamp)), '2050-01-01'::timestamp) as end_date
             from jump_perpetual_access
-            where package_id in ({jisc_package_ids_string})
+            where package_id in ({other_package_ids_string})
             group by issn_l
         );
         
         insert into jump_perpetual_access_input (package_id, issn, start_date, end_date) (
             select '{package_id}', issn_l as issn, coalesce(min(start_date), '1850-01-01'::timestamp) as start_date, coalesce(max(coalesce(end_date, '2050-01-01'::timestamp)), max(coalesce(end_date, '2050-01-01'::timestamp)), '2050-01-01'::timestamp) as end_date
             from jump_perpetual_access
-            where package_id in ({jisc_package_ids_string})
+            where package_id in ({other_package_ids_string})
             group by issn_l
-        );""".format(package_id=package_id, jisc_package_ids_string=jisc_package_ids_string)
+        );""".format(package_id=package_id, other_package_ids_string=other_package_ids_string)
 
     print(command)
     with get_db_cursor() as cursor:
