@@ -6,6 +6,8 @@ import simplejson as json
 from cached_property import cached_property
 from time import time
 import requests
+from psycopg2 import sql
+from psycopg2.extras import execute_values
 
 from app import db
 from app import get_db_cursor
@@ -13,7 +15,6 @@ from util import elapsed
 from util import chunks
 from util import sql_bool
 from util import sql_escape_string
-
 
 
 class JournalsDBRaw(db.Model):
@@ -89,37 +90,21 @@ class JournalMetadata(db.Model):
             return "TaylorFrancis"
         return self.publisher
 
-    def get_insert_values(self):
-        response = """(
-                    '{created}', 
-                    '{issn_l}', 
-                    '{issns_string}', 
-                    '{title}', 
-                    '{publisher}', 
-                    {is_current_subscription_journal}, 
-                    {is_gold_journal_in_most_recent_year},
-                    {is_currently_publishing},
-                    {subscription_price_usd},
-                    {subscription_price_gbp},
-                    {apc_price_usd},
-                    {apc_price_gbp},
-                    {num_dois_in_2020}  
-                )
-                """.format(created=self.created,
-                           issn_l=self.issn_l,
-                           issns_string=self.issns_string,
-                           title=sql_escape_string(self.title),
-                           publisher=sql_escape_string(self.publisher),
-                          is_current_subscription_journal=sql_bool(self.is_current_subscription_journal),
-                          is_gold_journal_in_most_recent_year=sql_bool(self.is_gold_journal_in_most_recent_year),
-                          is_currently_publishing=sql_bool(self.is_currently_publishing),
-                          subscription_price_usd=self.subscription_price_usd,
-                          subscription_price_gbp=self.subscription_price_gbp,
-                          apc_price_usd=self.apc_price_usd,
-                          apc_price_gbp=self.apc_price_gbp,
-                          num_dois_in_2020=self.num_dois_in_2020)
-        response = response.replace("None", "null")
-        return response
+    def get_insert_list(self):
+        return (
+            self.created,
+            self.issn_l,
+            self.issns_string,
+            sql_escape_string(self.title),
+            sql_escape_string(self.publisher),
+            sql_bool(self.is_current_subscription_journal),
+            sql_bool(self.is_gold_journal_in_most_recent_year),
+            sql_bool(self.is_currently_publishing),
+            self.subscription_price_usd,
+            self.subscription_price_gbp,
+            self.apc_price_usd,
+            self.apc_price_gbp,
+            self.num_dois_in_2020,)
 
     @classmethod
     def get_insert_column_names(cls):
@@ -245,18 +230,14 @@ def recompute_journal_metadata():
 
     print("starting commits")
     start_time = time()
-    insert_values_list = [j.get_insert_values() for j in new_computed_journals]
-    command_start = """INSERT INTO journalsdb_computed ({}) VALUES """.format(
-        ",".join(JournalMetadata.get_insert_column_names()))
+    insert_values = [j.get_insert_list() for j in new_computed_journals]
+    cols = JournalMetadata.get_insert_column_names()
 
     with get_db_cursor() as cursor:
-        i = 0
-        for short_values_list in chunks(insert_values_list, 1000):
-            values_list_string = ",".join(short_values_list)
-            q = "{} {};".format(command_start, values_list_string)
-            cursor.execute(q)
-            i += 1
-            print(i)
+        qry = sql.SQL("INSERT INTO journalsdb_computed ({}) VALUES %s").format(
+            sql.SQL(', ').join(map(sql.Identifier, cols)))
+        execute_values(cursor, qry, insert_values, page_size=1000)
+
     print("done committing journals, took {} seconds total".format(elapsed(start_time)))
     print("now refreshing flat view")
 
