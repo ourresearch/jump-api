@@ -69,6 +69,7 @@
 - RELEASE_NOTES.md
 - LICENSE
 - jump-api-mapping.md (this file)
+- bind-variables.md
 
 ## Tests
 
