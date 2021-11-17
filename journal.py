@@ -1430,40 +1430,16 @@ class Journal(object):
 
         return table_row
 
-
     def to_values_journals_for_consortium(self):
-
         table_row = self.to_dict_journals()
-
-        # keep this format
-        table_row["use_oa"] = self.use_oa_plus_social_networks
-        table_row["use_backfile"] = self.use_backfile
-        table_row["use_social_networks"] = self.use_social_networks
-        table_row["use_subscription"] = self.use_subscription
-        table_row["use_ill"] = self.use_ill
-        table_row["use_other_delayed"] = self.use_other_delayed
-
-        table_row["era_subjects"] = None
-        table_row["perpetual_access_years"] = self.display_perpetual_access_years
-        table_row["baseline_access"] = self.baseline_access
-
-        table_row["updated"] = datetime.datetime.utcnow().isoformat()
-        table_row["cpu"] = self.cpu  # number not display version
-        table_row["member_package_id"] = table_row["package_id"]
-        table_row["package_id"] = "{package_id}"
-        table_row["scenario_id"] = "{scenario_id}"
-        table_row["consortium_name"] = "{consortium_name}"
-        table_row["institution_name"] = table_row["institution_name"].replace("'", "''")
-        table_row["institution_short_name"] = self.institution_short_name
-        table_row["institution_id"] = self.institution_id
-
-        response = """('{member_package_id}', '{scenario_id}', '{updated}'::timestamp, '{issn_l}', {usage}, {cpu}, '{package_id}', '{consortium_name}', '{institution_name}', '{institution_short_name}', '{institution_id}', '{subject}', '{era_subjects}', {is_society_journal}, {subscription_cost}, {ill_cost}, {use_instant_for_debugging}, {use_social_networks}, {use_oa}, {use_backfile}, {use_subscription}, {use_other_delayed}, {use_ill}, '{perpetual_access_years}', '{baseline_access}', {use_social_networks_percent}, {use_green_percent}, {use_hybrid_percent}, {use_bronze_percent}, {use_peer_reviewed_percent}, {bronze_oa_embargo_months}, {is_hybrid_2019}, {downloads}, {citations}, {authorships})""".format(
-            **table_row
-        )
-
-        response = response.replace("'None'", "null")
-        response = response.replace("None", "null")
-
+        response = [table_row["package_id"], 'scenario_id', "'{}'::timestamp".format(datetime.datetime.utcnow().isoformat()), 
+            table_row["issn_l"], table_row["usage"], self.cpu, 'package_id', 'consortium_name', table_row["institution_name"].replace("'", "''"),
+            self.institution_short_name, self.institution_id, table_row["subject"], None, table_row["is_society_journal"], 
+            table_row["subscription_cost"], table_row["ill_cost"], table_row["use_instant_for_debugging"], self.use_social_networks, 
+            self.use_oa_plus_social_networks, self.use_backfile, self.use_subscription, self.use_other_delayed, self.use_ill,
+            self.display_perpetual_access_years, self.baseline_access, table_row['use_social_networks_percent'], table_row['use_green_percent'],
+            table_row['use_hybrid_percent'], table_row['use_bronze_percent'], table_row['use_peer_reviewed_percent'],
+            table_row['bronze_oa_embargo_months'], self.is_hybrid_2019, table_row['downloads'], table_row['citations'], table_row['authorships'],]
         return response
 
 

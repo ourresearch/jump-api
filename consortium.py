@@ -10,6 +10,8 @@ import weakref
 from time import time
 import simplejson as json
 from simplejson import dumps
+from psycopg2 import sql
+from psycopg2.extras import execute_values
 
 from app import app
 from app import get_db_cursor
@@ -31,11 +33,8 @@ from app import memorycache
 def get_latest_member_institutions_raw(scenario_id):
     scenario_members = []
     with get_db_cursor() as cursor:
-        command = """select scenario_members from jump_consortium_member_institutions where scenario_id='{}' order by updated desc limit 1;""".format(
-            scenario_id
-        )
-        # print command
-        cursor.execute(command)
+        command = "select scenario_members from jump_consortium_member_institutions where scenario_id=%s order by updated desc limit 1;"
+        cursor.execute(command, (scenario_id,))
         rows = cursor.fetchall()
 
     if rows:
@@ -63,13 +62,11 @@ def get_consortium_ids():
 
 def consortium_get_computed_data(scenario_id):
     start_time = time()
-    # command = """select member_package_id, scenario_id, issn_l, usage, cpu, subscription_cost, ill_cost, use_social_networks, use_oa, use_backfile, use_subscription, use_other_delayed, use_ill, perpetual_access_years, use_social_networks_percent, use_green_percent, use_hybrid_percent, use_bronze_percent, use_peer_reviewed_percent, bronze_oa_embargo_months, is_hybrid_2019, downloads, citations, authorships
-    #                 from jump_scenario_computed where scenario_id='{}'""".format(scenario_id)
     command = """select 
                     member_package_id, scenario_id, updated, issn_l, usage, cpu, package_id, consortium_name, institution_name, institution_short_name, institution_id, subject, era_subjects, is_society_journal, subscription_cost, ill_cost, use_instant_for_debugging, use_social_networks, use_oa, use_backfile, use_subscription, use_other_delayed, use_ill, perpetual_access_years, baseline_access, use_social_networks_percent, use_green_percent, use_hybrid_percent, use_bronze_percent, use_peer_reviewed_percent, bronze_oa_embargo_months, is_hybrid_2019, downloads, citations, authorships
-                    from jump_scenario_computed where scenario_id='{}'""".format(scenario_id)
+                    from jump_scenario_computed where scenario_id=%s"""
     with get_db_cursor(use_defaultcursor=True) as cursor:
-        cursor.execute(command)
+        cursor.execute(command, (scenario_id,))
         rows = cursor.fetchall()
 
     column_string = """member_package_id, scenario_id, updated, issn_l, usage, cpu, package_id, consortium_name, institution_name, institution_short_name, institution_id, subject, era_subjects, is_society_journal, subscription_cost, ill_cost, use_instant_for_debugging, use_social_networks, use_oa, use_backfile, use_subscription, use_other_delayed, use_ill, perpetual_access_years, baseline_access, use_social_networks_percent, use_green_percent, use_hybrid_percent, use_bronze_percent, use_peer_reviewed_percent, bronze_oa_embargo_months, is_hybrid_2019, downloads, citations, authorships"""
@@ -82,9 +79,9 @@ def consortium_get_computed_data(scenario_id):
 def consortium_get_issns(scenario_id):
     start_time = time()
 
-    command = """select distinct issn_l from jump_scenario_computed where scenario_id='{}'""".format(scenario_id)
+    command = "select distinct issn_l from jump_scenario_computed where scenario_id=%s"
     with get_db_cursor() as cursor:
-        cursor.execute(command)
+        cursor.execute(command, (scenario_id,))
         rows = cursor.fetchall()
 
     return [row["issn_l"] for row in rows]
@@ -188,10 +185,9 @@ class Consortium(object):
 
     @cached_property
     def update_notification_email(self):
-        command = "select email from jump_scenario_computed_update_queue where completed is null and scenario_id='{}'".format(self.scenario_id)
-        # print command
+        command = "select email from jump_scenario_computed_update_queue where completed is null and scenario_id=%s"
         with get_db_cursor() as cursor:
-            cursor.execute(command)
+            cursor.execute(command, (self.scenario_id,))
             rows = cursor.fetchall()
         if rows:
             return rows[0]["email"]
@@ -200,10 +196,9 @@ class Consortium(object):
     @cached_property
     def update_percent_complete(self):
         if self.is_locked_pending_update:
-            command = "select count(distinct member_package_id) as num_members_done from jump_scenario_computed where scenario_id='{}'".format(self.scenario_id)
-            # print command
+            command = "select count(distinct member_package_id) as num_members_done from jump_scenario_computed where scenario_id=%s"
             with get_db_cursor() as cursor:
-                cursor.execute(command)
+                cursor.execute(command, (self.scenario_id,))
                 rows = cursor.fetchall()
             if rows:
                 num_members_done = rows[0]["num_members_done"]
@@ -295,30 +290,20 @@ class Consortium(object):
         return my_response
 
     def copy_computed_journal_dicts(self, new_scenario_id):
-        values_column_names = """member_package_id, scenario_id, updated, issn_l, usage, cpu, package_id, consortium_name, institution_name, institution_short_name, institution_id, subject, era_subjects, is_society_journal, subscription_cost, ill_cost, use_instant_for_debugging, use_social_networks, use_oa, use_backfile, use_subscription, use_other_delayed, use_ill, perpetual_access_years, baseline_access, use_social_networks_percent, use_green_percent, use_hybrid_percent, use_bronze_percent, use_peer_reviewed_percent, bronze_oa_embargo_months, is_hybrid_2019, downloads, citations, authorships"""
-        values_column_names_with_sub = values_column_names.replace("scenario_id", "'{}'".format(self.scenario_id))
-
-        q = """
-                insert into jump_scenario_computed 
-                ({values_column_names}) 
-                (
-                    select {values_column_names_with_sub}
-                    from jump_scenario_computed
-                    where scenario_id = '{old_scenario_id}'
-                )
-            """.format(old_scenario_id=self.scenario_id,
-                       values_column_names=values_column_names,
-                       values_column_names_with_sub=values_column_names_with_sub)
+        values_column_names = ["member_package_id", "scenario_id", "updated", "issn_l", "usage", "cpu", "package_id", "consortium_name", "institution_name", "institution_short_name", "institution_id", "subject", "era_subjects", "is_society_journal", "subscription_cost", "ill_cost", "use_instant_for_debugging", "use_social_networks", "use_oa", "use_backfile", "use_subscription", "use_other_delayed", "use_ill", "perpetual_access_years", "baseline_access", "use_social_networks_percent", "use_green_percent", "use_hybrid_percent", "use_bronze_percent", "use_peer_reviewed_percent", "bronze_oa_embargo_months", "is_hybrid_2019", "downloads", "citations",]
+        values_column_names_with_sub = ["'{}'".format(self.scenario_id) if x == "scenario_id" else x for x in values_column_names]
         with get_db_cursor() as cursor:
-            print(q)
-            cursor.execute(q)
-
+            qry = sql.SQL("INSERT INTO {table} ({vcn}) (SELECT {vcns} FROM {table} WHERE scenario_id=%s)").format(
+                table=sql.Identifier('jump_scenario_computed'),
+                vcn=sql.SQL(', ').join(map(sql.Identifier, values_column_names)),
+                vcns=sql.SQL(', ').join(map(sql.Identifier, values_column_names_with_sub)))
+            cursor.execute(qry, (self.scenario_id,))
 
     @cached_property
     def all_member_package_ids(self):
-        q = "select member_package_id from jump_consortium_members where consortium_package_id='{}'".format(self.package_id)
+        q = "select member_package_id from jump_consortium_members where consortium_package_id=%s"
         with get_db_cursor() as cursor:
-            cursor.execute(q)
+            cursor.execute(q, (self.package_id,))
             rows = cursor.fetchall()
         if rows:
             return [row["member_package_id"] for row in rows]
@@ -331,22 +316,25 @@ class Consortium(object):
 
     def queue_for_recompute(self, email):
         num_member_institutions = len(self.all_member_package_ids)
-        command = """insert into jump_scenario_computed_update_queue (
-            consortium_name, consortium_short_name, package_name, institution_id, package_id, scenario_id, email, num_member_institutions, created, completed) 
-            values ('{}', '{}', '{}', '{}', '{}', '{}', '{}', {}, sysdate, null)""".format(
-            self.consortium_name, self.consortium_short_name, self.publisher, self.institution_id, self.package_id, self.scenario_id, email, num_member_institutions)
-        print("command queue_for_recompute\n", command)
+        cols = ['consortium_name', 'consortium_short_name', 'package_name', 'institution_id', 
+            'package_id', 'scenario_id', 'email', 'num_member_institutions', 'created', 'completed',]
+        values = (self.consortium_name, self.consortium_short_name, self.publisher, self.institution_id, 
+            self.package_id, self.scenario_id, email, num_member_institutions, datetime.datetime.now(), None, )
         with get_db_cursor() as cursor:
-            cursor.execute(command)
+            qry = sql.SQL("INSERT INTO jump_scenario_computed_update_queue ({}) VALUES ({})").format(
+                sql.SQL(', ').join(map(sql.Identifier, cols)),
+                sql.SQL(', ').join(sql.Placeholder() * len(cols)))
+            print(cursor.mogrify(qry, values))
+            cursor.execute(qry, values)
 
 
     def recompute_journal_dicts(self):
 
         # delete everything with this scenario_id first
-        q = "delete from jump_scenario_computed where scenario_id='{}'".format(self.scenario_id)
+        q = "delete from jump_scenario_computed where scenario_id=%s"
         with get_db_cursor() as cursor:
-            print(q)
-            cursor.execute(q)
+            print(cursor.mogrify(q, (self.scenario_id,)))
+            cursor.execute(q, (self.scenario_id,))
 
         from scenario import Scenario
 
@@ -371,20 +359,28 @@ class Consortium(object):
 
                     start_time = time()
 
-                    values_column_names = """member_package_id, scenario_id, updated, issn_l, usage, cpu, package_id, consortium_name, institution_name, institution_short_name, institution_id, subject, era_subjects, is_society_journal, subscription_cost, ill_cost, use_instant_for_debugging, use_social_networks, use_oa, use_backfile, use_subscription, use_other_delayed, use_ill, perpetual_access_years, baseline_access, use_social_networks_percent, use_green_percent, use_hybrid_percent, use_bronze_percent, use_peer_reviewed_percent, bronze_oa_embargo_months, is_hybrid_2019, downloads, citations, authorships"""
+                    cols = ["member_package_id","scenario_id","updated","issn_l","usage","cpu","package_id",
+                        "consortium_name","institution_name","institution_short_name","institution_id","subject",
+                        "era_subjects","is_society_journal","subscription_cost","ill_cost","use_instant_for_debugging",
+                        "use_social_networks","use_oa","use_backfile","use_subscription","use_other_delayed","use_ill",
+                        "perpetual_access_years","baseline_access","use_social_networks_percent","use_green_percent",
+                        "use_hybrid_percent","use_bronze_percent","use_peer_reviewed_percent","bronze_oa_embargo_months",
+                        "is_hybrid_2019","downloads","citations","authorships",]
 
-                    command_start = """INSERT INTO jump_scenario_computed 
-                        ({values_column_names}) 
-                        values """.format(values_column_names=values_column_names)
+                    # use [:] to replace in place to keep same object id() (identity) & reduce memory
+                    for lst in command_list:
+                        lst[:] = [self.package_id if x=='package_id' else x for x in lst]
+                        lst[:] = [self.scenario_id if x=='scenario_id' else x for x in lst]
+                        lst[:] = [self.consortium_name if x=='consortium_name' else x for x in lst]
+                    
+                    # convert list to tuples, as required by psycopg2
+                    command_list = [tuple(w) for w in command_list]
+
                     with get_db_cursor() as cursor:
-                        for short_command_list in chunks(command_list, 1000):
-                            command_list_string = ",".join(short_command_list)
-                            command_list_string = command_list_string.replace("{package_id}", self.package_id)
-                            command_list_string = command_list_string.replace("{scenario_id}", self.scenario_id)
-                            command_list_string = command_list_string.replace("{consortium_name}", self.consortium_name)
-                            q = "{} {};".format(command_start, command_list_string)
-                            cursor.execute(q)
-                            print(".", end=' ')
+                        qry = sql.SQL("INSERT INTO jump_scenario_computed ({}) VALUES %s").format(
+                            sql.SQL(', ').join(map(sql.Identifier, cols)))
+                        execute_values(cursor, qry, command_list, page_size=1000)
+
                     print((elapsed(start_time)))
                     print("done writing to db", member_package_id, self.scenario_id)
 
@@ -415,12 +411,12 @@ class Consortium(object):
             from jump_scenario_computed s
             join jump_account_package p on s.member_package_id = p.package_id
             join jump_institution i on i.id = p.institution_id
-            where s.scenario_id='{scenario_id}' 
-            and s.issn_l = '{issn_l}'
+            where s.scenario_id=%(scenario_id)s 
+            and s.issn_l=%(issn_l)s
             order by usage desc
-             """.format(scenario_id=self.scenario_id, issn_l=issn_l)
+             """
         with get_db_cursor(use_realdictcursor=True) as cursor:
-            cursor.execute(command)
+            cursor.execute(command, {'scenario_id':self.scenario_id,'issn_l':issn_l})
             rows = cursor.fetchall()
 
         response = []
@@ -495,18 +491,17 @@ class Consortium(object):
             join jump_account_package p on s.member_package_id = p.package_id
             join jump_institution i on i.id = p.institution_id
             left join tags t on t.institution_id=p.institution_id
-            where s.scenario_id='{scenario_id}' 
+            where s.scenario_id=%s
             group by s.member_package_id
             order by usage desc
-             """.format(scenario_id=self.scenario_id)
+             """
         with get_db_cursor(use_realdictcursor=True) as cursor:
-            cursor.execute(command)
+            cursor.execute(command, (self.scenario_id,))
             rows = cursor.fetchall()
 
-        command = """select * from jump_consortium_feedback_requests where consortium_scenario_id='{scenario_id}'
-             """.format(scenario_id=self.scenario_id)
+        command = "select * from jump_consortium_feedback_requests where consortium_scenario_id=%s"
         with get_db_cursor() as cursor:
-            cursor.execute(command)
+            cursor.execute(command, (self.scenario_id,))
             rows_for_feedback = cursor.fetchall()
 
         if self.scenario_id is not None:
