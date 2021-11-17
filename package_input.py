@@ -278,9 +278,9 @@ class PackageInput:
 
     def update_dest_table(self, package_id):
         with get_db_cursor() as cursor:
-            cursor.execute("delete from {} where package_id = '{}'".format(self.destination_table(), package_id))
-            cursor.execute("insert into {} (select * from {} where package_id = '{}')".format(
-                    self.destination_table(), self.import_view_name(), package_id))
+            cursor.execute("delete from %s where package_id=%s", (self.destination_table(), package_id,))
+            cursor.execute("insert into %s (select * from %s where package_id=%s)",
+                    (self.destination_table(), self.import_view_name(), package_id,))
 
     def make_package_file_warning(self, parse_warning, additional_msg=None):
         return {
