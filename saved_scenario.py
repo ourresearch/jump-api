@@ -68,30 +68,28 @@ def save_feedback_on_member_institutions_included_to_db(consortium_scenario_id, 
 
         command += """
             UPDATE jump_scenario_details_paid set added_via_pushpull=True WHERE 
-            scenario_id='{member_institution_scenario_id}';
+            scenario_id=%(member_institution_scenario_id)s;
 
             DELETE FROM jump_package_scenario WHERE 
-            scenario_id='{member_institution_scenario_id}';
+            scenario_id=%(member_institution_scenario_id)s;
             
             INSERT INTO jump_package_scenario 
             (package_id, scenario_id, scenario_name, created, is_base_scenario)
             values 
-            ('{member_package_id}', '{member_institution_scenario_id}', '', sysdate, False);
+            (%(member_package_id)s, %(member_institution_scenario_id)s, '', sysdate, False);
 
             DELETE FROM jump_consortium_feedback_requests WHERE 
-            consortium_scenario_id='{consortium_scenario_id}' and member_scenario_id='{member_institution_scenario_id}';
+            consortium_scenario_id=%(consortium_scenario_id)s and member_scenario_id=%(member_institution_scenario_id)s;
             
             INSERT INTO jump_consortium_feedback_requests 
             (consortium_scenario_id, scenario_json, member_package_id, member_scenario_id, sent_date, return_date, ip) 
             values 
-            ('{consortium_scenario_id}', '{scenario_json}', '{member_package_id}', '{member_institution_scenario_id}', sysdate, null, '{ip}');
-            
-            """.format(
-            consortium_scenario_id=consortium_scenario_id, scenario_json=scenario_json, member_package_id=member_package_id, member_institution_scenario_id=member_institution_scenario_id, ip=ip)
+            (%(consortium_scenario_id)s, %(scenario_json)s, %(member_package_id)s, %(member_institution_scenario_id)s, sysdate, null, %(ip)s);            
+            """
 
     with get_db_cursor() as cursor:
-        # print command
-        cursor.execute(command)
+        cursor.execute(command, {'consortium_scenario_id':consortium_scenario_id, 'scenario_json':scenario_json, 
+            'member_package_id':member_package_id, 'member_institution_scenario_id':member_institution_scenario_id, 'ip':ip})
 
 def get_latest_scenario_raw(scenario_id, exclude_added_via_pushpull=False):
     updated = None
