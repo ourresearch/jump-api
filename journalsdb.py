@@ -207,6 +207,7 @@ class JournalMetadata(db.Model):
 def recompute_journal_metadata():
     journals_raw = JournalsDBRaw.query.all()
     print(len(journals_raw))
+    print("Running on Heroku: branch staging")
 
     new_computed_journals = []
 
