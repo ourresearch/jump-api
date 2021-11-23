@@ -609,7 +609,7 @@ def get_consortium_package_ids(package_id):
 def get_counter_journals_by_report_name_from_db(package_id):
     command = """select report_version, report_name, count(distinct issn_l) as num_journals 
         from jump_counter 
-        where package_id='{}'
+        where package_id=%s
         group by report_version, report_name
         """
     with get_db_cursor() as cursor:
