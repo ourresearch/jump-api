@@ -154,33 +154,33 @@ def test_scenario_member_institutions(fetch_jwt):
 
 
 # Make sure some of the methods that use psycopg2 sql bind variables are working as expected
-# all with prefix 'test_scenario_bindvars_'
-def test_scenario_bindvars_get_consortium_package_ids():
+# all with prefix 'test_bindvars_'
+def test_bindvars_get_consortium_package_ids():
     from scenario import get_consortium_package_ids
     res = get_consortium_package_ids('uwdhDaJ2')
     assert isinstance(res, list)
     assert len(res) > 0
 
-def test_scenario_bindvars_get_counter_journals_by_report_name_from_db():
+def test_bindvars_get_counter_journals_by_report_name_from_db():
     from scenario import get_counter_journals_by_report_name_from_db
     res = get_counter_journals_by_report_name_from_db(package_id)
     assert isinstance(res, list)
     assert len(res) > 0
 
-def test_scenario_bindvars_get_counter_totals_from_db():
+def test_bindvars_get_counter_totals_from_db():
     from scenario import get_counter_totals_from_db
     res = get_counter_totals_from_db(package_id)
     assert isinstance(res, dict)
     assert len(res) > 0
 
-def test_scenario_bindvars_get_package_specific_scenario_data_from_db():
+def test_bindvars_get_package_specific_scenario_data_from_db():
     from scenario import get_package_specific_scenario_data_from_db
     res = get_package_specific_scenario_data_from_db(package_id)
     assert isinstance(res, dict)
     assert len(res) > 0
     assert list(res.keys()) == ['timing', 'counter_dict', 'citation_dict', 'authorship_dict']
 
-def test_scenario_bindvars_get_apc_data_from_db():
+def test_bindvars_get_apc_data_from_db():
     from scenario import get_apc_data_from_db
     res = get_apc_data_from_db(package_id)
     assert isinstance(res, list)
@@ -188,7 +188,7 @@ def test_scenario_bindvars_get_apc_data_from_db():
     assert isinstance(res[0], psycopg2.extras.RealDictRow)
     assert list(res[0].keys()) == ['package_id', 'doi', 'num_authors_total', 'num_authors_from_uni', 'journal_name', 'issn_l', 'year', 'oa_status', 'apc', 'publisher']
 
-def test_scenario_bindvars_get_perpetual_access_from_cache():
+def test_bindvars_get_perpetual_access_from_cache():
     from scenario import get_perpetual_access_from_cache
     res = get_perpetual_access_from_cache(package_id)
     assert isinstance(res, dict)
@@ -196,7 +196,7 @@ def test_scenario_bindvars_get_perpetual_access_from_cache():
     for x in list(res.keys()):
         assert re.match(r'\d+-\d+', x)
 
-def test_scenario_bindvars_get_core_list_from_db():
+def test_bindvars_get_core_list_from_db():
     from scenario import get_core_list_from_db
     res = get_core_list_from_db("51e8103d")
     assert isinstance(res, dict)
