@@ -627,10 +627,13 @@ def user_permissions():
         #     else:
         #         return abort_json(400, "Unknown permission: {}.".format(permission_name))
 
-        # safe_commit(db)
+        safe_commit(db)
 
         db.session.refresh(query_user)
         new_permissions = query_user.to_dict_permissions()
+
+        print("new_permissions: {}".format(new_permissions))
+        print("old_permissions: {}".format(old_permissions))
 
         notify_changed_permissions(query_user, auth_user, old_permissions, new_permissions)
 
