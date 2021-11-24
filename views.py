@@ -608,7 +608,7 @@ def user_permissions():
             else:
                 return abort_json(400, "Unknown permission: {}.".format(permission_name))
 
-        # this if block means don't run if "unaffiliated", which drops permissions for the user_id
+        # this if block = don't run if role set to "unaffiliated", which drops permissions for the user_id
         if perm_ids:
             insert_str = "('{}','{}',%s)".format(user_id, institution_id)
             insert_strs = [insert_str % x for x in perm_ids]
@@ -616,24 +616,10 @@ def user_permissions():
             with get_db_cursor() as cursor:
                 cursor.execute(command)
 
-        # for permission_name in permission_names:
-        #     permission = Permission.get(permission_name)
-        #     if permission:
-        #         user_perm = UserInstitutionPermission()
-        #         user_perm.permission_id = permission.id,
-        #         user_perm.user_id = query_user.id
-        #         user_perm.institution_id = institution_id
-        #         db.session.add(user_perm)
-        #     else:
-        #         return abort_json(400, "Unknown permission: {}.".format(permission_name))
-
         safe_commit(db)
 
         db.session.refresh(query_user)
         new_permissions = query_user.to_dict_permissions()
-
-        print("new_permissions: {}".format(new_permissions))
-        print("old_permissions: {}".format(old_permissions))
 
         notify_changed_permissions(query_user, auth_user, old_permissions, new_permissions)
 
