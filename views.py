@@ -596,17 +596,22 @@ def user_permissions():
         command = "delete from jump_user_institution_permission where user_id=%s and institution_id=%s"
         with get_db_cursor() as cursor:
             cursor.execute(command, (query_user.id, institution_id,))
-
+        
+        perm_ids = []
         for permission_name in permission_names:
             permission = Permission.get(permission_name)
             if permission:
-                user_perm = UserInstitutionPermission()
-                user_perm.permission_id = permission.id,
-                user_perm.user_id = query_user.id
-                user_perm.institution_id = institution_id
-                db.session.add(user_perm)
+                perm_ids.append(permission.id)
             else:
                 return abort_json(400, "Unknown permission: {}.".format(permission_name))
+
+        # this if block = don't run if role set to "unaffiliated", which drops permissions for the user_id
+        if perm_ids:
+            insert_str = "('{}','{}',%s)".format(user_id, institution_id)
+            insert_strs = [insert_str % x for x in perm_ids]
+            command = "INSERT INTO jump_user_institution_permission VALUES {};".format(",".join(insert_strs))
+            with get_db_cursor() as cursor:
+                cursor.execute(command)
 
         safe_commit(db)
 
