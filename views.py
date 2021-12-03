@@ -18,6 +18,7 @@ from sqlalchemy import func as sql_func
 from werkzeug.security import safe_str_cmp
 from werkzeug.security import generate_password_hash, check_password_hash
 from psycopg2 import sql
+from psycopg2.extras import execute_values
 
 import os
 import sys
@@ -607,11 +608,10 @@ def user_permissions():
 
         # this if block = don't run if role set to "unaffiliated", which drops permissions for the user_id
         if perm_ids:
-            insert_str = "('{}','{}',%s)".format(user_id, institution_id)
-            insert_strs = [insert_str % x for x in perm_ids]
-            command = "INSERT INTO jump_user_institution_permission VALUES {};".format(",".join(insert_strs))
+            insert_values = [(user_id, institution_id, x,) for x in perm_ids]
             with get_db_cursor() as cursor:
-                cursor.execute(command)
+                qry = sql.SQL("INSERT INTO jump_user_institution_permission values %s")
+                execute_values(cursor, qry, insert_values)
 
         safe_commit(db)
 
