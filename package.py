@@ -604,8 +604,7 @@ class Package(db.Model):
             """
         with get_db_cursor() as cursor:
             cursor.execute(delete_q, (self.package_id,))
-            rows_inserted = cursor.execute(insert_q, (self.package_id, self.publisher_name,))
-        return rows_inserted
+            cursor.execute(insert_q, (self.package_id, self.publisher_name,))
 
     def to_dict_apc(self):
         response = {

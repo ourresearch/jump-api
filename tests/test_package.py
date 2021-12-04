@@ -1,7 +1,8 @@
 import datetime
+import decimal
 import pytest
 
-from package import Package
+from package import Package,check_if_to_delete,get_custom_prices
 from util import write_to_tempfile
 
 package_id = 'package-kQbzEH9yiZt7' # scott+anothertest@ourresearch.org, "EmptyPackage"
@@ -9,6 +10,9 @@ package = Package.query.filter(Package.package_id == package_id).scalar()
 
 package_id2 = 'package-NZe2awMnex6K' # scott+anothertest@ourresearch.org, "Sage-HopeCollege"
 package_small = Package.query.filter(Package.package_id == package_id2).scalar()
+
+package_id3 = 'package-testingYJVJmYWBuLSY' # team+consortiumtest@ourresearch.org, "Test Big University"
+package_feedback = Package.query.filter(Package.package_id == package_id3).scalar()
 
 def test_to_package_dict():
     package_dict = package.to_package_dict()
@@ -49,3 +53,48 @@ def test_methods_that_use_get_base():
     assert isinstance(pubtoll2019wpubprice, list)
     assert isinstance(counteruniqrows, list)
     
+def test_feedback_rows():
+    # not a consortium feedback package
+    rows = package_small.feedback_rows
+    assert rows == []
+
+    # a consortium feedback package
+    rows_feedback = package_feedback.feedback_rows
+    assert len(rows_feedback) > 0
+    assert isinstance(rows_feedback[0], list)
+
+def test_consortia_scenario_ids_who_own_this_package():
+    # not a consortium feedback package
+    consrtium_ids = package_small.consortia_scenario_ids_who_own_this_package
+    assert consrtium_ids == []
+
+    # a consortium feedback package
+    consrtium_ids_feedback = package_feedback.consortia_scenario_ids_who_own_this_package
+    assert len(consrtium_ids_feedback) > 0
+    assert isinstance(consrtium_ids_feedback[0], str)
+
+def test_update_apc_authorships():
+    # returns nothing
+    z = package_small.update_apc_authorships()
+    assert z is None
+
+def test_data_files_dict():
+    out = package_small.data_files_dict
+    assert isinstance(out, dict)
+    assert list(out.keys()) == ['counter', 'counter-trj2', 'counter-trj3', 'counter-trj4', 'price-public', 'price', 'perpetual-access']
+    assert isinstance(out['perpetual-access'], dict)
+    assert isinstance(out['perpetual-access']['rows_count'], decimal.Decimal)
+
+def test_check_if_to_delete():
+    # check_if_to_delete() only ever used with file='price'
+    res = check_if_to_delete(package_small.package_id, "price")
+    assert isinstance(res, bool)
+
+def test_get_custom_prices():
+    # package w/o custom prices
+    out = get_custom_prices(package.package_id)
+    assert len(out) == 0
+
+    # package w/ custom prices
+    out = get_custom_prices(package_small.package_id)
+    assert len(out) > 0
