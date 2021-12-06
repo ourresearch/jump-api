@@ -5,7 +5,10 @@ both its appearance and its underlying data.
 This means you will often see changes in the UI/UX, and sometimes in the presented data.  
 Most of these changes are too small to note, but we'll keep a record of the larger ones here:
 
+- 2021/11/23 Fixed a bug that was causing user permissions to be removed from an institution when their role was changed in the user dashboard. 
+- 2021/10/25 Fixed two bugs: 1) When creating a new scenario, the name given was sometimes not being used. 2) When creating a new scenario or renaming a scenario, scenario names with quotes were throwing errors. 
 - 2021/10/14 Fixed a bug due to some journal titles having incorrect titles, in particular titles staring with "Nature Reviews"
+- 2021/09/23 Moved from using Python 2 to using Python 3
 - 2021/06/20 Fix bug in authorships and citations that has been live for the last ten days
 - 2021/05/17 Many updates, including COUNTER 5 support, GBP support, Perpetual Access (PTA) changes, and more.  See [Release Notes](http://help.unsub.org/en/articles/5238375-release-notes-may-2021). 
 - 2021/05/12 Updating Unsub's journal lists (publicly available prices, which journals are published by which publishers, which journals have flipped to OA, which journals are new, etc).  The forecasts and APC calculations on your dashboards may update slightly as a result.  
