@@ -46,6 +46,7 @@
 - save_groups.py
 - rewrite_scenario_details.py
 - backup_tables.py
+- cleanup_tables.py
 - consortium_recompute.py
 - init_consortium.py
 - init_institution.py
