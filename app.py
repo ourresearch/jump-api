@@ -8,7 +8,6 @@ import requests
 import simplejson as json
 import functools
 import hashlib
-import pickle
 import random
 import warnings
 import urllib.parse
