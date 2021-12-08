@@ -7,15 +7,12 @@ from collections import defaultdict
 from collections import OrderedDict
 import weakref
 from kids.cache import cache
-import pickle
 import requests
 import os
 from sqlalchemy.sql import text
 from random import random
 from time import sleep
 import bz2
-import pickle
-import pickle
 import gc
 import simplejson as json
 
@@ -923,45 +920,19 @@ def get_common_package_data_specific(package_id):
     return (my_data, my_timing)
 
 
-
-# from https://medium.com/better-programming/load-fast-load-big-with-compressed-pickles-5f311584507e
-# Pickle a file and then compress it into a file with extension
 # compressed_json('example_cp', data)
 def compressed_json(title, data):
-    # with bz2.BZ2File(title, "wb") as f:
-    #     cPickle.dump(data, f)
-
     print("dumping")
     output = open(title, 'wb')
     json.dump(data, output)
     output.close()
     print("done dumping")
 
-    # json_zip.dump(data, title + ".json.lzma") # for a lzma file
-
-
-# from https://medium.com/better-programming/load-fast-load-big-with-compressed-pickles-5f311584507e
 # data = decompress_json('example_cp')
 def decompress_json(file):
-    # data = bz2.BZ2File(file + ".pbz2", "rb")
-    # data = cPickle.load(data)
-
-    # disable garbage collector
-    # gc.disable()
-    # my_file = bz2.BZ2File(file + ".pbz2", "rb")
-    # data = cPickle.load(my_file)
-
-    # enable garbage collector again
-    # gc.enable()
-
     output = open(file, 'rb')
     data = json.load(output)
     output.close()
-
-    # output = open(file + '.json.zip', 'rb')
-    # data = json_unzip.load(output)
-    # output.close()
-
     return data
 
 @memorycache
@@ -979,7 +950,7 @@ def get_common_package_data_for_all():
         return (contents_json, my_timing)
 
     except Exception as e:
-        print("no pickle data, so computing.  Error message: ", e)
+        print("no S3 data, so computing.  Error message: ", e)
         pass
 
     my_data = {}
