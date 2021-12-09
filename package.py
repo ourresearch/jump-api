@@ -17,7 +17,6 @@ from app import get_db_cursor
 from app import DEMO_PACKAGE_ID
 from app import s3_client
 
-# from app import my_memcached # disable memcached
 from assumptions import Assumptions
 from counter import CounterInput
 from journal_price import JournalPriceInput

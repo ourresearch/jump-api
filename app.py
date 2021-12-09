@@ -33,7 +33,6 @@ from sqlalchemy import exc
 from sqlalchemy import event
 from sqlalchemy.pool import NullPool
 from sqlalchemy.pool import Pool
-# import bmemcached # Scott: AFAICT this package isn't used anywhere
 
 from util import safe_commit
 from util import elapsed
@@ -68,7 +67,6 @@ libraries_to_mum_warning = [
     "paramiko",
     "chardet",
     "cryptography",
-    "bmemcached",
     "pyexcel",
     "lml",
     "pyexcel_io"
@@ -229,14 +227,6 @@ def get_db_cursor(commit=False, use_realdictcursor=False, use_defaultcursor=Fals
             cursor.close()
             pass
 
-# disable memcached
-# memcached_servers = os.environ.get('MEMCACHIER_SERVERS', '').split(',')
-# memcached_user = os.environ.get('MEMCACHIER_USERNAME', '')
-# memcached_password = os.environ.get('MEMCACHIER_PASSWORD', '')
-# my_memcached = bmemcached.Client(memcached_servers, username=memcached_user, password=memcached_password)
-# my_memcached.enable_retry_delay(True)  # Enabled by default. Sets retry delay to 5s.
-## my_memcached.flush_all()
-
 s3_client = boto3.client("s3")
 print("made s3_client")
 
@@ -298,8 +288,6 @@ def memorycache(func):
 
 
 def reset_cache(module_name, function_name, *args):
-    # global my_memorycache_dict
-
     print("args", args)
     cache_key = build_cache_key(module_name, function_name, *args)
     print("cache_key", cache_key)
