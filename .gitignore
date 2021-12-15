@@ -107,4 +107,4 @@ export.csv
 
 # ignore n8 files
 data/n8data/*
-
+data/jiscdata/*
