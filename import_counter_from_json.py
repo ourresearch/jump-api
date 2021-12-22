@@ -103,7 +103,6 @@ if __name__ == "__main__":
             input_dict["total"] = 0
             for stat in item["Performance"]:
                 for instance in stat["Instance"]:
-                    # input_dict["metric_type"] = instance.get("Metric_Type")
                     metric_type = instance.get("Metric_Type")
                     if metric_type in ["Unique_Item_Requests", "No_License"]:
                         input_dict["metric_type"] = metric_type
