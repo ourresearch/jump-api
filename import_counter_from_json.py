@@ -42,20 +42,18 @@ if __name__ == "__main__":
                 - heroku local:run required to make sure environment variables are loaded
 
             # Show this help
-            heroku local:run python import_counter_from_json_new.py -h
+            heroku local:run python import_counter_from_json.py -h
 
-            heroku local:run python import_counter_from_json_new.py --publisher sage
-            heroku local:run python import_counter_from_json_new.py --publisher tf
-            heroku local:run python import_counter_from_json_new.py --publisher wiley
-            heroku local:run python import_counter_from_json_new.py --publisher springer
+            heroku local:run python import_counter_from_json.py --publisher sage
+            heroku local:run python import_counter_from_json.py --publisher tf
+            heroku local:run python import_counter_from_json.py --publisher wiley
+            heroku local:run python import_counter_from_json.py --publisher springer
             '''))
     parser.add_argument("--publisher", help="A publisher name, all lowercase (one of: springer, wiley, sage, tf)", type=str)
     parsed_args = parser.parse_args()
 
     jcinput_cols = ["issn", "total", "package_id", "report_year", "report_name", "report_version", "metric_type", "yop", "access_type", ]
 
-    # filenames: a list with file names, e.g., ["a.json", "b.json"]
-    # filenames = fetch_file_names('sage', exclusions['sage'])
     filenames = fetch_file_names(parsed_args.publisher, exclusions[parsed_args.publisher])
     print("number of files: {}".format(len(filenames)))
 
@@ -80,7 +78,6 @@ if __name__ == "__main__":
         print((report_type, institution_name, len(report_items)))
 
         input_dict["package_id"] = "package-jisc{}{}".format(parsed_args.publisher, filename[0:3])
-        # input_dict["package_id"] = "package-jisc{}{}".format('sage', filename[0:3])
         package_ids += [input_dict["package_id"]]
         input_dict["report_year"] = 2020
         input_dict["report_version"] = "5"
@@ -100,13 +97,31 @@ if __name__ == "__main__":
             if issn_ids:
                 input_dict["issn"] = issn_ids[0]["Value"]
 
+            loop_totals = {}
             input_dict["total"] = 0
             for stat in item["Performance"]:
                 for instance in stat["Instance"]:
                     metric_type = instance.get("Metric_Type")
-                    if metric_type in ["Unique_Item_Requests", "No_License"]:
-                        input_dict["metric_type"] = metric_type
-                        input_dict["total"] += instance["Count"]
+                    if metric_type not in loop_totals:
+                        loop_totals[metric_type] = 0
+                    loop_totals[metric_type] += instance["Count"]
+            
+            if input_dict["report_name"] == "trj2":
+                input_dict["metric_type"] = "No_License"
+                input_dict["total"] = loop_totals["No_License"]
+            else:
+                if 'Unique_Item_Requests' in loop_totals:
+                    input_dict["metric_type"] = 'Unique_Item_Requests'
+                    input_dict["total"] = loop_totals["Unique_Item_Requests"]
+                elif 'Total_Item_Requests' in loop_totals:
+                    input_dict["metric_type"] = 'Total_Item_Requests'
+                    input_dict["total"] = loop_totals["Total_Item_Requests"]
+                elif 'Unique_Item_Investigations' in loop_totals:
+                    input_dict["metric_type"] = 'Unique_Item_Investigations'
+                    input_dict["total"] = loop_totals["Unique_Item_Investigations"]
+                elif 'Total_Item_Investigations' in loop_totals:
+                    input_dict["metric_type"] = 'Total_Item_Investigations'
+                    input_dict["total"] = loop_totals["Total_Item_Investigations"]
 
             sorted_dict = OrderedDict([(el, input_dict[el]) for el in jcinput_cols])
             input_tuple_list += [tuple(sorted_dict.values())]
