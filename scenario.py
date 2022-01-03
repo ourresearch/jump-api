@@ -21,7 +21,6 @@ from app import get_db_cursor
 from app import DEMO_PACKAGE_ID
 from app import JISC_PACKAGE_ID
 from app import db
-# from app import my_memcached # disable memcached
 from app import logger
 from app import memorycache
 from app import s3_client

@@ -8,6 +8,7 @@ from time import time
 import requests
 from psycopg2 import sql
 from psycopg2.extras import execute_values
+from enum import Enum
 
 from app import db
 from app import get_db_cursor
@@ -16,6 +17,13 @@ from util import chunks
 from util import sql_bool
 from util import sql_escape_string
 
+
+class JiscDefaultPrices(Enum):
+    TaylorFrancis = 954.10
+    Sage = 659.99
+    Wiley = 1350.47
+    SpringerNature = 1476.53
+    Elsevier = 3775
 
 class JournalsDBRaw(db.Model):
     __tablename__ = "journalsdb_raw"
@@ -185,7 +193,7 @@ class JournalMetadata(db.Model):
 
         if not response:
             if use_high_price_if_unknown and currency == "GBP":
-                JISC_DEFAULT_PRICE_IN_GBP = 3775
+                JISC_DEFAULT_PRICE_IN_GBP = JiscDefaultPrices[self.publisher_code].value
                 response = JISC_DEFAULT_PRICE_IN_GBP
         return response
 
