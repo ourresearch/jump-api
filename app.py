@@ -43,6 +43,7 @@ DEMO_PACKAGE_ID = "658349d9"
 JISC_PACKAGE_ID = "package-3WkCDEZTqo6S"
 JISC_INSTITUTION_ID = "institution-Afxc4mAYXoJH"
 USE_PAPER_GROWTH = False
+DATABASE_URL = os.getenv("DATABASE_URL_REDSHIFT_TEST") if os.getenv("TESTING_DB") else os.getenv("DATABASE_URL_REDSHIFT")
 
 # set up logging
 # see http://wiki.pylonshq.com/display/pylonscookbook/Alternative+logging+configuration
@@ -127,9 +128,10 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True  # as instructed, to suppres
 app.config['SQLALCHEMY_ECHO'] = (os.getenv("SQLALCHEMY_ECHO", False) == "True")
 # app.config['SQLALCHEMY_ECHO'] = True
 
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL_REDSHIFT")
+# test or production database
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_BINDS"] = {
-    "redshift_db": os.getenv("DATABASE_URL_REDSHIFT")
+    "redshift_db": DATABASE_URL
 }
 
 # see https://stackoverflow.com/questions/43594310/redshift-sqlalchemy-long-query-hangs
@@ -173,8 +175,7 @@ if (os.getenv("FLASK_DEBUG", False) == "True"):
 Compress(app)
 app.config["COMPRESS_DEBUG"] = compress_json
 
-
-redshift_url = urllib.parse.urlparse(os.getenv("DATABASE_URL_REDSHIFT"))
+redshift_url = urllib.parse.urlparse(DATABASE_URL)
 app.config['postgreSQL_pool'] = ThreadedConnectionPool(2, 200,
                                   database=redshift_url.path[1:],
                                   user=redshift_url.username,
@@ -188,6 +189,7 @@ app.config['postgreSQL_pool'] = ThreadedConnectionPool(2, 200,
 
 app.config['PROFILE_REQUESTS'] = (os.getenv("PROFILE_REQUESTS", False) == "True")
 
+logger.info("Database URL host: {}".format(redshift_url.hostname))
 
 @contextmanager
 def get_db_connection():
