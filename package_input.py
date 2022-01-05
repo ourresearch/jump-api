@@ -282,9 +282,12 @@ class PackageInput:
 
     def update_dest_table(self, package_id):
         with get_db_cursor() as cursor:
-            cursor.execute("delete from %s where package_id=%s", (self.destination_table(), package_id,))
-            cursor.execute("insert into %s (select * from %s where package_id=%s)",
-                    (self.destination_table(), self.import_view_name(), package_id,))
+            qry1 = sql.SQL("delete from {} where package_id=%s").format(sql.Identifier(self.destination_table()))
+            cursor.execute(qry1, (package_id,))
+
+            qry2 = sql.SQL("insert into {} (select * from {} where package_id=%s)").format(
+                sql.Identifier(self.destination_table()), sql.Identifier(self.import_view_name()))
+            cursor.execute(qry2, (package_id,))
 
     def make_package_file_warning(self, parse_warning, additional_msg=None):
         return {
