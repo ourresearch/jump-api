@@ -171,7 +171,8 @@ class PackageInput:
         return "s3://{}/{}".format(bucket_name, object_name)
 
     def _raw_s3_bucket(self):
-        return "unsub-file-uploads"
+        upload_bucket = "unsub-file-uploads-testing" if os.getenv("TESTING_DB") else "unsub-file-uploads"
+        return upload_bucket
 
     def _copy_raw_to_s3(self, filename, package_id, num_rows=None, error=None, error_details=None):
         if "." in filename:

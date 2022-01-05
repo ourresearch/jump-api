@@ -678,7 +678,8 @@ class Package(db.Model):
                         my_dict["is_live"] = False
 
         # handle the ones that have been uploaded but not processed yet
-        preprocess_file_list = s3_client.list_objects(Bucket="unsub-file-uploads-preprocess")
+        upload_preprocess_bucket = "unsub-file-uploads-preprocess-testing" if os.getenv("TESTING_DB") else "unsub-file-uploads-preprocess"
+        preprocess_file_list = s3_client.list_objects(Bucket=upload_preprocess_bucket)
         for preprocess_file in preprocess_file_list.get("Contents", []):
             filename = preprocess_file["Key"]
             filename_base = filename.split(".")[0]

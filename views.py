@@ -1652,7 +1652,7 @@ def admin_accounts_get():
 def sign_s3(package_id):
     authenticate_for_package(package_id, Permission.modify())
 
-    upload_bucket = "unsub-file-uploads-preprocess"
+    upload_bucket = "unsub-file-uploads-preprocess-testing" if os.getenv("TESTING_DB") else "unsub-file-uploads-preprocess"
     file_name = request.args.get("filename")
 
     presigned_post = s3_client.generate_presigned_post(

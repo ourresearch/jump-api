@@ -50,8 +50,8 @@ def parse_uploads():
                 pass
 
         try:
-            upload_preprocess_bucket = "unsub-file-uploads-preprocess"
-            upload_finished_bucket = "unsub-file-uploads"
+            upload_preprocess_bucket = "unsub-file-uploads-preprocess-testing" if os.getenv("TESTING_DB") else "unsub-file-uploads-preprocess"
+            upload_finished_bucket = "unsub-file-uploads-testing" if os.getenv("TESTING_DB") else "unsub-file-uploads"
             preprocess_file_list = s3_client.list_objects(Bucket=upload_preprocess_bucket)
             for preprocess_file in preprocess_file_list.get("Contents", []):
                 filename = preprocess_file["Key"]
@@ -66,7 +66,7 @@ def parse_uploads():
                 size = preprocess_file["Size"]
                 age_seconds = (datetime.datetime.utcnow() - preprocess_file["LastModified"].replace(tzinfo=None)).total_seconds()
 
-                s3_clientobj = s3_client.get_object(Bucket="unsub-file-uploads-preprocess", Key=filename)
+                s3_clientobj = s3_client.get_object(Bucket=upload_preprocess_bucket, Key=filename)
                 contents_string = s3_clientobj["Body"].read()
                 with open(filename, "wb") as temp_file:
                     temp_file.write(contents_string)
