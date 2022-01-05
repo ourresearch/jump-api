@@ -1,6 +1,10 @@
 import pytest
+from app import db
+from package import Package
 from counter import CounterInput
 from app import get_db_cursor
+
+package_id = 'package-55BdKPno2uX5'
 
 file_rows = {
     'counter4_jr1_2018_00.csv': [
@@ -36,7 +40,6 @@ def test_imports_counter_4_samples():
         assert expected_rows == rows
 
 def test_set_to_delete():
-    package_id = 'package-55BdKPno2uX5'
     report_name = "jr1"
     res = CounterInput().set_to_delete(package_id, report_name)
     assert res == "Queued to delete"
@@ -47,6 +50,38 @@ def test_set_to_delete():
         cursor.execute(command, values)
         rows = cursor.fetchall()
     assert len(rows) == 0
+
+def counter2_file_uploaded(package_id):
+    package = Package.query.filter(Package.package_id == package_id).scalar()
+    db.session.refresh(package)
+    data_files_dict = package.data_files_dict
+    return data_files_dict['counter-trj2']['is_live']
+
+@pytest.mark.skipif(not counter2_file_uploaded(package_id), reason="Package '{}' counter file not uploaded".format(package_id))
+def test_delete():
+    package = Package.query.filter(Package.package_id == package_id).scalar()
+    db.session.refresh(package)
+    assert counter2_file_uploaded(package_id)
+
+    mssg = CounterInput().delete(package_id, report_name="trj2")
+    assert mssg == "Deleted CounterInput rows for package {}.".format(package_id)
+
+    db.session.refresh(package)
+    file_uploaded = counter2_file_uploaded(package_id)
+
+    assert file_uploaded == False
+
+    # clean up: re-upload counter 2 file
+    if not file_uploaded:
+        presigned_post = s3_client.generate_presigned_post(
+            Bucket = "unsub-file-uploads-preprocess-testing",
+            Key = package_id + "_counter-trj2.csv",
+            ExpiresIn = 60*60 # one hour
+        )
+        filename_to_upload = "tests/test_files/counter/elsevier_COUNTER5_trj2.csv"
+        with open(filename_to_upload, 'rb') as file:
+            files = {'file': (filename_to_upload, file)}
+            upload_response = requests.post(presigned_post['url'], data=presigned_post['fields'], files=files)
 
 # def test_delete():
 #     # add counter files
