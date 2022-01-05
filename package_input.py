@@ -244,11 +244,11 @@ class PackageInput:
 
     # report_name is used by CounterInput override
     def delete(self, package_id, report_name=None):
-
+        sql_delete = "delete from {} where package_id=%s"
         with get_db_cursor() as cursor:
-            sql1 = sql.SQL("delete from {} where package_id=%s".format(sql.Identifier(self.__tablename__), sql.Placeholder()))
+            sql1 = sql.SQL(sql_delete).format(sql.Identifier(self.__tablename__))
             cursor.execute(sql1, (package_id,))
-            sql2 = sql.SQL("delete from {} where package_id=%s".format(sql.Identifier(self.destination_table()), sql.Placeholder()))
+            sql2 = sql.SQL(sql_delete).format(sql.Identifier(self.destination_table()))
             cursor.execute(sql2, (package_id,))
             cursor.execute("delete from jump_file_import_error_rows where package_id=%s and file=%s",
                 (package_id, self.file_type_label(),))
