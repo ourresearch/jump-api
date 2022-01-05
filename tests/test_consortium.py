@@ -52,4 +52,4 @@ def test_bindvars_get_perpetual_access_from_cache():
     assert isinstance(res, list)
     assert len(res) > 0
     assert isinstance(res[0], psycopg2.extras.RealDictRow)
-    assert list(res[0].keys()) == ['institution_id', 'institution_short_name', 'institution_name', 'package_id', 'usage', 'num_journals', 'tags', 'included']
+    assert list(res[0].keys()) == ['institution_id', 'institution_short_name', 'institution_name', 'package_id', 'usage', 'num_journals', 'tags', 'included', 'sent_date', 'return_date', 'changed_date', 'member_added_subrs']
