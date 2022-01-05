@@ -15,6 +15,7 @@ import shortuuid
 import csv
 from enum import Enum
 from sqlalchemy.sql import text
+from psycopg2 import sql
 from kids.cache import cache
 
 import package
@@ -245,14 +246,10 @@ class PackageInput:
     def delete(self, package_id, report_name=None):
 
         with get_db_cursor() as cursor:
-            # cursor.execute("delete from {} where package_id = '{}'".format(self.__tablename__, package_id))
-            # cursor.execute("delete from {} where package_id = '{}'".format(self.destination_table(), package_id))
-            # cursor.execute("delete from jump_file_import_error_rows where package_id = '{}' and file = '{}'".format(
-            #     package_id, self.file_type_label()))
-            # cursor.execute("delete from jump_raw_file_upload_object where package_id = '{}' and file = '{}'".format(
-            #     package_id, self.file_type_label()))
-            cursor.execute("delete from %s where package_id=%s", (self.__tablename__, package_id,))
-            cursor.execute("delete from %s where package_id=%s", (self.destination_table(), package_id,))
+            sql1 = sql.SQL("delete from {} where package_id=%s".format(sql.Identifier(self.__tablename__), sql.Placeholder()))
+            cursor.execute(sql1, (package_id,))
+            sql2 = sql.SQL("delete from {} where package_id=%s".format(sql.Identifier(self.destination_table()), sql.Placeholder()))
+            cursor.execute(sql2, (package_id,))
             cursor.execute("delete from jump_file_import_error_rows where package_id=%s and file=%s",
                 (package_id, self.file_type_label(),))
             cursor.execute("delete from jump_raw_file_upload_object where package_id=%s and file=%s",
