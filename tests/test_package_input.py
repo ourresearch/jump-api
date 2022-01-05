@@ -1,9 +1,13 @@
 import datetime
 import pytest
+import requests
 
 # TODO: separate file input table classes from ingestion logic to remove import cycles
-import package
+from package import Package
 from package_input import PackageInput, ParseWarning
+from journal_price import JournalPriceInput
+from counter import CounterInput
+from app import s3_client
 from util import write_to_tempfile
 
 
@@ -386,3 +390,44 @@ class TestInputFormat(PackageInput):
                 'required': False
             },
         }
+
+def test_set_to_delete_fake_data():
+    text = CounterInput().set_to_delete("package-fakepackage", "doesntexist")
+    assert text == 'Queued to delete'
+
+    res = CounterInput().delete("package-fakepackage", "jr1")
+    assert res == 'Deleted CounterInput rows for package package-fakepackage.'
+
+
+def price_file_uploaded(package_id):
+    package = Package.query.filter(Package.package_id == package_id).scalar()
+    data_files_dict = package.data_files_dict
+    return data_files_dict['price']['is_live']
+
+package_id = "package-iQF8sFiRY99t"
+@pytest.mark.skipif(not price_file_uploaded(package_id), reason="Package '{}' price file not uploaded".format(package_id))
+def test_set_to_delete():
+    assert price_file_uploaded(package_id)
+
+    JournalPriceInput().set_to_delete(package_id)
+
+    file_uploaded = price_file_uploaded(package_id)
+
+    assert file_uploaded == False
+
+    # clean up: re-upload price file
+    if not file_uploaded:
+        presigned_post = s3_client.generate_presigned_post(
+            Bucket = "unsub-file-uploads-preprocess-testing",
+            Key = package_id + "_price.csv",
+            ExpiresIn = 60*60 # one hour
+        )
+        filename_to_upload = "tests/test_files/journal_price/elsevier-prices.csv"
+        with open(filename_to_upload, 'rb') as file:
+            files = {'file': (filename_to_upload, file)}
+            upload_response = requests.post(presigned_post['url'], data=presigned_post['fields'], files=files)
+
+        
+
+
+
