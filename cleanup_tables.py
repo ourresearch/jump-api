@@ -5,17 +5,19 @@ from app import get_db_cursor
 
 if __name__ == "__main__":
     table_names = """
-        jump_counter
-        jump_journal_prices
-        jump_perpetual_access
-        jump_counter_input
-        jump_journal_prices_input
-        jump_perpetual_access_input
         jump_account_package
-        jump_scenario_details_paid
+        jump_apc_authorships
+        jump_counter
+        jump_counter_input
+        jump_journal_prices
+        jump_journal_prices_input
         jump_package_scenario
-        jump_scenario_computed
+        jump_perpetual_access
+        jump_perpetual_access_input
         jump_raw_file_upload_object
+        jump_scenario_computed
+        jump_scenario_details_paid
+        jump_user_institution_permission
     """.split()
 
     show_tables = """SELECT DISTINCT tablename
