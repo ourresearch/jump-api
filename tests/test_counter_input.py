@@ -1,10 +1,16 @@
 import pytest
+import requests
+
 from app import db
 from package import Package
 from counter import CounterInput
 from app import get_db_cursor
+from app import s3_client
 
-package_id = 'package-55BdKPno2uX5'
+# scott+anothertest@ourresearch.org
+# package name: "Els"
+# publisher: Elsevier
+package_id = 'package-55BdKPno2uX5' 
 
 file_rows = {
     'counter4_jr1_2018_00.csv': [
@@ -51,25 +57,25 @@ def test_set_to_delete():
         rows = cursor.fetchall()
     assert len(rows) == 0
 
-def counter2_file_uploaded(package_id):
-    package = Package.query.filter(Package.package_id == package_id).scalar()
-    db.session.refresh(package)
-    data_files_dict = package.data_files_dict
-    return data_files_dict['counter-trj2']['is_live']
 
-@pytest.mark.skipif(not counter2_file_uploaded(package_id), reason="Package '{}' counter file not uploaded".format(package_id))
+def counter_file_uploaded(package_id, report_name="counter-trj2"):
+    with get_db_cursor() as cursor:
+        command = "select * from jump_raw_file_upload_object where package_id=%(package_id)s and file=%(file)s"
+        values = {'package_id': package_id, 'file': report_name}
+        cursor.execute(command, values)
+        rows = cursor.fetchall()
+    return len(rows) > 0 
+
+@pytest.mark.skipif(not counter_file_uploaded(package_id), reason="Package '{}' counter file not uploaded".format(package_id))
 def test_delete():
-    package = Package.query.filter(Package.package_id == package_id).scalar()
-    db.session.refresh(package)
-    assert counter2_file_uploaded(package_id)
+    assert counter_file_uploaded(package_id)
 
     mssg = CounterInput().delete(package_id, report_name="trj2")
     assert mssg == "Deleted CounterInput rows for package {}.".format(package_id)
 
-    db.session.refresh(package)
-    file_uploaded = counter2_file_uploaded(package_id)
+    file_uploaded = counter_file_uploaded(package_id)
 
-    assert file_uploaded == False
+    assert not file_uploaded
 
     # clean up: re-upload counter 2 file
     if not file_uploaded:
