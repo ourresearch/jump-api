@@ -39,7 +39,6 @@ from app import logger
 from app import jwt
 from app import db
 from app import get_db_cursor
-from app import reset_cache
 
 import ror_search
 import password_reset
