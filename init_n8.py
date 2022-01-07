@@ -461,8 +461,10 @@ if __name__ == "__main__":
             num_univ_subscribing = sum(univ_subscribing)
             # print("    univ's subscribing: {}".format(num_univ_subscribing))
             if num_univ_subscribing > 0:
-                num_ill_requests_split_evenly = row['downloads_ill'] / num_univ_subscribing
                 univ_to_assign_to = list(compress(group_jusp_id_list, univ_subscribing))
+                univ_ill_subscribing = list(filter(lambda x: any(x['jusp_id'].str.contains('|'.join(univ_to_assign_to))), results_ill))
+                downloads_less_self = row['downloads_ill'] - float(sum([w[w['issn_l'] == issn]['downloads_ill'] for w in univ_ill_subscribing]))
+                num_ill_requests_split_evenly = downloads_less_self / num_univ_subscribing
                 # print("    univ's: {}".format((*univ_to_assign_to,)))
                 for univ in univ_to_assign_to:
                     each_univ[univ] += num_ill_requests_split_evenly
