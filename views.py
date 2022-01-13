@@ -1433,7 +1433,7 @@ def scenario_id_export_get(scenario_id):
 def scenario_post(package_id):
     new_scenario_id = request.json.get("id", shortuuid.uuid()[0:8])
     new_scenario_name = request.json.get("name", "New Scenario")
-    new_scenario_name = new_scenario_name.replace('"', '""')
+    new_scenario_name = new_scenario_name.replace('"', "'")
     new_scenario_name = new_scenario_name.replace('&', ' ')
 
     if package_id.startswith("demo-package") and not new_scenario_id.startswith("demo-scenario-"):
@@ -1486,7 +1486,7 @@ def publisher_scenario_post(publisher_id):
 
     new_scenario_id = request.json.get("id", "scenario-{}".format(shortuuid.uuid()[0:12]))
     new_scenario_name = request.json.get("name", "New Scenario")
-    new_scenario_name = new_scenario_name.replace('"', '""')
+    new_scenario_name = new_scenario_name.replace('"', "'")
     new_scenario_name = new_scenario_name.replace('&', ' ')
 
     my_saved_scenario_to_copy_from = None
