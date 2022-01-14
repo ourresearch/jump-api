@@ -17,9 +17,10 @@ The Unsub application is open source. We think it's important that users can ins
 
 See the following files
 
-- Overview of project: README.md
-- Release nots: RELEASE_NOTES.md
-- License file: LICENSE
-- What are the files in this repo: jump-api-mapping.md
-- How do bind variables work: bind-variables.md (on bind-vars branch)
-- How does caching work in this repo: caching.md (not done yet)
+- Overview of project: `README.md`
+- Release nots: `RELEASE_NOTES.md`
+- License file: `LICENSE`
+- What are the files in this repo: `jump-api-mapping.md`
+- How do bind variables work: `bind-variables.md`
+- How to run staging vs. production and run tests: `running-unsub.md`
+- How does caching work in this repo: `caching.md` (not done yet)
