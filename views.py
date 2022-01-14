@@ -1098,7 +1098,7 @@ def post_subscription_guts(scenario_id, scenario_name=None):
 
     dict_to_save = request.get_json()
     if scenario_name:
-        scenario_name = scenario_name.replace('"', '""')
+        scenario_name = scenario_name.replace('"', "'")
         scenario_name = scenario_name.replace('&', ' ')
         dict_to_save["name"] = scenario_name
         save_raw_scenario_to_db(scenario_id, dict_to_save, get_ip(request))
@@ -1129,7 +1129,7 @@ def scenario_id_post(scenario_id):
 
     scenario_name = request.json.get("name", None)
     if scenario_name:
-        scenario_name = scenario_name.replace('"', '""')
+        scenario_name = scenario_name.replace('"', "'")
         scenario_name = scenario_name.replace('&', ' ')
         with get_db_cursor() as cursor:
             qry = sql.SQL("UPDATE jump_package_scenario SET scenario_name = (%s) where scenario_id = (%s)")
