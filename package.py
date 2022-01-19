@@ -2,14 +2,10 @@
 
 from cached_property import cached_property
 import numpy as np
-from collections import defaultdict
-import weakref
 from collections import OrderedDict
 import datetime
 import shortuuid
 import os
-import json
-from time import time
 import numpy as np
 import pandas as pd
 
@@ -24,8 +20,6 @@ from saved_scenario import SavedScenario # used in relationship
 from institution import Institution  # used in relationship
 from scenario import get_core_list_from_db
 from scenario import get_apc_data_from_db
-from util import get_sql_answers
-from util import get_sql_rows
 from util import get_sql_dict_rows
 from util import safe_commit
 from util import for_sorting
