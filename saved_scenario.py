@@ -3,22 +3,19 @@
 from cached_property import cached_property
 import simplejson as json
 import datetime
-import shortuuid
-from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
 from collections import OrderedDict
 from time import time
 from sqlalchemy import orm
+from psycopg2 import sql
+from psycopg2.extras import Json
+from psycopg2.extensions import register_adapter
+register_adapter(dict, Json)
 
 from app import db
 from app import get_db_cursor
 from scenario import Scenario
 from app import DEMO_PACKAGE_ID
 from util import elapsed
-
-from psycopg2 import sql
-from psycopg2.extras import Json
-from psycopg2.extensions import register_adapter
-register_adapter(dict, Json)
 
 def save_raw_scenario_to_db(scenario_id, raw_scenario_definition, ip):
     print("in save_raw_scenario_to_db")
