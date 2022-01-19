@@ -1,14 +1,11 @@
 import datetime
 import string
-
 import secrets
 import shortuuid
-from sqlalchemy.orm import relationship
 from unidecode import unidecode
 from werkzeug.security import check_password_hash
 
 from app import db
-from permission import UserInstitutionPermission
 from util import authenticated_user_id
 
 
