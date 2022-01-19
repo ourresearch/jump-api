@@ -5,7 +5,6 @@ import weakref
 from collections import OrderedDict
 from collections import defaultdict
 from threading import Lock
-import simplejson as json
 
 import numpy as np
 import scipy
