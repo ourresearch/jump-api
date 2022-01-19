@@ -1,20 +1,15 @@
 # coding: utf-8
 
+import argparse
 import os
-import sys
 import random
 import datetime
-from time import time
 from time import sleep
 import boto3
-
-import argparse
 
 from app import s3_client
 from app import get_db_cursor
 from app import db
-import package
-from package_input import PackageInput
 from counter import CounterInput
 from perpetual_access import PerpetualAccessInput
 from journal_price import JournalPriceInput
