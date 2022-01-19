@@ -1,7 +1,5 @@
 # coding: utf-8
 
-import timeout_decorator
-from flask import make_response
 from flask import request
 from flask import redirect
 from flask import abort
@@ -13,7 +11,6 @@ from flask import send_file
 from flask import g
 from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity
 from pyinstrument import Profiler
-from sqlalchemy import or_
 from sqlalchemy import func as sql_func
 from werkzeug.security import safe_str_cmp
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -29,7 +26,6 @@ from time import time
 import csv
 import shortuuid
 import datetime
-import requests
 import tempfile
 import random
 from collections import OrderedDict
@@ -46,7 +42,6 @@ import prepared_demo_publisher
 from emailer import create_email, send
 from counter import Counter, CounterInput
 from grid_id import GridId
-from scenario import Scenario
 from institution import Institution
 from journal_price import JournalPrice, JournalPriceInput
 from package import Package
