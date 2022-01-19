@@ -1,22 +1,18 @@
 # coding: utf-8
 
-import traceback
 import logging
 import sys
 import os
 import requests
 import simplejson as json
 import functools
-import hashlib
-import random
 import warnings
 import urllib.parse
 from time import time
 import numpy
-from random import shuffle
 from contextlib import contextmanager
 from collections import OrderedDict
-from dozer import Dozer
+# from dozer import Dozer
 import boto3
 
 warnings.filterwarnings("ignore", category=UserWarning, module='psycopg2')
@@ -29,12 +25,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_compress import Compress
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_jwt_extended import JWTManager
-from sqlalchemy import exc
-from sqlalchemy import event
-from sqlalchemy.pool import NullPool
-from sqlalchemy.pool import Pool
+# from sqlalchemy.pool import NullPool
 
-from util import safe_commit
 from util import elapsed
 from util import HTTPMethodOverrideMiddleware
 
@@ -317,7 +309,7 @@ def warm_cache():
     #     consortium.consortium_get_computed_data(scenario_id)
     #     consortium.consortium_get_issns(scenario_id)
 
-    from consortium import consortium_get_computed_data
+    # from consortium import consortium_get_computed_data
 
     # global cached_consortium_scenario_ids
     # shuffle(cached_consortium_scenario_ids)
