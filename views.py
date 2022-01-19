@@ -1660,66 +1660,66 @@ def sign_s3(package_id):
     })
 
 
-cache_last_updated = "1999-01-01"
+# cache_last_updated = "1999-01-01"
 
-def start_cache_thread():
+# def start_cache_thread():
+# 
+#     from time import sleep
+# 
+#     def do_stuff(dummy):
+#         print("in do stuff")
+#         global cache_last_updated
+# 
+#         while True:
+#             command = "select cache_call, updated from jump_cache_status where updated > %s::timestamp"
+#             with get_db_cursor() as cursor:
+#                 cursor.execute(command, (cache_last_updated,))
+#                 rows = cursor.fetchall()
+#                 random.shuffle(rows)
+# 
+#             # print ".",
+# 
+#             for row in rows:
+#                 print("CACHE: found some things that need refreshing")
+#                 try:
+#                     del app.my_memorycache_dict[row["cache_call"]]
+#                 except KeyError:
+#                     # hadn't been cached before
+#                     pass
+# 
+#                 (module_name, function_name, args) = json.loads(row["cache_call"])
+# 
+#                 module = __import__(module_name)
+#                 func = getattr(module, function_name)
+#                 func(*args)
+# 
+#             if rows:
+#                 cache_last_updated = max([row["updated"] for row in rows]).isoformat()
+#             sleep( 1 * random.random())
+# 
+# 
+#     import threading
+# 
+#     data = None
+#     t = threading.Thread(target=do_stuff, args=[data])
+#     t.daemon = True  # so it doesn't block
+#     t.start()
 
-    from time import sleep
 
-    def do_stuff(dummy):
-        print("in do stuff")
-        global cache_last_updated
-
-        while True:
-            command = "select cache_call, updated from jump_cache_status where updated > %s::timestamp"
-            with get_db_cursor() as cursor:
-                cursor.execute(command, (cache_last_updated,))
-                rows = cursor.fetchall()
-                random.shuffle(rows)
-
-            # print ".",
-
-            for row in rows:
-                print("CACHE: found some things that need refreshing")
-                try:
-                    del app.my_memorycache_dict[row["cache_call"]]
-                except KeyError:
-                    # hadn't been cached before
-                    pass
-
-                (module_name, function_name, args) = json.loads(row["cache_call"])
-
-                module = __import__(module_name)
-                func = getattr(module, function_name)
-                func(*args)
-
-            if rows:
-                cache_last_updated = max([row["updated"] for row in rows]).isoformat()
-            sleep( 1 * random.random())
-
-
-    import threading
-
-    data = None
-    t = threading.Thread(target=do_stuff, args=[data])
-    t.daemon = True  # so it doesn't block
-    t.start()
-
-
-def do_things():
-    # consortium
-    # scenario_id = "scenario-QC2kbHfUhj9W"
-
-    # not consortium
-    scenario_id = "scenario-VCebMrfWahSZ"
-
-    consortium_ids = get_consortium_ids()
-    if scenario_id in [d["scenario_id"] for d in consortium_ids]:
-        my_consortium = Consortium(scenario_id)
-        my_saved_scenario_dict = my_consortium.to_dict_journals()
-    else:
-        my_saved_scenario = get_saved_scenario(scenario_id)
-        my_saved_scenario_dict = my_saved_scenario.to_dict_journals()
+# def do_things():
+#     # consortium
+#     # scenario_id = "scenario-QC2kbHfUhj9W"
+#
+#     # not consortium
+#     scenario_id = "scenario-VCebMrfWahSZ"
+#
+#     consortium_ids = get_consortium_ids()
+#     if scenario_id in [d["scenario_id"] for d in consortium_ids]:
+#         my_consortium = Consortium(scenario_id)
+#         my_saved_scenario_dict = my_consortium.to_dict_journals()
+#     else:
+#         my_saved_scenario = get_saved_scenario(scenario_id)
+#         my_saved_scenario_dict = my_saved_scenario.to_dict_journals()
 
 #
 # # https://goshippo.com/blog/measure-real-size-any-python-object/
