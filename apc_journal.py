@@ -3,9 +3,7 @@
 from cached_property import cached_property
 import numpy as np
 from collections import defaultdict
-import weakref
 from collections import OrderedDict
-import pandas as pd
 
 class ApcJournal(object):
     years = list(range(0, 5))
