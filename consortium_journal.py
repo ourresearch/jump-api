@@ -1,12 +1,7 @@
 # coding: utf-8
 
 from cached_property import cached_property
-from collections import defaultdict
 from time import time
-from kids.cache import cache
-from collections import OrderedDict
-
-from util import format_currency
 from journal import Journal
 
 # start_time = time()
