@@ -5,15 +5,7 @@ import numpy as np
 import pandas as pd
 from collections import defaultdict
 from collections import OrderedDict
-import weakref
 from kids.cache import cache
-import requests
-import os
-from sqlalchemy.sql import text
-from random import random
-from time import sleep
-import bz2
-import gc
 import simplejson as json
 
 from app import use_groups
@@ -32,7 +24,6 @@ from util import TimingMessages
 from util import get_sql_answer
 
 from journal import Journal
-from consortium import Consortium
 from assumptions import Assumptions
 
 def get_clean_package_id(http_request_args):
