@@ -1,24 +1,8 @@
 # coding: utf-8
 
-import os
-import sys
-import random
-import datetime
-from time import time
-from time import sleep
-import shortuuid
-
 import argparse
 
-from app import db
-from app import get_db_cursor
 from consortium import Consortium
-from package import Package
-from saved_scenario import SavedScenario
-from saved_scenario import save_raw_scenario_to_db
-from saved_scenario import save_raw_member_institutions_included_to_db
-from util import safe_commit
-
 
 # heroku run --size=performance-l python consortium_recompute.py --package_id=package-3WkCDEZTqo6S -r heroku
 # heroku run --size=performance-l python consortium_recompute.py --scenario_id=tGUVWRiN -r heroku
