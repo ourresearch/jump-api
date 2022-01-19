@@ -5,7 +5,7 @@ import argparse
 import simplejson as json
 from cached_property import cached_property
 from time import time
-import requests
+# import requests
 from psycopg2 import sql
 from psycopg2.extras import execute_values
 from enum import Enum
