@@ -25,7 +25,6 @@
 - permission.py
 - perpetual_access.py
 - prepared_demo_publisher.py
-- purge_cache.py
 - raw_file_upload_object.py
 - ror_id.py
 - ror_search.py
@@ -60,7 +59,6 @@
 ## Heroku config
 
 - Procfile
-- Procfile.dev
 - runtime.txt
 - newrelic.ini
 
@@ -69,8 +67,10 @@
 - README.md
 - RELEASE_NOTES.md
 - LICENSE
-- jump-api-mapping.md (this file)
-- bind-variables.md
+- docs/jump-api-mapping.md (this file)
+- docs/bind-variables.md
+- docs/running-unsub.md
+- docs/caching.md
 
 ## Tests
 
@@ -80,3 +80,4 @@
 
 - static (has unpaywall favicon, remove?)
 - temp (remove maybe?)
+- purge_cache.py

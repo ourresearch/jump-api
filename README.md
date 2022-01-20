@@ -20,7 +20,7 @@ See the following files
 - Overview of project: `README.md`
 - Release nots: `RELEASE_NOTES.md`
 - License file: `LICENSE`
-- What are the files in this repo: `jump-api-mapping.md`
-- How do bind variables work: `bind-variables.md`
-- How to run staging vs. production and run tests: `running-unsub.md`
-- How does caching work in this repo: `caching.md` (not done yet)
+- What are the files in this repo: `docs/jump-api-mapping.md`
+- How do bind variables work: `docs/bind-variables.md`
+- How to run staging vs. production and run tests: `docs/running-unsub.md`
+- How does caching work in this repo: `docs/caching.md`
