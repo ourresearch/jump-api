@@ -1009,7 +1009,7 @@ def jump_perpetual_access(package_id):
     authenticate_for_package(package_id, Permission.view() if request.method == "GET" else Permission.modify())
 
     if request.method == "GET":
-        rows = PerpetualAccess.query.filter(PerpetualAccess.package_id == package_id).all()
+        rows = PerpetualAccess.query.filter(PerpetualAccess.package_id == package_id, PerpetualAccess.issn_l != None).all()
         if rows:
             return jsonify_fast_no_sort({"rows": [row.to_dict() for row in rows]})
         else:
@@ -1059,7 +1059,7 @@ def jump_journal_prices(package_id):
     package = authenticate_for_package(package_id, Permission.view() if request.method == "GET" else Permission.modify())
 
     if request.method == "GET":
-        rows = JournalPrice.query.filter(JournalPrice.package_id == package_id).all()
+        rows = JournalPrice.query.filter(JournalPrice.package_id == package_id, JournalPrice.issn_l != None).all()
         if rows:
             return jsonify_fast_no_sort({"rows": [row.to_dict() for row in rows]})
         else:
