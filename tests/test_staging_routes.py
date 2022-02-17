@@ -88,4 +88,30 @@ def test_staging_api_account(fetch_jwt):
     assert res.status_code == 404
     assert re.match("Removed. Use /user/me", res.json()["message"])
 
+def test_staging_download_price_custom_file(fetch_jwt):
+    package_id = 'package-jisctfnth'
+    res = requests.get(
+        url_base + f"/publisher/{package_id}/price",
+        headers={"Authorization": "Bearer " + fetch_jwt(os.environ["UNSUB_JISC_PWD"], os.environ["UNSUB_JISC_EMAIL"])},
+    )
+    assert res.status_code == 200
+    if res.ok:
+        body = res.json()
+        assert isinstance(body, dict)
+        assert isinstance(body['rows'][0], dict)
+        assert isinstance(body['rows'][0]['issn_l'], str)
+
+def test_staging_download_pta_file(fetch_jwt):
+    package_id = 'package-jisctfnth'
+    res = requests.get(
+        url_base + f"/publisher/{package_id}/perpetual-access",
+        headers={"Authorization": "Bearer " + fetch_jwt(os.environ["UNSUB_JISC_PWD"], os.environ["UNSUB_JISC_EMAIL"])},
+    )
+    assert res.status_code == 200
+    if res.ok:
+        body = res.json()
+        assert isinstance(body, dict)
+        assert isinstance(body['rows'][0], dict)
+        assert isinstance(body['rows'][0]['issn_l'], str)
+
 # staging_off(con)
