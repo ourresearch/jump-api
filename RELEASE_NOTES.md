@@ -5,6 +5,7 @@ both its appearance and its underlying data.
 This means you will often see changes in the UI/UX, and sometimes in the presented data.  
 Most of these changes are too small to note, but we'll keep a record of the larger ones here:
 
+- 2022/02/17 Fixed a problem where PTA and title price exports in the setup tabs failed if any ISSN's were missing - resulting from missing ISSN in user uploaded PTA or price files
 - 2022/01/14 Another fix for quotes in scenario names: all double quotes replaced with single quotes to avoid errors
 - 2022/01/14 Many changes throughout the Unsub backend to use proper SQL bind variables, including addition of many tests, and tweaks to allow testing on test database, test S3 buckets, and staging heroku instance. None of these changes are user facing.
 - 2021/11/23 Fixed a bug that was causing user permissions to be removed from an institution when their role was changed in the user dashboard. 
