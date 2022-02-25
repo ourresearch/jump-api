@@ -24,7 +24,7 @@ def save_raw_scenario_to_db(scenario_id, raw_scenario_definition, ip):
     else:
         tablename = "jump_scenario_details_paid"
     cols = ['scenario_id', 'updated', 'ip', 'scenario_json']
-    values = (scenario_id, datetime.datetime.now(), ip, Json(raw_scenario_definition), )
+    values = (scenario_id, datetime.datetime.utcnow(), ip, Json(raw_scenario_definition), )
     with get_db_cursor() as cursor:
         qry = sql.SQL("INSERT INTO {} ({}) values ({})").format( 
             sql.Identifier(tablename),
@@ -36,7 +36,7 @@ def save_raw_scenario_to_db(scenario_id, raw_scenario_definition, ip):
 def save_raw_member_institutions_included_to_db(scenario_id, member_institutions_list, ip):
     with get_db_cursor() as cursor:
         cols = ['scenario_id', 'updated', 'ip', 'scenario_members']
-        values = (scenario_id, datetime.datetime.now(), ip, Json(member_institutions_list), )
+        values = (scenario_id, datetime.datetime.utcnow(), ip, Json(member_institutions_list), )
         qry = sql.SQL("INSERT INTO jump_consortium_member_institutions ({}) values ({})").format(
             sql.SQL(', ').join(map(sql.Identifier, cols)),
             sql.SQL(', ').join(sql.Placeholder() * len(cols)))
@@ -178,7 +178,7 @@ class SavedScenario(db.Model):
             tablename = "jump_scenario_details_paid"
         with get_db_cursor() as cursor:
             cols = ['scenario_id', 'updated', 'ip', 'scenario_json']
-            values = (self.scenario_id, datetime.datetime.now(), ip, Json(self.to_dict_definition()), )
+            values = (self.scenario_id, datetime.datetime.utcnow(), ip, Json(self.to_dict_definition()), )
             qry = sql.SQL("INSERT INTO {} ({}) values ({})").format(
                 sql.Identifier(tablename),
                 sql.SQL(', ').join(map(sql.Identifier, cols)),

@@ -319,7 +319,7 @@ class Consortium(object):
         cols = ['consortium_name', 'consortium_short_name', 'package_name', 'institution_id', 
             'package_id', 'scenario_id', 'email', 'num_member_institutions', 'created', 'completed',]
         values = (self.consortium_name, self.consortium_short_name, self.publisher, self.institution_id, 
-            self.package_id, self.scenario_id, email, num_member_institutions, datetime.datetime.now(), None, )
+            self.package_id, self.scenario_id, email, num_member_institutions, datetime.datetime.utcnow(), None, )
         with get_db_cursor() as cursor:
             qry = sql.SQL("INSERT INTO jump_scenario_computed_update_queue ({}) VALUES ({})").format(
                 sql.SQL(', ').join(map(sql.Identifier, cols)),
