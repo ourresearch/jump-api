@@ -1431,7 +1431,7 @@ class Journal(object):
 
     def to_values_journals_for_consortium(self):
         table_row = self.to_dict_journals()
-        response = [table_row["package_id"], 'scenario_id', "'{}'::timestamp".format(datetime.datetime.utcnow().isoformat()), 
+        response = [table_row["package_id"], 'scenario_id', datetime.datetime.utcnow().isoformat(), 
             table_row["issn_l"], table_row["usage"], self.cpu, 'package_id', 'consortium_name', table_row["institution_name"].replace("'", "''"),
             self.institution_short_name, self.institution_id, table_row["subject"], None, table_row["is_society_journal"], 
             table_row["subscription_cost"], table_row["ill_cost"], table_row["use_instant_for_debugging"], self.use_social_networks, 
