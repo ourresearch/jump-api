@@ -14,6 +14,22 @@ package_small = Package.query.filter(Package.package_id == package_id2).scalar()
 package_id3 = 'package-testingYJVJmYWBuLSY' # team+consortiumtest@ourresearch.org, "Test Big University"
 package_feedback = Package.query.filter(Package.package_id == package_id3).scalar()
 
+def test_jisc_price_warnings():
+    # missing_prices warnings shouldn't exist for JISC packages 
+    # since we use default prices when there's no public or custom price
+    package_id_cra_sage = 'package-jiscsagecra' # team+jisc@ourresearch.org
+    package_jisc_cra_sage = Package.query.filter(Package.package_id == package_id_cra_sage).scalar()
+    package_id_shu_tf = 'package-jisctfshu'
+    package_jisc_shu_tf = Package.query.filter(Package.package_id == package_id_shu_tf).scalar()
+
+    # warnings is empty b/c we use a default price
+    assert len(package_jisc_cra_sage.warnings) == 0
+    assert len(package_jisc_shu_tf.warnings) == 0
+
+    # but there are actually missing prices
+    assert len(package_jisc_cra_sage.journals_missing_prices) > 0
+    assert len(package_jisc_shu_tf.journals_missing_prices) > 0
+
 def test_to_package_dict():
     package_dict = package.to_package_dict()
     
