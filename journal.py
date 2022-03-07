@@ -185,6 +185,7 @@ class Journal(object):
             if "actual" in key:
                 del self.__dict__[key]
 
+    # TODO: not used anywhere, remove
     @cached_property
     def years_by_year(self):
         return [2019 + year_index for year_index in self.years]
@@ -192,7 +193,9 @@ class Journal(object):
     @cached_property
     def historical_years_by_year(self):
         # used for citation, authorship lookup
-        return list(range(2015, 2019+1))
+        now = datetime.datetime.utcnow()
+        return list(range(now.year - 5, now.year))
+        # return list(range(2015, 2019+1))
 
     @cached_property
     def cost_actual_by_year(self):
@@ -1444,6 +1447,7 @@ class Journal(object):
 
     def to_dict_details(self):
         response = OrderedDict()
+        now = datetime.datetime.utcnow()
 
         response["top"] = {
                 "issn_l": self.issn_l,
@@ -1470,19 +1474,15 @@ class Journal(object):
             group_dict["usage_percent"] = format_percent(round(float(100)*self.use_actual[group]/self.use_total))
             # group_dict["timeline"] = u",".join(["{:>7}".format(self.use_actual_by_year[group][year]) for year in self.years])
             for year in self.years:
-                group_dict["year_"+str(2020 + year)] = format_with_commas(round(self.use_actual_by_year[group][year]))
+                group_dict["year_" + str(now.year + year)] = format_with_commas(round(self.use_actual_by_year[group][year]))
             group_list += [group_dict]
         response["fulfillment"] = {
             "headers": [
                 {"text": "Type", "value": "group"},
                 {"text": "Usage (projected annual)", "value": "usage"},
                 {"text": "Usage (percent)", "value": "usage_percent"},
-                {"text": "Usage projected 2020", "value": "year_2020"},
-                {"text": "2021", "value": "year_2021"},
-                {"text": "2022", "value": "year_2022"},
-                {"text": "2023", "value": "year_2023"},
-                {"text": "2024", "value": "year_2024"},
-            ],
+                {"text": "Usage projected " + str(now.year + self.years[0]), "value": "year_" + str(now.year + self.years[0])},
+            ] + [{"text": str(now.year + w), "value": "year_" + str(now.year + w)} for w in self.years[1:]],
             "data": group_list
             }
         response["fulfillment"]["use_actual_by_year"] = self.use_actual_by_year
@@ -1558,7 +1558,7 @@ class Journal(object):
                 cost_dict["cost_type"] = cost_dict["cost_type"].replace("Ill", "ILL")
             costs = self.__getattribute__(cost_type)
             for year in self.years:
-                cost_dict["year_"+str(2020 + year)] = format_currency(costs[year])
+                cost_dict["year_" + str(now.year + year)] = format_currency(costs[year])
             cost_list += [cost_dict]
             cost_dict["cost_avg"] = format_currency(self.__getattribute__(cost_type.replace("_by_year", "")))
             if self.use_paywalled:
@@ -1572,33 +1572,18 @@ class Journal(object):
                 {"text": "Cost Type", "value": "cost_type"},
                 {"text": "Cost (projected annual)", "value": "cost_avg"},
                 {"text": "Cost-Type per paid use", "value": "cost_per_use"},
-                {"text": "Cost projected 2020", "value": "year_2020"},
-                {"text": "2021", "value": "year_2021"},
-                {"text": "2022", "value": "year_2022"},
-                {"text": "2023", "value": "year_2023"},
-                {"text": "2024", "value": "year_2024"},
-            ],
+                {"text": "Cost projected " + str(now.year + self.years[0]), "value": "year_" + str(now.year + self.years[0])},
+            ] + [{"text": str(now.year + w), "value": "year_" + str(now.year + w)} for w in self.years[1:]],
             "data": cost_list
             }
 
         num_papers_list = []
         num_papers_dict = OrderedDict()
         for year in self.years:
-            num_papers_dict["year_" + str(2015 + year)] = int(round(self.raw_num_papers_historical_by_year[year]))
+            num_papers_dict["year_" + str(now.year - 5 + year)] = int(round(self.raw_num_papers_historical_by_year[year]))
         num_papers_list += [num_papers_dict]
         response["num_papers"] = {
-            "headers": [
-                {"text": "2015", "value": "year_2015"},
-                {"text": "2016", "value": "year_2016"},
-                {"text": "2017", "value": "year_2017"},
-                {"text": "2018", "value": "year_2018"},
-                {"text": "2019", "value": "year_2019"},
-                {"text": "2020", "value": "year_2020"},
-                {"text": "2021", "value": "year_2021"},
-                {"text": "2022", "value": "year_2022"},
-                {"text": "2023", "value": "year_2023"},
-                {"text": "2024", "value": "year_2024"}
-            ],
+            "headers": [{"text": str(w), "value": "year_" + str(w)} for w in range(now.year - 5, now.year + 5)],
             "data": num_papers_list
             }
 
@@ -1609,9 +1594,9 @@ class Journal(object):
                 for i, year in enumerate(self.curve_fit_for_num_papers["x"]):
                     # print self.curve_fit_for_num_papers["x"]
                     # print self.curve_fit_for_num_papers["y_fit"]
-                    num_papers_dict["year_" + str(2015 + year)] = int(round(self.curve_fit_for_num_papers["y_fit"][i]))
+                    num_papers_dict["year_" + str((now.year - 5) + year)] = int(round(self.curve_fit_for_num_papers["y_fit"][i]))
         for year in self.years:
-            num_papers_dict["year_" + str(2020 + year)] = int(round(self.num_papers_by_year[year]))
+            num_papers_dict["year_" + str(now.year + year)] = int(round(self.num_papers_by_year[year]))
         num_papers_list += [num_papers_dict]
         response["num_papers_forecast"] = {"headers": response["num_papers"]["headers"], "data": num_papers_list}
 
