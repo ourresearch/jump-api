@@ -474,9 +474,11 @@ class Package(db.Model):
         if self.institution.is_consortium:
             return []
 
-        if "jiscels" in self.package_id:
+        if any([w in self.package_id for w in ['jiscels', 'jiscsage', 'jiscwiley', 'jiscspringer', 'jisctf']]):
             # don't show warnings for those packages
             # maybe best thing is don't show warnings for any feedback packages?
+            # Update on 2022-03-07: Scott added ignore warnings for sage, wiley, springer, and tf pkgs
+            #   This removes warnings for not just feeder pkgs but standalone packages for each institution
             return []
 
         response = []
