@@ -1,4 +1,7 @@
-# heroku run --size=performance-l python user_summary.py -r heroku
+# Run like:
+## heroku run --size=performance-l python user_summary.py -r heroku
+# Or run in the background like:
+## heroku run:detached --size=performance-l python user_summary.py -r heroku
 
 import pandas as pd
 import numpy as np
@@ -186,8 +189,8 @@ non_consortia = non_consortia[~non_consortia['name'].str.contains("Scott")]
 # row = next(it)[1]
 # non_consortia.iterrows()[572]
 all_institutions = []
-for index, row in non_consortia[1:10].iterrows():
-	print(row["ror_id"])
+for index, row in non_consortia.iterrows():
+	# print(row["ror_id"])
 	with get_db_cursor() as cursor:
 	    cmd = "select * from jump_account_package where institution_id = %s"
 	    cursor.execute(cmd, (row["institution_id"],))
