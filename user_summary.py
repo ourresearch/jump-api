@@ -9,130 +9,14 @@ import os
 import json
 import gspread
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
-from hubspot3.companies import CompaniesClient
-from hubspot3.deals import DealsClient
-from hubspot3.crm_associations import CRMAssociationsClient
-from hubspot3.contacts import ContactsClient
 
 from app import get_db_cursor
 from package import Package
 
-def int_try(x):
-	try:
-	    z = int(x)
-	    x = z
-	finally:
-		return x
-
-class HubSpot(object):
-	def __init__(self):
-		super(HubSpot, self).__init__()
-		self.HS_API_KEY = os.environ.get('HS_API_KEY')
-		self.company_client = CompaniesClient(api_key=self.HS_API_KEY)
-		self.deals_client = DealsClient(api_key=self.HS_API_KEY)
-		self.assoc_client = CRMAssociationsClient(api_key=self.HS_API_KEY)
-		self.contacts_client = ContactsClient(api_key=self.HS_API_KEY)
-		self._companies = []
-		self._deals = []
-		self._contacts = []
-
-	def fetch_companies(self, extra_properties=["ror_id","consortia","consortium_account","amount_last_paid_invoice","date_last_paid_invoice","domain"]):
-		print("fetching companies")
-		self._companies = self.company_client.get_all(extra_properties=extra_properties)
-
-	def fetch_deals(self, extra_properties=["our_research_deal_type"]):
-		print("fetching deals")
-		self._deals = self.deals_client.get_all(extra_properties=extra_properties)
-
-	def fetch_contacts(self, extra_properties=[]):
-		print("fetching contacts")
-		self._contacts = self.contacts_client.get_all(extra_properties=extra_properties)
-	
-	def extract_deals(self, company_id):
-		company_deals = list(filter(lambda x: company_id in x['associatedCompanyIds'], self._deals))
-		deal_data = []
-		for deal in company_deals:
-			closedate = deal.get('closedate')
-			createdate = deal.get('createdate')
-			if closedate:
-				closedate = datetime.fromtimestamp(int(closedate)/1000)
-			if createdate:
-				createdate = datetime.fromtimestamp(int(createdate)/1000)
-			amount = deal.get('amount')
-			if amount:
-				amount = int_try(amount)
-			deal_data.append({'close_date': closedate, 'create_date': createdate,
-				'amount': amount, 'stage': deal.get('dealstage'),
-				'our_research_deal_type': deal.get('our_research_deal_type'),})
-		# sort by close dates
-		deal_data = sorted(deal_data, key = lambda x: (x['close_date'] is None, x['close_date']))
-		# convert dates to strings
-		# [w.update(close_date = w['close_date'].strftime('%Y-%m-%d')) for w in deal_data if w['close_date']]
-		# [w.update(create_date = w['create_date'].strftime('%Y-%m-%d')) for w in deal_data if w['create_date']]
-		return deal_data
-
-	def companies(self):
-		self.fetch_companies()
-		self.fetch_deals()
-		print("matching deals to companies")
-		for company in self._companies:
-			# print(company['id'])
-			company['deals'] = self.extract_deals(company_id=company['id'])
-
-	def filter_by_ror_id(self, ror_id):
-		if self._companies:
-			return list(filter(lambda x: x.get('ror_id') == ror_id, self._companies))
-
-	def current_deal(self, ror_id):
-		customer = False # by default not a current customer
-		data = self.filter_by_ror_id(ror_id)
-		try:
-			if data: # company not found
-				data = data[0]
-				deals = data['deals']
-				if deals: # no deals found
-					deals_closed_won = list(filter(lambda x: x['stage'] == "closedwon", deals))
-					if deals_closed_won:
-						date_max = max([w['close_date'] for w in deals_closed_won if w['close_date'] is not None])
-						deal = list(filter(lambda x: x['close_date'] == date_max, deals))[0]
-						if deal['our_research_deal_type'] == "UJD": # only Unsub deals
-							if deal['close_date']: # no closed date
-								end_date = deal['close_date'] + relativedelta(years=1)
-								customer = end_date > datetime.today()
-		except:
-			pass
-
-		return customer
-
+from hubspot import HubSpot
 
 hs = HubSpot()
 hs.companies()
-# hs.fetch_companies()
-# hs.fetch_contacts()
-# hs._deals
-# hs._companies[0:4]
-# hs.filter_by_ror_id(ror_id='asdff')
-
-# not a current customer
-# hs.filter_by_ror_id(ror_id='05g3dte14')
-# hs.current_deal(ror_id='05g3dte14')
-
-# # not a current customer: JULAC
-# hs.filter_by_ror_id(ror_id='00t33hh48')
-# hs.current_deal(ror_id='00t33hh48')
-
-# # is a current customer
-# hs.filter_by_ror_id(ror_id='01vx35703')
-# hs.current_deal(ror_id='01vx35703')
-
-# # consortium members: CRKN
-# hs.filter_by_ror_id(ror_id='010gxg263')
-# hs.current_deal(ror_id='010gxg263')
-
-# # consortium JISC
-# hs.filter_by_ror_id(ror_id='01rv9gx86')
-# hs.current_deal(ror_id='01rv9gx86')
 
 def params_changed(x):
 	defaults = {
@@ -164,8 +48,6 @@ with get_db_cursor() as cursor:
     rows = cursor.fetchall()
 
 institutions = pd.DataFrame(rows, columns=['institution_id','name','created','is_consortium','consortium_id','ror_id'])
-# len(institutions)
-# institutions = [x[0] for x in rows]
 
 # Consortia
 institutions['is_consortium'].fillna(False, inplace=True)
@@ -189,7 +71,7 @@ non_consortia = non_consortia[~non_consortia['name'].str.contains("Scott")]
 # row = next(it)[1]
 # non_consortia.iterrows()[572]
 all_institutions = []
-for index, row in non_consortia.iterrows():
+for index, row in non_consortia[0:1].iterrows():
 	# print(row["ror_id"])
 	with get_db_cursor() as cursor:
 	    cmd = "select * from jump_account_package where institution_id = %s"
@@ -280,18 +162,6 @@ all_institutions_df.to_csv(pkg_file, index=False)
 
 
 # aggregate package level data up to institutions
-## aggregate: 
-#### filter out pkgs that are deleted and that are feeder or feedback pkgs
-#### - number of pkgs
-#### - number of scenarios, sum up "scenarios"
-#### - has_complete_counter_data - any FALSE?
-#### - perpetual_access - any FALSE?
-#### - custom_price - any FALSE?
-#### - last created scenario, just grab max value of "created_sce_last"
-#### - any scenario_user_subrs?
-#### - any scenario_param_chgs?
-#### - 
-# drop after: package_id, package_name, created_pkg, publisher, is_deleted, currency, big_deal_cost, big_deal_cost_increase, has_complete_counter_data, perpetual_access, custom_price, is_feeder_package, is_feedback_package, created_sce_first, created_sce_last, scenarios, scenario_user_subrs, scenario_param_chgs, scenario_param_str
 inst_level = all_institutions_df
 inst_level = inst_level[~inst_level['is_deleted'].fillna(False) & ~inst_level['is_feeder_package'].fillna(False) & ~inst_level['is_feedback_package'].fillna(False)]
 inst_level['created_sce_last'] = pd.to_datetime(inst_level['created_sce_last'])
@@ -327,7 +197,6 @@ inst_level.to_csv(inst_file, index=False)
 
 
 # Upload to google sheets 
-# auth
 json_cred = os.environ.get('GOOGLE_SHEETS_JSON')
 file_cred = 'google_sheets_creds.json'
 with open(file_cred, 'w') as f:
