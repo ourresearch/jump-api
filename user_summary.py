@@ -71,7 +71,7 @@ non_consortia = non_consortia[~non_consortia['name'].str.contains("Scott")]
 # row = next(it)[1]
 # non_consortia.iterrows()[572]
 all_institutions = []
-for index, row in non_consortia[0:1].iterrows():
+for index, row in non_consortia.iterrows():
 	# print(row["ror_id"])
 	with get_db_cursor() as cursor:
 	    cmd = "select * from jump_account_package where institution_id = %s"
