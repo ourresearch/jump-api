@@ -73,7 +73,7 @@ non_consortia = non_consortia[~non_consortia['name'].str.contains("Scott")]
 # non_consortia.iterrows()[572]
 all_institutions = []
 for index, row in non_consortia.iterrows():
-	# print(row["ror_id"])
+	print(row["ror_id"])
 	with get_db_cursor() as cursor:
 	    cmd = "select * from jump_account_package where institution_id = %s"
 	    cursor.execute(cmd, (row["institution_id"],))
@@ -108,6 +108,7 @@ for index, row in non_consortia.iterrows():
 	institution_pkgs["created_inst"] = row['created'].strftime("%Y-%m-%d")
 
 	# intercom
+	intlastseen = None
 	with get_db_cursor() as cursor:
 	    cmd = "select * from jump_debug_admin_combo_view where institution_id = %s"
 	    cursor.execute(cmd, (row["institution_id"],))
@@ -117,7 +118,9 @@ for index, row in non_consortia.iterrows():
 		domain = None
 		if company:
 			domain = company[0].get('domain')
-		institution_pkgs["intercom_last_seen"] = intercom(emails, domain)
+		intlastseen = intercom(emails, domain)
+
+	institution_pkgs["intercom_last_seen"] = intlastseen
 	# end intercom
 
 	# packages

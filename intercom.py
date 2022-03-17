@@ -10,7 +10,7 @@ if zzz:
 
 def intercom(emails, domain):
   if not emails:
-    return None
+    return ''
 
   emails_array = [{"field": "email", "operator": "=", "value": w} for w in emails]
 
@@ -39,7 +39,7 @@ def intercom(emails, domain):
   key = os.getenv("INTERCOM_API_KEY")
   auth = {"Authorization": "Bearer " + key}
   res = requests.post(intercom_base + "/contacts/search", json=body, headers=auth)
-  last_seen_at = None
+  last_seen_at = ''
   if res.ok:
     data = res.json()
     # remove consortia admins
@@ -50,11 +50,11 @@ def intercom(emails, domain):
     if len(times) > 1:
       last_seen_at = max(times)
     elif len(times) == 0:
-      last_seen_at = None
+      last_seen_at = ''
     else:
       last_seen_at = times[0]
 
   if isinstance(last_seen_at, pd.Timestamp) or isinstance(last_seen_at, datetime):
     last_seen_at = last_seen_at.strftime("%Y-%m-%d")
 
-  return last_seen_at
+  return str(last_seen_at)
