@@ -14,6 +14,7 @@ from app import get_db_cursor
 from package import Package
 
 from hubspot import HubSpot
+from intercom import intercom
 
 hs = HubSpot()
 hs.companies()
@@ -88,7 +89,7 @@ for index, row in non_consortia.iterrows():
 		institution_pkgs.drop(["account_id","con_package_id","is_dismissed_warning_missing_perpetual_access","is_dismissed_warning_missing_prices","default_to_no_perpetual_access","updated"], axis=1, inplace=True)
 		institution_pkgs["institution_name"] = row["name"]
 		institution_pkgs["ror_id"] = row["ror_id"]
-		
+
 	institution_pkgs["current_deal"] = hs.current_deal(ror_id=row["ror_id"])
 	company = hs.filter_by_ror_id(ror_id=row["ror_id"])
 	consortia = None
@@ -106,6 +107,20 @@ for index, row in non_consortia.iterrows():
 	institution_pkgs["amount_last_paid_invoice"] = amount_last_paid_invoice
 	institution_pkgs["created_inst"] = row['created'].strftime("%Y-%m-%d")
 
+	# intercom
+	with get_db_cursor() as cursor:
+	    cmd = "select * from jump_debug_admin_combo_view where institution_id = %s"
+	    cursor.execute(cmd, (row["institution_id"],))
+	    rows_users = cursor.fetchall()
+	if rows_users:
+		emails = list(filter(lambda x: x is not None, [w['email'] for w in rows_users]))
+		domain = None
+		if company:
+			domain = company[0].get('domain')
+		institution_pkgs["intercom_last_seen"] = intercom(emails, domain)
+	# end intercom
+
+	# packages
 	pkgid = institution_pkgs.get('package_id')
 	if not isinstance(pkgid, pd.Series):
 		all_institutions.append(institution_pkgs)
@@ -151,6 +166,7 @@ created_pkg_new = [w.strftime("%Y-%m-%d") if isinstance(w, pd.Timestamp) else w 
 del all_institutions_df['created']
 all_institutions_df['created_pkg'] = created_pkg_new
 all_institutions_df = all_institutions_df[["institution_id","institution_name","ror_id","created_inst","current_deal","consortia","consortium_account","date_last_paid_invoice","amount_last_paid_invoice",
+	"intercom_last_seen",
 	"package_id","package_name","created_pkg","publisher","is_deleted",
 	"currency","big_deal_cost","big_deal_cost_increase","has_complete_counter_data",
 	"perpetual_access","custom_price","is_feeder_package","is_feedback_package",
@@ -173,6 +189,7 @@ inst_level = pd.concat([
 	inst_level.groupby(['institution_id','institution_name'])['consortium_account'].apply(lambda x: ",".join(filter(None, list(set(x))))),
 	inst_level.groupby(['institution_id','institution_name'])['date_last_paid_invoice'].apply(lambda x: ",".join(filter(None, list(set(x))))),
 	inst_level.groupby(['institution_id','institution_name'])['amount_last_paid_invoice'].apply(lambda x: list(set(x))[0]),
+	inst_level.groupby(['institution_id','institution_name'])['intercom_last_seen'].apply(lambda x: ",".join(filter(None, list(set(x))))),
 	inst_level.groupby(['institution_id','institution_name'])['publisher'].apply(lambda x: ",".join(list(np.unique(list(filter(lambda z: isinstance(z, str), x)))))),
 	inst_level.groupby(['institution_id','institution_name']).nunique().package_id,
 	inst_level.groupby(['institution_id','institution_name']).sum().scenarios,
