@@ -5,6 +5,9 @@ both its appearance and its underlying data.
 This means you will often see changes in the UI/UX, and sometimes in the presented data.  
 Most of these changes are too small to note, but we'll keep a record of the larger ones here:
 
+- 2022/03/17 Fix in Unsub consortia dashboard: some consortia dashboards were displaying incorrect percent change in cost versus their big deal cost (see https://github.com/ourresearch/get-unsub/pull/28) 
+- 2022/03/17 We have a new webinars page at https://unsub.org/webinars
+- 2022/03/17 We made various improvements in our journal metadata; you may have noticed slight changes in your dashboards with respect to titles included or excluded following changes in our metadata; get in touch if you have any questions
 - 2022/02/17 Fixed a problem where PTA and title price exports in the setup tabs failed if any ISSN's were missing - resulting from missing ISSN in user uploaded PTA or price files
 - 2022/01/14 Another fix for quotes in scenario names: all double quotes replaced with single quotes to avoid errors
 - 2022/01/14 Many changes throughout the Unsub backend to use proper SQL bind variables, including addition of many tests, and tweaks to allow testing on test database, test S3 buckets, and staging heroku instance. None of these changes are user facing.
