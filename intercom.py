@@ -10,7 +10,7 @@ if zzz:
 
 def intercom(emails, domain):
   if not emails and not domain:
-    return ''
+    return ['', '']
 
   emails_array = [{"field": "email", "operator": "=", "value": w} for w in emails]
 

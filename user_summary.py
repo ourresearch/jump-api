@@ -94,6 +94,8 @@ for index, row in non_consortia.iterrows():
 	company = hs.filter_by_ror_id(ror_id=row["ror_id"])
 	consortia = None
 	consortium_account = None
+	date_last_paid_invoice = None
+	amount_last_paid_invoice = None
 	if company:
 		consortia = company[0].get('consortia')
 		consortium_account = company[0].get('consortium_account')
