@@ -109,6 +109,7 @@ for index, row in non_consortia.iterrows():
 
 	# intercom
 	intlastseen = None
+	emaillastseen = None
 	with get_db_cursor() as cursor:
 	    cmd = "select * from jump_debug_admin_combo_view where institution_id = %s"
 	    cursor.execute(cmd, (row["institution_id"],))
@@ -118,9 +119,10 @@ for index, row in non_consortia.iterrows():
 		domain = None
 		if company:
 			domain = company[0].get('domain')
-		intlastseen = intercom(emails, domain)
+		intlastseen, emaillastseen = intercom(emails, domain)
 
 	institution_pkgs["intercom_last_seen"] = intlastseen
+	institution_pkgs["intercom_last_seen_email"] = emaillastseen
 	# end intercom
 
 	# packages
@@ -169,7 +171,7 @@ created_pkg_new = [w.strftime("%Y-%m-%d") if isinstance(w, pd.Timestamp) else w 
 del all_institutions_df['created']
 all_institutions_df['created_pkg'] = created_pkg_new
 all_institutions_df = all_institutions_df[["institution_id","institution_name","ror_id","created_inst","current_deal","consortia","consortium_account","date_last_paid_invoice","amount_last_paid_invoice",
-	"intercom_last_seen",
+	"intercom_last_seen", "intercom_last_seen_email",
 	"package_id","package_name","created_pkg","publisher","is_deleted",
 	"currency","big_deal_cost","big_deal_cost_increase","has_complete_counter_data",
 	"perpetual_access","custom_price","is_feeder_package","is_feedback_package",
@@ -193,6 +195,7 @@ inst_level = pd.concat([
 	inst_level.groupby(['institution_id','institution_name'])['date_last_paid_invoice'].apply(lambda x: ",".join(filter(None, list(set(x))))),
 	inst_level.groupby(['institution_id','institution_name'])['amount_last_paid_invoice'].apply(lambda x: list(set(x))[0]),
 	inst_level.groupby(['institution_id','institution_name'])['intercom_last_seen'].apply(lambda x: ",".join(filter(None, list(set(x))))),
+	inst_level.groupby(['institution_id','institution_name'])['intercom_last_seen_email'].apply(lambda x: ",".join(filter(None, list(set(x))))),
 	inst_level.groupby(['institution_id','institution_name'])['publisher'].apply(lambda x: ",".join(list(np.unique(list(filter(lambda z: isinstance(z, str), x)))))),
 	inst_level.groupby(['institution_id','institution_name']).nunique().package_id,
 	inst_level.groupby(['institution_id','institution_name']).sum().scenarios,

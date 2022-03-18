@@ -40,13 +40,15 @@ def intercom(emails, domain):
   auth = {"Authorization": "Bearer " + key}
   res = requests.post(intercom_base + "/contacts/search", json=body, headers=auth)
   last_seen_at = ''
+  email_last_seen_at = ''
   if res.ok:
     data = res.json()
     # remove consortia admins
     data = list(filter(lambda x: x['email'] not in consortia_admin_emails, data['data']))
     # filter to emails searched or domain for organization
     data = list(filter(lambda x: x['email'] in emails or domain in x['email'], data))
-    times = [datetime.fromtimestamp(w['last_seen_at']) for w in data if w['last_seen_at'] is not None]
+    # times = [datetime.fromtimestamp(w['last_seen_at']) for w in data if w['last_seen_at'] is not None]
+    times = [w['last_seen_at'] for w in data if w['last_seen_at'] is not None]
     if len(times) > 1:
       last_seen_at = max(times)
     elif len(times) == 0:
@@ -54,7 +56,11 @@ def intercom(emails, domain):
     else:
       last_seen_at = times[0]
 
+  if last_seen_at:
+    email_last_seen_at = list(filter(lambda z: z['last_seen_at'] == last_seen_at, data))[0].get('email')
+    last_seen_at = datetime.fromtimestamp(last_seen_at)
+
   if isinstance(last_seen_at, pd.Timestamp) or isinstance(last_seen_at, datetime):
     last_seen_at = last_seen_at.strftime("%Y-%m-%d")
 
-  return str(last_seen_at)
+  return [str(last_seen_at), email_last_seen_at]
