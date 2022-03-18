@@ -9,7 +9,7 @@ if zzz:
   consortia_admin_emails = zzz.split(",")
 
 def intercom(emails, domain):
-  if not emails:
+  if not emails and not domain:
     return ''
 
   emails_array = [{"field": "email", "operator": "=", "value": w} for w in emails]
