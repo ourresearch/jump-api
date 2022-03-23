@@ -5,6 +5,7 @@ both its appearance and its underlying data.
 This means you will often see changes in the UI/UX, and sometimes in the presented data.  
 Most of these changes are too small to note, but we'll keep a record of the larger ones here:
 
+- 2022/03/23 Fix for Unsub dashboards: When a title's CPU was less than -1 the title (grey square) wasn't appearing in the histogram (but was present in the table view). Very few users were impacted by this. No Unsub backend changes - front end fix only.
 - 2022/03/17 Fix in Unsub consortia dashboard: some consortia dashboards were displaying incorrect percent change in cost versus their big deal cost (see https://github.com/ourresearch/get-unsub/pull/28) 
 - 2022/03/17 We have a new webinars page at https://unsub.org/webinars
 - 2022/03/17 We made various improvements in our journal metadata; you may have noticed slight changes in your dashboards with respect to titles included or excluded following changes in our metadata; get in touch if you have any questions
