@@ -112,3 +112,4 @@ data/jiscdata/*
 # testing stuff locally
 new_publisher/*
 pro_file.py
+missing_titles_outputs
