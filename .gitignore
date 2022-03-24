@@ -113,3 +113,6 @@ data/jiscdata/*
 new_publisher/*
 pro_file.py
 missing_titles_outputs
+scratch.py
+scenario_missing_titles_determination*
+non_consortia*.csv
