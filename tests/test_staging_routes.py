@@ -114,4 +114,33 @@ def test_staging_download_pta_file(fetch_jwt):
         assert isinstance(body['rows'][0], dict)
         assert isinstance(body['rows'][0]['issn_l'], str)
 
+# see https://github.com/ourresearch/unsub-private/issues/23
+def test_staging_zoom_scenario_issnl(fetch_jwt):
+    # consortium_scenario_id = 'e5tqtgQQ' # team+consortiumtest@ourresearch.org
+    scenario_id = 'Jad3Cc6a' # scott+test@ourresearch.org, package-erBCoZrj6V9Q
+    good_issn_l = '1347-4367'
+    bad_issn_l = '999X-X999'
+    jwt = fetch_jwt(os.environ["UNSUB_USER1_PWD"], os.environ["UNSUB_USER1_EMAIL"])
+    
+    good_res = requests.get(
+        url_base + f"/scenario/{scenario_id}/journal/{good_issn_l}",
+        headers={"Authorization": "Bearer " + jwt},
+    )
+    bad_res = requests.get(
+        url_base + f"/scenario/{scenario_id}/journal/{bad_issn_l}",
+        headers={"Authorization": "Bearer " + jwt},
+    )
+    
+    assert good_res.status_code == 200
+    assert bad_res.status_code == 404
+    
+    if good_res.ok:
+        body = good_res.json()
+        assert list(body.keys()) == ['_settings', 'journal']
+
+    if not bad_res.ok:
+        body = bad_res.json()
+        assert body['error']
+        assert "not found in scenario" in body['message']
+
 # staging_off(con)
