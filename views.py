@@ -208,6 +208,8 @@ def jump_scenario_issn_get(scenario_id, issn_l):
         response = {"journal": {"member_institutions": my_consortium.to_dict_journal_zoom(issn_l)}}
     else:
         my_journal = scenario.get_journal(issn_l)
+        if not my_journal:
+            abort_json(404, f"Journal with ISSN-L {issn_l} not found in scenario")
         response = {"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()}
     response = jsonify_fast_no_sort(response)
     return response
