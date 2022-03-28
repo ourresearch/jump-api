@@ -271,7 +271,7 @@ class PackageInput:
                 # which will take longer, but don't worry about it for now
 
                 my_consortium = Consortium(consortium_scenario_id)
-                email = "heather+{}@ourresearch.org".format(my_package.package_id)
+                email = "scott+{}@ourresearch.org".format(my_package.package_id)
                 my_consortium.queue_for_recompute(email)
                 reset_cache("consortium", "consortium_get_computed_data", consortium_scenario_id)
 

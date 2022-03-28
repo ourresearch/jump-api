@@ -1162,7 +1162,7 @@ def subscriptions_notifications_done_editing_post(scenario_id):
             """.format(scenario_id))
 
     # by default send email to consortium test email. if JISC, send to Mafalda
-    email_for_notification = "team+consortiumtest@ourresearch.org"
+    email_for_notification = "scott+consortiumtest@ourresearch.org"
     if 'jisc' in scenario_id:
         email_for_notification = "alice.hughes@jisc.ac.uk"
     email = create_email(email_for_notification, u"New push/pull submission", "push_pull_done_editing", {"data": {
