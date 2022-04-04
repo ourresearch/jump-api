@@ -185,7 +185,7 @@ all_institutions_df.to_csv(pkg_file, index=False)
 
 
 # aggregate package level data up to institutions
-inst_level = all_institutions_df
+inst_level = all_institutions_df.copy()
 inst_level = inst_level[~inst_level['is_deleted'].fillna(False) & ~inst_level['is_feeder_package'].fillna(False) & ~inst_level['is_feedback_package'].fillna(False)]
 inst_level['created_sce_last'] = pd.to_datetime(inst_level['created_sce_last'])
 inst_level = pd.concat([
@@ -219,6 +219,19 @@ inst_level.rename(columns={
 	'scenario_param_chgs': 'any_scenario_param_chgs'}, inplace=True)
 inst_file = 'non_consortia_inst_level.csv'
 inst_level.to_csv(inst_file, index=False)
+
+
+# apply rules
+from user_summary_rules import rule_not_paid, rule_not_using, rule_new_users
+inst_with_rules = rule_not_paid(inst_level)
+inst_with_rules = rule_not_using(inst_with_rules)
+inst_with_rules = rule_new_users(inst_with_rules)
+inst_with_rules.to_csv(inst_file, index=False)
+
+from user_summary_rules import rule_required_data, rule_recommended_data
+pkg_with_rules = rule_required_data(all_institutions_df)
+# pkg_with_rules = rule_recommended_data(pkg_with_rules)
+pkg_with_rules.to_csv(pkg_file, index=False)
 
 
 # Upload to google sheets 
