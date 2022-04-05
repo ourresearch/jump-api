@@ -72,7 +72,7 @@ non_consortia = non_consortia[~non_consortia['name'].str.contains("Scott")]
 # row = next(it)[1]
 # non_consortia.iterrows()[572]
 all_institutions = []
-for index, row in non_consortia.iterrows():
+for index, row in non_consortia[0:15].iterrows():
 	print(row["ror_id"])
 	with get_db_cursor() as cursor:
 	    cmd = "select * from jump_account_package where institution_id = %s"
@@ -223,13 +223,15 @@ inst_level.to_csv(inst_file, index=False)
 
 # apply rules
 from user_summary_rules import rule_not_paid, rule_not_using, rule_new_users
-inst_with_rules = rule_not_paid(inst_level)
+inst_for_rules = pd.read_csv(inst_file)
+inst_with_rules = rule_not_paid(inst_for_rules)
 inst_with_rules = rule_not_using(inst_with_rules)
 inst_with_rules = rule_new_users(inst_with_rules)
 inst_with_rules.to_csv(inst_file, index=False)
 
 from user_summary_rules import rule_required_data, rule_recommended_data
-pkg_with_rules = rule_required_data(all_institutions_df)
+pkgs_for_rules = pd.read_csv(pkg_file)
+pkg_with_rules = rule_required_data(pkgs_for_rules)
 # pkg_with_rules = rule_recommended_data(pkg_with_rules)
 pkg_with_rules.to_csv(pkg_file, index=False)
 
