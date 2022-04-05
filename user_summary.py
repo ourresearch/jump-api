@@ -232,7 +232,7 @@ inst_with_rules.to_csv(inst_file, index=False)
 from user_summary_rules import rule_required_data, rule_recommended_data
 pkgs_for_rules = pd.read_csv(pkg_file)
 pkg_with_rules = rule_required_data(pkgs_for_rules)
-# pkg_with_rules = rule_recommended_data(pkg_with_rules)
+pkg_with_rules = rule_recommended_data(pkg_with_rules)
 pkg_with_rules.to_csv(pkg_file, index=False)
 
 
