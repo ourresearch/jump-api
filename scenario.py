@@ -138,7 +138,7 @@ class Scenario(object):
 
         prices_dict = {}
         prices_uploaded_raw = get_custom_prices(self.package_id)
-        from journalsdb import get_journal_metadata_for_publisher_currently_subscription
+        from openalex import get_journal_metadata_for_publisher_currently_subscription
 
         publisher_journals = get_journal_metadata_for_publisher_currently_subscription(self.publisher_name)
 

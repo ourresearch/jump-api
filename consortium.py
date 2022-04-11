@@ -226,7 +226,7 @@ class Consortium(object):
     #     return self.apc_journals
 
     def to_dict_journals_list_by_institution(self, member_ids=None):
-        from journalsdb import all_journal_metadata_flat
+        from openalex import all_journal_metadata_flat
 
         rows = self.journal_member_data
 

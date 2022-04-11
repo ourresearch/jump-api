@@ -82,7 +82,7 @@ class Journal(object):
 
     @cached_property
     def journal_metadata(self):
-        from journalsdb import get_journal_metadata
+        from openalex import get_journal_metadata
         return get_journal_metadata(self.issn_l)
 
     @cached_property

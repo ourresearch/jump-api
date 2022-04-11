@@ -24,11 +24,10 @@ from util import get_sql_dict_rows
 from util import safe_commit
 from util import for_sorting
 
-
 def get_fresh_apc_journal_list(issn_ls, apc_df_dict, my_package):
     print("in get_fresh_apc_journal_list")
 
-    from journalsdb import get_journal_metadata
+    from openalex import get_journal_metadata
     apc_journals = []
     if not hasattr(my_package, "apc_data"):
         my_package.apc_data = get_apc_data_from_db(my_package.package_id)
@@ -127,7 +126,7 @@ class Package(db.Model):
             core.issn_l, 
             title as title
             from jump_core_journals core
-            left outer join journalsdb_computed on core.issn_l = journalsdb_computed.issn_l
+            left outer join openalex_computed on core.issn_l = openalex_computed.issn_l
             where package_id=%(package_id_for_db)s
             order by title desc
             """
@@ -147,7 +146,7 @@ class Package(db.Model):
            listagg(title, ',') as title, 
            sum(total::int) as num_2018_downloads
            from jump_counter counter
-           left outer join journalsdb_computed_flat rj on counter.issn_l = rj.issn
+           left outer join openalex_computed_flat rj on counter.issn_l = rj.issn
            where package_id=%(package_id_for_db)s
            group by rj.issn_l           
            order by num_2018_downloads desc
@@ -163,7 +162,7 @@ class Package(db.Model):
             sum(total::int) as num_2018_downloads, 
             count(*) as num_journals_with_issn_l
             from jump_counter counter
-            left outer join journalsdb_computed_flat rj on counter.issn_l = rj.issn
+            left outer join openalex_computed_flat rj on counter.issn_l = rj.issn
             where package_id=%(package_id_for_db)s 
             {}
             group by rj.issn_l
@@ -176,7 +175,7 @@ class Package(db.Model):
     def get_published_in_2019(self):
         rows = self.get_base(and_where=""" and rj.issn_l in
 	            (select rj.issn_l from unpaywall u 
-	            join journalsdb_computed_flat rj on u.journal_issn_l = rj.issn
+	            join openalex_computed_flat rj on u.journal_issn_l = rj.issn
 	            where year=2019 
 	            group by rj.issn_l) """)
         return self.filter_by_core_list(rows)
@@ -185,7 +184,7 @@ class Package(db.Model):
     def get_published_toll_access_in_2019(self):
         rows = self.get_base(and_where=""" and rj.issn_l in
 	            (select rj.issn_l from unpaywall u 
-	            join journalsdb_computed_flat rj on u.journal_issn_l = rj.issn
+	            join openalex_computed_flat rj on u.journal_issn_l = rj.issn
 	            where year=2019 and journal_is_oa='false' 
 	            group by rj.issn_l) """)
         return self.filter_by_core_list(rows)
@@ -225,7 +224,7 @@ class Package(db.Model):
         rows = self.get_base(and_where=""" and rj.issn_l in
 	            (select distinct rj.issn_l 
 	            from unpaywall u 
-	            join journalsdb_computed_flat rj on u.journal_issn_l=rj.issn
+	            join openalex_computed_flat rj on u.journal_issn_l=rj.issn
 	            where year=2019 and journal_is_oa='false'
 	            and rj.publisher = %(publisher)s
 	            ) """, extrakv={'publisher': self.publisher_name})
@@ -236,7 +235,7 @@ class Package(db.Model):
         rows = self.get_base(and_where=""" and rj.issn_l in
 	            (select distinct rj.issn_l 
 	            from unpaywall u 
-	            join journalsdb_computed_flat rj on u.journal_issn_l=rj.issn
+	            join openalex_computed_flat rj on u.journal_issn_l=rj.issn
 	            where year=2019 and journal_is_oa='false'
 	            and rj.publisher = %(publisher)s
 	            )
@@ -422,7 +421,7 @@ class Package(db.Model):
 
     @cached_property
     def journals_missing_prices(self):
-        from journalsdb import all_journal_metadata
+        from openalex import all_journal_metadata
 
         counter_rows = self.counter_totals_from_db
         prices_uploaded_raw = get_custom_prices(self.package_id)
@@ -499,7 +498,7 @@ class Package(db.Model):
 
     def public_price_rows(self):
         prices_rows = []
-        from journalsdb import all_journal_metadata
+        from openalex import all_journal_metadata
         for my_journal_metadata in list(all_journal_metadata.values()):
             if my_journal_metadata.publisher_code == self.publisher:
                 if my_journal_metadata.is_current_subscription_journal:
@@ -527,7 +526,6 @@ class Package(db.Model):
             return []
 
         df = pd.DataFrame(self.apc_data)
-    #     # df["apc"] = df["apc"].astype(float)
         df["year"] = df["year"].astype(int)
         df["authorship_fraction"] = df.num_authors_from_uni/df.num_authors_total
         df_by_issn_l_and_year = df.groupby(["issn_l", "year"]).authorship_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'size': 'num_papers', "sum": "authorship_fraction"})
@@ -597,7 +595,7 @@ class Package(db.Model):
                 insert into jump_apc_authorships (
                     select * from jump_apc_authorships_view
                     where package_id = %s and issn_l in 
-                    (select issn_l from journalsdb_computed rj where rj.publisher = %s))
+                    (select issn_l from openalex_computed rj where rj.publisher = %s))
             """
         with get_db_cursor() as cursor:
             cursor.execute(delete_q, (self.package_id,))
