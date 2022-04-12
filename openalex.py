@@ -196,22 +196,72 @@ class JournalMetadata(db.Model):
     def __repr__(self):
         return "<{} ({}) '{}' {}>".format(self.__class__.__name__, self.issn_l, self.title, self.publisher)
 
+class JournalConcepts(object):
+    def __init__(self, journal_raw):
+        self.created = datetime.datetime.utcnow().isoformat()
+        self.issn_l = journal_raw.issn_l
+        self.x_concepts = json.loads(journal_raw.x_concepts)
+        self.data = None
+        self.set_data()
+        super(JournalConcepts, self).__init__()
+
+    @classmethod
+    def get_insert_column_names(cls):
+        return ["created",
+                "issn_l",
+                "concept",
+                "level",
+                "score",
+                "openalex_id",
+                "wikidata",]
+
+    def keys_map(self):
+        return {v: i for i, v in enumerate(self.get_insert_column_names())}
+
+    def set_data(self):
+        if self.x_concepts:
+            level_zero_one_concepts = list(filter(lambda x: x['level'] in (0,1), self.x_concepts))
+            for dict in level_zero_one_concepts:
+                dict['concept'] = dict.pop('display_name')
+                dict['openalex_id'] = dict.pop('id')
+                dict['issn_l'] = self.issn_l
+                dict['created'] = self.created
+            res = [sorted(w.items(), key=lambda pair: self.keys_map()[pair[0]]) for w in level_zero_one_concepts]
+            self.data = [tuple([z[1] for z in w]) for w in res]
+
+    def __repr__(self):
+        return "<{} ({})>".format(self.__class__.__name__, self.issn_l)
+
+def this_year_ish():
+    from dateutil.relativedelta import relativedelta
+    now = datetime.datetime.now()
+    current_year = int(now.strftime('%Y'))
+    first_of_year = datetime.datetime(current_year, 1, 1) 
+    diff = now - first_of_year
+    if diff.days < 120:
+        year = current_year - 1
+    else:
+        year = current_year
+    return year
+
 def recompute_journal_metadata():
     journals_raw = OpenalexDBRaw.query.all()
     print(len(journals_raw))
-
-    new_computed_journals = []
 
     print("making backups and getting tables ready to run")
     with get_db_cursor() as cursor:
         cursor.execute("drop table openalex_computed_bak_yesterday;")
         cursor.execute("create table openalex_computed_bak_yesterday as (select * from openalex_computed);")
+        cursor.execute("drop table openalex_concepts_bak_yesterday;")
+        cursor.execute("create table openalex_concepts_bak_yesterday as (select * from openalex_concepts);")
 
     # do it as its own to force commit
     with get_db_cursor() as cursor:
-        cursor.execute("delete from openalex_computed;")
+        cursor.execute("delete from openalex_computed")
+        cursor.execute("delete from openalex_concepts")
     print("tables ready for insertion")
 
+    new_computed_journals = []
     for journal_raw in journals_raw:
         new_journal_metadata = JournalMetadata(journal_raw)
         if new_journal_metadata.issns:
@@ -227,12 +277,36 @@ def recompute_journal_metadata():
             sql.SQL(', ').join(map(sql.Identifier, cols)))
         execute_values(cursor, qry, insert_values, page_size=1000)
 
-    print("done committing journals, took {} seconds total".format(elapsed(start_time)))
-    print("now refreshing flat view")
+    print("done committing to openalex_computed, took {} seconds total".format(elapsed(start_time)))
 
+    print("now refreshing flat view")
     with get_db_cursor() as cursor:
         cursor.execute("refresh materialized view openalex_computed_flat;")
         cursor.execute("analyze openalex_computed;")
+
+    # concepts
+    new_computed_concepts = []
+    for journal_raw in journals_raw:
+        new_journal_concept = JournalConcepts(journal_raw)
+        new_computed_concepts.append(new_journal_concept)
+
+    concept_insert_values_tmp = [j.data for j in new_computed_concepts]
+    concept_insert_values = []
+    for index, x in enumerate(concept_insert_values_tmp):
+        if x:
+            concept_insert_values.extend(x)
+    
+    concept_cols = JournalConcepts.get_insert_column_names()
+
+    print("now commiting to openalex_concepts")
+    with get_db_cursor() as cursor:
+        qry = sql.SQL("INSERT INTO openalex_concepts ({}) VALUES %s").format(
+            sql.SQL(', ').join(map(sql.Identifier, concept_cols)))
+        execute_values(cursor, qry, concept_insert_values, page_size=1000)
+
+    # print("adding sort key (issn_l) to openalex_concepts")
+    # with get_db_cursor() as cursor:
+    #     cursor.execute("alter table openalex_concepts alter sortkey(issn_l)")
 
     print("done writing to db, took {} seconds total".format(elapsed(start_time)))
 
@@ -272,18 +346,6 @@ class MissingJournalMetadata(object):
     @cached_property
     def get_subscription_price(self, currency, use_high_price_if_unknown=False):
         return None
-
-def this_year_ish():
-    from dateutil.relativedelta import relativedelta
-    now = datetime.datetime.now()
-    current_year = int(now.strftime('%Y'))
-    first_of_year = datetime.datetime(current_year, 1, 1) 
-    diff = now - first_of_year
-    if diff.days < 120:
-        year = current_year - 1
-    else:
-        year = current_year
-    return year
 
 def get_journal_metadata(issn):
     global all_journal_metadata_flat
