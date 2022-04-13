@@ -213,7 +213,6 @@ class Scenario(object):
     def fuzzed_lookup(self, var):
         df = pd.DataFrame({"issn_l": [j.issn_l for j in self.journals], "lookup_value": [getattr(j, var) for j in self.journals]})
         df["ranked"] = df.lookup_value.rank(method='first', na_option="keep")
-        df["ranked"] = df["ranked"].fillna(0) # replace NA with 0 if no CPU value to allow last line to work
         if (len(df) == 1):
             return dict(list(zip(df["issn_l"], "-")))
         return dict(list(zip(df.issn_l, pd.qcut(df.ranked,  3, labels=["low", "medium", "high"]))))
