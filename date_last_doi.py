@@ -197,19 +197,22 @@ class DateLastDOI:
 		)
 
 # python date_last_doi.py --update
-# heroku run --size=performance-l python date_last_doi.py --update -r heroku
+# heroku local:run python date_last_doi.py --update
+# heroku local:run python date_last_doi.py --update --only_missing
+# heroku local:run python date_last_doi.py --write_to_db=filepath
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--update", help="Update date last DOI table", action="store_true", default=False)
 	parser.add_argument("--only_missing", help="Only run for ISSNs w/o data?", action="store_true", default=False)
-	parser.add_argument("--write_to_db", help="Write data in txt file to database?", action="store_true", default=False)
+	parser.add_argument("--write_to_db", help="Write data in txt file to database?", type = str)
 	parsed_args = parser.parse_args()
 
 	if parsed_args.update:
 		DateLastDOI(parsed_args.only_missing)
 
 	if parsed_args.write_to_db:
-		with open(FILE_PATH) as f:
+		print(f"reading from: {parsed_args.write_to_db}")
+		with open(parsed_args.write_to_db) as f:
 			lns = f.read()
 		tmp = [w.split(',') for w in lns.split()]
 		write_to_database(tmp)
