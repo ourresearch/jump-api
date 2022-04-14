@@ -62,7 +62,9 @@ non_consortia = institutions[~institutions['is_consortium']]
 non_consortia = non_consortia[~non_consortia['institution_id'].str.contains("institution-testing")]
 non_consortia = non_consortia[~non_consortia['institution_id'].str.contains("institution-demo")]
 non_consortia = non_consortia[~non_consortia['name'].str.contains("Demo")]
+non_consortia = non_consortia[~non_consortia['name'].str.contains("DEMO")]
 non_consortia = non_consortia[~non_consortia['name'].str.contains("Test")]
+non_consortia = non_consortia[~non_consortia['name'].str.contains("TEST")]
 non_consortia = non_consortia[~non_consortia['name'].str.contains("Scott")]
 
 
