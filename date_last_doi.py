@@ -26,8 +26,9 @@ class Cache(object):
 	"""Cache for Crossref 404s"""
 	def __init__(self):
 		self.now = datetime.now().strftime("%Y-%m-%d")
-		self.con = sqlite3.connect('crossref404.db')
+		self.con = sqlite3.connect('crossref.db')
 		self.con.execute('CREATE TABLE if NOT EXISTS crossref404 (date text, issn_l text)')
+		self.con.execute('CREATE TABLE if NOT EXISTS crossref_no_published (date text, issn_l text)')
 		super(Cache, self).__init__()
 
 	def sqlite_query(self, qry):
@@ -36,24 +37,30 @@ class Cache(object):
 			rows = res.fetchall()
 		return rows
 
-	def sqlite_insert(self, issn_l):
+	def sqlite_insert(self, table, issn_l):
 		with self.con as cursor:
-			res = cursor.execute("INSERT INTO crossref404 VALUES (?, ?)", (self.now, issn_l))
+			res = cursor.execute(f"INSERT INTO {table} VALUES (?, ?)", (self.now, issn_l))
 		self.con.commit()
 
-	def sqlite_delete(self, issn_l):
+	def sqlite_delete(self, table, issn_l):
 		with self.con as cursor:
-			res = cursor.execute(f"DELETE FROM crossref404 WHERE issn_l = '{issn_l}'")
+			res = cursor.execute(f"DELETE FROM {table} WHERE issn_l = '{issn_l}'")
 		self.con.commit()
 
 	def exists_404(self, issn_l):
 		return len(self.sqlite_query(f"SELECT * FROM crossref404 WHERE issn_l = '{issn_l}'")) > 0
+	def exists_no_published(self, issn_l):
+		return len(self.sqlite_query(f"SELECT * FROM crossref_no_published WHERE issn_l = '{issn_l}'")) > 0
 
 	def log_404(self, issn_l):
-		return self.sqlite_insert(issn_l)
+		return self.sqlite_insert('crossref404', issn_l)
+	def log_no_published(self, issn_l):
+		return self.sqlite_insert('crossref_no_published', issn_l)
 
 	def delete_404(self, issn_l):
-		return self.sqlite_delete(issn_l)
+		return self.sqlite_delete('crossref404', issn_l)
+	def delete_no_published(self, issn_l):
+		return self.sqlite_delete('crossref_no_published', issn_l)
 
 class OpenalexDateLastDOI(db.Model):
 	__tablename__ = "openalex_date_last_doi"
@@ -103,14 +110,14 @@ def write_to_database(data):
 		execute_values(cursor, qry, input_values, page_size = 1000)
 
 class DateLastDOI:
-	def __init__(self, only_missing=False, skip404=False):
+	def __init__(self, only_missing=False, skip404=False, skipnopub=False):
 		self.file_path = FILE_PATH
 		self.api_url = "https://api.crossref.org/journals/{}/works?sort=published&select=published&rows=1&mailto=scott@ourresearch.org"
 		self.cache = Cache()
 		self.cols = OpenalexDateLastDOI.get_insert_column_names()
 		self.load_openalex()
 		self.load_datelastdois()
-		self.all_date_last_dois(only_missing, skip404)
+		self.all_date_last_dois(only_missing, skip404, skipnopub)
 
 	def load_openalex(self):
 		self.openalex_data = JournalMetadata.query.all()
@@ -121,7 +128,7 @@ class DateLastDOI:
 		self.openalex_date_last_doi_issnls = [w.issn_l for w in self.openalex_date_last_doi]
 		print(f"{len(self.openalex_date_last_doi)} openalex_date_last_doi records found")
 
-	def all_date_last_dois(self, only_missing=False, skip404=False):
+	def all_date_last_dois(self, only_missing=False, skip404=False, skipnopub=False):
 		if only_missing:
 			self.openalex_data = list(filter(lambda x: x.issn_l not in self.openalex_date_last_doi_issnls, self.openalex_data))
 		for x in self.openalex_data:
@@ -133,6 +140,11 @@ class DateLastDOI:
 			if skip404:
 				if self.cache.exists_404(x.issn_l):
 					continue
+
+			if skipnopub:
+				if self.cache.exists_no_published(x.issn_l):
+					continue
+
 			self.date_last_doi(x)
 			if getattr(x, 'date_last_doi', None):
 				self.write_to_file(x)
@@ -174,6 +186,7 @@ class DateLastDOI:
 		try:
 			r = requests.get(self.api_url.format(journal.issn_l))
 			if r.status_code == 404:
+				print(f"Crossref 404 for {journal.issn_l}, logging it")
 				self.cache.log_404(journal.issn_l)
 				for issn in journal.issns:
 					if journal.issn_l != issn:
@@ -191,7 +204,8 @@ class DateLastDOI:
 			and r.json()["message"].get("items")
 		):
 			if not r.json()["message"]["items"][0].get("published"):
-				print("issue with issn {} (no 'published' field found).".format(journal.issn_l))
+				print("issue with issn {} (no 'published' field found; logging).".format(journal.issn_l))
+				self.cache.log_no_published(journal.issn_l)
 			else:
 				try:
 					# full date
@@ -238,7 +252,7 @@ class DateLastDOI:
 # python date_last_doi.py --update
 # heroku local:run python date_last_doi.py --update
 # heroku local:run python date_last_doi.py --update --only_missing
-# heroku local:run python date_last_doi.py --update --only_missing --skip404
+# heroku local:run python date_last_doi.py --update --only_missing --skip404 --skipnopub
 # heroku local:run python date_last_doi.py --write_to_db=filepath
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
@@ -246,10 +260,11 @@ if __name__ == "__main__":
 	parser.add_argument("--only_missing", help="Only run for ISSNs w/o data?", action="store_true", default=False)
 	parser.add_argument("--write_to_db", help="Write data in txt file to database?", type = str)
 	parser.add_argument("--skip404", help="Skip Crossref 404s?", action="store_true", default=False)
+	parser.add_argument("--skipnopub", help="Skip Crossref responses that have no 'published' field?", action="store_true", default=False)
 	parsed_args = parser.parse_args()
 
 	if parsed_args.update:
-		DateLastDOI(parsed_args.only_missing, parsed_args.skip404)
+		DateLastDOI(parsed_args.only_missing, parsed_args.skip404, parsed_args.skipnopub)
 
 	if parsed_args.write_to_db:
 		print(f"reading from: {parsed_args.write_to_db}")
