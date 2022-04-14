@@ -16,6 +16,7 @@ from util import chunks
 from util import sql_bool
 from util import sql_escape_string
 from journalsdb_pricing import jdb_pricing
+from openalex_date_last_doi import OpenalexDateLastDOI
 
 
 class JiscDefaultPrices(Enum):
@@ -57,6 +58,7 @@ class JournalMetadata(db.Model):
 
     def __init__(self, journal_raw):
         self.created = datetime.datetime.utcnow().isoformat()
+        self.date_last_doi = OpenalexDateLastDOI.query.all()
         for attr in ("issn_l", "publisher"):
             setattr(self, attr, getattr(journal_raw, attr))
         self.issns_string = journal_raw.issn

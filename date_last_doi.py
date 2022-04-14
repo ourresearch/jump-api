@@ -11,7 +11,8 @@ from util import safe_commit
 from psycopg2 import sql
 from psycopg2.extras import execute_values
 from openalex import JournalMetadata
-# from date_last_doi import DateLastDOI, OpenalexDateLastDOI, Cache
+from openalex_date_last_doi import OpenalexDateLastDOI
+# from date_last_doi import DateLastDOI, Cache
 
 # res = DateLastDOI()
 # class Empty(object):
@@ -61,33 +62,6 @@ class Cache(object):
 		return self.sqlite_delete('crossref404', issn_l)
 	def delete_no_published(self, issn_l):
 		return self.sqlite_delete('crossref_no_published', issn_l)
-
-class OpenalexDateLastDOI(db.Model):
-	__tablename__ = "openalex_date_last_doi"
-	created = db.Column(db.DateTime)
-	issn_l = db.Column(db.Text, primary_key=True)
-	date_last_doi = db.Column(db.Text)
-
-	def __init__(self, journal):
-		self.created = datetime.utcnow().isoformat()
-		for attr in ("issn_l", "date_last_doi"):
-			setattr(self, attr, getattr(journal, attr))
-		super(OpenalexDateLastDOI, self).__init__()
-
-	def get_values(self):
-		return (
-			self.created,
-			self.issn_l,
-			self.date_last_doi,)
-
-	@classmethod
-	def get_insert_column_names(cls):
-		return ["created",
-				"issn_l",
-				"date_last_doi",]
-
-	def __repr__(self):
-		return "<{} ({}) '{}'>".format(self.__class__.__name__, self.issn_l, self.date_last_doi)
 
 class LastDate:
 	def __init__(self, issn_l, date_last_doi):
