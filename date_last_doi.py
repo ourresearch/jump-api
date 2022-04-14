@@ -124,7 +124,7 @@ class DateLastDOI:
 	def all_date_last_dois(self, only_missing=False, skip404=False):
 		if only_missing:
 			self.openalex_data = list(filter(lambda x: x.issn_l not in self.openalex_date_last_doi_issnls, self.openalex_data))
-		for x in self.openalex_data[0:10]:
+		for x in self.openalex_data:
 			# print(x.issn_l)
 			# present = False
 			# if only_missing:
@@ -238,6 +238,7 @@ class DateLastDOI:
 # python date_last_doi.py --update
 # heroku local:run python date_last_doi.py --update
 # heroku local:run python date_last_doi.py --update --only_missing
+# heroku local:run python date_last_doi.py --update --only_missing --skip404
 # heroku local:run python date_last_doi.py --write_to_db=filepath
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
