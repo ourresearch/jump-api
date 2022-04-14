@@ -51,7 +51,7 @@ def rule_not_using(df_original):
 	# We noticed that you have not been using Unsub despite having a current subscription
 	#- From columns: intercom_last_seen, current_deal, consortia, consortium_account, date_last_paid_invoice, amount_last_paid_invoice, created_sce_last
 	#- Rule:
-	# IF NOT last seen on Intercom recently (last 3 mo's) 
+	# IF NOT last seen on Intercom recently (last 6 mo's) 
 	# AND 
 	#   there is a recent deal 
 	#   OR likely paid through consortium 
@@ -60,7 +60,7 @@ def rule_not_using(df_original):
 	#   It's been more than 2 months since Institution created
 
 	not_using = df[
-		([z < three_months_ago if isinstance(z, pd.Timestamp) else True for z in df['intercom_last_seen'].to_list()]) &
+		([z < six_months_ago if isinstance(z, pd.Timestamp) else True for z in df['intercom_last_seen'].to_list()]) &
 		(
 			df['current_deal'] | 
 			[isinstance(w, str) and w != "No" for w in df['consortia']] |
