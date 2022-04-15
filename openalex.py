@@ -57,12 +57,12 @@ class JournalMetadata(db.Model):
     apc_price_gbp = db.Column(db.Numeric(asdecimal=False))
 
     def __init__(self, journal_raw):
-        self.created = datetime.datetime.utcnow().isoformat()
-        self.date_last_doi = OpenalexDateLastDOI.query.all()
+        self.now = datetime.datetime.utcnow()
+        self.created = self.now.isoformat()
         for attr in ("issn_l", "publisher"):
             setattr(self, attr, getattr(journal_raw, attr))
         self.issns_string = journal_raw.issn
-        for attr in ("title","is_current_subscription_journal", "is_gold_journal_in_most_recent_year", "is_currently_publishing", ):
+        for attr in ("title","is_current_subscription_journal",):
             setter = getattr(self, "set_{}".format(attr))
             setter(journal_raw)
         self.set_subscription_prices()
@@ -150,12 +150,19 @@ class JournalMetadata(db.Model):
 
     def set_is_currently_publishing(self, journal_raw):
         self.is_currently_publishing = False
-        if journal_raw.counts_by_year:
-            dois = json.loads(journal_raw.counts_by_year)
-            for row in dois:
-                if row['year'] == this_year_ish() and row['works_count'] > 0:
-                    self.is_currently_publishing = True
-        if self.issn_l == '0036-8733': # hack for Scientific American, take out when fixed in metadata
+        match = last_dois_dict.get(self.issn_l)
+        if match:
+            date_last_doi_as_date = datetime.datetime.strptime(match.date_last_doi, "%Y-%m-%d")
+            if (self.now - date_last_doi_as_date).days < 365:
+                self.is_currently_publishing = True
+        else:
+            if journal_raw.counts_by_year:
+                dois = json.loads(journal_raw.counts_by_year)
+                for row in dois:
+                    if row['year'] == this_year_ish() and row['works_count'] > 0:
+                        self.is_currently_publishing = True
+        # TODO: hack for Scientific American, take out when fixed in metadata
+        if self.issn_l == '0036-8733':
             self.is_currently_publishing = True
 
     def set_subscription_prices(self):
@@ -240,7 +247,8 @@ def this_year_ish():
     current_year = int(now.strftime('%Y'))
     first_of_year = datetime.datetime(current_year, 1, 1) 
     diff = now - first_of_year
-    if diff.days < 120:
+    # if it's less than 6 months after the new year, use the previous year
+    if diff.days < 180:
         year = current_year - 1
     else:
         year = current_year
@@ -248,7 +256,14 @@ def this_year_ish():
 
 def recompute_journal_metadata():
     journals_raw = OpenalexDBRaw.query.all()
-    print(len(journals_raw))
+    print(f"retrieved {len(journals_raw)} records from openalex_journals")
+    last_dois = OpenalexDateLastDOI.query.all()
+    print(f"retrieved {len(last_dois)} records from openalex_date_last_doi")
+    
+    global last_dois_dict
+    last_dois_dict = {}
+    for x in last_dois:
+        last_dois_dict[x.issn_l] = x
 
     print("making backups and getting tables ready to run")
     with get_db_cursor() as cursor:
@@ -269,7 +284,7 @@ def recompute_journal_metadata():
         if new_journal_metadata.issns:
             new_computed_journals.append(new_journal_metadata)
 
-    print("starting commits")
+    print("now commiting to openalex_computed")
     start_time = time()
     insert_values = [j.get_insert_list() for j in new_computed_journals]
     cols = JournalMetadata.get_insert_column_names()
@@ -279,14 +294,11 @@ def recompute_journal_metadata():
             sql.SQL(', ').join(map(sql.Identifier, cols)))
         execute_values(cursor, qry, insert_values, page_size=1000)
 
-    print("done committing to openalex_computed, took {} seconds total".format(elapsed(start_time)))
-
-    print("now refreshing flat view")
+    print("now refreshing openalex_computed_flat view")
     with get_db_cursor() as cursor:
         cursor.execute("refresh materialized view openalex_computed_flat;")
         cursor.execute("analyze openalex_computed;")
 
-    # concepts
     new_computed_concepts = []
     for journal_raw in journals_raw:
         new_journal_concept = JournalConcepts(journal_raw)
