@@ -174,6 +174,8 @@ class Scenario(object):
         # remove this
         self.data["journal_era_subjects"] = get_journal_era_subjects()
 
+        self.data["concepts"] = get_openalex_concepts()
+
 
     @property
     def has_custom_perpetual_access(self):
@@ -780,6 +782,34 @@ def get_journal_era_subjects():
     return _journal_era_subjects
 
 
+
+_openalex_concepts = None
+
+def _load_openalex_concepts_from_db():
+    global _openalex_concepts
+
+    if _openalex_concepts is None:
+        _openalex_concepts = {}
+
+        # get max score at level 0
+        with get_db_cursor() as cursor:
+            cursor.execute('select * from openalex_concepts_top_view')
+            rows = cursor.fetchall()
+
+        for row in rows:
+            _openalex_concepts[row['issn_l']] = {'top': row['max_zero_concepts']}
+
+        # get all the concepts and their openalex IDs
+        with get_db_cursor() as cursor:
+            cursor.execute('select issn_l,id_concept_all from openalex_concepts_agg_view')
+            aggrows = cursor.fetchall()
+
+        for aggrow in aggrows:
+            _openalex_concepts[aggrow["issn_l"]].update({'all': json.loads(aggrow["id_concept_all"])})
+
+def get_openalex_concepts():
+    _load_openalex_concepts_from_db()
+    return _openalex_concepts
 
 
 @cache

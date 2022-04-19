@@ -73,8 +73,9 @@ class Journal(object):
 
     @cached_property
     def subject(self):
-        return self.my_scenario_data_row.get("subject", "")
-
+        w = self._scenario_data['concepts'][self.issn_l] or None
+        return w
+        # return self.my_scenario_data_row.get("subject", "")
 
     @property
     def era_subjects(self):
