@@ -595,7 +595,7 @@ class Package(db.Model):
         delete_q = 'delete from jump_apc_authorships where package_id = %s'
         insert_q = """
                 insert into jump_apc_authorships (
-                    select * from jump_apc_authorships_view
+                    select * from jump_apc_authorships_recent_pkgs_view
                     where package_id = %s and issn_l in 
                     (select issn_l from journalsdb_computed rj where rj.publisher = %s))
             """
