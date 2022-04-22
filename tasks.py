@@ -1,3 +1,4 @@
+from enum import Enum
 from celery import Celery
 from app import app
 from app import get_db_cursor
@@ -21,6 +22,13 @@ def make_celery(app):
     celery.Task = ContextTask
     return celery
 
+class Pubs(Enum):
+    Elsevier = "Elsevier"
+    Wiley = "Wiley"
+    SpringerNature = "Springer Nature"
+    Sage = "SAGE"
+    TaylorFrancis = "Taylor & Francis"
+
 def update_apc(package_id):
     find_q = 'select publisher from jump_account_package where package_id = %s'
     delete_q = 'delete from jump_apc_authorships where package_id = %s'
@@ -38,7 +46,7 @@ def update_apc(package_id):
     if row:
         with get_db_cursor() as cursor:
             cursor.execute(delete_q, (package_id,))
-            cursor.execute(insert_q, (package_id, row['publisher'],))
+            cursor.execute(insert_q, (package_id, Pubs[row['publisher']].value,))
 
 celery = make_celery(app)
 
