@@ -75,6 +75,8 @@ from app import logger
 from app import DEMO_PACKAGE_ID
 from app import s3_client
 
+from tasks import update_apc_authships
+
 def s3_cache_get(url):
     print("in cache_get with", url)
 
@@ -912,7 +914,8 @@ def new_publisher():
     db.session.add(new_package)
     safe_commit(db)
 
-    new_package.update_apc_authorships()
+    # new_package.update_apc_authorships()
+    update_apc_authships.apply_async(args=(new_package.package_id,))
 
     package_dict = new_package.to_package_dict()
     return jsonify_fast_no_sort(package_dict)

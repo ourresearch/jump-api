@@ -85,3 +85,30 @@ TESTING_DB=true make ipython
 TESTING_DB=true python
 TESTING_DB=true ipython
 ```
+
+# Celery and Redis
+
+This is used only for updating the table `jump_apc_authorships` - for some yet unknown reason this takes a long time, e.g. 30 seconds to a minute or two even. This works fine locally, but on Heroku you hit the 30 sec timeout and the request fails.
+
+When running on production on Heroku, the `REDIS_URL` env is set by Heroku from the Heroku add on for Redis (`heroku-redis`)
+
+When running locally, spin up redis like `redis-server`, then start up jump-api setting the env var for `REDIS_URL` to the local URI for your Redis instance, then spin up a celery worker:
+
+```
+REDIS_URL=redis://localhost:6379 make run
+REDIS_URL=redis://localhost:6379 celery -A tasks.celery worker --loglevel=WARNING
+```
+
+## Logs for Celery worker
+
+```
+heroku logs --tail --app unpaywall-jump-api --dyno worker.1
+```
+
+## Inspecting Celery tasks
+
+Connect via Redis to see Celery tasks
+
+See Heroku's help on this https://devcenter.heroku.com/articles/connecting-heroku-redis#connecting-in-python
+
+Use `celery-tasks-via-redis.py` after starting Python like `make ipython` (make sure the env var `REDIS_URL` is in your `.env` file)
