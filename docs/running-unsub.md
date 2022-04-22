@@ -104,3 +104,11 @@ REDIS_URL=redis://localhost:6379 celery -A tasks.celery worker --loglevel=WARNIN
 ```
 heroku logs --tail --app unpaywall-jump-api --dyno worker.1
 ```
+
+## Inspecting Celery tasks
+
+Connect via Redis to see Celery tasks
+
+See Heroku's help on this https://devcenter.heroku.com/articles/connecting-heroku-redis#connecting-in-python
+
+Use `celery-tasks-via-redis.py` after starting Python like `make ipython` (make sure the env var `REDIS_URL` is in your `.env` file)
