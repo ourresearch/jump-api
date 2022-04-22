@@ -98,3 +98,9 @@ When running locally, spin up redis like `redis-server`, then start up jump-api 
 REDIS_URL=redis://localhost:6379 make run
 REDIS_URL=redis://localhost:6379 celery -A tasks.celery worker --loglevel=WARNING
 ```
+
+## Logs for Celery worker
+
+```
+heroku logs --tail --app unpaywall-jump-api --dyno worker.1
+```
