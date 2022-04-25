@@ -14,7 +14,8 @@ messages = []
 for key in keys:
 	mssg = r.get(key)
 	mssg_dict = json.loads(mssg)
-	mssg_dict['package_id'] = re.search('package-.+', mssg_dict['result']).group(0)
+	if mssg_dict['status'] == "SUCCESS":
+		mssg_dict['package_id'] = re.search('package-.+', mssg_dict['result']).group(0)
 	messages.append(mssg_dict)
 
 messages = sorted(messages, key=lambda x: x['date_done'])
