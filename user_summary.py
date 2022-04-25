@@ -224,11 +224,12 @@ inst_level.to_csv(inst_file, index=False)
 
 
 # apply rules
-from user_summary_rules import rule_not_paid, rule_not_using, rule_new_users
+from user_summary_rules import rule_not_paid, rule_not_using, rule_new_users, rule_current_users
 inst_for_rules = pd.read_csv(inst_file)
 inst_with_rules = rule_not_paid(inst_for_rules)
 inst_with_rules = rule_not_using(inst_with_rules)
 inst_with_rules = rule_new_users(inst_with_rules)
+inst_with_rules = rule_current_users(inst_with_rules)
 inst_with_rules.to_csv(inst_file, index=False)
 
 from user_summary_rules import rule_required_data, rule_recommended_data

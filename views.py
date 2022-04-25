@@ -915,7 +915,7 @@ def new_publisher():
     safe_commit(db)
 
     # new_package.update_apc_authorships()
-    update_apc_authships.apply_async(args=(new_package.package_id,))
+    update_apc_authships.apply_async(args=(new_package.package_id,), retry=True)
 
     package_dict = new_package.to_package_dict()
     return jsonify_fast_no_sort(package_dict)

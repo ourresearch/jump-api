@@ -1,18 +1,21 @@
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 from dateutil.parser import parse
+from dateutil.relativedelta import relativedelta
 import numpy as np
 
 # inst_level = pd.read_csv("~/Downloads/unsub-institution-level.csv")
 # all_institutions_df = pd.read_csv("~/Downloads/unsub-package-level.csv")
 
 today = datetime.now()
-one_month_ago = today - timedelta(days=30)
-two_months_ago = today - timedelta(days=60)
-three_months_ago = today - timedelta(days=90)
-four_months_ago = today - timedelta(days=120)
-six_months_ago = today - timedelta(days=182)
-more_than_1_year_ago = today - timedelta(days=366)
+one_month_ago = today - relativedelta(months=+1)
+two_months_ago = today - relativedelta(months=+2)
+three_months_ago = today - relativedelta(months=+3)
+four_months_ago = today - relativedelta(months=+4)
+six_months_ago = today - relativedelta(months=+6)
+one_year_ago = today - relativedelta(years=+1)
+fourteen_months_ago = today - relativedelta(months=+14)
+more_than_1_year_ago = today - relativedelta(days=+366)
 
 
 # rules for institutions
@@ -85,6 +88,26 @@ def rule_new_users(df_original):
 	df_original = df_original.assign(new_users = df_original['institution_id'].map(new_users.set_index('institution_id')['new_users']))
 	return df_original
 
+def rule_current_users(df_original):
+	df = df_original.copy()
+	df['created_inst'] = [parse(w) if isinstance(w, str) else w for w in df['created_inst']]
+	df['date_last_paid_invoice'] = [parse(w) if isinstance(w, str) else w for w in df['date_last_paid_invoice']]
+	df['intercom_last_seen'] = [parse(w) if isinstance(w, str) else w for w in df['intercom_last_seen']]
+
+	# IF has a current deal
+	# OR invoice paid within last 14 months
+	# OR last seen on intercom within last 12 months
+	# OR institution created within last 3 months
+	current_users = df[
+		(df['current_deal']) | 
+		([z > fourteen_months_ago if isinstance(z, pd.Timestamp) else False for z in df['date_last_paid_invoice']]) |
+		([z > one_year_ago if isinstance(z, pd.Timestamp) else False for z in df['intercom_last_seen']]) | 
+		(df['created_inst'] > three_months_ago)
+	]
+	current_users = current_users.assign(current_users=True)
+
+	df_original = df_original.assign(current_user = df_original['institution_id'].map(current_users.set_index('institution_id')['current_users']))
+	return df_original
 
 
 # rules for packages

@@ -1,8 +1,8 @@
+import ssl
 from enum import Enum
 from celery import Celery
+
 from app import app
-from app import get_db_cursor
-import ssl
 
 def make_celery(app):
     celery = Celery(
@@ -30,6 +30,8 @@ class Pubs(Enum):
     TaylorFrancis = "Taylor & Francis"
 
 def update_apc(package_id):
+    from app import get_db_cursor
+
     find_q = 'select publisher from jump_account_package where package_id = %s'
     delete_q = 'delete from jump_apc_authorships where package_id = %s'
     insert_q = """
@@ -50,7 +52,8 @@ def update_apc(package_id):
 
 celery = make_celery(app)
 
-@celery.task()
+@celery.task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 3})
 def update_apc_authships(package_id):
     update_apc(package_id)
     return f"apc authorships updated for {package_id}"
+
