@@ -73,13 +73,15 @@ class Journal(object):
 
     @cached_property
     def subject(self):
-        w = self._scenario_data['concepts'][self.issn_l] or None
-        return w
-        # return self.my_scenario_data_row.get("subject", "")
+        return self._scenario_data['concepts'][self.issn_l].get("best", "")
 
-    @property
-    def era_subjects(self):
-        return self._scenario_data["journal_era_subjects"].get(self.issn_l, [])
+    @cached_property
+    def subject_top_three(self):
+        return self._scenario_data['concepts'][self.issn_l].get("top_three", "")
+
+    @cached_property
+    def subjects_all(self):
+        return self._scenario_data["concepts"][self.issn_l].get("all", [])
 
     @cached_property
     def journal_metadata(self):
@@ -1366,7 +1368,8 @@ class Journal(object):
         table_row["title"] = self.title
         table_row["issns"] = self.issns
         table_row["subject"] = self.subject
-        table_row["era_subjects"] = self.era_subjects
+        table_row["subject_top_three"] = self.subject_top_three
+        table_row["subjects_all"] = self.subjects_all
         table_row["subscribed"] = self.subscribed
 
         table_row["is_society_journal"] = self.is_society_journal
@@ -1450,7 +1453,8 @@ class Journal(object):
                 "issn_l": self.issn_l,
                 "title": self.title,
                 "subject": self.subject,
-                "era_subjects": self.era_subjects,
+                "subject_top_three": self.subject_top_three,
+                "subjects_all": self.subjects_all,
                 # "publisher": self.publisher,
                 "is_society_journal": self.is_society_journal,
                 "subscribed": self.subscribed,

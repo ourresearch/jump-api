@@ -636,6 +636,18 @@ def user_permissions():
 #     return jsonify_fast_no_sort(response_dict)
 
 
+@app.route("/common_data", methods=["GET"])
+@jwt_required()
+def common_data():
+    from scenario import get_openalex_concepts, get_common_package_data_for_all
+    from openalex import load_all_journal_metadata
+    from journalsdb_pricing import load_journalsdb_pricing
+    load_journalsdb_pricing()
+    get_openalex_concepts()
+    load_all_journal_metadata()
+    get_common_package_data_for_all()
+    return {"message": "loaded common data"}
+
 
 @app.route("/institution/<institution_id>", methods=["POST", "GET"])
 @jwt_required()
@@ -1327,7 +1339,7 @@ def export_get(table_dicts, is_main_export=True):
         return []
 
     if is_main_export:
-        keys = ['issn_l_prefixed', 'issn_l', 'title', 'issns', 'subject', 'era_subjects', 'subscribed', 'is_society_journal', 'usage', 'subscription_cost', 'ill_cost', 'cpu', 'cpu_rank', 'cost', 'instant_usage_percent', 'free_instant_usage_percent', 'subscription_minus_ill_cost', 'use_oa_percent', 'use_backfile_percent', 'use_subscription_percent', 'use_ill_percent', 'use_other_delayed_percent', 'perpetual_access_years_text', 'baseline_access_text', 'bronze_oa_embargo_months', 'downloads', 'citations', 'authorships', 'cpu_fuzzed', 'subscription_cost_fuzzed', 'subscription_minus_ill_cost_fuzzed', 'usage_fuzzed', 'downloads_fuzzed', 'citations_fuzzed', 'authorships_fuzzed']
+        keys = ['issn_l_prefixed', 'issn_l', 'title', 'issns', 'subject', 'subject_top_three', 'subjects_all', 'subscribed', 'is_society_journal', 'usage', 'subscription_cost', 'ill_cost', 'cpu', 'cpu_rank', 'cost', 'instant_usage_percent', 'free_instant_usage_percent', 'subscription_minus_ill_cost', 'use_oa_percent', 'use_backfile_percent', 'use_subscription_percent', 'use_ill_percent', 'use_other_delayed_percent', 'perpetual_access_years_text', 'baseline_access_text', 'bronze_oa_embargo_months', 'downloads', 'citations', 'authorships', 'cpu_fuzzed', 'subscription_cost_fuzzed', 'subscription_minus_ill_cost_fuzzed', 'usage_fuzzed', 'downloads_fuzzed', 'citations_fuzzed', 'authorships_fuzzed']
     else:
         keys = ['scenario_id', 'institution_code', 'package_id', 'institution_name', 'issn_l_prefixed', 'issn_l', 'subscribed_by_consortium', 'subscribed_by_member_institution', 'core_plus_for_member_institution', 'title', 'issns',  'subscription_cost', 'ill_cost', 'cpu', 'usage', 'downloads', 'citations', 'authorships', 'use_oa', 'use_backfile', 'use_subscription', 'use_ill', 'use_other_delayed', 'perpetual_access_years', 'bronze_oa_embargo_months',  'is_society_journal']
 

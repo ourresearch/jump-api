@@ -97,9 +97,15 @@ class JournalsDB(db.Model):
     def __repr__(self):
         return "<{} ({}) '{}' {}>".format(self.__class__.__name__, self.issn_l, self.title, self.publisher)
 
-print("loading journalsdb pricing metadata...", end=' ')
 start_time = time()
 jdb_pricing_list = JournalsDB.query.all()
 [db.session.expunge(x) for x in jdb_pricing_list]
 jdb_pricing = dict(list(zip([w.issn_l for w in jdb_pricing_list], jdb_pricing_list)))
 print("loaded journalsdb pricing in {} seconds.".format(elapsed(start_time)))
+
+def load_journalsdb_pricing():
+    start_time = time()
+    jdb_pricing_list = JournalsDB.query.all()
+    [db.session.expunge(x) for x in jdb_pricing_list]
+    jdb_pricing = dict(list(zip([w.issn_l for w in jdb_pricing_list], jdb_pricing_list)))
+    print("loaded journalsdb pricing in {} seconds.".format(elapsed(start_time)))

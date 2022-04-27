@@ -171,9 +171,6 @@ class Scenario(object):
         # remove this
         self.data["perpetual_access"] = get_perpetual_access_from_cache(self.package_id)
 
-        # remove this
-        self.data["journal_era_subjects"] = get_journal_era_subjects()
-
         self.data["concepts"] = get_openalex_concepts()
 
 
@@ -758,46 +755,29 @@ def get_num_papers_from_db():
     return lookup_dict
 
 
-
-
-
-
-_journal_era_subjects = None
-
-def _load_journal_era_subjects_from_db():
-    global _journal_era_subjects
-
-    if _journal_era_subjects is None:
-        _journal_era_subjects = defaultdict(list)
-
-        with get_db_cursor() as cursor:
-            cursor.execute('select issn_l, subject_code, subject_description, explicit from jump_journal_era_subjects')
-            rows = cursor.fetchall()
-
-        for row in rows:
-            _journal_era_subjects[row["issn_l"]].append([row["subject_code"], row["subject_description"]])
-
-def get_journal_era_subjects():
-    _load_journal_era_subjects_from_db()
-    return _journal_era_subjects
-
-
-
 _openalex_concepts = None
-
 def _load_openalex_concepts_from_db():
     global _openalex_concepts
 
     if _openalex_concepts is None:
+        start_time = time()
         _openalex_concepts = {}
 
-        # get max score at level 0
+        # get single "best" concept
         with get_db_cursor() as cursor:
-            cursor.execute('select * from openalex_concepts_top_view')
+            cursor.execute('select * from openalex_concepts_best')
             rows = cursor.fetchall()
 
         for row in rows:
-            _openalex_concepts[row['issn_l']] = {'top': row['max_zero_concepts']}
+            _openalex_concepts[row['issn_l']] = {'best': row['best']}
+
+        # get top three concepts by score
+        with get_db_cursor() as cursor:
+            cursor.execute('select * from openalex_concepts_top_three')
+            rows = cursor.fetchall()
+
+        for row in rows:
+            _openalex_concepts[row['issn_l']].update({'top_three': row['top_three']})
 
         # get all the concepts and their openalex IDs
         with get_db_cursor() as cursor:
@@ -805,9 +785,12 @@ def _load_openalex_concepts_from_db():
             aggrows = cursor.fetchall()
 
         for aggrow in aggrows:
-            _openalex_concepts[aggrow["issn_l"]].update({'all': json.loads(aggrow["id_concept_all"])})
+            _openalex_concepts[aggrow["issn_l"]].update({'all': aggrow["id_concept_all"]})
+
+        print("loaded openalex concepts in {} seconds".format(elapsed(start_time)))
 
 def get_openalex_concepts():
+    print("loading openalex concepts...", end=' ')
     _load_openalex_concepts_from_db()
     return _openalex_concepts
 
@@ -959,6 +942,7 @@ def decompress_json(file):
 def get_common_package_data_for_all():
     my_timing = TimingMessages()
     try:
+        start_time = time()
         # print u"trying to load in json"
         # my_data = decompress_json("data/get_common_package_data_for_all_s3.json")
         # print u"found json, returning"
@@ -967,6 +951,7 @@ def get_common_package_data_for_all():
         s3_clientobj = s3_client.get_object(Bucket="unsub-cache", Key="get_common_package_data_for_all.json")
         contents_string = s3_clientobj["Body"].read().decode("utf-8")
         contents_json = json.loads(contents_string)
+        print("get_common_package_data_for_all took {} seconds".format(elapsed(start_time)))
         return (contents_json, my_timing)
 
     except Exception as e:
@@ -974,9 +959,6 @@ def get_common_package_data_for_all():
         pass
 
     my_data = {}
-
-    my_data["journal_era_subjects"] = get_journal_era_subjects()
-    my_timing.log_timing("get_journal_era_subjects")
 
     my_data["embargo_dict"] = get_embargo_data_from_db()
     my_timing.log_timing("get_embargo_data_from_db")
