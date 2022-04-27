@@ -75,6 +75,8 @@ from app import logger
 from app import DEMO_PACKAGE_ID
 from app import s3_client
 
+from tasks import update_apc_authships
+
 def s3_cache_get(url):
     print("in cache_get with", url)
 
@@ -208,6 +210,8 @@ def jump_scenario_issn_get(scenario_id, issn_l):
         response = {"journal": {"member_institutions": my_consortium.to_dict_journal_zoom(issn_l)}}
     else:
         my_journal = scenario.get_journal(issn_l)
+        if not my_journal:
+            abort_json(404, f"Journal with ISSN-L {issn_l} not found in scenario")
         response = {"_settings": scenario.settings.to_dict(), "journal": my_journal.to_dict_details()}
     response = jsonify_fast_no_sort(response)
     return response
@@ -910,7 +914,8 @@ def new_publisher():
     db.session.add(new_package)
     safe_commit(db)
 
-    new_package.update_apc_authorships()
+    # new_package.update_apc_authorships()
+    update_apc_authships.apply_async(args=(new_package.package_id,), retry=True)
 
     package_dict = new_package.to_package_dict()
     return jsonify_fast_no_sort(package_dict)
@@ -1160,7 +1165,7 @@ def subscriptions_notifications_done_editing_post(scenario_id):
             """.format(scenario_id))
 
     # by default send email to consortium test email. if JISC, send to Mafalda
-    email_for_notification = "team+consortiumtest@ourresearch.org"
+    email_for_notification = "scott+consortiumtest@ourresearch.org"
     if 'jisc' in scenario_id:
         email_for_notification = "alice.hughes@jisc.ac.uk"
     email = create_email(email_for_notification, u"New push/pull submission", "push_pull_done_editing", {"data": {

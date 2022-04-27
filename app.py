@@ -183,6 +183,12 @@ app.config['PROFILE_REQUESTS'] = (os.getenv("PROFILE_REQUESTS", False) == "True"
 
 logger.info("Database URL host: {}".format(redshift_url.hostname))
 
+# celery background tasks
+app.config.update(
+    CELERY_BROKER_URL=os.environ['REDIS_URL'],
+    CELERY_RESULT_BACKEND=os.environ['REDIS_URL']
+)
+
 @contextmanager
 def get_db_connection():
     try:

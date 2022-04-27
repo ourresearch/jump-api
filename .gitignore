@@ -108,3 +108,11 @@ export.csv
 # ignore n8 files
 data/n8data/*
 data/jiscdata/*
+
+# testing stuff locally
+new_publisher/*
+pro_file.py
+missing_titles_outputs
+scratch.py
+scenario_missing_titles_determination*
+non_consortia*.csv

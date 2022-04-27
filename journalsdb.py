@@ -155,6 +155,8 @@ class JournalMetadata(db.Model):
             for (year, num) in dois_tuple:
                 if year == 2021 and num > 0:
                     self.is_currently_publishing = True
+        if self.issn_l == '0036-8733':
+            self.is_currently_publishing = True
 
     def set_num_dois_in_2020(self, journal_raw):
         self.num_dois_in_2020 = 0
