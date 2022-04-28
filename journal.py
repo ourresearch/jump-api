@@ -35,6 +35,7 @@ class Journal(object):
     years = list(range(0, 5))
 
     def __init__(self, issn_l, scenario=None, scenario_data=None, package_id=None):
+        self.now = datetime.datetime.utcnow()
         self.set_scenario(scenario)
         self.set_scenario_data(scenario_data)
         self.issn_l = issn_l
@@ -185,17 +186,14 @@ class Journal(object):
             if "actual" in key:
                 del self.__dict__[key]
 
-    # TODO: not used anywhere, remove
     @cached_property
     def years_by_year(self):
-        return [2019 + year_index for year_index in self.years]
+        return [self.now.year + year_index for year_index in self.years]
 
     @cached_property
     def historical_years_by_year(self):
         # used for citation, authorship lookup
-        now = datetime.datetime.utcnow()
-        return list(range(now.year - 5, now.year))
-        # return list(range(2015, 2019+1))
+        return list(range(self.now.year - 5, self.now.year))
 
     @cached_property
     def cost_actual_by_year(self):
