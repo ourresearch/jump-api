@@ -49,7 +49,7 @@ def update_apc(package_id):
     insert_from_temp_table = """
         insert into jump_apc_authorships (select * from %s)
     """
-    temp_table_name = 'apc_temp_' + package_id.replace('-', '_')
+    temp_table_name = 'apc_temp_' + package_id.replace('-', '_').lower()
     
     with get_db_cursor() as cursor:
         cursor.execute(find_q, (package_id,))
@@ -70,6 +70,10 @@ def update_apc(package_id):
         with get_db_cursor() as cursor:
             # print(cursor.mogrify(insert_from_temp_table, (AsIs(temp_table_name),)))
             cursor.execute(insert_from_temp_table, (AsIs(temp_table_name),))
+
+        # cleanup temporary table
+        with get_db_cursor() as cursor:
+            cursor.execute('drop table %s', (AsIs(temp_table_name),))
 
 celery = make_celery(app)
 
