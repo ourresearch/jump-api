@@ -31,6 +31,7 @@ class Pubs(Enum):
 
 def update_apc(package_id):
     from app import get_db_cursor
+    from psycopg2.extensions import AsIs
 
     find_q = 'select publisher from jump_account_package where package_id = %s'
     delete_q = 'delete from jump_apc_authorships where package_id = %s'
@@ -40,6 +41,15 @@ def update_apc(package_id):
             where package_id = %s and issn_l in 
             (select issn_l from journalsdb_computed rj where rj.publisher = %s))
     """
+    make_temp_table = """
+        select * into temp table %s from jump_apc_authorships_view
+            where package_id = %s and issn_l in
+            (select issn_l from journalsdb_computed rj where rj.publisher = %s)
+    """
+    insert_from_temp_table = """
+        insert into jump_apc_authorships (select * from %s)
+    """
+    temp_table_name = 'apc_temp_' + package_id.replace('-', '_')
     
     with get_db_cursor() as cursor:
         cursor.execute(find_q, (package_id,))
@@ -48,7 +58,18 @@ def update_apc(package_id):
     if row:
         with get_db_cursor() as cursor:
             cursor.execute(delete_q, (package_id,))
-            cursor.execute(insert_q, (package_id, Pubs[row['publisher']].value,))
+
+        # with get_db_cursor() as cursor:
+        #     cursor.execute(insert_q, (package_id, Pubs[row['publisher']].value,))
+
+        with get_db_cursor() as cursor:
+            # print(cursor.mogrify(make_temp_table, (AsIs(temp_table_name), package_id, 'Elsevier',)))
+            # print(cursor.mogrify(make_temp_table, (AsIs(temp_table_name), package_id, Pubs[row['publisher']].value,)))
+            cursor.execute(make_temp_table, (AsIs(temp_table_name), package_id, Pubs[row['publisher']].value,))
+
+        with get_db_cursor() as cursor:
+            # print(cursor.mogrify(insert_from_temp_table, (AsIs(temp_table_name),)))
+            cursor.execute(insert_from_temp_table, (AsIs(temp_table_name),))
 
 celery = make_celery(app)
 
