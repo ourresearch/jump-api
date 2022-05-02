@@ -533,7 +533,7 @@ class PackageInput:
             self._copy_raw_to_s3(file_name, package_id, num_rows=None, error="error_reading_file")
             return {"success": False, "message": "error_reading_file", "warnings": []}
         except RuntimeError as e:
-            print("Runtime Error processing file {}".format(str(e)))
+            print("Runtime Error processing file: {}".format(str(e)))
             self._copy_raw_to_s3(file_name, package_id, num_rows=None, error="parsing_error", error_details=str(e))
             return {"success": False, "message": str(e), "warnings": []}
 

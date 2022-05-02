@@ -82,6 +82,8 @@ def _convert_blind(workbook):
         with open(csv_file_name, 'w', encoding='utf-8') as csv_file:
             writer = csv.writer(csv_file, delimiter=',')
             for row in sheet.iter_rows(min_row=1):
+                if 'f' in [w.data_type for w in row]:
+                    raise RuntimeError('Uploaded files can not contain formulas')
                 writer.writerow([cell.value for cell in row])
 
         csv_file_names.append(csv_file_name)
