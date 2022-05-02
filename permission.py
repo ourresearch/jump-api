@@ -40,4 +40,4 @@ class UserInstitutionPermission(db.Model):
     permission = relationship(Permission, lazy='subquery')
 
     def __repr__(self):
-        return '<{} ({}, {}) {}>'.format(self.__class__.__name__, self.user, self.institution, self.permission.name)
+        return '<{} ({}, {}) {}>'.format(self.__class__.__name__, self.user, self.institution, self.permission)
