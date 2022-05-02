@@ -373,13 +373,6 @@ def get_journal_metadata(issn):
 		my_journal_metadata = MissingJournalMetadata(issn_l=issn)
 	return my_journal_metadata
 
-def get_journal_metadata_issnl_only(issn_l):
-	global all_journal_metadata
-	my_journal_metadata = all_journal_metadata.get(issn_l, None)
-	if not my_journal_metadata:
-		my_journal_metadata = MissingJournalMetadata(issn_l=issn_l)
-	return my_journal_metadata
-
 def get_journal_metadata_for_publisher(publisher):
 	lookup_journaldb_publisher = {
 		"SpringerNature": "Springer Nature",
