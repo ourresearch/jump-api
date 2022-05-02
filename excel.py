@@ -51,11 +51,17 @@ def _convert_parsed(workbook):
         elif set(sheet_column_names.values()).difference(set(column_names)):
             raise ValueError('all worksheets must contain the same columns')
 
+        cell_types = []
         for row_cells in sheet.iter_rows(min_row=2):
             row = {}
             for column in range(0, len(sheet_column_names)):
                 row[sheet_column_names[column]] = row_cells[column].value or None
+                cell_types.append(row_cells[column].data_type)
             rows.append(row)
+
+        formula_cells = cell_types.count('f')
+        if formula_cells > 0:
+            raise RuntimeError('Uploaded files can not contain formulas. Found {} cells with formulas.'.format(formula_cells))
 
     with open(csv_file_name, 'w') as csv_file:
         writer = csv.DictWriter(csv_file, column_names)
@@ -76,6 +82,8 @@ def _convert_blind(workbook):
         with open(csv_file_name, 'w', encoding='utf-8') as csv_file:
             writer = csv.writer(csv_file, delimiter=',')
             for row in sheet.iter_rows(min_row=1):
+                if 'f' in [w.data_type for w in row]:
+                    raise RuntimeError('Uploaded files can not contain formulas')
                 writer.writerow([cell.value for cell in row])
 
         csv_file_names.append(csv_file_name)
