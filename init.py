@@ -152,7 +152,7 @@ def add_user(user_name, email, institution, permissions = None, password = None,
 	else:
 		my_user = User()
 		my_user.email = email
-		my_user.password_hash = generate_password_hash(password)
+		my_user.password_hash = generate_password_hash(password or "")
 
 	my_user.display_name = user_name
 	db.session.merge(my_user)
@@ -175,7 +175,7 @@ def add_user(user_name, email, institution, permissions = None, password = None,
 	for permission_name in permission_names:
 		perm = Permission.get(permission_name)
 		if not perm:
-			raise ValueError(f"unknown permission {permission_name}")
+			raise ValueError(f"unknown permission '{permission_name}'")
 		user_perm = UserInstitutionPermission(
 			user_id=my_user.id,
 			institution_id=my_institution.id,
