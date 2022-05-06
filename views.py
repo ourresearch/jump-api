@@ -636,19 +636,6 @@ def user_permissions():
 #     return jsonify_fast_no_sort(response_dict)
 
 
-@app.route("/common_data", methods=["GET"])
-@jwt_required()
-def common_data():
-    from scenario import get_openalex_concepts, get_common_package_data_for_all
-    from openalex import load_all_journal_metadata
-    from journalsdb_pricing import load_journalsdb_pricing
-    load_journalsdb_pricing()
-    get_openalex_concepts()
-    load_all_journal_metadata()
-    get_common_package_data_for_all()
-    return {"message": "loaded common data"}
-
-
 @app.route("/institution/<institution_id>", methods=["POST", "GET"])
 @jwt_required()
 def institution(institution_id):
