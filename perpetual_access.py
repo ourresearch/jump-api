@@ -17,8 +17,8 @@ class PerpetualAccess(db.Model):
 
     @cached_property
     def journal_metadata(self):
-        from openalex import get_journal_metadata
-        return get_journal_metadata(self.issn_l)
+        from package import Package
+        return Package(package_id = self.package_id).get_journal_metadata(self.issn_l)
 
     @cached_property
     def issns(self):

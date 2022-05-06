@@ -1399,7 +1399,7 @@ def scenario_id_export_csv_get(scenario_id):
         table_dicts = my_consortium.to_dict_journals()["journals"]
     else:
         my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
-        table_dicts = my_saved_scenario.to_dict_journals()["journals"]
+        table_dicts = my_saved_scenario.to_dict_journals(gather_export_concepts = True)["journals"]
 
     contents = export_get(table_dicts)
     return Response(contents, mimetype="text/csv")

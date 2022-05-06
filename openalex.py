@@ -3,6 +3,7 @@
 import datetime
 import argparse
 import simplejson as json
+from kids.cache import cache
 from cached_property import cached_property
 from time import time
 from psycopg2 import sql
@@ -166,13 +167,13 @@ class JournalMetadata(db.Model):
 			self.is_currently_publishing = True
 
 	def set_subscription_prices(self):
-		jdb = jdb_pricing.get(self.issn_l)
+		jdb = jdb_pricing().get(self.issn_l)
 		if jdb:
 			self.subscription_price_usd = jdb.subscription_price_usd
 			self.subscription_price_gbp = jdb.subscription_price_gbp
 	
 	def set_apc_prices(self):
-		jdb = jdb_pricing.get(self.issn_l)
+		jdb = jdb_pricing().get(self.issn_l)
 		if jdb:
 			self.apc_price_usd = jdb.apc_price_usd
 			self.apc_price_gbp = jdb.apc_price_gbp
@@ -365,61 +366,6 @@ class MissingJournalMetadata(object):
 	@cached_property
 	def get_subscription_price(self, currency, use_high_price_if_unknown=False):
 		return None
-
-def get_journal_metadata(issn):
-	global all_journal_metadata_flat
-	my_journal_metadata = all_journal_metadata_flat.get(issn, None)
-	if not my_journal_metadata:
-		my_journal_metadata = MissingJournalMetadata(issn_l=issn)
-	return my_journal_metadata
-
-def get_journal_metadata_for_publisher(publisher):
-	lookup_journaldb_publisher = {
-		"SpringerNature": "Springer Nature",
-		"Sage": "SAGE",
-		"TaylorFrancis": "Taylor & Francis"
-	}
-	publisher_normalized = lookup_journaldb_publisher.get(publisher, publisher)
-
-	global all_journal_metadata
-
-	response = {}
-	for issn_l, journal_metadata in all_journal_metadata.items():
-		if journal_metadata.publisher == publisher_normalized:
-			response[issn_l] = journal_metadata
-	return response
-
-def get_journal_metadata_for_publisher_currently_subscription(publisher):
-	my_journals = get_journal_metadata_for_publisher(publisher)
-	response = {}
-	for issn_l, journal_metadata in my_journals.items():
-		if journal_metadata.is_current_subscription_journal:
-			response[issn_l] = journal_metadata
-	return response
-
-
-print("loading all journal metadata...", end=' ')
-start_time = time()
-all_journal_metadata_list = JournalMetadata.query.all()
-[db.session.expunge(my_journal_metadata) for my_journal_metadata in all_journal_metadata_list]
-all_journal_metadata = dict(list(zip([journal_object.issn_l for journal_object in all_journal_metadata_list], all_journal_metadata_list)))
-all_journal_metadata_flat = {}
-for issn_l, journal_metadata in all_journal_metadata.items():
-	for issn in journal_metadata.issns:
-		all_journal_metadata_flat[issn] = journal_metadata
-print("loaded all journal metadata in {} seconds.".format(elapsed(start_time)))
-
-def load_all_journal_metadata():
-	print("loading all journal metadata...", end=' ')
-	start_time = time()
-	all_journal_metadata_list = JournalMetadata.query.all()
-	[db.session.expunge(my_journal_metadata) for my_journal_metadata in all_journal_metadata_list]
-	all_journal_metadata = dict(list(zip([journal_object.issn_l for journal_object in all_journal_metadata_list], all_journal_metadata_list)))
-	all_journal_metadata_flat = {}
-	for issn_l, journal_metadata in all_journal_metadata.items():
-		for issn in journal_metadata.issns:
-			all_journal_metadata_flat[issn] = journal_metadata
-	print("loaded all journal metadata in {} seconds.".format(elapsed(start_time)))
 
 # python openalex.py --recompute
 # heroku run --size=performance-l python openalex.py --recompute -r heroku

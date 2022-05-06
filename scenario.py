@@ -53,7 +53,7 @@ def get_fresh_journal_list(scenario, my_jwt):
         issnls_to_build = [issn_l for issn_l in issnls_to_build if issn_l in list(scenario.data[scenario.package_id]["counter_dict"].keys())]
         package_id = scenario.package_id
 
-    journals = [Journal(issn_l, package_id=package_id) for issn_l in issnls_to_build if issn_l]
+    journals = [Journal(issn_l, package=my_package) for issn_l in issnls_to_build if issn_l]
 
     for my_journal in journals:
         my_journal.set_scenario(scenario)
@@ -81,6 +81,7 @@ class Scenario(object):
 
         from package import Package
         my_package = Package.query.filter(Package.package_id == self.package_id_for_db).first()
+        my_package.unique_issns
         self.publisher_name = my_package.publisher
         self.package_name = my_package.package_name
         my_institution = my_package.institution
@@ -105,7 +106,7 @@ class Scenario(object):
         if not my_package or my_package.is_demo or package_id == DEMO_PACKAGE_ID:
             package_id_in_cache = DEMO_PACKAGE_ID
 
-        self.data = get_common_package_data(package_id_in_cache)
+        self.data = get_common_package_data(package_id_in_cache, my_package.unique_issns)
         self.log_timing("get_common_package_data from_cache")
 
         self.set_clean_data()  #order for this one matters, after get common, before build journals
@@ -138,15 +139,11 @@ class Scenario(object):
 
         prices_dict = {}
         prices_uploaded_raw = get_custom_prices(self.package_id)
-        from openalex import get_journal_metadata_for_publisher_currently_subscription
 
-        publisher_journals = get_journal_metadata_for_publisher_currently_subscription(self.publisher_name)
-
-        for my_issn_l, my_journal_metadata in publisher_journals.items():
-            # print u"{} {}".format(my_issn_l, my_journal_metadata)
+        for my_issn_l, my_meta in self.my_package.journal_metadata.items():
             prices_dict[my_issn_l] = prices_uploaded_raw.get(my_issn_l, None)
             if prices_dict[my_issn_l] == None:
-                prices_dict[my_issn_l] = my_journal_metadata.get_subscription_price(self.my_package.currency, use_high_price_if_unknown=use_high_price_if_unknown)
+                prices_dict[my_issn_l] = my_meta.get_subscription_price(self.my_package.currency, use_high_price_if_unknown=use_high_price_if_unknown)
         self.data["prices"] = prices_dict
 
         clean_dict = {}
@@ -171,7 +168,7 @@ class Scenario(object):
         # remove this
         self.data["perpetual_access"] = get_perpetual_access_from_cache(self.package_id)
 
-        self.data["concepts"] = get_openalex_concepts()
+        self.data["concepts"] = openalex_best_concepts(self.my_package.unique_issns)
 
 
     @property
@@ -724,122 +721,133 @@ def get_core_list_from_db(input_package_id):
 
 
 @cache
-def get_embargo_data_from_db():
-    command = "select issn_l, embargo from journal_delayed_oa_active"
+def get_embargo_data_from_db(issns):
+    qry = "select issn_l, embargo from journal_delayed_oa_active where issn_l in %s"
     embargo_rows = None
     with get_db_cursor() as cursor:
-        cursor.execute(command)
+        cursor.execute(qry, (tuple(issns),))
         embargo_rows = cursor.fetchall()
     embargo_dict = dict((a["issn_l"], round(a["embargo"])) for a in embargo_rows)
     return embargo_dict
 
 @cache
-def get_unpaywall_downloads_from_db():
-    command = "select * from jump_unpaywall_downloads where issn_l in (select distinct issn_l from jump_counter)"
+def get_unpaywall_downloads_from_db(issns):
+    qry = "select * from jump_unpaywall_downloads where issn_l in %s"
     big_view_rows = None
     with get_db_cursor() as cursor:
-        cursor.execute(command)
+        cursor.execute(qry, (tuple(issns),))
         big_view_rows = cursor.fetchall()
     unpaywall_downloads_dict = dict((row["issn_l"], row) for row in big_view_rows)
     return unpaywall_downloads_dict
 
 @cache
-def get_num_papers_from_db():
-    command = "select issn_l, year, num_papers from jump_num_papers"
+def get_num_papers_from_db(issns):
+    qry = "select issn_l, year, num_papers from jump_num_papers where issn_l in %s"
     with get_db_cursor() as cursor:
-        cursor.execute(command)
+        cursor.execute(qry, (tuple(issns),))
         rows = cursor.fetchall()
     lookup_dict = defaultdict(dict)
     for row in rows:
         lookup_dict[row["issn_l"]][row["year"]] = row["num_papers"]
     return lookup_dict
 
-
-_openalex_concepts = None
-def _load_openalex_concepts_from_db():
-    global _openalex_concepts
-
-    if _openalex_concepts is None:
-        start_time = time()
-        _openalex_concepts = {}
-
-        # get single "best" concept
-        with get_db_cursor() as cursor:
-            cursor.execute('select * from openalex_concepts_best')
-            rows = cursor.fetchall()
-
-        for row in rows:
-            _openalex_concepts[row['issn_l']] = {'best': row['best']}
-
-        # get top three concepts by score
-        with get_db_cursor() as cursor:
-            cursor.execute('select * from openalex_concepts_top_three')
-            rows = cursor.fetchall()
-
-        for row in rows:
-            _openalex_concepts[row['issn_l']].update({'top_three': row['top_three']})
-
-        # get all the concepts and their openalex IDs
-        with get_db_cursor() as cursor:
-            cursor.execute('select issn_l,id_concept_all from openalex_concepts_agg_view')
-            aggrows = cursor.fetchall()
-
-        for aggrow in aggrows:
-            _openalex_concepts[aggrow["issn_l"]].update({'all': aggrow["id_concept_all"]})
-
-        print("loaded openalex concepts in {} seconds".format(elapsed(start_time)))
-
-def get_openalex_concepts():
-    print("loading openalex concepts...", end=' ')
-    _load_openalex_concepts_from_db()
-    return _openalex_concepts
-
-
 @cache
-def get_oa_recent_data_from_db():
-    oa_dict = {}
-    for submitted in ["with_submitted", "no_submitted"]:
-        for bronze in ["with_bronze", "no_bronze"]:
-            key = "{}_{}".format(submitted, bronze)
-            command = """select * from jump_oa_recent_{}_precovid
-                            """.format(key)
+def load_openalex_best_concepts_from_db(issns):
+    start_time = time()
+    concepts = {}
 
-            with get_db_cursor() as cursor:
-                cursor.execute(command)
-                rows = cursor.fetchall()
-            lookup_dict = defaultdict(list)
-            for row in rows:
-                lookup_dict[row["issn_l"]] += [row]
-            oa_dict[key] = lookup_dict
-    return oa_dict
-
-
-@cache
-def get_oa_data_from_db():
-    oa_dict = {}
-    for submitted in ["with_submitted", "no_submitted"]:
-        for bronze in ["with_bronze", "no_bronze"]:
-            key = "{}_{}".format(submitted, bronze)
-
-            command = """select * from jump_oa_{}_precovid	
-                        where year_int >= 2015	
-                            """.format(key)
-
-            with get_db_cursor() as cursor:
-                cursor.execute(command)
-                rows = cursor.fetchall()
-            lookup_dict = defaultdict(list)
-            for row in rows:
-                lookup_dict[row["issn_l"]] += [row]
-            oa_dict[key] = lookup_dict
-    return oa_dict
-
-
-@cache
-def get_society_data_from_db():
-    command = "select issn_l, is_society_journal from jump_society_journals_input where is_society_journal is not null"
     with get_db_cursor() as cursor:
-        cursor.execute(command)
+        cursor.execute('select * from openalex_concepts_best where issn_l in %s', (issns,))
+        rows = cursor.fetchall()
+
+    for row in rows:
+        concepts[row['issn_l']] = {'best': row['best']}
+
+    print(f"loaded openalex best concepts in {elapsed(start_time)} seconds")
+
+    return concepts
+
+def openalex_best_concepts(issns):
+    return load_openalex_best_concepts_from_db(tuple(issns))
+
+@cache
+def load_openalex_export_concepts_from_db(concepts, issns):
+    start_time = time()
+
+    # get top three concepts by score
+    with get_db_cursor() as cursor:
+        cursor.execute('select * from openalex_concepts_top_three where issn_l in %s', (issns,))
+        rows = cursor.fetchall()
+
+    for row in rows:
+        concepts[row['issn_l']].update({'top_three': row['top_three']})
+
+    # get all the concepts and their openalex IDs
+    with get_db_cursor() as cursor:
+        cursor.execute('select issn_l,id_concept_all from openalex_concepts_agg_view where issn_l in %s', (issns,))
+        aggrows = cursor.fetchall()
+
+    for aggrow in aggrows:
+        concepts[aggrow["issn_l"]].update({'all': aggrow["id_concept_all"]})
+
+    print(f"loaded openalex export concepts in {elapsed(start_time)} seconds")
+
+    return concepts
+
+def openalex_export_concepts(concepts, issns):
+    return load_openalex_export_concepts_from_db(concepts, tuple(issns))
+
+
+@cache
+def get_oa_recent_data_from_db(issns):
+    oa_dict = {}
+    for submitted in ["with_submitted", "no_submitted"]:
+        for bronze in ["with_bronze", "no_bronze"]:
+            key = "{}_{}".format(submitted, bronze)
+            qry = """select * from jump_oa_recent_{}_precovid where issn_l in %s
+                """.format(key)
+
+            with get_db_cursor() as cursor:
+                cursor.execute(qry, (tuple(issns),))
+                rows = cursor.fetchall()
+            lookup_dict = defaultdict(list)
+            for row in rows:
+                lookup_dict[row["issn_l"]] += [row]
+            oa_dict[key] = lookup_dict
+    return oa_dict
+
+
+@cache
+def get_oa_data_from_db(issns):
+    oa_dict = {}
+    for submitted in ["with_submitted", "no_submitted"]:
+        for bronze in ["with_bronze", "no_bronze"]:
+            key = "{}_{}".format(submitted, bronze)
+
+            qry = """select * from jump_oa_{}_precovid	
+                        where year_int >= 2015	
+                        and issn_l in %s
+                            """.format(key)
+
+            with get_db_cursor() as cursor:
+                cursor.execute(qry, (tuple(issns),))
+                rows = cursor.fetchall()
+            lookup_dict = defaultdict(list)
+            for row in rows:
+                lookup_dict[row["issn_l"]] += [row]
+            oa_dict[key] = lookup_dict
+    return oa_dict
+
+
+@cache
+def get_society_data_from_db(issns):
+    qry = """
+        select issn_l, is_society_journal from jump_society_journals_input 
+        where is_society_journal is not null
+        and issn_l in %s
+    """
+    with get_db_cursor() as cursor:
+        cursor.execute(qry, (tuple(issns),))
         rows = cursor.fetchall()
     lookup_dict = defaultdict(list)
     for row in rows:
@@ -848,11 +856,11 @@ def get_society_data_from_db():
 
 
 @cache
-def get_social_networks_data_from_db():
-    command = """select issn_l, asn_only_rate::float from jump_mturk_asn_rates
-                    """
+def get_social_networks_data_from_db(issns):
+    # qry = "select issn_l, asn_only_rate::float from jump_mturk_asn_rates"
+    qry = "select issn_l, asn_only_rate::float from jump_mturk_asn_rates where issn_l in %s"
     with get_db_cursor() as cursor:
-        cursor.execute(command)
+        cursor.execute(qry, (tuple(issns),))
         rows = cursor.fetchall()
     lookup_dict = {}
     for row in rows:
@@ -884,7 +892,7 @@ def get_social_networks_data_from_db():
 
 
 # not cached on purpose, because components are cached to save space
-def get_common_package_data(package_id):
+def get_common_package_data(package_id, issns):
     my_timing = TimingMessages()
     my_data = {}
 
@@ -893,7 +901,7 @@ def get_common_package_data(package_id):
     my_data.update(my_data_specific)
     # my_timing.messages += timing_specific.messages
 
-    (my_data_common, timing_common) = get_common_package_data_for_all()
+    (my_data_common, timing_common) = get_common_package_data_for_all(issns)
     my_timing.log_timing("LIVE get_common_package_data_for_all")
     my_data.update(my_data_common)
     # my_timing.messages += timing_common.messages
@@ -938,52 +946,48 @@ def decompress_json(file):
     output.close()
     return data
 
-@memorycache
-def get_common_package_data_for_all():
+@cache
+def get_common_package_data_for_all(issns = None):
     my_timing = TimingMessages()
-    try:
-        start_time = time()
-        # print u"trying to load in json"
-        # my_data = decompress_json("data/get_common_package_data_for_all_s3.json")
-        # print u"found json, returning"
-        # return (my_data, my_timing)
+    # try:
+    #     start_time = time()
+    #     # print u"trying to load in json"
+    #     # my_data = decompress_json("data/get_common_package_data_for_all_s3.json")
+    #     # print u"found json, returning"
+    #     # return (my_data, my_timing)
 
-        s3_clientobj = s3_client.get_object(Bucket="unsub-cache", Key="get_common_package_data_for_all.json")
-        contents_string = s3_clientobj["Body"].read().decode("utf-8")
-        contents_json = json.loads(contents_string)
-        print("get_common_package_data_for_all took {} seconds".format(elapsed(start_time)))
-        return (contents_json, my_timing)
+    #     s3_clientobj = s3_client.get_object(Bucket="unsub-cache", Key="get_common_package_data_for_all.json")
+    #     contents_string = s3_clientobj["Body"].read().decode("utf-8")
+    #     contents_json = json.loads(contents_string)
+    #     print("get_common_package_data_for_all took {} seconds".format(elapsed(start_time)))
+    #     return (contents_json, my_timing)
 
-    except Exception as e:
-        print("no S3 data, so computing.  Error message: ", e)
-        pass
+    # except Exception as e:
+    #     print("no S3 data, so computing.  Error message: ", e)
+    #     pass
 
+    start_time = time()
     my_data = {}
 
-    my_data["embargo_dict"] = get_embargo_data_from_db()
+    my_data["embargo_dict"] = get_embargo_data_from_db(issns)
     my_timing.log_timing("get_embargo_data_from_db")
 
-    my_data["unpaywall_downloads_dict_raw"] = get_unpaywall_downloads_from_db()
+    my_data["unpaywall_downloads_dict_raw"] = get_unpaywall_downloads_from_db(issns)
     my_timing.log_timing("get_unpaywall_downloads_from_db")
 
-    my_data["social_networks"] = get_social_networks_data_from_db()
+    my_data["social_networks"] = get_social_networks_data_from_db(issns)
     my_timing.log_timing("get_social_networks_data_from_db")
 
-    my_data["oa_recent"] = get_oa_recent_data_from_db()
+    my_data["oa_recent"] = get_oa_recent_data_from_db(issns)
     my_timing.log_timing("get_oa_recent_data_from_db")
 
-    my_data["oa"] = get_oa_data_from_db()
+    my_data["oa"] = get_oa_data_from_db(issns)
     my_timing.log_timing("get_oa_data_from_db")
 
-
-    # add this in later
-    # my_data["oa_adjustment"] = get_oa_adjustment_data_from_db()
-    # my_timing.log_timing("get_oa_adjustment_data_from_db")
-
-    my_data["society"] = get_society_data_from_db()
+    my_data["society"] = get_society_data_from_db(issns)
     my_timing.log_timing("get_society_data_from_db")
 
-    my_data["num_papers"] = get_num_papers_from_db()
+    my_data["num_papers"] = get_num_papers_from_db(issns)
     my_timing.log_timing("get_num_papers_from_db")
 
     # compressed_json("data/get_common_package_data_for_all.json", my_data)
@@ -992,6 +996,7 @@ def get_common_package_data_for_all():
     my_data["_timing_common"] = my_timing.to_dict()
     print("my timing")
     print(my_timing.to_dict())
+    print("get_common_package_data_for_all took {} seconds".format(elapsed(start_time)))
 
     return (my_data, my_timing)
 

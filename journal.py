@@ -34,11 +34,11 @@ def display_cpu(value):
 class Journal(object):
     years = list(range(0, 5))
 
-    def __init__(self, issn_l, scenario=None, scenario_data=None, package_id=None):
+    def __init__(self, issn_l, scenario=None, scenario_data=None, package=None):
         self.set_scenario(scenario)
         self.set_scenario_data(scenario_data)
         self.issn_l = issn_l
-        self.package_id = package_id
+        self.package_id = package.package_id
         self.package_id_for_db = self.package_id
         if self.package_id.startswith("demo"):
             self.package_id_for_db = DEMO_PACKAGE_ID
@@ -46,6 +46,7 @@ class Journal(object):
         self.subscribed_custom = False
         self.use_default_download_curve = False
         self.use_default_num_papers_curve = False
+        self.my_package = package
 
     def set_scenario(self, scenario):
         if scenario:
@@ -85,8 +86,7 @@ class Journal(object):
 
     @cached_property
     def journal_metadata(self):
-        from openalex import get_journal_metadata
-        return get_journal_metadata(self.issn_l)
+        return self.my_package.get_journal_metadata(self.issn_l)
 
     @cached_property
     def issns(self):
