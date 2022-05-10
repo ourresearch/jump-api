@@ -369,6 +369,7 @@ class MissingJournalMetadata(object):
 
 # python openalex.py --recompute
 # heroku run --size=performance-l python openalex.py --recompute -r heroku
+# heroku local:run python openalex.py --recompute
 if __name__ == "__main__":
 
 	parser = argparse.ArgumentParser()
