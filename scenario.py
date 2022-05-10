@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import os
 from cached_property import cached_property
 import numpy as np
 import pandas as pd
@@ -25,6 +26,9 @@ from util import get_sql_answer
 
 from journal import Journal
 from assumptions import Assumptions
+from sqlite_cache import SqLite
+
+sqlite_conn = SqLite(os.getenv("SQLITE_PATH", "sqlite_cache.db"), "sqlitecache.zip")
 
 def get_clean_package_id(http_request_args):
     if not http_request_args:
@@ -719,38 +723,6 @@ def get_core_list_from_db(input_package_id):
     my_dict = dict([(a["issn_l"], a) for a in rows])
     return my_dict
 
-
-@cache
-def get_embargo_data_from_db(issns):
-    qry = "select issn_l, embargo from journal_delayed_oa_active where issn_l in %s"
-    embargo_rows = None
-    with get_db_cursor() as cursor:
-        cursor.execute(qry, (tuple(issns),))
-        embargo_rows = cursor.fetchall()
-    embargo_dict = dict((a["issn_l"], round(a["embargo"])) for a in embargo_rows)
-    return embargo_dict
-
-@cache
-def get_unpaywall_downloads_from_db(issns):
-    qry = "select * from jump_unpaywall_downloads where issn_l in %s"
-    big_view_rows = None
-    with get_db_cursor() as cursor:
-        cursor.execute(qry, (tuple(issns),))
-        big_view_rows = cursor.fetchall()
-    unpaywall_downloads_dict = dict((row["issn_l"], row) for row in big_view_rows)
-    return unpaywall_downloads_dict
-
-@cache
-def get_num_papers_from_db(issns):
-    qry = "select issn_l, year, num_papers from jump_num_papers where issn_l in %s"
-    with get_db_cursor() as cursor:
-        cursor.execute(qry, (tuple(issns),))
-        rows = cursor.fetchall()
-    lookup_dict = defaultdict(dict)
-    for row in rows:
-        lookup_dict[row["issn_l"]][row["year"]] = row["num_papers"]
-    return lookup_dict
-
 @cache
 def load_openalex_best_concepts_from_db(issns):
     start_time = time()
@@ -798,26 +770,43 @@ def openalex_export_concepts(concepts, issns):
     return load_openalex_export_concepts_from_db(concepts, tuple(issns))
 
 
-@cache
+def get_embargo_data_from_db(issns):
+    qry = "select issn_l, embargo from journal_delayed_oa_active where issn_l in (%s)"
+    query = qry % ','.join('?'*len(issns))
+    rows = sqlite_conn.select(query, issns)
+    embargo_dict = dict((a["issn_l"], round(a["embargo"])) for a in rows)
+    return embargo_dict
+
+def get_unpaywall_downloads_from_db(issns):
+    qry = "select * from jump_unpaywall_downloads where issn_l in (%s)"
+    query = qry % ','.join('?'*len(issns))
+    rows = sqlite_conn.select(query, issns)
+    unpaywall_downloads_dict = dict((row["issn_l"], dict(row)) for row in rows)
+    return unpaywall_downloads_dict
+
+def get_num_papers_from_db(issns):
+    qry = "select issn_l, year, num_papers from jump_num_papers where issn_l in (%s)"
+    query = qry % ','.join('?'*len(issns))
+    rows = sqlite_conn.select(query, issns)
+    lookup_dict = defaultdict(dict)
+    for row in rows:
+        lookup_dict[row["issn_l"]][row["year"]] = row["num_papers"]
+    return lookup_dict
+
 def get_oa_recent_data_from_db(issns):
     oa_dict = {}
     for submitted in ["with_submitted", "no_submitted"]:
         for bronze in ["with_bronze", "no_bronze"]:
             key = "{}_{}".format(submitted, bronze)
-            qry = """select * from jump_oa_recent_{}_precovid where issn_l in %s
-                """.format(key)
-
-            with get_db_cursor() as cursor:
-                cursor.execute(qry, (tuple(issns),))
-                rows = cursor.fetchall()
+            qry = f"select * from jump_oa_recent_{key}_precovid where issn_l in (%s)"
+            query = qry % ','.join('?'*len(issns))
+            rows = sqlite_conn.select(query, issns)
             lookup_dict = defaultdict(list)
             for row in rows:
-                lookup_dict[row["issn_l"]] += [row]
+                lookup_dict[row["issn_l"]] += [dict(row)]
             oa_dict[key] = lookup_dict
     return oa_dict
 
-
-@cache
 def get_oa_data_from_db(issns):
     oa_dict = {}
     for submitted in ["with_submitted", "no_submitted"]:
@@ -826,70 +815,37 @@ def get_oa_data_from_db(issns):
 
             qry = """select * from jump_oa_{}_precovid	
                         where year_int >= 2015	
-                        and issn_l in %s
+                        and issn_l in (%s)
                             """.format(key)
-
-            with get_db_cursor() as cursor:
-                cursor.execute(qry, (tuple(issns),))
-                rows = cursor.fetchall()
+            query = qry % ','.join('?'*len(issns))
+            rows = sqlite_conn.select(query, issns)
             lookup_dict = defaultdict(list)
             for row in rows:
-                lookup_dict[row["issn_l"]] += [row]
+                lookup_dict[row["issn_l"]] += [dict(row)]
             oa_dict[key] = lookup_dict
     return oa_dict
 
-
-@cache
 def get_society_data_from_db(issns):
     qry = """
         select issn_l, is_society_journal from jump_society_journals_input 
         where is_society_journal is not null
-        and issn_l in %s
+        and issn_l in (%s)
     """
-    with get_db_cursor() as cursor:
-        cursor.execute(qry, (tuple(issns),))
-        rows = cursor.fetchall()
+    query = qry % ','.join('?'*len(issns))
+    rows = sqlite_conn.select(query, issns)
     lookup_dict = defaultdict(list)
     for row in rows:
         lookup_dict[row["issn_l"]] = row["is_society_journal"]
     return lookup_dict
 
-
-@cache
 def get_social_networks_data_from_db(issns):
-    # qry = "select issn_l, asn_only_rate::float from jump_mturk_asn_rates"
-    qry = "select issn_l, asn_only_rate::float from jump_mturk_asn_rates where issn_l in %s"
-    with get_db_cursor() as cursor:
-        cursor.execute(qry, (tuple(issns),))
-        rows = cursor.fetchall()
+    qry = "select issn_l, asn_only_rate from jump_mturk_asn_rates where issn_l in (%s)"
+    query = qry % ','.join('?'*len(issns))
+    rows = sqlite_conn.select(query, issns)
     lookup_dict = {}
     for row in rows:
         lookup_dict[row["issn_l"]] = row["asn_only_rate"]
     return lookup_dict
-
-#
-# @cache
-# def get_oa_adjustment_data_from_db():
-#     command = """select rj.issn_l,
-#             max(mturk.max_oa_rate::float) as mturk_max_oa_rate,
-#             count(*) as num_papers_3_years,
-#             sum(case when u.oa_status = 'closed' then 0 else 1 end) as num_papers_3_years_oa,
-#             round(sum(case when u.oa_status = 'closed' then 0 else 1 end)/count(*)::float, 3) as unpaywall_measured_fraction_3_years_oa
-#             from jump_mturk_oa_rates mturk
-#             join unpaywall u on mturk.issn_l = u.journal_issn_l
-# 	        join ricks_journal_flat rj on u.journal_issn_l=rj.issn
-#             where year >= 2016 and year <= 2018
-#             and genre='journal-article'
-#             group by rj.issn_l
-#                     """
-#     with get_db_cursor() as cursor:
-#         cursor.execute(command)
-#         rows = cursor.fetchall()
-#     lookup_dict = {}
-#     for row in rows:
-#         lookup_dict[row["issn_l"]] = row
-#     return lookup_dict
-
 
 # not cached on purpose, because components are cached to save space
 def get_common_package_data(package_id, issns):
@@ -901,8 +857,10 @@ def get_common_package_data(package_id, issns):
     my_data.update(my_data_specific)
     # my_timing.messages += timing_specific.messages
 
-    (my_data_common, timing_common) = get_common_package_data_for_all(issns)
-    my_timing.log_timing("LIVE get_common_package_data_for_all")
+    if not sqlite_conn.exists():
+        sqlite_conn.create()
+    (my_data_common, timing_common) = get_common_package_data_for(issns)
+    my_timing.log_timing("LIVE get_common_package_data_for")
     my_data.update(my_data_common)
     # my_timing.messages += timing_common.messages
 
@@ -930,41 +888,9 @@ def get_common_package_data_specific(package_id):
 
     return (my_data, my_timing)
 
-
-# compressed_json('example_cp', data)
-def compressed_json(title, data):
-    print("dumping")
-    output = open(title, 'wb')
-    json.dump(data, output)
-    output.close()
-    print("done dumping")
-
-# data = decompress_json('example_cp')
-def decompress_json(file):
-    output = open(file, 'rb')
-    data = json.load(output)
-    output.close()
-    return data
-
-@cache
-def get_common_package_data_for_all(issns = None):
+@memorycache
+def get_common_package_data_for(issns = None):
     my_timing = TimingMessages()
-    # try:
-    #     start_time = time()
-    #     # print u"trying to load in json"
-    #     # my_data = decompress_json("data/get_common_package_data_for_all_s3.json")
-    #     # print u"found json, returning"
-    #     # return (my_data, my_timing)
-
-    #     s3_clientobj = s3_client.get_object(Bucket="unsub-cache", Key="get_common_package_data_for_all.json")
-    #     contents_string = s3_clientobj["Body"].read().decode("utf-8")
-    #     contents_json = json.loads(contents_string)
-    #     print("get_common_package_data_for_all took {} seconds".format(elapsed(start_time)))
-    #     return (contents_json, my_timing)
-
-    # except Exception as e:
-    #     print("no S3 data, so computing.  Error message: ", e)
-    #     pass
 
     start_time = time()
     my_data = {}
@@ -990,14 +916,9 @@ def get_common_package_data_for_all(issns = None):
     my_data["num_papers"] = get_num_papers_from_db(issns)
     my_timing.log_timing("get_num_papers_from_db")
 
-    # compressed_json("data/get_common_package_data_for_all.json", my_data)
-    # my_timing.log_timing("pickling")
-
     my_data["_timing_common"] = my_timing.to_dict()
     print("my timing")
     print(my_timing.to_dict())
-    print("get_common_package_data_for_all took {} seconds".format(elapsed(start_time)))
+    print("get_common_package_data_for took {} seconds".format(elapsed(start_time)))
 
     return (my_data, my_timing)
-
-

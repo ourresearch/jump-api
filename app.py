@@ -304,60 +304,22 @@ def reset_cache(module_name, function_name, *args):
 cached_consortium_scenario_ids = ["tGUVWRiN", "scenario-QC2kbHfUhj9W", "EcUvEELe", "CBy9gUC3", "6it6ajJd", "GcAsm5CX", "aAFAuovt"]
 
 
-def warm_cache():
-    print("warming cache")
-
+def warm_sqlite_cache():
     start_time = time()
-
-    # import consortium
-    # consortium_ids = consortium.get_consortium_ids()
-    # for scenario_id in [d["scenario_id"] for d in consortium_ids]:
-    #     consortium.consortium_get_computed_data(scenario_id)
-    #     consortium.consortium_get_issns(scenario_id)
-
-    # from consortium import consortium_get_computed_data
-
-    # global cached_consortium_scenario_ids
-    # shuffle(cached_consortium_scenario_ids)
-    # for scenario_id in cached_consortium_scenario_ids:
-    #     consortium_get_computed_data(scenario_id)
-    # print u"done warming cached_consortium_scenario_ids {}s".format(elapsed(start_time))
-
-    # do this second so it is a bit random when it gets here
-
-    from scenario import _load_journal_era_subjects_from_db
-    _load_journal_era_subjects_from_db()
-
-    import scenario
-    scenario.get_common_package_data_for_all()
-    # scenario.get_common_package_data_specific(DEMO_PACKAGE_ID)
-
-    print("done warming the cache in {}s".format(elapsed(start_time)))
-
+    from sqlite_cache import SqLite
+    sqlite_conn = SqLite(os.getenv("SQLITE_PATH", "sqlite_cache.db"), "sqlitecache.zip")
+    try:
+        sqlite_conn.s3_fetch()
+        sqlite_conn.zip_extract()
+    except:
+        sqlite_conn.create()
+    print("done warming sqlite cache in {}s".format(elapsed(start_time)))
 
 if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
-    print("warming caches")
-    start_time = time()
-
     import threading
-
     data = None
-    t = threading.Thread(target=warm_cache)
+    t = threading.Thread(target=warm_sqlite_cache)
     t.daemon = True  # so it doesn't block
     t.start()
-    print("done start warm_cache")
-
-    # from views import start_cache_thread
-    # start_cache_thread()
-    # print u"done start_cache_thread"
-
-    print("done loading to cache in {}s".format(elapsed(start_time)))
 else:
-    print("not warming caches")
-
-#
-# print "clearing cache"
-# reset_cache("consortium", "consortium_get_computed_data", "scenario-fsVitXLd")
-# print "cache clear set"
-
-
+    print("not warming sqlite cache")
