@@ -53,7 +53,7 @@ class Package(db.Model):
     @cached_property
     def unique_issns(self):
         with get_db_cursor() as cursor:
-            qry = "select distinct(issn_l) from jump_counter where package_id = %s and report_name in ('trj2','trj3')"
+            qry = "select distinct(issn_l) from jump_counter where package_id = %s"
             cursor.execute(qry, (self.package_id,))
             rows = cursor.fetchall()
         return [w[0] for w in rows]
