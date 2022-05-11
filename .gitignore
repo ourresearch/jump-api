@@ -117,3 +117,9 @@ scratch.py
 scenario_missing_titles_determination*
 non_consortia*.csv
 profiling/
+
+# sqlite cache files
+sqlite_cache.db
+sqlitecache.db
+sqlite_cache.zip
+sqlitecache.zip
