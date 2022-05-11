@@ -78,6 +78,11 @@ def write_to_database(data):
 	cols = OpenalexDateLastDOI.get_insert_column_names()
 	input_values = [LastDate(w[0], w[1]).get_obj().get_values() for w in data]
 
+	# delete issnl's from table before insert b/c redshift doesn't have upsert
+	with get_db_cursor() as cursor:
+		cursor.execute("DELETE from openalex_date_last_doi where issn_l in %s", )
+
+	# insert
 	with get_db_cursor() as cursor:
 		qry = sql.SQL("INSERT INTO openalex_date_last_doi ({}) VALUES %s").format(
 			sql.SQL(', ').join(map(sql.Identifier, cols)))
@@ -121,8 +126,8 @@ class DateLastDOI:
 
 			self.date_last_doi(x)
 			if getattr(x, 'date_last_doi', None):
-				self.write_to_file(x)
-				# self.write_to_database(x)
+				# self.write_to_file(x)
+				self.write_to_database_via_sqlalchemy(x)
 			# else:
 			# 	self.keep_db_alive()
 			# else:
@@ -139,6 +144,17 @@ class DateLastDOI:
 		with open(self.file_path, 'a') as f:
 			writer = csv.writer(f)
 			writer.writerow([journal.issn_l, journal.date_last_doi])
+
+	def write_to_database_via_sqlalchemy(self, journal):
+		res = OpenalexDateLastDOI.query.get(journal.issn_l)
+		if not res:
+			res = OpenalexDateLastDOI(journal.issn_l)
+			db.session.add(res)
+		else:
+			res.date_last_doi = journal.date_last_doi
+			res.updated = datetime.utcnow().isoformat()
+
+		db.session.commit()
 
 	def write_to_database(self, journal):
 		out = OpenalexDateLastDOI(journal)
@@ -227,6 +243,7 @@ class DateLastDOI:
 # heroku local:run python date_last_doi.py --update
 # heroku local:run python date_last_doi.py --update --only_missing
 # heroku local:run python date_last_doi.py --update --only_missing --skip404 --skipnopub
+# heroku local:run python date_last_doi.py --update --skip404 --skipnopub
 # heroku local:run python date_last_doi.py --write_to_db=filepath
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
