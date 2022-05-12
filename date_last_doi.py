@@ -127,7 +127,10 @@ class DateLastDOI:
 			self.date_last_doi(x)
 			if getattr(x, 'date_last_doi', None):
 				# self.write_to_file(x)
-				self.write_to_database_via_sqlalchemy(x)
+				try:
+					self.write_to_database_via_sqlalchemy(x)
+				except Exception as e:
+					pass
 			# else:
 			# 	self.keep_db_alive()
 			# else:
