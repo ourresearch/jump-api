@@ -60,10 +60,15 @@ class Package(db.Model):
 
     @cached_property
     def journal_metadata(self):
-        start_time = time()
+        pub_lookup = {
+            "SpringerNature": "Springer Nature",
+            "Sage": "SAGE",
+            "TaylorFrancis": "Taylor & Francis"
+        }
+        publisher_normalized = pub_lookup.get(self.publisher, self.publisher)
         meta_list = JournalMetadata.query.filter(
             JournalMetadata.issn_l.in_(self.unique_issns),
-            JournalMetadata.publisher == self.publisher,
+            JournalMetadata.publisher == publisher_normalized,
             JournalMetadata.is_current_subscription_journal).all()
         [db.session.expunge(my_meta) for my_meta in meta_list]
         return dict(list(zip([j.issn_l for j in meta_list], meta_list)))
