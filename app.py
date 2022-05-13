@@ -270,10 +270,10 @@ def memorycache(func):
             # print "cache hit on", cache_key
             return result
 
-        print("cache miss on", cache_key)
+        # print("cache miss on", cache_key)
 
         # Generate output
-        print("> calling {}.{} with {}".format(func.__module__, func.__name__, args))
+        # print("> calling {}.{} with {}".format(func.__module__, func.__name__, args))
         result = func(*args)
 
         # Cache output if allowed

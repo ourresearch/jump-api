@@ -735,7 +735,7 @@ def load_openalex_best_concepts_from_db(issns):
     for row in rows:
         concepts[row['issn_l']] = {'best': row['best']}
 
-    print(f"loaded openalex best concepts in {elapsed(start_time)} seconds")
+    # print(f"loaded openalex best concepts in {elapsed(start_time)} seconds")
 
     return concepts
 
@@ -917,8 +917,8 @@ def get_common_package_data_for(issns = None):
     my_timing.log_timing("get_num_papers_from_db")
 
     my_data["_timing_common"] = my_timing.to_dict()
-    print("my timing")
-    print(my_timing.to_dict())
-    print("get_common_package_data_for took {} seconds".format(elapsed(start_time)))
+    # print("my timing")
+    # print(my_timing.to_dict())
+    # print("get_common_package_data_for took {} seconds".format(elapsed(start_time)))
 
     return (my_data, my_timing)
