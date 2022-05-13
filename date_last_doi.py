@@ -1,5 +1,6 @@
 import argparse
 from datetime import datetime
+from dateutil.parser import parse
 import requests
 import csv
 from requests.exceptions import RequestException
@@ -112,10 +113,11 @@ class DateLastDOI:
 			self.openalex_data = list(filter(lambda x: x.issn_l not in self.openalex_date_last_doi_issnls, self.openalex_data))
 		
 		if since_update_date:
-			since_update_date_dt = datetime.strptime(since_update_date, "%Y-%m-%d")
+			since_update_date_dt = parse(since_update_date)
 			not_update = list(filter(lambda x: x.updated > since_update_date_dt, self.openalex_date_last_doi))
 			not_update_issns = [w.issn_l for w in not_update]
 			self.openalex_data = list(filter(lambda x: x.issn_l not in not_update_issns, self.openalex_data))
+			print(f"Since update date: {since_update_date} - limiting to {len(self.openalex_data)} records")
 		
 		for x in self.openalex_data:
 			# print(x.issn_l)
@@ -255,7 +257,8 @@ class DateLastDOI:
 # heroku local:run python date_last_doi.py --update --only_missing --skip404 --skipnopub
 # heroku local:run python date_last_doi.py --update --skip404 --skipnopub
 # heroku local:run python date_last_doi.py --write_to_db=filepath
-# heroku local:run python date_last_doi.py --since_update_date=2022-05-01
+# heroku local:run python date_last_doi.py --since_update_date="2022-05-01"
+# heroku local:run python date_last_doi.py --since_update_date="2022-05-13 15:26:35.051186"
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--update", help="Update date last DOI table", action="store_true", default=False)
