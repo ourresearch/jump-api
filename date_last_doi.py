@@ -89,14 +89,14 @@ def write_to_database(data):
 		execute_values(cursor, qry, input_values, page_size = 1000)
 
 class DateLastDOI:
-	def __init__(self, only_missing=False, skip404=False, skipnopub=False):
+	def __init__(self, only_missing=False, skip404=False, skipnopub=False, since_update_date=None):
 		self.file_path = FILE_PATH
 		self.api_url = "https://api.crossref.org/journals/{}/works?sort=published&select=published&rows=1&mailto=scott@ourresearch.org"
 		self.cache = Cache()
 		self.cols = OpenalexDateLastDOI.get_insert_column_names()
 		self.load_openalex()
 		self.load_datelastdois()
-		self.all_date_last_dois(only_missing, skip404, skipnopub)
+		self.all_date_last_dois(only_missing, skip404, skipnopub, since_update_date)
 
 	def load_openalex(self):
 		self.openalex_data = JournalMetadata.query.all()
@@ -107,9 +107,16 @@ class DateLastDOI:
 		self.openalex_date_last_doi_issnls = [w.issn_l for w in self.openalex_date_last_doi]
 		print(f"{len(self.openalex_date_last_doi)} openalex_date_last_doi records found")
 
-	def all_date_last_dois(self, only_missing=False, skip404=False, skipnopub=False):
+	def all_date_last_dois(self, only_missing=False, skip404=False, skipnopub=False, since_update_date=None):
 		if only_missing:
 			self.openalex_data = list(filter(lambda x: x.issn_l not in self.openalex_date_last_doi_issnls, self.openalex_data))
+		
+		if since_update_date:
+			since_update_date_dt = datetime.strptime(since_update_date, "%Y-%m-%d")
+			not_update = list(filter(lambda x: x.updated > since_update_date_dt, self.openalex_date_last_doi))
+			not_update_issns = [w.issn_l for w in not_update]
+			self.openalex_data = list(filter(lambda x: x.issn_l not in not_update_issns, self.openalex_data))
+		
 		for x in self.openalex_data:
 			# print(x.issn_l)
 			# present = False
@@ -248,6 +255,7 @@ class DateLastDOI:
 # heroku local:run python date_last_doi.py --update --only_missing --skip404 --skipnopub
 # heroku local:run python date_last_doi.py --update --skip404 --skipnopub
 # heroku local:run python date_last_doi.py --write_to_db=filepath
+# heroku local:run python date_last_doi.py --since_update_date=2022-05-01
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--update", help="Update date last DOI table", action="store_true", default=False)
@@ -255,10 +263,11 @@ if __name__ == "__main__":
 	parser.add_argument("--write_to_db", help="Write data in txt file to database?", type = str)
 	parser.add_argument("--skip404", help="Skip Crossref 404s?", action="store_true", default=False)
 	parser.add_argument("--skipnopub", help="Skip Crossref responses that have no 'published' field?", action="store_true", default=False)
+	parser.add_argument("--since_update_date", help="Only work on ISSNs not updated since the date", action="store_true", default=str)
 	parsed_args = parser.parse_args()
 
 	if parsed_args.update:
-		DateLastDOI(parsed_args.only_missing, parsed_args.skip404, parsed_args.skipnopub)
+		DateLastDOI(parsed_args.only_missing, parsed_args.skip404, parsed_args.skipnopub, parsed_args.since_update_date)
 
 	if parsed_args.write_to_db:
 		print(f"reading from: {parsed_args.write_to_db}")
