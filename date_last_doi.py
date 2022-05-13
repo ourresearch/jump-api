@@ -263,7 +263,7 @@ if __name__ == "__main__":
 	parser.add_argument("--write_to_db", help="Write data in txt file to database?", type = str)
 	parser.add_argument("--skip404", help="Skip Crossref 404s?", action="store_true", default=False)
 	parser.add_argument("--skipnopub", help="Skip Crossref responses that have no 'published' field?", action="store_true", default=False)
-	parser.add_argument("--since_update_date", help="Only work on ISSNs not updated since the date", action="store_true", default=str)
+	parser.add_argument("--since_update_date", help="Only work on ISSNs not updated since the date", default=str)
 	parsed_args = parser.parse_args()
 
 	if parsed_args.update:
