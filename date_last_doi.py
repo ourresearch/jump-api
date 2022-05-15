@@ -163,11 +163,11 @@ class DateLastDOI:
 			res = OpenalexDateLastDOI(journal.issn_l)
 			db.session.add(res)
 		else:
-			if res.date_last_doi == journal.date_last_doi:
-				print(f"skipping database update, last doi date is unchanged for {journal.issn_l}")
-			else:
-				res.date_last_doi = journal.date_last_doi
-				res.updated = datetime.utcnow().isoformat()
+			# if res.date_last_doi == journal.date_last_doi:
+			# 	print(f"skipping database update, last doi date is unchanged for {journal.issn_l}")
+			# else:
+			res.date_last_doi = journal.date_last_doi
+			res.updated = datetime.utcnow().isoformat()
 
 		db.session.commit()
 
