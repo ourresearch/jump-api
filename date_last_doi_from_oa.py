@@ -24,7 +24,7 @@ class DateLastDoiOA:
 		self.all_date_last_dois(since_update_date)
 
 	def load_openalex(self):
-		self.openalex_data = OpenalexDBRaw.query.limit(100).all()
+		self.openalex_data = OpenalexDBRaw.query.all()
 		for x in self.openalex_data:
 			x.id_oa = re.search('V.+', x.id)[0]
 		print(f"{len(self.openalex_data)} openalex_journals records found")
