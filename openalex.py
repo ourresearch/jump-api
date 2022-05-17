@@ -38,6 +38,7 @@ class OpenalexDBRaw(db.Model):
 	counts_by_year = db.Column(db.Text)
 	x_concepts = db.Column(db.Text)
 	updated_date = db.Column(db.DateTime)
+	id = db.Column(db.Text)
 
 	def __repr__(self):
 		return "<{} ({}) '{}' {}>".format(self.__class__.__name__, self.issn_l, self.display_name, self.publisher)
