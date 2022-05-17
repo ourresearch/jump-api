@@ -102,11 +102,11 @@ class DateLastDoiOA:
 			)
 		)
 
-# heroku local:run python date_last_doi_from_oa.py --since_update_date="2022-05-13 15:26:35.051186"
+# heroku local:run python date_last_doi_from_oa.py --update --since_update_date="2022-05-13 15:26:35.051186"
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--update", help="Update date last DOI table", action="store_true", default=False)
-	parser.add_argument("--since_update_date", help="Only work on ISSNs not updated since the date", default=str)
+	parser.add_argument("--since_update_date", help="Only work on ISSNs not updated since the date", default=None)
 	parsed_args = parser.parse_args()
 
 	if parsed_args.update:
