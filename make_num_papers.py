@@ -88,9 +88,12 @@ class MakeNumPapers:
         cols = NumPapers.__table__.columns.keys()
         all_rows = []
         for d in data:
-            updated = datetime.utcnow().isoformat()
-            rows = [(updated, d.venue_id, d.issn_l, w['year'], w['works_count']) for w in d.data]
-            all_rows.append(rows)
+            try:
+                updated = datetime.utcnow().isoformat()
+                rows = [(updated, d.venue_id, d.issn_l, w['year'], w['works_count']) for w in d.data]
+                all_rows.append(rows)
+            except:
+                pass
         inputs = [w for sublist in all_rows for w in sublist]
 
         from app import get_db_cursor
