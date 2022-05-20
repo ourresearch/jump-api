@@ -25,7 +25,7 @@ def make_chunks(lst, n):
 
 class DateLastDoiOA:
     def __init__(self):
-        self.api_url = "https://api.openalex.org/works?filter=host_venue.id:{}&per_page=1&sort=publication_date:desc&mailto=scott@ourresearch.org"
+        self.api_url = "https://openalex-elastic-api.herokuapp.com/works?filter=host_venue.id:{}&per_page=1&sort=publication_date:desc&mailto=scott@ourresearch.org"
         self.table = "openalex_date_last_doi_from_oa"
         self.load_openalex()
         self.all_date_last_dois()
@@ -81,7 +81,7 @@ class DateLastDoiOA:
         for i, item in enumerate(self.openalex_data_chunks):
             asyncio.run(fetch_chunks(item))
             self.write_to_db(item)
-            time.sleep(1)
+            time.sleep(3)
 
     def write_to_db(self, data):
         cols = OpenalexDateLastDOIFromOA.get_insert_column_names()
