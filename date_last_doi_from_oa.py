@@ -23,7 +23,7 @@ def make_chunks(lst, n):
 
 class DateLastDoiOA:
     def __init__(self):
-        self.api_url = "https://openalex-elastic-api.herokuapp.com/works?filter=host_venue.id:{}&per_page=1&sort=publication_date:desc&mailto=scott@ourresearch.org"
+        self.api_url = "https://api.openalex.org/works?filter=host_venue.id:{}&per_page=1&sort=publication_date:desc&mailto=scott@ourresearch.org"
         self.table = "openalex_date_last_doi_from_oa"
         self.load_openalex()
         self.all_date_last_dois()
@@ -36,7 +36,7 @@ class DateLastDoiOA:
         print(f"{len(self.openalex_data)} openalex_journals records found")
 
     def all_date_last_dois(self):
-        self.openalex_data_chunks = list(make_chunks(self.openalex_data, 20))
+        self.openalex_data_chunks = list(make_chunks(self.openalex_data, 40))
 
         async def get_data(client, journal):
             try:
@@ -79,7 +79,7 @@ class DateLastDoiOA:
         for i, item in enumerate(self.openalex_data_chunks):
             asyncio.run(fetch_chunks(item))
             self.write_to_db(item)
-            time.sleep(3)
+            time.sleep(1)
 
     def write_to_db(self, data):
         cols = OpenalexDateLastDOIFromOA.get_insert_column_names()
@@ -91,7 +91,7 @@ class DateLastDoiOA:
             qry = sql.SQL(
                 "INSERT INTO openalex_date_last_doi_from_oa ({}) VALUES %s"
             ).format(sql.SQL(", ").join(map(sql.Identifier, cols)))
-            execute_values(cursor, qry, input_values, page_size=20)
+            execute_values(cursor, qry, input_values, page_size=40)
 
     @staticmethod
     def set_last_doi_date(journal, published):
