@@ -3,11 +3,9 @@ import argparse
 import re
 from datetime import datetime
 from dateutil.parser import parse
-import requests
 import httpx
 import asyncio
 import csv
-from requests.exceptions import RequestException
 
 from psycopg2 import sql
 from psycopg2.extras import execute_values
@@ -45,7 +43,7 @@ class DateLastDoiOA:
                 r = await client.get(self.api_url.format(journal.id_oa), timeout = 10)
                 if r.status_code == 404:
                     pass
-            except RequestException:
+            except httpx.RequestError:
                 return None
 
             if (
