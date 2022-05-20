@@ -42,7 +42,7 @@ class DateLastDoiOA:
 
         async def get_data(client, journal):
             try:
-                r = await client.get(self.api_url.format(journal.id_oa))
+                r = await client.get(self.api_url.format(journal.id_oa), timeout = 10)
                 if r.status_code == 404:
                     pass
             except RequestException:
