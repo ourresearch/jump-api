@@ -60,15 +60,8 @@ class Package(db.Model):
 
     @cached_property
     def journal_metadata(self):
-        pub_lookup = {
-            "SpringerNature": "Springer Nature",
-            "Sage": "SAGE",
-            "TaylorFrancis": "Taylor & Francis"
-        }
-        publisher_normalized = pub_lookup.get(self.publisher, self.publisher)
         meta_list = JournalMetadata.query.filter(
             JournalMetadata.issn_l.in_(self.unique_issns),
-            JournalMetadata.publisher == publisher_normalized,
             JournalMetadata.is_current_subscription_journal).all()
         [db.session.expunge(my_meta) for my_meta in meta_list]
         return dict(list(zip([j.issn_l for j in meta_list], meta_list)))
@@ -214,62 +207,6 @@ class Package(db.Model):
         return self.filter_by_core_list(rows)
 
     @cached_property
-    def publisher_name(self):
-        if self.publisher == "Elsevier":
-            return "Elsevier"
-        elif self.publisher == "Wiley":
-            return "Wiley"
-        elif self.publisher == "SpringerNature":
-            return "Springer Nature"
-        elif self.publisher == "Sage":
-            return "SAGE"
-        elif self.publisher == "TaylorFrancis":
-            return "Taylor & Francis"
-        else:
-            return "false"
-
-    @property
-    def publisher_name_snippets(self):
-        if self.publisher == "Elsevier":
-            return ["elsevier"]
-        elif self.publisher == "Wiley":
-            return ["wiley"]
-        elif self.publisher == "SpringerNature":
-            return ["springer", "nature"]
-        elif self.publisher == "Sage":
-            return ["sage"]
-        elif self.publisher == "TaylorFrancis":
-            return ["taylor", "informa"]
-        else:
-            return []
-
-    @cached_property
-    def get_published_toll_access_in_2019_with_publisher(self):
-        rows = self.get_base(and_where=""" and rj.issn_l in
-	            (select distinct rj.issn_l 
-	            from unpaywall u 
-	            join openalex_computed_flat rj on u.journal_issn_l=rj.issn
-	            where year=2019 and journal_is_oa='false'
-	            and rj.publisher = %(publisher)s
-	            ) """, extrakv={'publisher': self.publisher_name})
-        return self.filter_by_core_list(rows)
-
-    @cached_property
-    def get_published_toll_access_in_2019_with_publisher_have_price(self):
-        rows = self.get_base(and_where=""" and rj.issn_l in
-	            (select distinct rj.issn_l 
-	            from unpaywall u 
-	            join openalex_computed_flat rj on u.journal_issn_l=rj.issn
-	            where year=2019 and journal_is_oa='false'
-	            and rj.publisher = %(publisher)s
-	            )
-	            and rj.issn_l in 
-                (select distinct issn_l from jump_journal_prices 
-                    where price > 0 and package_id in('658349d9', %(package_id)s) 
-                ) """, extrakv={'package_id': self.package_id, 'publisher': self.publisher_name})
-        return self.filter_by_core_list(rows)
-
-    @cached_property
     def get_in_scenario(self):
         my_saved_scenario = None
         if self.unique_saved_scenarios:
@@ -328,47 +265,6 @@ class Package(db.Model):
             if row["issn_l"] not in remove:
                 response_dict[row["issn_l"]] = row
         response = sorted(list(response_dict.values()), key=lambda x: x["num_2018_downloads"], reverse=True)
-        return response
-
-    @cached_property
-    def get_diff_changed_publisher(self):
-        response_dict = {}
-        remove = [row["issn_l"] for row in self.get_published_toll_access_in_2019_with_publisher]
-        for row in self.get_published_toll_access_in_2019:
-            if row["issn_l"] not in remove:
-                response_dict[row["issn_l"]] = row
-        response = sorted(list(response_dict.values()), key=lambda x: x["num_2018_downloads"], reverse=True)
-        return response
-
-    @cached_property
-    def get_diff_no_price(self):
-        response_dict = {}
-        remove = [row["issn_l"] for row in self.get_published_toll_access_in_2019_with_publisher_have_price]
-        for row in self.get_published_toll_access_in_2019_with_publisher:
-            if row["issn_l"] not in remove:
-                response_dict[row["issn_l"]] = row
-        response = sorted(list(response_dict.values()), key=lambda x: x["num_2018_downloads"], reverse=True)
-        return response
-
-    @cached_property
-    def get_diff_missing_from_scenario(self):
-        response_dict = {}
-        remove = [row["issn_l"] for row in self.get_in_scenario]
-        for row in self.get_published_toll_access_in_2019_with_publisher_have_price:
-            if row["issn_l"] not in remove:
-                response_dict[row["issn_l"]] = row
-        response = sorted(list(response_dict.values()), key=lambda x: x["num_2018_downloads"], reverse=True)
-        return response
-
-    @cached_property
-    def get_diff_extra_in_scenario(self):
-        response_dict = {}
-        remove = [row["issn_l"] for row in self.get_published_toll_access_in_2019_with_publisher_have_price]
-        for row in self.get_in_scenario:
-            if row["issn_l"] not in remove:
-                response_dict[row["issn_l"]] = row
-        response = list(response_dict.values())
-        # response = sorted(response_dict.values(), key=lambda x: x["num_2018_downloads"], reverse=True)
         return response
 
     @cached_property
@@ -450,27 +346,26 @@ class Package(db.Model):
         journals_missing_prices = []
 
         for my_journal_metadata in list(self.journal_metadata.values()):
-            if my_journal_metadata.publisher_code == self.publisher:
-                if my_journal_metadata.is_current_subscription_journal:
-                    issn_l = my_journal_metadata.issn_l
-                    if not issn_l in counter_rows:
-                        pass
-                    elif counter_rows[issn_l] == 0:
-                        pass
-                    elif prices_uploaded_raw.get(issn_l, None) != None:
-                        pass
-                    elif my_journal_metadata.get_subscription_price(self.currency, use_high_price_if_unknown=False) != None:
-                        pass
-                    else:
-                        my_dict = OrderedDict([
-                            ("issn_l_prefixed", my_journal_metadata.display_issn_l),
-                            ("issn_l", my_journal_metadata.issn_l),
-                            ("name", my_journal_metadata.title),
-                            ("issns", my_journal_metadata.display_issns),
-                            ("currency", self.currency),
-                            ("counter_total", counter_rows[issn_l]),
-                        ])
-                        journals_missing_prices.append(my_dict)
+            if my_journal_metadata.is_current_subscription_journal:
+                issn_l = my_journal_metadata.issn_l
+                if not issn_l in counter_rows:
+                    pass
+                elif counter_rows[issn_l] == 0:
+                    pass
+                elif prices_uploaded_raw.get(issn_l, None) != None:
+                    pass
+                elif my_journal_metadata.get_subscription_price(self.currency, use_high_price_if_unknown=False) != None:
+                    pass
+                else:
+                    my_dict = OrderedDict([
+                        ("issn_l_prefixed", my_journal_metadata.display_issn_l),
+                        ("issn_l", my_journal_metadata.issn_l),
+                        ("name", my_journal_metadata.title),
+                        ("issns", my_journal_metadata.display_issns),
+                        ("currency", self.currency),
+                        ("counter_total", counter_rows[issn_l]),
+                    ])
+                    journals_missing_prices.append(my_dict)
 
         journals_missing_prices = sorted(journals_missing_prices, key=lambda x: 0 if x["counter_total"]==None else x["counter_total"], reverse=True)
 
@@ -521,19 +416,18 @@ class Package(db.Model):
     def public_price_rows(self):
         prices_rows = []
         for my_journal_metadata in list(self.journal_metadata.values()):
-            if my_journal_metadata.publisher_code == self.publisher:
-                if my_journal_metadata.is_current_subscription_journal:
-                    my_price = my_journal_metadata.get_subscription_price(self.currency, use_high_price_if_unknown=False)
-                    if my_price != None:
-                        my_dict = OrderedDict()
-                        my_dict["issn_l_prefixed"] = my_journal_metadata.display_issn_l
-                        my_dict["issn_l"] = my_journal_metadata.issn_l
-                        my_dict["issns"] = my_journal_metadata.display_issns
-                        my_dict["title"] = my_journal_metadata.title
-                        my_dict["publisher"] = my_journal_metadata.publisher
-                        my_dict["currency"] = self.currency
-                        my_dict["price"] = my_price
-                        prices_rows += [my_dict]
+            if my_journal_metadata.is_current_subscription_journal:
+                my_price = my_journal_metadata.get_subscription_price(self.currency, use_high_price_if_unknown=False)
+                if my_price != None:
+                    my_dict = OrderedDict()
+                    my_dict["issn_l_prefixed"] = my_journal_metadata.display_issn_l
+                    my_dict["issn_l"] = my_journal_metadata.issn_l
+                    my_dict["issns"] = my_journal_metadata.display_issns
+                    my_dict["title"] = my_journal_metadata.title
+                    my_dict["publisher"] = my_journal_metadata.publisher
+                    my_dict["currency"] = self.currency
+                    my_dict["price"] = my_price
+                    prices_rows += [my_dict]
 
         prices_rows = sorted(prices_rows, key=lambda x: 0 if x["price"]==None else x["price"], reverse=True)
         return prices_rows
@@ -629,11 +523,11 @@ class Package(db.Model):
                 insert into jump_apc_authorships (
                     select * from jump_apc_authorships_view
                     where package_id = %s and issn_l in 
-                    (select issn_l from openalex_computed rj where rj.publisher = %s))
+                    (select issn_l from openalex_computed))
             """
         with get_db_cursor() as cursor:
             cursor.execute(delete_q, (self.package_id,))
-            cursor.execute(insert_q, (self.package_id, self.publisher_name,))
+            cursor.execute(insert_q, (self.package_id,))
 
     def to_dict_apc(self):
         response = {
