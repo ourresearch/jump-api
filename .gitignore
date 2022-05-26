@@ -123,3 +123,6 @@ sqlite_cache.db
 sqlitecache.db
 sqlite_cache.zip
 sqlitecache.zip
+
+# old versions to reference locally 
+date_last_doi_old_version.py
