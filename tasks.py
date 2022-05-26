@@ -9,8 +9,8 @@ def make_celery(app):
         app.import_name,
         backend=app.config['CELERY_RESULT_BACKEND'],
         broker=app.config['CELERY_BROKER_URL'],
-        broker_use_ssl={"ssl_cert_reqs": ssl.CERT_REQUIRED},
-        redis_backend_use_ssl={"ssl_cert_reqs": ssl.CERT_REQUIRED}
+        broker_use_ssl={"ssl_cert_reqs": ssl.CERT_NONE},
+        redis_backend_use_ssl={"ssl_cert_reqs": ssl.CERT_NONE}
     )
     celery.conf.update(app.config)
 
