@@ -154,9 +154,10 @@ class JournalMetadata(db.Model):
 		self.is_currently_publishing = False
 		match = last_dois_dict.get(self.issn_l)
 		if match:
-			date_last_doi_as_date = datetime.datetime.strptime(match.date_last_doi, "%Y-%m-%d")
-			if (self.now - date_last_doi_as_date).days < 365:
-				self.is_currently_publishing = True
+			if match.date_last_doi:
+				date_last_doi_as_date = datetime.datetime.strptime(match.date_last_doi, "%Y-%m-%d")
+				if (self.now - date_last_doi_as_date).days < 365:
+					self.is_currently_publishing = True
 		else:
 			if journal_raw.counts_by_year:
 				dois = json.loads(journal_raw.counts_by_year)
