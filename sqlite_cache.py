@@ -37,10 +37,13 @@ class SqLite():
 		return con
 
 	def exists(self):
-		qry = "SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'"
-		rows = self.select(qry)
-		rows = [w[0] for w in rows]
-		return os.path.isfile(self.file) and len(rows) == 13
+		try:
+			qry = "SELECT name FROM sqlite_schema WHERE type ='table' AND name NOT LIKE 'sqlite_%'"
+			rows = self.select(qry)
+			rows = [w[0] for w in rows]
+			return os.path.isfile(self.file) and len(rows) == 13
+		except:
+			return False
 
 	def zip_compress(self):
 		with zipfile.ZipFile(self.zip_file, "w", zipfile.ZIP_LZMA) as archive:
