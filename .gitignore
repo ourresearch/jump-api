@@ -109,6 +109,9 @@ export.csv
 data/n8data/*
 data/jiscdata/*
 
+# ignore preload data files
+data/common_package*
+
 # testing stuff locally
 new_publisher/*
 pro_file.py
