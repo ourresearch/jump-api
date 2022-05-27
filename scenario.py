@@ -727,7 +727,6 @@ def get_core_list_from_db(input_package_id):
 
 @cache
 def load_openalex_best_concepts_from_db(issns):
-    start_time = time()
     concepts = {}
 
     with get_db_cursor() as cursor:
@@ -736,8 +735,6 @@ def load_openalex_best_concepts_from_db(issns):
 
     for row in rows:
         concepts[row['issn_l']] = {'best': row['best']}
-
-    # print(f"loaded openalex best concepts in {elapsed(start_time)} seconds")
 
     return concepts
 

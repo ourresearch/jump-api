@@ -1367,9 +1367,12 @@ class Journal(object):
         table_row["issn_l"] = self.issn_l
         table_row["title"] = self.title
         table_row["issns"] = self.issns
-        table_row["subject"] = self.subject
-        table_row["subject_top_three"] = self.subject_top_three
-        table_row["subjects_all"] = self.subjects_all
+        
+        if not self.__class__.__name__ == 'ConsortiumJournal':
+            table_row["subject"] = self.subject
+            table_row["subject_top_three"] = self.subject_top_three
+            table_row["subjects_all"] = self.subjects_all
+
         table_row["subscribed"] = self.subscribed
 
         table_row["is_society_journal"] = self.is_society_journal

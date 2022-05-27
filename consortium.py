@@ -17,6 +17,7 @@ from app import app
 from app import get_db_cursor
 from app import reset_cache
 from consortium_journal import ConsortiumJournal
+from package import Package
 from util import elapsed
 from util import chunks
 from util import uniquify_list
@@ -137,6 +138,7 @@ class Consortium(object):
         self.consortium_name = my_row["consortium_name"]
         self.consortium_short_name = my_row["consortium_short_name"]
         self.package_id = my_row["package_id"]
+        self.my_package = Package.query.get(self.package_id)
         self.publisher = my_row["publisher"]
         self.institution_id = my_row["institution_id"]
 
@@ -445,7 +447,7 @@ class Consortium(object):
         journal_list = []
         for issn_l in issn_ls:
             if len(journals_dicts_by_issn_l[issn_l]) > 0:
-                journal_list.append(ConsortiumJournal(issn_l, self.member_institution_included_list, journals_dicts_by_issn_l[issn_l], self.is_jisc))
+                journal_list.append(ConsortiumJournal(issn_l, self.member_institution_included_list, journals_dicts_by_issn_l[issn_l], self.is_jisc, self.my_package))
 
         for my_journal in journal_list:
             if my_journal.issn_l in self.scenario_saved_dict.get("subrs", []):
