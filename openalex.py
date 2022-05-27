@@ -335,7 +335,7 @@ def recompute_journal_metadata():
 class MissingJournalMetadata(object):
 	def __init__(self, issn_l):
 		self.issn_l = issn_l
-		print("in MissingJournalMetadata missing journal {} from openalex: https://api.openalex.org/venues/issn:{}".format(issn_l, issn_l))
+		# print("in MissingJournalMetadata missing journal {} from openalex: https://api.openalex.org/venues/issn:{}".format(issn_l, issn_l))
 		super(MissingJournalMetadata, self).__init__()
 
 	@cached_property
