@@ -6,6 +6,7 @@ from collections import OrderedDict
 
 from app import db
 from package_input import PackageInput
+from openalex import MissingJournalMetadata, all_journal_metadata
 
 
 class PerpetualAccess(db.Model):
@@ -18,9 +19,10 @@ class PerpetualAccess(db.Model):
 
     @cached_property
     def journal_metadata(self):
-        return self.package.get_journal_metadata_for_export(self.issn_l)
-        # from package import Package
-        # return Package(package_id = self.package_id).get_journal_metadata(self.issn_l)
+        meta = all_journal_metadata.get(self.issn_l)
+        if not meta:
+            meta = MissingJournalMetadata(issn_l=self.issn_l)
+        return meta
 
     @cached_property
     def issns(self):
@@ -54,10 +56,7 @@ class PerpetualAccess(db.Model):
             return None
         return self.end_date.isoformat()[0:10]
 
-    def to_dict(self, package):
-        if package.__class__.__name__ != 'Package':
-            raise TypeError("'package' passed to PerpetualAccess.to_dict must be of class Package")
-        self.package = package
+    def to_dict(self):
         return OrderedDict([
             ("issn_l_prefixed", self.display_issn_l),
             ("issn_l", self.issn_l),

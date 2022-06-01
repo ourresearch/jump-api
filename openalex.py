@@ -332,12 +332,23 @@ def recompute_journal_metadata():
 
 	print("done writing to db, took {} seconds total".format(elapsed(start_time)))
 
+
+
+print("loading all journal metadata...", end=' ')
+start_time = time()
+all_journal_metadata_list = JournalMetadata.query.all()
+[db.session.expunge(my_journal_metadata) for my_journal_metadata in all_journal_metadata_list]
+all_journal_metadata = dict(list(zip([journal_object.issn_l for journal_object in all_journal_metadata_list], all_journal_metadata_list)))
+
 # load issns from openalex_computed_flat
 with get_db_cursor() as cursor:
 	cursor.execute("select issn from openalex_computed_flat")
 	rows = cursor.fetchall()
 
 oa_issns = [w[0] for w in rows]
+
+print("loaded all journal metadata in {} seconds.".format(elapsed(start_time)))
+
 
 class MissingJournalMetadata(object):
 	def __init__(self, issn_l):
