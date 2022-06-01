@@ -1065,7 +1065,7 @@ def jump_journal_prices(package_id):
     if request.method == "GET":
         rows = JournalPrice.query.filter(JournalPrice.package_id == package_id, JournalPrice.issn_l != None).all()
         if rows:
-            return jsonify_fast_no_sort({"rows": [row.to_dict() for row in rows]})
+            return jsonify_fast_no_sort({"rows": [row.to_dict(package) for row in rows]})
         else:
             return abort_json(404, "no journal price file for package {}".format(package_id))
     elif request.method == "DELETE":

@@ -15,11 +15,11 @@ class JournalPrice(db.Model):
     subject = db.Column(db.Text)
     price = db.Column(db.Numeric(asdecimal=False))
     year = db.Column(db.Numeric(asdecimal=False))
+    package = None
 
     @cached_property
     def journal_metadata(self):
-        from package import Package
-        return Package(package_id = self.package_id).get_journal_metadata(self.issn_l)
+        return self.package.get_journal_metadata(self.issn_l)
 
     @cached_property
     def issns(self):
@@ -41,7 +41,10 @@ class JournalPrice(db.Model):
     def publisher(self):
         return self.journal_metadata.publisher
 
-    def to_dict(self):
+    def to_dict(self, package):
+        if package.__class__.__name__ != 'Package':
+            raise TypeError("'package' passed to JournalPrice.to_dict must be of class Package")
+        self.package = package
         return OrderedDict([
             ("issn_l_prefixed", self.display_issn_l),
             ("issn_l", self.issn_l),
