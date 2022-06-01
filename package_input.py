@@ -84,14 +84,14 @@ class PackageInput:
 
     @staticmethod
     def normalize_issn(issn, warn_if_blank=False):
-        from openalex import all_journal_metadata_flat
+        from openalex import oa_issns
         if issn:
             issn = issn.replace("issn:", "")
             issn = sub(r"\s", "", issn).upper()
             if re.match(r"^\d{4}-?\d{3}(?:X|\d)$", issn):
                 issn = issn.replace("-", "")
                 issn = issn[0:4] + "-" + issn[4:8]
-                if all_journal_metadata_flat.get(issn, None) == None:
+                if issn not in oa_issns:
                     print(f"Missing journal in normalize_issn {issn} from OpenAlex: https://api.openalex.org/venues/issn:{issn}")
                     # journalsdb is no longer
                     # r = requests.post("https://api.journalsdb.org/missing_journal", json={"issn": issn})
