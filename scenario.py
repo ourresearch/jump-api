@@ -28,9 +28,6 @@ from util import get_sql_answer
 
 from journal import Journal
 from assumptions import Assumptions
-# from sqlite_cache import SqLite
-
-# sqlite_conn = SqLite(os.getenv("SQLITE_PATH", "sqlite_cache.db"), "sqlitecache.zip")
 
 def get_clean_package_id(http_request_args):
     if not http_request_args:
