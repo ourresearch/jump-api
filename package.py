@@ -96,7 +96,7 @@ class Package(db.Model):
 
     @cached_property
     def journal_metadata(self):
-        my_dict = self.journal_metadata_including_excluded
+        my_dict = self.journal_metadata_including_excluded.copy()
         new_dict = {}
         for x in my_dict:
             if my_dict[x].is_current_subscription_journal:
