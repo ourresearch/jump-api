@@ -6,7 +6,6 @@ from collections import OrderedDict
 
 from app import db
 from package_input import PackageInput
-from openalex import MissingJournalMetadata, all_journal_metadata
 
 
 class PerpetualAccess(db.Model):
@@ -19,6 +18,7 @@ class PerpetualAccess(db.Model):
 
     @cached_property
     def journal_metadata(self):
+        from openalex import MissingJournalMetadata, all_journal_metadata
         meta = all_journal_metadata.get(self.issn_l)
         if not meta:
             meta = MissingJournalMetadata(issn_l=self.issn_l)

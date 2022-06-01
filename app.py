@@ -329,15 +329,16 @@ def warm_common_data(lst):
 # NOTE: we have to do this when app loads for now - return to this later 
 ## if there's a different take on dealing with common data
 # if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
-import threading
-import time
-an_lst = []
-t = threading.Thread(target=warm_common_data, args=[an_lst])
-t.daemon = True
-t.start()
-while t.is_alive():
-    time.sleep(0.1)
-common_data_dict = an_lst[0]
-print("warm_common_data done!")
-# else:
-#     print("not warming common data cache")
+if not common_data_dict:
+    import threading
+    import time
+    an_lst = []
+    t = threading.Thread(target=warm_common_data, args=[an_lst])
+    t.daemon = True
+    t.start()
+    while t.is_alive():
+        time.sleep(0.1)
+    common_data_dict = an_lst[0]
+    print("warm_common_data done!")
+else:
+    print("not warming common data cache")
