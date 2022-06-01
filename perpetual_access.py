@@ -14,11 +14,13 @@ class PerpetualAccess(db.Model):
     start_date = db.Column(db.DateTime)
     end_date = db.Column(db.DateTime)
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
+    package = None
 
     @cached_property
     def journal_metadata(self):
-        from package import Package
-        return Package(package_id = self.package_id).get_journal_metadata(self.issn_l)
+        return self.package.get_journal_metadata(self.issn_l)
+        # from package import Package
+        # return Package(package_id = self.package_id).get_journal_metadata(self.issn_l)
 
     @cached_property
     def issns(self):
@@ -52,7 +54,10 @@ class PerpetualAccess(db.Model):
             return None
         return self.end_date.isoformat()[0:10]
 
-    def to_dict(self):
+    def to_dict(self, package):
+        if package.__class__.__name__ != 'Package':
+            raise TypeError("'package' passed to PerpetualAccess.to_dict must be of class Package")
+        self.package = package
         return OrderedDict([
             ("issn_l_prefixed", self.display_issn_l),
             ("issn_l", self.issn_l),
