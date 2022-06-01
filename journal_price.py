@@ -19,7 +19,7 @@ class JournalPrice(db.Model):
 
     @cached_property
     def journal_metadata(self):
-        return self.package.get_journal_metadata(self.issn_l)
+        return self.package.get_journal_metadata_for_export(self.issn_l)
 
     @cached_property
     def issns(self):

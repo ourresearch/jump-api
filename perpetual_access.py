@@ -18,7 +18,7 @@ class PerpetualAccess(db.Model):
 
     @cached_property
     def journal_metadata(self):
-        return self.package.get_journal_metadata(self.issn_l)
+        return self.package.get_journal_metadata_for_export(self.issn_l)
         # from package import Package
         # return Package(package_id = self.package_id).get_journal_metadata(self.issn_l)
 

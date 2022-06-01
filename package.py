@@ -81,7 +81,7 @@ class Package(db.Model):
         return [w[0] for w in rows]
 
     @cached_property
-    def journal_metadata(self):
+    def journal_metadata_including_excluded(self):
         pub_lookup = {
             "SpringerNature": "Springer Nature",
             "Sage": "SAGE",
@@ -90,10 +90,26 @@ class Package(db.Model):
         publisher_normalized = pub_lookup.get(self.publisher, self.publisher)
         meta_list = JournalMetadata.query.filter(
             JournalMetadata.issn_l.in_(self.unique_issns),
-            JournalMetadata.publisher == publisher_normalized,
-            JournalMetadata.is_current_subscription_journal).all()
+            JournalMetadata.publisher == publisher_normalized).all()
         [db.session.expunge(my_meta) for my_meta in meta_list]
         return dict(list(zip([j.issn_l for j in meta_list], meta_list)))
+
+    @cached_property
+    def journal_metadata(self):
+        my_dict = self.journal_metadata_including_excluded()
+        new_dict = {}
+        for x in my_dict:
+            if my_dict[x].is_current_subscription_journal:
+                new_dict[x] = my_dict[x]
+        return new_dict
+
+    @cached_property
+    def journal_metadata_flat_including_excluded(self):
+        jmf = {}
+        for issn_l, x in self.journal_metadata_including_excluded.items():
+            for issn in x.issns:
+                jmf[issn] = x
+        return jmf
 
     @cached_property
     def journal_metadata_flat(self):
@@ -102,6 +118,12 @@ class Package(db.Model):
             for issn in x.issns:
                 jmf[issn] = x
         return jmf
+
+    def get_journal_metadata_for_export(self, issn):
+        journal_meta = self.journal_metadata_flat_including_excluded.get(issn, None)
+        if not journal_meta:
+            journal_meta = MissingJournalMetadata(issn_l=issn)
+        return journal_meta
 
     def get_journal_metadata(self, issn):
         journal_meta = self.journal_metadata_flat.get(issn, None)
