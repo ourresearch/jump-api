@@ -363,11 +363,11 @@ class MissingJournalMetadata(object):
 
 	@cached_property
 	def title(self):
-		return "Unrecognized Journal"
+		return "Unrecognized Title"
 
 	@cached_property
 	def publisher(self):
-		return "Unrecognized Journal"
+		return "Unrecognized Publisher"
 
 	def get_apc_price(self, currency):
 		return None
