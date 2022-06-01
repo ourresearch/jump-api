@@ -323,20 +323,19 @@ def fetch_common_package_data():
 
 common_data_dict = None
 
-def warm_common_data():
-    start_time = time()
-    # global common_data
-    return fetch_common_package_data()
-    # q.put(out)
-    print("done warming common data cache in {}s".format(elapsed(start_time)))
+def warm_common_data(lst):
+    lst.append(fetch_common_package_data())
 
 if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
-    common_data_dict = warm_common_data()
-    # import threading, queue
-    # q = queue.Queue()
-    # t = threading.Thread(target=warm_common_data, args=(q))
-    # t.daemon = True  # so it doesn't block
-    # t.start()
-    # common_data_dict = q.get()
+    import threading
+    import time
+    an_lst = []
+    t = threading.Thread(target=warm_common_data, args=[an_lst])
+    t.daemon = True
+    t.start()
+    while t.is_alive():
+        time.sleep(0.1)
+    common_data_dict = an_lst[0]
+    print("warm_common_data done!")
 else:
     print("not warming common data cache")
