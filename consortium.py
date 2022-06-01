@@ -228,8 +228,6 @@ class Consortium(object):
     #     return self.apc_journals
 
     def to_dict_journals_list_by_institution(self, member_ids=None):
-        from openalex import all_journal_metadata_flat
-
         rows = self.journal_member_data
 
         response = []
@@ -240,7 +238,7 @@ class Consortium(object):
 
         for row in rows:
             issn_l = row["issn_l"]
-            journal_metadata = all_journal_metadata_flat[issn_l]
+            journal_metadata = self.my_package.get_journal_metadata(issn_l)
             if row["member_package_id"] in members_to_export:
                 row["title"] = journal_metadata.title
                 row["issns"] = journal_metadata.display_issns
