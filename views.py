@@ -993,7 +993,7 @@ def jump_counter(package_id):
 @app.route("/publisher/<package_id>/perpetual-access", methods=["GET", "POST", "DELETE"])
 @jwt_required()
 def jump_perpetual_access(package_id):
-    authenticate_for_package(package_id, Permission.view() if request.method == "GET" else Permission.modify())
+    package = authenticate_for_package(package_id, Permission.view() if request.method == "GET" else Permission.modify())
 
     if request.method == "GET":
         rows = PerpetualAccess.query.filter(PerpetualAccess.package_id == package_id, PerpetualAccess.issn_l != None).all()
@@ -1352,7 +1352,7 @@ def scenario_id_export_subscriptions_txt_get(scenario_id):
 
 
 
-
+# push-pull functionality only
 @app.route("/scenario/<scenario_id>/member-institutions/consortial-scenarios.csv", methods=["GET"])
 @jwt_required()
 def scenario_id_member_institutions_export_csv_get(scenario_id):
@@ -1362,6 +1362,7 @@ def scenario_id_member_institutions_export_csv_get(scenario_id):
     contents = export_get(table_dicts, is_main_export=False)
     return Response(contents, mimetype="text/csv")
 
+# push-pull functionality only
 @app.route("/scenario/<scenario_id>/member-institutions/consortial-scenarios", methods=["GET"])
 @jwt_required()
 def scenario_id_member_institutions_export_text_get(scenario_id):

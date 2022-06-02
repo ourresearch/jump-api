@@ -3,6 +3,7 @@
 import logging
 import sys
 import os
+import gzip
 import requests
 import simplejson as json
 import functools
@@ -268,9 +269,11 @@ def memorycache(func):
         result = app.my_memorycache_dict.get(cache_key, None)
         if result is not None:
             # print "cache hit on", cache_key
+            # print("cache hit")
             return result
 
         # print("cache miss on", cache_key)
+        # print("cache miss")
 
         # Generate output
         # print("> calling {}.{} with {}".format(func.__module__, func.__name__, args))
@@ -303,23 +306,39 @@ def reset_cache(module_name, function_name, *args):
 
 cached_consortium_scenario_ids = ["tGUVWRiN", "scenario-QC2kbHfUhj9W", "EcUvEELe", "CBy9gUC3", "6it6ajJd", "GcAsm5CX", "aAFAuovt"]
 
-
-def warm_sqlite_cache():
-    start_time = time()
-    from sqlite_cache import SqLite
-    sqlite_conn = SqLite(os.getenv("SQLITE_PATH", "sqlite_cache.db"), "sqlitecache.zip")
+@memorycache
+def fetch_common_package_data():
     try:
-        sqlite_conn.s3_fetch()
-        sqlite_conn.zip_extract()
-    except:
-        sqlite_conn.create()
-    print("done warming sqlite cache in {}s".format(elapsed(start_time)))
+        print("downloading common_package_data_for_all.json.gz")
+        s3_clientobj = s3_client.get_object(Bucket="unsub-cache", Key="common_package_data_for_all.json.gz")
+        with gzip.open(s3_clientobj["Body"], 'r') as f:
+            data_from_s3 = json.loads(f.read().decode('utf-8'))
+        return data_from_s3
+    except Exception as e:
+        print("no S3 data, so computing.  Error message: ", e)
+        pass
 
-if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
+    from common_data import gather_common_data
+    return gather_common_data()
+
+common_data_dict = None
+
+def warm_common_data(lst):
+    lst.append(fetch_common_package_data())
+
+# NOTE: we have to do this when app loads for now - return to this later 
+## if there's a different take on dealing with common data
+# if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
+if not common_data_dict:
     import threading
-    data = None
-    t = threading.Thread(target=warm_sqlite_cache)
-    t.daemon = True  # so it doesn't block
+    import time
+    an_lst = []
+    t = threading.Thread(target=warm_common_data, args=[an_lst])
+    t.daemon = True
     t.start()
+    while t.is_alive():
+        time.sleep(0.1)
+    common_data_dict = an_lst[0]
+    print("warm_common_data done!")
 else:
-    print("not warming sqlite cache")
+    print("not warming common data cache")

@@ -51,11 +51,33 @@ class Package(db.Model):
         super(Package, self).__init__(**kwargs)
 
     @cached_property
-    def unique_issns(self):
+    def is_consortial_package(self):
+        is_cons_pkg = False
+        if self.consortial_package_ids:
+            is_cons_pkg = True
+        return is_cons_pkg
+
+    @cached_property
+    def consortial_package_ids(self):
         with get_db_cursor() as cursor:
-            qry = "select distinct(issn_l) from jump_counter where package_id = %s"
+            qry = "select member_package_id from jump_consortium_members where consortium_package_id = %s"
             cursor.execute(qry, (self.package_id,))
             rows = cursor.fetchall()
+        return [w[0] for w in rows]
+
+    @cached_property
+    def unique_issns(self):
+        if self.is_consortial_package:
+            package_ids = tuple(self.consortial_package_ids)
+            with get_db_cursor() as cursor:
+                qry = "select distinct(issn_l) from jump_counter where package_id in %s"
+                cursor.execute(qry, (package_ids,))
+                rows = cursor.fetchall()
+        else:
+            with get_db_cursor() as cursor:
+                qry = "select distinct(issn_l) from jump_counter where package_id = %s"
+                cursor.execute(qry, (self.package_id,))
+                rows = cursor.fetchall()
         return [w[0] for w in rows]
 
     @cached_property

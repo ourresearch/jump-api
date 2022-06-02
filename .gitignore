@@ -109,6 +109,9 @@ export.csv
 data/n8data/*
 data/jiscdata/*
 
+# ignore preload data files
+data/common_package*
+
 # testing stuff locally
 new_publisher/*
 pro_file.py
@@ -123,3 +126,7 @@ sqlite_cache.db
 sqlitecache.db
 sqlite_cache.zip
 sqlitecache.zip
+
+# old versions to reference locally 
+date_last_doi_old_version.py
+date_last_doi_from_oa_dumps.py

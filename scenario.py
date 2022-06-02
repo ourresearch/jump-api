@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import os
+import gzip
 from cached_property import cached_property
 import numpy as np
 import pandas as pd
@@ -17,6 +18,7 @@ from app import db
 from app import logger
 from app import memorycache
 from app import s3_client
+from app import common_data_dict
 
 from time import time
 from util import elapsed
@@ -26,9 +28,6 @@ from util import get_sql_answer
 
 from journal import Journal
 from assumptions import Assumptions
-from sqlite_cache import SqLite
-
-sqlite_conn = SqLite(os.getenv("SQLITE_PATH", "sqlite_cache.db"), "sqlitecache.zip")
 
 def get_clean_package_id(http_request_args):
     if not http_request_args:
@@ -725,7 +724,6 @@ def get_core_list_from_db(input_package_id):
 
 @cache
 def load_openalex_best_concepts_from_db(issns):
-    start_time = time()
     concepts = {}
 
     with get_db_cursor() as cursor:
@@ -734,8 +732,6 @@ def load_openalex_best_concepts_from_db(issns):
 
     for row in rows:
         concepts[row['issn_l']] = {'best': row['best']}
-
-    # print(f"loaded openalex best concepts in {elapsed(start_time)} seconds")
 
     return concepts
 
@@ -769,100 +765,51 @@ def load_openalex_export_concepts_from_db(concepts, issns):
 def openalex_export_concepts(concepts, issns):
     return load_openalex_export_concepts_from_db(concepts, tuple(issns))
 
+def include_keys(dictionary, keys):
+    """Filters a dict by only including certain keys."""
+    key_set = set(keys) & set(dictionary.keys())
+    return {key: dictionary[key] for key in key_set}
 
-def get_embargo_data_from_db(issns):
-    qry = "select issn_l, embargo from journal_delayed_oa_active where issn_l in (%s)"
-    query = qry % ','.join('?'*len(issns))
-    rows = sqlite_conn.select(query, issns)
-    embargo_dict = dict((a["issn_l"], round(a["embargo"])) for a in rows)
-    return embargo_dict
+def get_embargo_data_from_json(issns):
+    return include_keys(common_data_dict['embargo_dict'], issns)
 
-def get_unpaywall_downloads_from_db(issns):
-    qry = "select * from jump_unpaywall_downloads where issn_l in (%s)"
-    query = qry % ','.join('?'*len(issns))
-    rows = sqlite_conn.select(query, issns)
-    unpaywall_downloads_dict = dict((row["issn_l"], dict(row)) for row in rows)
-    return unpaywall_downloads_dict
+def get_unpaywall_downloads_from_json(issns):
+    return include_keys(common_data_dict['unpaywall_downloads_dict_raw'], issns)
 
-def get_num_papers_from_db(issns):
-    qry = "select issn_l, year, num_papers from jump_num_papers where issn_l in (%s)"
-    query = qry % ','.join('?'*len(issns))
-    rows = sqlite_conn.select(query, issns)
-    lookup_dict = defaultdict(dict)
-    for row in rows:
-        lookup_dict[row["issn_l"]][row["year"]] = row["num_papers"]
-    return lookup_dict
+def get_num_papers_from_json(issns):
+    return include_keys(common_data_dict['num_papers'], issns)
 
-def get_oa_recent_data_from_db(issns):
+def get_oa_recent_data_from_json(issns):
     oa_dict = {}
     for submitted in ["with_submitted", "no_submitted"]:
         for bronze in ["with_bronze", "no_bronze"]:
             key = "{}_{}".format(submitted, bronze)
-            qry = f"select * from jump_oa_recent_{key}_precovid where issn_l in (%s)"
-            query = qry % ','.join('?'*len(issns))
-            rows = sqlite_conn.select(query, issns)
-            lookup_dict = defaultdict(list)
-            for row in rows:
-                lookup_dict[row["issn_l"]] += [dict(row)]
-            oa_dict[key] = lookup_dict
+            oa_dict[key] = include_keys(common_data_dict['oa_recent'][key], issns)
     return oa_dict
 
-def get_oa_data_from_db(issns):
+def get_oa_data_from_json(issns):
     oa_dict = {}
     for submitted in ["with_submitted", "no_submitted"]:
         for bronze in ["with_bronze", "no_bronze"]:
             key = "{}_{}".format(submitted, bronze)
-
-            qry = """select * from jump_oa_{}_precovid	
-                        where year_int >= 2015	
-                        and issn_l in (%s)
-                            """.format(key)
-            query = qry % ','.join('?'*len(issns))
-            rows = sqlite_conn.select(query, issns)
-            lookup_dict = defaultdict(list)
-            for row in rows:
-                lookup_dict[row["issn_l"]] += [dict(row)]
-            oa_dict[key] = lookup_dict
+            oa_dict[key] = include_keys(common_data_dict['oa'][key], issns)
     return oa_dict
 
-def get_society_data_from_db(issns):
-    qry = """
-        select issn_l, is_society_journal from jump_society_journals_input 
-        where is_society_journal is not null
-        and issn_l in (%s)
-    """
-    query = qry % ','.join('?'*len(issns))
-    rows = sqlite_conn.select(query, issns)
-    lookup_dict = defaultdict(list)
-    for row in rows:
-        lookup_dict[row["issn_l"]] = row["is_society_journal"]
-    return lookup_dict
+def get_society_data_from_json(issns):
+    return include_keys(common_data_dict['society'], issns)
 
-def get_social_networks_data_from_db(issns):
-    qry = "select issn_l, asn_only_rate from jump_mturk_asn_rates where issn_l in (%s)"
-    query = qry % ','.join('?'*len(issns))
-    rows = sqlite_conn.select(query, issns)
-    lookup_dict = {}
-    for row in rows:
-        lookup_dict[row["issn_l"]] = row["asn_only_rate"]
-    return lookup_dict
+def get_social_networks_data_from_json(issns):
+    return include_keys(common_data_dict['social_networks'], issns)
 
 # not cached on purpose, because components are cached to save space
 def get_common_package_data(package_id, issns):
-    my_timing = TimingMessages()
     my_data = {}
 
     (my_data_specific, timing_specific) = get_common_package_data_specific(package_id)
-    my_timing.log_timing("LIVE get_common_package_data_specific")
     my_data.update(my_data_specific)
-    # my_timing.messages += timing_specific.messages
 
-    if not sqlite_conn.exists():
-        sqlite_conn.create()
-    (my_data_common, timing_common) = get_common_package_data_for(issns)
-    my_timing.log_timing("LIVE get_common_package_data_for")
+    my_data_common = get_common_package_data_for(issns)
     my_data.update(my_data_common)
-    # my_timing.messages += timing_common.messages
 
     return my_data
 
@@ -890,35 +837,13 @@ def get_common_package_data_specific(package_id):
 
 @memorycache
 def get_common_package_data_for(issns = None):
-    my_timing = TimingMessages()
-
-    start_time = time()
     my_data = {}
-
-    my_data["embargo_dict"] = get_embargo_data_from_db(issns)
-    my_timing.log_timing("get_embargo_data_from_db")
-
-    my_data["unpaywall_downloads_dict_raw"] = get_unpaywall_downloads_from_db(issns)
-    my_timing.log_timing("get_unpaywall_downloads_from_db")
-
-    my_data["social_networks"] = get_social_networks_data_from_db(issns)
-    my_timing.log_timing("get_social_networks_data_from_db")
-
-    my_data["oa_recent"] = get_oa_recent_data_from_db(issns)
-    my_timing.log_timing("get_oa_recent_data_from_db")
-
-    my_data["oa"] = get_oa_data_from_db(issns)
-    my_timing.log_timing("get_oa_data_from_db")
-
-    my_data["society"] = get_society_data_from_db(issns)
-    my_timing.log_timing("get_society_data_from_db")
-
-    my_data["num_papers"] = get_num_papers_from_db(issns)
-    my_timing.log_timing("get_num_papers_from_db")
-
-    my_data["_timing_common"] = my_timing.to_dict()
-    # print("my timing")
-    # print(my_timing.to_dict())
-    # print("get_common_package_data_for took {} seconds".format(elapsed(start_time)))
-
-    return (my_data, my_timing)
+    issns = tuple(issns)
+    my_data["embargo_dict"] = get_embargo_data_from_json(issns)
+    my_data["unpaywall_downloads_dict_raw"] = get_unpaywall_downloads_from_json(issns)
+    my_data["social_networks"] = get_social_networks_data_from_json(issns)
+    my_data["oa_recent"] = get_oa_recent_data_from_json(issns)
+    my_data["oa"] = get_oa_data_from_json(issns)
+    my_data["society"] = get_society_data_from_json(issns)
+    my_data["num_papers"] = get_num_papers_from_json(issns)
+    return my_data

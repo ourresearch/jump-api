@@ -154,9 +154,10 @@ class JournalMetadata(db.Model):
 		self.is_currently_publishing = False
 		match = last_dois_dict.get(self.issn_l)
 		if match:
-			date_last_doi_as_date = datetime.datetime.strptime(match.date_last_doi, "%Y-%m-%d")
-			if (self.now - date_last_doi_as_date).days < 365:
-				self.is_currently_publishing = True
+			if match.date_last_doi:
+				date_last_doi_as_date = datetime.datetime.strptime(match.date_last_doi, "%Y-%m-%d")
+				if (self.now - date_last_doi_as_date).days < 365:
+					self.is_currently_publishing = True
 		else:
 			if journal_raw.counts_by_year:
 				dois = json.loads(journal_raw.counts_by_year)
@@ -331,10 +332,28 @@ def recompute_journal_metadata():
 
 	print("done writing to db, took {} seconds total".format(elapsed(start_time)))
 
+
+
+print("loading all journal metadata...", end=' ')
+start_time = time()
+all_journal_metadata_list = JournalMetadata.query.all()
+[db.session.expunge(my_journal_metadata) for my_journal_metadata in all_journal_metadata_list]
+all_journal_metadata = dict(list(zip([journal_object.issn_l for journal_object in all_journal_metadata_list], all_journal_metadata_list)))
+
+# load issns from openalex_computed_flat
+with get_db_cursor() as cursor:
+	cursor.execute("select issn from openalex_computed_flat")
+	rows = cursor.fetchall()
+
+oa_issns = [w[0] for w in rows]
+
+print("loaded all journal metadata in {} seconds.".format(elapsed(start_time)))
+
+
 class MissingJournalMetadata(object):
 	def __init__(self, issn_l):
 		self.issn_l = issn_l
-		print("in MissingJournalMetadata missing journal {} from openalex: https://api.openalex.org/venues/issn:{}".format(issn_l, issn_l))
+		# print("in MissingJournalMetadata missing journal {} from openalex: https://api.openalex.org/venues/issn:{}".format(issn_l, issn_l))
 		super(MissingJournalMetadata, self).__init__()
 
 	@cached_property
@@ -355,11 +374,11 @@ class MissingJournalMetadata(object):
 
 	@cached_property
 	def title(self):
-		return "Unrecognized Journal"
+		return "Unrecognized Title"
 
 	@cached_property
 	def publisher(self):
-		return "Unrecognized Journal"
+		return "Unrecognized Publisher"
 
 	def get_apc_price(self, currency):
 		return None
