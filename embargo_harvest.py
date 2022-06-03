@@ -78,7 +78,7 @@ class Embargo:
             pass
 
 # heroku local:run python embargo_harvest.py --update
-# heroku run --size=performance-l python embargo_harvest.py --update -r heroku
+# heroku run:detached --size=performance-l python embargo_harvest.py --update -r heroku
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
