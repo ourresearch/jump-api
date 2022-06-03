@@ -74,15 +74,15 @@ class Journal(object):
 
     @cached_property
     def subject(self):
-        return self._scenario_data['concepts'][self.issn_l].get("best", "")
+        return self._scenario_data['concepts'].get(self.issn_l, {}).get("best", "")
 
     @cached_property
     def subject_top_three(self):
-        return self._scenario_data['concepts'][self.issn_l].get("top_three", "")
+        return self._scenario_data['concepts'].get(self.issn_l, {}).get("top_three", "")
 
     @cached_property
     def subjects_all(self):
-        return self._scenario_data["concepts"][self.issn_l].get("all", [])
+        return self._scenario_data["concepts"].get(self.issn_l, {}).get("all", [])
 
     @cached_property
     def journal_metadata(self):
