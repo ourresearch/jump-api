@@ -725,6 +725,8 @@ def get_core_list_from_db(input_package_id):
 @cache
 def load_openalex_best_concepts_from_db(issns):
     concepts = {}
+    if not issns:
+        return concepts
 
     with get_db_cursor() as cursor:
         cursor.execute('select * from openalex_concepts_best where issn_l in %s', (issns,))
