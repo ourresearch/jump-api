@@ -84,6 +84,7 @@ class Package(db.Model):
     def journal_metadata(self):
         pub_lookup = {
             "SpringerNature": "Springer Nature",
+            "Springer": "Springer Nature",
             "Sage": "SAGE",
             "TaylorFrancis": "Taylor & Francis"
         }
