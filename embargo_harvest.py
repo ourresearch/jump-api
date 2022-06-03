@@ -33,7 +33,7 @@ class Embargo:
             print(f"deleting all rows in {self.table}")
             cursor.execute(f"truncate table {self.table}")
         
-        for x in self.openalex_data[0:100]:
+        for x in self.openalex_data:
             self.fetch_embargo(x)
             if x.embargo_months:
                 self.write_to_db(x)
@@ -78,6 +78,7 @@ class Embargo:
             pass
 
 # heroku local:run python embargo_harvest.py --update
+# heroku run --size=performance-l python embargo_harvest.py --update -r heroku
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
