@@ -85,11 +85,6 @@ def test_consortia_scenario_ids_who_own_this_package():
     assert len(consrtium_ids_feedback) > 0
     assert isinstance(consrtium_ids_feedback[0], str)
 
-def test_update_apc_authorships():
-    # returns nothing
-    z = package_small.update_apc_authorships()
-    assert z is None
-
 def test_data_files_dict():
     out = package_small.data_files_dict
     assert isinstance(out, dict)

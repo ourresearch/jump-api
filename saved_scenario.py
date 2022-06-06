@@ -373,8 +373,8 @@ class SavedScenario(db.Model):
 
         if gather_export_concepts:
             self.live_scenario.data['concepts'] = openalex_export_concepts(self.live_scenario.data['concepts'], self.live_scenario.my_package.unique_issns)
-            [setattr(j, 'subject_top_three', self.live_scenario.data['concepts'][j.issn_l]['top_three']) for j in self.live_scenario.journals]
-            [setattr(j, 'subjects_all', self.live_scenario.data['concepts'][j.issn_l]['all']) for j in self.live_scenario.journals]
+            [setattr(j, 'subject_top_three', self.live_scenario.data['concepts'].get(j.issn_l, {}).get("top_three", "")) for j in self.live_scenario.journals]
+            [setattr(j, 'subjects_all', self.live_scenario.data['concepts'].get(j.issn_l, {}).get("all", "")) for j in self.live_scenario.journals]
 
         response = OrderedDict()
         response["meta"] = self.to_dict_meta()
