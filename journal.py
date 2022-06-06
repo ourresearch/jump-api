@@ -71,6 +71,9 @@ class Journal(object):
     def title(self):
         return self.journal_metadata.title
 
+    @cached_property
+    def publisher(self):
+        return self.journal_metadata.publisher
 
     @cached_property
     def subject(self):
@@ -1367,6 +1370,7 @@ class Journal(object):
         table_row["issn_l"] = self.issn_l
         table_row["title"] = self.title
         table_row["issns"] = self.issns
+        table_row["publisher_journal"] = self.publisher
         
         if not self.__class__.__name__ == 'ConsortiumJournal':
             table_row["subject"] = self.subject
