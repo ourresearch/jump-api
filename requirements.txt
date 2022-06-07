@@ -39,3 +39,4 @@ gspread==5.2.0
 hubspot3==3.2.51
 celery==5.2.6
 redis==4.2.2
+httpx==0.23.0
