@@ -1,6 +1,5 @@
-import time
-import argparse
-import re
+import os
+import click
 from datetime import datetime
 from dateutil.parser import parse
 import requests
@@ -15,11 +14,12 @@ from openalex import OpenalexDBRaw
 # self.__class__ = Embargo
 
 class Embargo:
-    def __init__(self):
+    def __init__(self, use_cache = True, truncate = False, since_update_date = None):
+        self.record_file = "oa_works_cache.csv"
         self.api_url = "https://api.openaccessbutton.org/permissions/{}"
         self.table = "jump_embargo"
         self.load_openalex()
-        self.harvest_embargos()
+        self.harvest_embargos(use_cache, truncate, since_update_date)
 
     def load_openalex(self):
         self.openalex_data = OpenalexDBRaw.query.all()
@@ -27,11 +27,31 @@ class Embargo:
             x.embargo_months = None
         print(f"{len(self.openalex_data)} openalex_journals records found")
 
-    def harvest_embargos(self):
-        from app import get_db_cursor
-        with get_db_cursor() as cursor:
-            print(f"deleting all rows in {self.table}")
-            cursor.execute(f"truncate table {self.table}")
+    def harvest_embargos(self, use_cache, truncate, since_update_date):
+        if use_cache:
+            with open(self.record_file, 'r') as f:
+                cached_issns = f.read().splitlines()
+
+            len_original = len(self.openalex_data)
+            self.openalex_data = list(filter(lambda x: x.issn_l not in cached_issns, self.openalex_data))
+            print(f"Found {len(cached_issns)} in {self.record_file} cache file - limiting to {len(self.openalex_data)} ISSNs (of {len_original})")
+
+        if since_update_date:
+            from app import get_db_cursor
+            with get_db_cursor() as cursor:
+                cursor.execute(f"select distinct(issn_l) from {self.table} where updated <= '{since_update_date}'")
+                rows = cursor.fetchall()
+
+            len_original = len(self.openalex_data)
+            not_update_issns = [w[0] for w in rows]
+            self.openalex_data = list(filter(lambda x: x.issn_l not in not_update_issns, self.openalex_data))
+            print(f"Since update date: {since_update_date} - limiting to {len(self.openalex_data)} ISSNs (of {len_original})")
+        
+        if truncate:
+            from app import get_db_cursor
+            with get_db_cursor() as cursor:
+                print(f"deleting all rows in {self.table}")
+                cursor.execute(f"truncate table {self.table}")
         
         for x in self.openalex_data:
             self.fetch_embargo(x)
@@ -50,13 +70,20 @@ class Embargo:
                 sql.SQL(', ').join(sql.Placeholder() * len(cols)))
             cursor.execute(qry, input_values)
 
+    def record(self, issn_l):
+        with open(self.record_file, 'a') as f:
+            f.write("\n" + issn_l)
+
     def fetch_embargo(self, journal):
         try:
-            r = requests.get(self.api_url.format(journal.issn_l))
+            headers = {'X-apikey': os.getenv('OA_WORKS_KEY')}
+            r = requests.get(self.api_url.format(journal.issn_l), )
             if r.status_code == 404:
                 print(f"(oa.works) 404 for {journal.issn_l}")
-        except RequestException:
+        except requests.RequestException:
             print(f"(oa.works) request failed for {journal.issn_l} HTTP: ({r.status_code})")
+
+        self.record(journal.issn_l)
 
         if r.status_code == 200:
             if r.json().get("best_permission"):
@@ -77,17 +104,27 @@ class Embargo:
         except:
             pass
 
-# heroku local:run python embargo_harvest.py --update
+@click.command()
+@click.option('--update', help='Update embargo data from oa.works', is_flag=True)
+@click.option('--use_cache', help='Use cache file for ISSNs already queried (b/c many ISSNs have no embargo data, so wont be captured w/ since_update_date)?', is_flag=True)
+@click.option('--truncate', help='Drop all rows in jump_embargo table before running?', is_flag=True)
+@click.option('--since_update_date', help='A publisher', required=False, default=None)
+# heroku local:run python embargo_harvest.py --update --use_cache 
+# heroku local:run python embargo_harvest.py --update --use_cache --since_update_date="2022-05-13 15:26:35.051186"
 # heroku run:detached --size=performance-l python embargo_harvest.py --update -r heroku
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--update",
-        help="Update embargo data from oa.works",
-        action="store_true",
-        default=False,
-    )
-    parsed_args = parser.parse_args()
+def embargo_harvest(update, use_cache, truncate, since_update_date):
+    if since_update_date:
+        truncate = False
 
-    if parsed_args.update:
-        Embargo()
+    click.echo("Arguments:")
+    click.echo(f"  use_cache: {use_cache}")
+    click.echo(f"  truncate: {truncate}")
+    click.echo(f"  since_update_date: {since_update_date}")
+
+    if update:
+        Embargo(use_cache, truncate, since_update_date)
+
+    click.echo("Done!")
+
+if __name__ == '__main__':
+    embargo_harvest()
