@@ -54,7 +54,7 @@ tables = {
         """,
 }
 
-def truncate(table):
+def truncate_table(table):
     with get_db_cursor() as cursor:
         print(f"deleting all rows in table: {table}")
         cursor.execute(f"truncate table {table}")
@@ -181,8 +181,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--update", help="Update jump_oa_all_vars table from OpenAlex", action="store_true", default=False)
     parser.add_argument("--since_update_date", help="Only work on ISSNs not updated since the date", default=None)
-    parser.add_argument("--truncate", help="Drop all rows in jump_oa_all_vars table before running?", default=False)
-    parser.add_argument("--update_tables", help="Update jump_oa_* tables after jump_oa_all_vars updated?", default=False)
+    parser.add_argument("--truncate", help="Drop all rows in jump_oa_all_vars table before running?", action="store_true", default=False)
+    parser.add_argument("--update_tables", help="Update jump_oa_* tables after jump_oa_all_vars updated?", action="store_true", default=False)
     parsed_args = parser.parse_args()
 
     if parsed_args.update:
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     if parsed_args.update_tables:
         from app import get_db_cursor
         for table in tables.keys():
-            truncate(table)
+            truncate_table(table)
 
         from app import get_db_cursor
         for table, qry in tables.items():
