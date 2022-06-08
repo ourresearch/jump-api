@@ -1,8 +1,11 @@
+import time
 import os
 import click
 from datetime import datetime
 from dateutil.parser import parse
-import requests
+# import requests
+import httpx
+import asyncio
 
 from psycopg2 import sql
 from psycopg2.extras import execute_values
@@ -20,6 +23,10 @@ class Embargo:
         self.table = "jump_embargo"
         self.load_openalex()
         self.harvest_embargos(use_cache, truncate, since_update_date)
+
+    def make_chunks(self, lst, n):
+        for i in range(0, len(lst), n):
+            yield lst[i : i + n]
 
     def load_openalex(self):
         self.openalex_data = OpenalexDBRaw.query.all()
@@ -52,35 +59,45 @@ class Embargo:
             with get_db_cursor() as cursor:
                 print(f"deleting all rows in {self.table}")
                 cursor.execute(f"truncate table {self.table}")
+
+        self.openalex_data_chunks = list(self.make_chunks(self.openalex_data, 5))
         
-        for x in self.openalex_data:
-            self.fetch_embargo(x)
-            if x.embargo_months:
-                self.write_to_db(x)
+        print(f"querying OA.works permissions API and writing each chunk to {self.table}")
+        for i, item in enumerate(self.openalex_data_chunks):
+            asyncio.run(self.fetch_chunks(item))
+            self.write_to_db(item)
+            time.sleep(2)
+
+        # i, item = next(z)
+        # asyncio.run(self.fetch_chunks(item))
+        # w = item
+        # inputvalues
 
     def write_to_db(self, w):
-        print(f"(oa.works) {w.issn_l} writing to db")
         cols = ['updated','issn_l','embargo_months','embargo_months_updated']
-        input_values = (datetime.utcnow().isoformat(), w.issn_l, w.embargo_months, w.embargo_months_updated,)
-        from app import get_db_cursor
-        with get_db_cursor() as cursor:
-            qry = sql.SQL("INSERT INTO {} ({}) VALUES ({})").format(
-                sql.Identifier(self.table),
-                sql.SQL(', ').join(map(sql.Identifier, cols)),
-                sql.SQL(', ').join(sql.Placeholder() * len(cols)))
-            cursor.execute(qry, input_values)
+        input_values = []
+        for j in w:
+            if j.embargo_months:
+                input_values.append( (datetime.utcnow().isoformat(), j.issn_l, j.embargo_months, j.embargo_months_updated,) )
+        if input_values:
+            from app import get_db_cursor
+            with get_db_cursor() as cursor:
+                qry = sql.SQL("INSERT INTO {} ({}) VALUES %s").format(
+                    sql.Identifier(self.table),
+                    sql.SQL(', ').join(map(sql.Identifier, cols)))
+                execute_values(cursor, qry, input_values, page_size=20)
 
     def record(self, issn_l):
         with open(self.record_file, 'a') as f:
             f.write("\n" + issn_l)
 
-    def fetch_embargo(self, journal):
+    async def fetch_embargo(self, client, journal):
         try:
             headers = {'X-apikey': os.getenv('OA_WORKS_KEY')}
-            r = requests.get(self.api_url.format(journal.issn_l), )
+            r = await client.get(self.api_url.format(journal.issn_l), )
             if r.status_code == 404:
                 print(f"(oa.works) 404 for {journal.issn_l}")
-        except requests.RequestException:
+        except httpx.RequestError:
             print(f"(oa.works) request failed for {journal.issn_l} HTTP: ({r.status_code})")
 
         self.record(journal.issn_l)
@@ -95,6 +112,15 @@ class Embargo:
                     print(f"(oa.works) issue with issn {journal.issn_l} (index out of range)")
             else:
                 print(f"(oa.works) {journal.issn_l} not found")
+
+    async def fetch_chunks(self, lst):
+        async with httpx.AsyncClient() as client:
+            tasks = []
+            for s in lst:
+                tasks.append(asyncio.ensure_future(self.fetch_embargo(client, s)))
+
+            async_results = await asyncio.gather(*tasks)
+            return async_results
 
     @staticmethod
     def set_embargo(journal, months, updated):
