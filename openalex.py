@@ -63,6 +63,7 @@ class JournalMetadata(db.Model):
 		self.created = self.now.isoformat()
 		for attr in ("issn_l", "publisher"):
 			setattr(self, attr, getattr(journal_raw, attr))
+		self.set_custom_fields()
 		self.issns_string = journal_raw.issn
 		for attr in ("title","is_current_subscription_journal",):
 			setter = getattr(self, "set_{}".format(attr))
@@ -204,6 +205,10 @@ class JournalMetadata(db.Model):
 			if self.apc_price_gbp:
 				response = float(self.apc_price_gbp)
 		return response
+
+	def set_custom_fields(self):
+		if self.issn_l in ['2058-5276']:
+			self.publisher = 'Springer Nature'
 
 	def __repr__(self):
 		return "<{} ({}) '{}' {}>".format(self.__class__.__name__, self.issn_l, self.title, self.publisher)
