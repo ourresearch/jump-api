@@ -24,9 +24,8 @@ tables = {
     "jump_oa_with_submitted_with_bronze":
         """
         insert into jump_oa_with_submitted_with_bronze (updated, venue_id, issn_l, fresh_oa_status, year_int, count) (
-            select sysdate,venue_id,issn_l,fresh_oa_status,year_int, sum(count) as sum_count from jump_oa_all_vars
+            select sysdate,venue_id,issn_l,fresh_oa_status,year_int,count from jump_oa_all_vars_new
             where with_submitted
-            group by 2,3,4,5
         )
         """,
     "jump_oa_with_submitted_no_bronze":
@@ -36,9 +35,8 @@ tables = {
     "jump_oa_no_submitted_with_bronze":
         """
         insert into jump_oa_no_submitted_with_bronze (updated, venue_id, issn_l, fresh_oa_status, year_int, count) (
-            select sysdate,venue_id,issn_l,fresh_oa_status,year_int, sum(count) as sum_count from jump_oa_all_vars
-            where not has_oa_submitted
-            group by 2,3,4,5
+            select sysdate,venue_id,issn_l,fresh_oa_status,year_int,count from jump_oa_all_vars_new
+            where not with_submitted
         )
         """,
     "jump_oa_no_submitted_no_bronze":
