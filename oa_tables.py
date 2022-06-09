@@ -12,27 +12,20 @@ from psycopg2 import sql
 from psycopg2.extras import execute_values
 from openalex import OpenalexDBRaw
 
-def make_params(venue, oa_status, version_flag):
+def make_params(venue, oa_status, submitted):
     parts = [
         f"host_venue.id:{venue}", 
-        f"{version_flag}:true",
         f"oa_status:{oa_status}",]
+    if submitted == "false":
+        parts.append("has_oa_submitted_version:false")
     return ",".join(parts)
-
-def oa_flag_switch(key):
-    match key:
-        case "has_oa_accepted_or_published_version":
-            return {'acc_pub': True, 'sub': False}
-        case "has_oa_submitted_version":
-            return {'acc_pub': False, 'sub': True}
-        case _:
-            return {'acc_pub': False, 'sub': False}
 
 tables = {
     "jump_oa_with_submitted_with_bronze":
         """
         insert into jump_oa_with_submitted_with_bronze (updated, venue_id, issn_l, fresh_oa_status, year_int, count) (
             select sysdate,venue_id,issn_l,fresh_oa_status,year_int, sum(count) as sum_count from jump_oa_all_vars
+            where with_submitted
             group by 2,3,4,5
         )
         """,
@@ -76,8 +69,8 @@ class OpenAccessTables:
         self.api_url = "https://api.openalex.org/works?group_by=publication_year&mailto=scott@ourresearch.org&filter="
         self.years = list(range(2010, datetime.now().year + 1))
         self.oa_statuses = ['gold','green','bronze','hybrid',]
-        self.version_flags = ['has_oa_accepted_or_published_version','has_oa_submitted_version',]
-        self.table = "jump_oa_all_vars"
+        self.oa_submitted = ["none","false",]
+        self.table = "jump_oa_all_vars_new"
         self.load_openalex()
         self.make_tables(since_update_date)
 
@@ -87,7 +80,7 @@ class OpenAccessTables:
             x.venue_id = re.search("V.+", x.id)[0]
             x.data = {}
             for oa_status in self.oa_statuses:
-                x.data[oa_status] = dict((el, None) for el in self.version_flags)
+                x.data[oa_status] = dict((el, None) for el in self.oa_submitted)
         print(f"{len(self.openalex_data)} openalex_journals records found")
 
     def make_tables(self, since_update_date=None):
@@ -103,9 +96,9 @@ class OpenAccessTables:
             self.openalex_data = list(filter(lambda x: x.issn_l not in not_update_issns, self.openalex_data))
             print(f"Since update date: {since_update_date} - limiting to {len(self.openalex_data)} ISSNs (of {len_original})")
 
-        async def get_data(client, journal, oa_status, version_flag):
+        async def get_data(client, journal, oa_status, submitted):
             try:
-                url = self.api_url + make_params(journal.venue_id, oa_status, version_flag)
+                url = self.api_url + make_params(journal.venue_id, oa_status, submitted)
                 # r = httpx.get(url)
                 r = await client.get(url, timeout = 10)
                 if r.status_code == 404:
@@ -117,7 +110,7 @@ class OpenAccessTables:
                 res = r.json()
                 [w.pop('key_display_name') for w in res['group_by']]
                 res['group_by'] = list(filter(lambda x: int(x['key']) in self.years, res['group_by']))
-                self.set_data(journal, oa_status, version_flag, res['group_by'])
+                self.set_data(journal, oa_status, submitted, res['group_by'])
             except:
                 print(f"http request error for: {journal.issn_l}")
                 pass
@@ -126,8 +119,8 @@ class OpenAccessTables:
             async with httpx.AsyncClient() as client:
                 tasks = []
                 for oa_status in self.oa_statuses:
-                    for version_flag in self.version_flags:
-                        tasks.append(asyncio.ensure_future(get_data(client, j, oa_status, version_flag)))
+                    for submitted in self.oa_submitted:
+                        tasks.append(asyncio.ensure_future(get_data(client, j, oa_status, submitted)))
 
                 async_results = await asyncio.gather(*tasks)
                 return async_results
@@ -144,8 +137,7 @@ class OpenAccessTables:
             self.write_to_db(j)
 
     def write_to_db(self, dat):
-        cols = ['updated','venue_id','issn_l','fresh_oa_status','year_int','count',
-            'has_oa_accepted_or_published','has_oa_submitted',]
+        cols = ['updated','venue_id','issn_l','fresh_oa_status','year_int','count','with_submitted',]
         all_rows = []
         updated = datetime.utcnow().isoformat()
         try:
@@ -153,9 +145,8 @@ class OpenAccessTables:
                 for key, value in dat.data[oa_status].items():
                     if value:
                         for years in value:
-                            flags = oa_flag_switch(key)
                             all_rows.append((updated, dat.venue_id, dat.issn_l, oa_status, 
-                                int(years['key']), years['count'], flags['acc_pub'], flags['sub']))
+                                int(years['key']), years['count'], False if key == "false" else True))
         except:
             pass
 
@@ -168,8 +159,8 @@ class OpenAccessTables:
             execute_values(cursor, qry, all_rows, page_size=1000)
 
     @staticmethod
-    def set_data(journal, oa_status, version_flag, data):
-        journal.data[oa_status][version_flag] = data
+    def set_data(journal, oa_status, submitted, data):
+        journal.data[oa_status][submitted] = data
 
 
 # heroku local:run python oa_tables.py --update
