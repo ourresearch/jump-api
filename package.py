@@ -129,6 +129,13 @@ class Package(db.Model):
 
         return False
 
+    @cached_property
+    def filter_data_set(self):
+        if self.data_files_dict["filter"]["is_live"]:
+            return True
+
+        return False
+
     @property
     def has_custom_perpetual_access(self):
         my_data_file_dict = self.data_files_dict["perpetual-access"]
@@ -656,6 +663,7 @@ class Package(db.Model):
             ("is_deleted", self.is_deleted is not None and self.is_deleted),
             ("is_demo", self.is_demo),
             ("has_complete_counter_data", self.has_complete_counter_data),
+            ("filter_data_set", self.filter_data_set),
             ("data_files", data_files_list),
             # @todo for testing, show all scenarios even with owned by consortium
             # ("is_owned_by_consortium", self.is_owned_by_consortium),
