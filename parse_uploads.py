@@ -13,6 +13,7 @@ from app import db
 from counter import CounterInput
 from perpetual_access import PerpetualAccessInput
 from journal_price import JournalPriceInput
+from filter_titles import FilterTitlesInput
 
 
 def parse_uploads():
@@ -30,6 +31,8 @@ def parse_uploads():
                     JournalPriceInput().delete(package_id)
                 elif file == "perpetual-access":
                     PerpetualAccessInput().delete(package_id)
+                elif file == "filter":
+                    FilterTitlesInput().delete(package_id)
                 else:
                     report_name = "jr1"
                     if "-" in file:
@@ -73,6 +76,8 @@ def parse_uploads():
                     loader = PerpetualAccessInput()
                 elif filetype.startswith("price"):
                     loader = JournalPriceInput()
+                elif filetype.startswith("filter"):
+                    loader = FilterTitlesInput()
 
                 if loader:
                     load_result = loader.load(package_id, filename, commit=True)

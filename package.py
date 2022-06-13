@@ -585,7 +585,7 @@ class Package(db.Model):
             raw_file_upload_rows = cursor.fetchall()
 
         data_files_dict = {}
-        data_file_types = ["counter", "counter-trj2", "counter-trj3", "counter-trj4", "price-public", "price", "perpetual-access"]
+        data_file_types = ["counter", "counter-trj2", "counter-trj3", "counter-trj4", "price-public", "price", "perpetual-access", "filter"]
         for data_file_type in data_file_types:
             my_dict = OrderedDict()
             my_dict["name"] = data_file_type

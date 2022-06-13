@@ -422,33 +422,20 @@ class PackageInput:
             normalized_rows = []
 
             # make sure we have all the required columns
-            raw_column_names = parsed_rows[header_index]
-            normalized_column_names = [self.normalize_column_name(cn) for cn in raw_column_names]
-            raw_to_normalized_map = dict(list(zip(raw_column_names, normalized_column_names)))
+            self.raw_column_names = parsed_rows[header_index]
+            normalized_column_names = [self.normalize_column_name(cn) for cn in self.raw_column_names]
+            raw_to_normalized_map = dict(list(zip(self.raw_column_names, normalized_column_names)))
             normalized_to_raw_map = {}
             for k, v in list(raw_to_normalized_map.items()):
                 normalized_to_raw_map[v] = k
 
             required_keys = [k for k, v in list(self.csv_columns().items()) if v.get("required", True)]
 
-
             # combine the header and data rows into dicts
             row_dicts = [dict(list(zip(parsed_rows[header_index], x))) for x in parsed_rows[header_index+1:]]
 
-
-            # if ("total" in required_keys) and ("total" not in normalized_column_names) and ("jan" in normalized_column_names):
-            #     for row in row_dicts:
-            #
-            #         row["total"] = 0
-            #         for month_idx in range(1, 13):
-            #             month_name = calendar.month_abbr[month_idx].lower()
-            #             new_value = self.normalize_cell(month_name, row[normalized_to_raw_map[month_name]])
-            #             row["total"] += new_value
-            #
-            #     normalized_column_names += ["total"]
-
             if set(required_keys).difference(set(normalized_column_names)):
-                raise RuntimeError("Error: missing required columns. Required: {}, Found: {}.".format(required_keys, raw_column_names))
+                raise RuntimeError("Error: missing required columns. Required: {}, Found: {}.".format(required_keys, self.raw_column_names))
 
             for row_no, row in enumerate(row_dicts):
                 absolute_row_no = parsed_to_absolute_line_no[row_no] + header_index + 1
