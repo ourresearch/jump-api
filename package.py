@@ -401,6 +401,17 @@ class Package(db.Model):
         return journals_missing_prices
 
     @cached_property
+    def journals_filtering(self):
+        filtering = []
+        with get_db_cursor() as cursor:
+            qry = "select issn_l from jump_journal_filter where package_id = %s"
+            cursor.execute(qry, (self.package_id,))
+            rows = cursor.fetchall()
+        if rows:
+            filtering = [w[0] for w in rows]
+        return filtering
+
+    @cached_property
     def returned_big_deal_cost(self):
         if self.institution.is_consortium:
             return 42
@@ -438,6 +449,12 @@ class Package(db.Model):
             response += [OrderedDict([
                 ("id", "missing_prices"),
                 ("journals", self.journals_missing_prices)
+            ])]
+
+        if self.filter_data_set:
+            response += [OrderedDict([
+                ("id", "filtering_titles"),
+                ("journals", self.journals_filtering)
             ])]
 
         return response
