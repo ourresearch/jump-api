@@ -44,6 +44,7 @@ from counter import Counter, CounterInput
 from grid_id import GridId
 from institution import Institution
 from journal_price import JournalPrice, JournalPriceInput
+from filter_titles import FilterTitles, FilterTitlesInput
 from package import Package
 from permission import Permission, UserInstitutionPermission
 from perpetual_access import PerpetualAccess, PerpetualAccessInput
@@ -1060,6 +1061,26 @@ def jump_journal_prices(package_id):
         else:
             return jsonify_fast_no_sort(_load_package_file(package_id, request, JournalPriceInput))
 
+
+@app.route("/publisher/<package_id>/filter", methods=["GET", "POST", "DELETE"])
+@jwt_required()
+def jump_journal_filter(package_id):
+    package = authenticate_for_package(package_id, Permission.view() if request.method == "GET" else Permission.modify())
+
+    if request.method == "GET":
+        rows = FilterTitles.query.filter(FilterTitles.package_id == package_id, FilterTitles.issn_l != None).all()
+        if rows:
+            return jsonify_fast_no_sort({"rows": [row.to_dict() for row in rows]})
+        else:
+            return abort_json(404, "no filter file for package {}".format(package_id))
+    elif request.method == "DELETE":
+        FilterTitlesInput().set_to_delete(package_id)
+        return jsonify_fast_no_sort({"message": "Queued for delete."})
+    else:
+        if request.args.get("error", False):
+            return abort_json(400, _long_error_message())
+        else:
+            return jsonify_fast_no_sort(_load_package_file(package_id, request, FilterTitlesInput))
 
 # @app.route("/publisher/<package_id>/price/raw", methods=["GET"])
 # @jwt_required()
