@@ -290,14 +290,22 @@ class Consortium(object):
         return my_response
 
     def copy_computed_journal_dicts(self, new_scenario_id):
-        values_column_names = ["member_package_id", "scenario_id", "updated", "issn_l", "usage", "cpu", "package_id", "consortium_name", "institution_name", "institution_short_name", "institution_id", "subject", "era_subjects", "is_society_journal", "subscription_cost", "ill_cost", "use_instant_for_debugging", "use_social_networks", "use_oa", "use_backfile", "use_subscription", "use_other_delayed", "use_ill", "perpetual_access_years", "baseline_access", "use_social_networks_percent", "use_green_percent", "use_hybrid_percent", "use_bronze_percent", "use_peer_reviewed_percent", "bronze_oa_embargo_months", "is_hybrid_2019", "downloads", "citations",]
-        values_column_names_with_sub = ["'{}'".format(self.scenario_id) if x == "scenario_id" else x for x in values_column_names]
+        values_column_names = """member_package_id, scenario_id, updated, issn_l, usage, cpu, package_id, consortium_name, institution_name, institution_short_name, institution_id, subject, era_subjects, is_society_journal, subscription_cost, ill_cost, use_instant_for_debugging, use_social_networks, use_oa, use_backfile, use_subscription, use_other_delayed, use_ill, perpetual_access_years, baseline_access, use_social_networks_percent, use_green_percent, use_hybrid_percent, use_bronze_percent, use_peer_reviewed_percent, bronze_oa_embargo_months, is_hybrid_2019, downloads, citations, authorships"""
+        values_column_names_with_sub = values_column_names.replace("scenario_id", "'{}'".format(new_scenario_id))
+
+        q = """
+                insert into jump_scenario_computed 
+                ({values_column_names}) 
+                (
+                    select {values_column_names_with_sub}
+                    from jump_scenario_computed
+                    where scenario_id = '{old_scenario_id}'
+                )
+            """.format(old_scenario_id=self.scenario_id,
+                       values_column_names=values_column_names,
+                       values_column_names_with_sub=values_column_names_with_sub)
         with get_db_cursor() as cursor:
-            qry = sql.SQL("INSERT INTO {table} ({vcn}) (SELECT {vcns} FROM {table} WHERE scenario_id=%s)").format(
-                table=sql.Identifier('jump_scenario_computed'),
-                vcn=sql.SQL(', ').join(map(sql.Identifier, values_column_names)),
-                vcns=sql.SQL(', ').join(map(sql.Identifier, values_column_names_with_sub)))
-            cursor.execute(qry, (self.scenario_id,))
+            cursor.execute(q)
 
     @cached_property
     def all_member_package_ids(self):

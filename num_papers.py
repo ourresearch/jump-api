@@ -32,11 +32,12 @@ class NumPapers(db.Model):
         return "<{} {} ({})>".format(self.__class__.__name__, self.issn_l, self.venue_id)
 
 class MakeNumPapers:
-    def __init__(self):
+    def __init__(self, since_update_date=None, truncate=False, per_async_chunk=40):
+        self.truncate = truncate
         self.api_url = "https://api.openalex.org/venues/issn:{}?mailto=scott@ourresearch.org"
         self.table = NumPapers.__tablename__
         self.load_openalex()
-        self.gather_papers()
+        self.gather_papers(since_update_date, per_async_chunk)
 
     def load_openalex(self):
         self.openalex_data = OpenalexDBRaw.query.all()
@@ -45,12 +46,24 @@ class MakeNumPapers:
             x.data = None
         print(f"{len(self.openalex_data)} openalex_journals records found")
 
-    def gather_papers(self):
-        self.openalex_data_chunks = list(make_chunks(self.openalex_data, 40))
+    def gather_papers(self, since_update_date=None, per_async_chunk=40):
+        if since_update_date:
+            len_original = len(self.openalex_data)
+
+            from app import get_db_cursor
+            with get_db_cursor() as cursor:
+                cursor.execute(f"select distinct(issn_l) from {self.table} where updated <= '{since_update_date}'")
+                rows = cursor.fetchall()
+
+            not_update_issns = [w[0] for w in rows]
+            self.openalex_data = list(filter(lambda x: x.issn_l not in not_update_issns, self.openalex_data))
+            print(f"Since update date: {since_update_date} - limiting to {len(self.openalex_data)} ISSNs (of {len_original})")
+
+        self.openalex_data_chunks = list(make_chunks(self.openalex_data, per_async_chunk))
 
         async def get_data(client, journal):
             try:
-                r = await client.get(self.api_url.format(journal.issn_l), timeout = 10)
+                r = await client.get(self.api_url.format(journal.issn_l), timeout = 10, follow_redirects=True)
                 if r.status_code == 404:
                     pass
             except httpx.RequestError:
@@ -72,11 +85,11 @@ class MakeNumPapers:
                 async_results = await asyncio.gather(*tasks)
                 return async_results
 
-        from app import get_db_cursor
-
-        with get_db_cursor() as cursor:
-            print(f"deleting all rows in {self.table}")
-            cursor.execute(f"truncate table {self.table}")
+        if self.truncate:
+            from app import get_db_cursor
+            with get_db_cursor() as cursor:
+                print(f"deleting all rows in {self.table}")
+                cursor.execute(f"truncate table {self.table}")
 
         print(f"querying OpenAlex API and writing each chunk to {self.table}")
         for i, item in enumerate(self.openalex_data_chunks):
@@ -110,13 +123,19 @@ class MakeNumPapers:
         journal.data = data
 
 
-# heroku local:run python jump_num_papers.py --update
+# full refresh 
+### heroku local:run python num_papers.py --update --truncate
+# just update since and do not truncate 
+### heroku local:run python num_papers.py --update --since_update_date="2022-05-23 23:49:29.839859"
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--update", help="Update jump_num_papers_oa table", action="store_true", default=False,
-    )
+    parser.add_argument("--update", help="Update jump_num_papers_oa table", action="store_true", default=False,)
+    parser.add_argument("--since_update_date", help="Only work on ISSNs not updated since the date", default=None)
+    parser.add_argument("--truncate", help="Drop all rows in jump_num_papers_oa table before running?", action="store_true", default=False)
+    parser.add_argument("--per_async_chunk", help="Number of HTTP requests per async round", default=40)
     parsed_args = parser.parse_args()
 
     if parsed_args.update:
-        MakeNumPapers()
+        chk = int(parsed_args.per_async_chunk)
+        print(chk)
+        MakeNumPapers(parsed_args.since_update_date, parsed_args.truncate, chk)
