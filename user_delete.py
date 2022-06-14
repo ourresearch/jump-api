@@ -1,15 +1,28 @@
 # coding: utf-8
 
-import argparse
+import click
 import textwrap
 
-from app import app
-from app import db
-from app import logger
-from app import get_db_cursor
-from views import lookup_user
+# Delete user from Unsub: deletes user from tables jump_user and jump_user_institution_permission
+# Examples
+# --------
+# Notes:
+#     - prefix `heroku local:run` required to make sure environment variables are loaded
+# # Shows help
+# python user_delete.py --help
+# # Delete a user by email
+# heroku local:run python user_delete.py --email foo@bar.org
+# # Delete a user by user id
+# heroku local:run python user_delete.py --id user-x8g019bx7s9
+# # Delete a user by email and institution id - delete jump_user_institution_permission entry only (leave jump_user)
+# heroku local:run python user_delete.py --email foo@bar.org --inst institution-a79a8 --perm_only
+def user_delete_one(email=None, id=None, inst=None, perm_only=False):
+    from app import app
+    from app import db
+    from app import logger
+    from app import get_db_cursor
+    from views import lookup_user
 
-def user_delete(email=None, id=None, inst=None, perm_only=False):
     if email:
         email = email.strip()
     if id:
@@ -39,40 +52,29 @@ def user_delete(email=None, id=None, inst=None, perm_only=False):
 
     logger.info("  commit")
     db.session.commit()
+            
+@click.command()
+@click.option("--email", help="An Unsub user email", type=str, multiple=True)
+@click.option("--id", help="An Unsub user ID", type=str, multiple=True)
+@click.option("--inst", help="An Unsub institution ID", type=str)
+@click.option("--perm_only", help="Only delete entries from permissions table? (default False)",
+    default=False, is_flag=True)
+def user_delete(email=None, id=None, inst=None, perm_only=False):
+    if email and id:
+        click.echo("supply only email or id")
+        raise click.Abort()
+    
+    if email:
+        for mail in email:
+            user_delete_one(email=mail, id=None, inst=inst, perm_only=perm_only)
+    if id:
+        for x in id:
+            user_delete_one(email=None, id=x, inst=inst, perm_only=perm_only)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=textwrap.dedent('''\
-            Delete user from Unsub: deletes user from tables jump_user and jump_user_institution_permission
-
-            Examples
-            --------
-
-            Notes:
-                - prefix `heroku local:run` required to make sure environment variables are loaded
-
-            # Show this help
-            heroku local:run python user_delete.py -h
-
-            # Delete a user by email
-            heroku local:run python user_delete.py --email foo@bar.org
-
-            # Delete a user by user id
-            heroku local:run python user_delete.py --id user-x8g019bx7s9
-
-            # Delete a user by email and institution id - delete jump_user_institution_permission entry only (leave jump_user)
-            heroku local:run python user_delete.py --email foo@bar.org --inst institution-a79a8 --perm_only
-            '''))
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--email", help="An Unsub user email", type=str)
-    group.add_argument("--id", help="An Unsub user ID", type=str)
-    parser.add_argument("--inst", help="An Unsub institution ID", type=str)
-    parser.add_argument("--perm_only", help="Only delete entries from permissions table? (default False)", 
-        action="store_true", default=False)
-    args = parser.parse_args()
-
-    user_delete(email = args.email, id = args.id, inst = args.inst, perm_only = args.perm_only)
+    user_delete()
+    # print(len(email))
+    # user_delete(email = args.email, id = args.id, inst = args.inst, perm_only = args.perm_only)
 
 # # deleting users within a Pyton REPL
 # # first get csv of user info from unsub-scripts/lookup_by.py script
