@@ -34,7 +34,7 @@ class NumPapers(db.Model):
 class MakeNumPapers:
     def __init__(self, since_update_date=None, truncate=False, per_async_chunk=40):
         self.truncate = truncate
-        self.api_url = "https://api.openalex.org/venues/issn:{}?mailto=scott@ourresearch.org"
+        self.api_url = "https://api.openalex.org/works?group_by=publication_year&filter=host_venue.id:{}&mailto=scott@ourresearch.org"
         self.table = NumPapers.__tablename__
         self.load_openalex()
         self.gather_papers(since_update_date, per_async_chunk)
@@ -42,7 +42,7 @@ class MakeNumPapers:
     def load_openalex(self):
         self.openalex_data = OpenalexDBRaw.query.all()
         for x in self.openalex_data:
-            x.venue_id = None
+            x.venue_id = re.search("V.+", x.id)[0]
             x.data = None
         print(f"{len(self.openalex_data)} openalex_journals records found")
 
@@ -59,11 +59,11 @@ class MakeNumPapers:
             self.openalex_data = list(filter(lambda x: x.issn_l not in not_update_issns, self.openalex_data))
             print(f"Since update date: {since_update_date} - limiting to {len(self.openalex_data)} ISSNs (of {len_original})")
 
-        self.openalex_data_chunks = list(make_chunks(self.openalex_data, per_async_chunk))
+        self.openalex_data_chunks = list(make_chunks(self.openalex_data[0:200], per_async_chunk))
 
         async def get_data(client, journal):
             try:
-                r = await client.get(self.api_url.format(journal.issn_l), timeout = 10, follow_redirects=True)
+                r = await client.get(self.api_url.format(journal.venue_id), timeout = 10)
                 if r.status_code == 404:
                     pass
             except httpx.RequestError:
@@ -71,9 +71,9 @@ class MakeNumPapers:
 
             try:
                 res = r.json()
-                self.set_data(journal, re.search("V.+", res['id'])[0], res['counts_by_year'])
+                self.set_data(journal, journal.venue_id, res['group_by'])
             except:
-                print(f"http request error for: {journal.issn_l}")
+                print(f"http request error for: {journal.venue_id}")
                 pass
 
         async def fetch_chunks(lst):
@@ -103,7 +103,7 @@ class MakeNumPapers:
         for d in data:
             try:
                 updated = datetime.utcnow().isoformat()
-                rows = [(updated, d.venue_id, d.issn_l, w['year'], w['works_count']) for w in d.data]
+                rows = [(updated, d.venue_id, d.issn_l, w['key'], w['count']) for w in d.data]
                 all_rows.append(rows)
             except:
                 pass
@@ -137,5 +137,4 @@ if __name__ == "__main__":
 
     if parsed_args.update:
         chk = int(parsed_args.per_async_chunk)
-        print(chk)
         MakeNumPapers(parsed_args.since_update_date, parsed_args.truncate, chk)
