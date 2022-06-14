@@ -45,15 +45,16 @@ def get_fresh_journal_list(scenario, my_jwt):
     my_package = Package.query.filter(Package.package_id == scenario.package_id).scalar()
 
     journals_to_exclude = ["0370-2693"]
+    issn_ls = list(scenario.data["unpaywall_downloads_dict"].keys())
+    issnls_to_build = [issn_l for issn_l in issn_ls if issn_l not in journals_to_exclude]
+
     with get_db_cursor() as cursor:
         qry = "select issn_l from jump_journal_filter where package_id = %s"
         cursor.execute(qry, (scenario.package_id,))
         rows = cursor.fetchall()
     if rows:
-        filtered_journals_to_exclude = [w[0] for w in rows]
-        journals_to_exclude.extend(filtered_journals_to_exclude)
-    issn_ls = list(scenario.data["unpaywall_downloads_dict"].keys())
-    issnls_to_build = [issn_l for issn_l in issn_ls if issn_l not in journals_to_exclude]
+        journals_to_include = [w[0] for w in rows]
+        issnls_to_build = [issn_l for issn_l in issnls_to_build if issn_l in journals_to_include]
 
     # only include things in the counter file
     if my_package.is_demo:
