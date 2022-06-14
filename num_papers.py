@@ -59,7 +59,7 @@ class MakeNumPapers:
             self.openalex_data = list(filter(lambda x: x.issn_l not in not_update_issns, self.openalex_data))
             print(f"Since update date: {since_update_date} - limiting to {len(self.openalex_data)} ISSNs (of {len_original})")
 
-        self.openalex_data_chunks = list(make_chunks(self.openalex_data[0:200], per_async_chunk))
+        self.openalex_data_chunks = list(make_chunks(self.openalex_data, per_async_chunk))
 
         async def get_data(client, journal):
             try:
