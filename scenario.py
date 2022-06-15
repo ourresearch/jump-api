@@ -49,7 +49,7 @@ def get_fresh_journal_list(scenario, my_jwt):
     issnls_to_build = [issn_l for issn_l in issn_ls if issn_l not in journals_to_exclude]
 
     with get_db_cursor() as cursor:
-        qry = "select dictinct(issn_l) from jump_journal_filter where package_id = %s"
+        qry = "select distinct(issn_l) from jump_journal_filter where package_id = %s"
         cursor.execute(qry, (scenario.package_id,))
         rows = cursor.fetchall()
     if rows:
