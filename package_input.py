@@ -364,7 +364,7 @@ class PackageInput:
         # file_name = convert_to_utf_8(file_name)
         # logger.info("converted file: {}".format(file_name))
 
-        with open(file_name, "r", encoding="utf-8") as csv_file:
+        with open(file_name, "r", encoding="utf-8-sig") as csv_file:
             reader_params = {}
 
             if self.is_single_column_file(csv_file):
@@ -455,7 +455,7 @@ class PackageInput:
                     if normalized_name:
                         try:
                             normalized_value = self.normalize_cell(normalized_name, raw_value)
-                            if isinstance(normalized_value, ParseWarning):
+                            if normalized_value.__class__.__name__ == "ParseWarning":
                                 parse_warning = normalized_value
                                 # logger.info("parse warning: {} for data {},  {}".format(parse_warning, raw_column_name, row))
                                 cell_errors[normalized_name] = self.make_package_file_warning(parse_warning)
