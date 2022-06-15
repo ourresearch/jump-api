@@ -134,6 +134,9 @@ class PackageInput:
     def apply_header(self, normalized_rows, header_rows):
         return normalized_rows
 
+    def update_subscriptions(self):
+        pass
+
     @cache
     def normalize_column_name(self, raw_column_name):
         for canonical_name, spec in list(self.csv_columns().items()):
@@ -589,6 +592,7 @@ class PackageInput:
             safe_commit(db)
             self.update_dest_table(package_id)
             self._copy_raw_to_s3(file_name, package_id, num_rows, error=None)
+            self.update_subscriptions(package_id)
         else:
             self._copy_raw_to_s3(file_name, package_id, num_rows=0, error="no_useable_rows")
 
