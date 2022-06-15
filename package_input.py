@@ -339,6 +339,10 @@ class PackageInput:
     def validate_publisher(self):
         return False
 
+    def is_single_column_file(self, csv_file):
+        line = csv_file.readline().rstrip()
+        return len(line.split(",")) == 1
+
     def normalize_rows(self, file_name, file_package=None):
         # convert to csv if needed
         if file_name.endswith(".xls") or file_name.endswith(".xlsx"):
@@ -357,42 +361,41 @@ class PackageInput:
         # logger.info("converted file: {}".format(file_name))
 
         with open(file_name, "r", encoding="utf-8") as csv_file:
-            # determine the csv format
-            dialect_sample = ""
-            for i in range(0, 20):
-                next_line = csv_file.readline()
-                # ignore header row when determining dialect
-                # data rows should be more consistent with each other
-                if i > 0:
-                    dialect_sample = str(dialect_sample) + str(next_line)
-                if not next_line:
-                    break
-
             reader_params = {}
-            try:
-                dialect = csv.Sniffer().sniff(dialect_sample)
-                # logger.info(u"sniffed csv dialect:\n{}".format(json.dumps(vars(dialect), indent=2)))
-            except csv.Error:
+
+            if self.is_single_column_file(csv_file):
                 dialect = None
                 if file_name.endswith(".tsv"):
                     reader_params["delimiter"] = "\t"
+            else:
+                # determine the csv format
+                dialect_sample = ""
+                for i in range(0, 20):
+                    next_line = csv_file.readline()
+                    # ignore header row when determining dialect
+                    # data rows should be more consistent with each other
+                    if i > 0:
+                        dialect_sample = str(dialect_sample) + str(next_line)
+                    if not next_line:
+                        break
+
+                try:
+                    dialect = csv.Sniffer().sniff(dialect_sample)
+                    # logger.info(u"sniffed csv dialect:\n{}".format(json.dumps(vars(dialect), indent=2)))
+                except csv.Error:
+                    dialect = None
+                    if file_name.endswith(".tsv"):
+                        reader_params["delimiter"] = "\t"
 
             csv_file.seek(0)
 
-            # turn rows into arrays
-            # remember the first row that looks like a header
+            # turn rows into arrays - remember the first row that looks like a header
             max_columns = 0
             header_index = None
             parsed_rows = []
             line_no = 0  # the index in parsed_rows where this row will land
             absolute_line_no = 0  # the actual file row we're parsing
             parsed_to_absolute_line_no = {}
-
-            # print "getting chardet_result"
-            # import chardet
-            # with open(file_name, 'rb') as rawdata:
-            #     chardet_result = chardet.detect(rawdata.read(1000000))
-            # print chardet_result
 
             for line in csv.reader(csv_file, dialect=dialect, **reader_params):
                 absolute_line_no += 1
