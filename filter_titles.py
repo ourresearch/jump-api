@@ -42,7 +42,10 @@ class FilterTitlesInput(db.Model, PackageInput):
 		return FilterTitles.__tablename__
 
 	def issn_columns(self):
-		return ["print_issn", "online_issn"]
+		if "online_identifier" not in self.raw_column_names:
+			return ["issn"]
+		else:
+			return ["print_identifier", "online_identifier"]
 
 	def csv_columns(self):
 		if "online_identifier" not in self.raw_column_names:
@@ -56,13 +59,13 @@ class FilterTitlesInput(db.Model, PackageInput):
 			}
 		else:
 			return {
-				"print_issn": {
+				"print_identifier": {
 					"normalize": self.normalize_issn,
 					"name_snippets": ["print identifier", "print_identifier"],
 					"required": True,
 					"warn_if_blank": True,
 				},
-				"online_issn": {
+				"online_identifier": {
 					"normalize": self.normalize_issn,
 					"name_snippets": ["online identifier", "online_identifier"],
 					"required": True,
