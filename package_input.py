@@ -345,7 +345,7 @@ class PackageInput:
     def is_single_column_file(self, csv_file):
         import re
         line = csv_file.readline().rstrip()
-        return len(re.split(',|;|\\s', line)) > 1
+        return len(re.split(',|;|\\s', line)) == 1
 
     def normalize_rows(self, file_name, file_package=None):
         # convert to csv if needed
