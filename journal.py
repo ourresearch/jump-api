@@ -38,15 +38,15 @@ class Journal(object):
         self.set_scenario(scenario)
         self.set_scenario_data(scenario_data)
         self.issn_l = issn_l
+        self.my_package = package
         self.package_id = package.package_id
         self.package_id_for_db = self.package_id
-        if self.package_id.startswith("demo"):
+        if self.package_id.startswith("demo") or self.my_package.is_demo:
             self.package_id_for_db = DEMO_PACKAGE_ID
         self.subscribed_bulk = False
         self.subscribed_custom = False
         self.use_default_download_curve = False
         self.use_default_num_papers_curve = False
-        self.my_package = package
 
     def set_scenario(self, scenario):
         if scenario:
