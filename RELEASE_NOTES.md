@@ -5,6 +5,8 @@ both its appearance and its underlying data.
 This means you will often see changes in the UI/UX, and sometimes in the presented data.  
 Most of these changes are too small to note, but we'll keep a record of the larger ones here:
 
+- 2022/06/17 Fix for demo accounts where dashboards weren't displaying correctly. Although we don't support any new demo accounts, some users have access to old demo accounts.
+- 2022/06/17 Unsub dashboard improvement: The encircled question mark that previously linked to our documentation at help.unsub.org, now is a dropdown with links to documentation, webinars and a link to send us feedback at support@unsub.org
 - 2022/06/14 Copying a scenario within a consortial package was broken due to a bug in our code. It is now fixed! 
 - 2022/06/02 Integrate OpenAlex metadata into the Unsub backend. For now this includes journal metadata (e.g., ISSN, title, publisher, etc.) as well as journal concepts/subjects (e.g., Medicine, Ecology). Later we'll integrate additional OpenAlex data. To be clear, subjects throughout Unsub (in the user interface and in data exports) are now from OpenAlex. This change of journal metadata does affect what titles are included in your Unsub dashboards. We analyzed 212 scenarios before OpenAlex and after integrating OpenAlex, and there are only tiny differences: on average number of titles included in scenario are 0.62% different, forecasted costs are 0.18% different and forecasted access (fullfimment) is 0.05% different. 
 - 2022/06/02 Scenario exports used to have two subject fields (subject, era_subjects), but now have three subject fields: subject, subject_top_three, and subjects_all. See the docs (https://docs.unsub.org/reference/data-export) for further details.
