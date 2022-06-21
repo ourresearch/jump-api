@@ -344,6 +344,10 @@ start_time = time()
 all_journal_metadata_list = JournalMetadata.query.all()
 [db.session.expunge(my_journal_metadata) for my_journal_metadata in all_journal_metadata_list]
 all_journal_metadata = dict(list(zip([journal_object.issn_l for journal_object in all_journal_metadata_list], all_journal_metadata_list)))
+all_journal_metadata_flat = {}
+for issn_l, journal_metadata in all_journal_metadata.items():
+    for issn in journal_metadata.issns:
+        all_journal_metadata_flat[issn] = journal_metadata
 
 # load issns from openalex_computed_flat
 with get_db_cursor() as cursor:
