@@ -43,7 +43,8 @@ def fetch_data_and_split(table):
         rows = cursor.fetchall()
     
     import pandas as pd
-    df = pd.DataFrame([dict(w) for w in rows]) # haven't tested all ISSNs yet, but should be fast enough
+    df = pd.DataFrame([dict(w) for w in rows])
+    df.issn_l = [w.strip() for w in df.issn_l] # some have weird leading chars
     grouped = df.groupby('issn_l')
     issn_dict = defaultdict(list)
     for name, group in grouped:
@@ -60,6 +61,14 @@ def fetch_data_and_split(table):
     #     issn_dict[issn] = [w for w in rows if w['issn_l'] == issn]
     # return issn_dict
 
+def delete_rows(table, data):
+    keys_to_extract = ["issn_l", "fresh_oa_status", "year_int"]
+    []
+    with get_db_cursor() as cursor:
+        query_str = "delete from {} where issn_l=%s and fresh_oa_status=%s and year_int=%s"
+        qry = sql.SQL(query_str).format(sql.Identifier(table))
+        cursor.execute(qry, (,))
+    print(f"deleted {len(data)} rows in {table}")
 
 def year_count(rws, year):
     return list(filter(lambda x: x['year_int'] == year, rws))[0]['count']
@@ -103,20 +112,20 @@ def correct_2020(data):
 
         fixed_data.append(subset_2020)
 
-    fixed_tuples = [tuple(w) for w in fixed_data if w]
-    return fixed_tuples
+    fixed_dicts = [dict(w) for w in fixed_data if w]
+    return fixed_dicts
 
-def update_changes(table, rows):
-    with get_db_cursor() as cursor:
-        for row in rows:
-            query_str = """
-                UPDATE {}
-                SET count = %(count)s, updated = sysdate
-                WHERE issn_l = %(issn_l)s and fresh_oa_status = %(fresh_oa_status)s and year_int = %(year_int)s
-                """
-            qry = sql.SQL(query_str).format(sql.Identifier(table))
-            print(cursor.mogrify(qry, row))
-            cursor.execute(qry, row)
+# def update_changes(table, rows):
+#     with get_db_cursor() as cursor:
+#         for row in rows:
+#             query_str = """
+#                 UPDATE {}
+#                 SET count = %(count)s, updated = sysdate
+#                 WHERE issn_l = %(issn_l)s and fresh_oa_status = %(fresh_oa_status)s and year_int = %(year_int)s
+#                 """
+#             qry = sql.SQL(query_str).format(sql.Identifier(table))
+#             print(cursor.mogrify(qry, row))
+#             cursor.execute(qry, row)
 
 def make_params(venue, oa_status, submitted):
     parts = [
@@ -142,6 +151,7 @@ tables_with_bronze = {
         )
         """,
 }
+
 tables_no_bronze = {
     "jump_oa_with_submitted_no_bronze":
         """
@@ -309,18 +319,24 @@ if __name__ == "__main__":
             # issnls = distinct_issnls(table)
             data = fetch_data_and_split(table)
             to_update = []
-            pbar = tqdm(total = len(issnls) - 1)
+            pbar = tqdm(total = len(data) - 1)
             for issn, lst in data.items():
                 print(f"{issn}")
                 # res = query_one(issn)
                 out = correct_2020(lst)
                 if out:
-                    to_update.append(out)
+                    to_update.extend(out)
                 pbar.update(1)
                 # print(f"{len(out)}")
                 # if out:
                 #     update_changes(table, out)
             pbar.close()
+
+            # delete all rows that have changed data
+            delete_rows(to_update)
+
+            # insert new data 
+            insert_rows()
 
         # make tables_no_bronze tables
         print("making no_bronze tables")
