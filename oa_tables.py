@@ -6,11 +6,117 @@ from datetime import datetime
 from dateutil.parser import parse
 import httpx
 import asyncio
+from statistics import mean
+from math import floor, ceil
+from tqdm import tqdm
+from collections import defaultdict
 
 from app import db
+from app import get_db_cursor
 from psycopg2 import sql
 from psycopg2.extras import execute_values
 from openalex import OpenalexDBRaw
+
+def distinct_issnls(table):
+    with get_db_cursor() as cursor:
+        qry = sql.SQL("select distinct(issn_l) from {}").format( 
+            sql.Identifier(table))
+        print(cursor.mogrify(qry))
+        cursor.execute(qry)
+        rows = cursor.fetchall()
+    return [w[0] for w in rows]
+
+def query_one(issn_l):
+    with get_db_cursor() as cursor:
+        cols = ['issn_l','fresh_oa_status','year_int','count']
+        qry = sql.SQL("select {} from {} where issn_l = %s").format( 
+            sql.SQL(', ').join(map(sql.Identifier, cols)), sql.Identifier(table))
+        # print(cursor.mogrify(qry, (issn_l,)))
+        cursor.execute(qry, (issn_l,))
+        rows = cursor.fetchall()
+    return rows
+
+def fetch_data_and_split(table):
+    with get_db_cursor() as cursor:
+        qry = sql.SQL("select * from {}").format(sql.Identifier(table))
+        cursor.execute(qry)
+        rows = cursor.fetchall()
+    
+    import pandas as pd
+    df = pd.DataFrame([dict(w) for w in rows]) # haven't tested all ISSNs yet, but should be fast enough
+    grouped = df.groupby('issn_l')
+    issn_dict = defaultdict(list)
+    for name, group in grouped:
+        issn_dict[name] = group.to_dict(orient='records')
+
+    return issn_dict
+    # issns = list(set([w['issn_l'] for w in rows]))
+    # issn_dict = defaultdict(list)
+    # for issn in issns:
+    #     issn_dict[issn] = list(filter(lambda x: x['issn_l'] == issn, rows))
+    #     # [x['issn_l'] == issn for x in issns[0:3]]
+    # issn_dict = defaultdict(list, { k:[] for k in issns })
+    # for issn in issns[0:100]:
+    #     issn_dict[issn] = [w for w in rows if w['issn_l'] == issn]
+    # return issn_dict
+
+
+def year_count(rws, year):
+    return list(filter(lambda x: x['year_int'] == year, rws))[0]['count']
+
+def mean_of_two_years(value_target, year_1, year_2):
+    val_mean = mean([year_1, year_2])
+    match value_target < val_mean:
+        case True:
+            val_mean_rounded = floor(val_mean)
+        case False:
+            val_mean_rounded = ceil(val_mean)
+    
+    return val_mean_rounded
+
+def correct_2020(data):
+    """
+    returns only the data thats changed. if none changed, an empty 
+    """
+    colors = list(set([w['fresh_oa_status'] for w in data]))
+    # color = colors[1]
+    fixed_data = []
+    for color in colors:
+        subset_2020 = []
+        subset = list(filter(lambda x: x['fresh_oa_status'] == color, data))
+        years = set([w['year_int'] for w in subset if w['year_int'] in range(2019, 2022)])
+        if 2020 not in years:
+            fixed_data.append(subset_2020)
+            continue
+        
+        subset_2020 = list(filter(lambda x: x['year_int'] == 2020, subset))[0]
+        
+        if set([2019, 2020, 2021]) == years:
+            subset_2020['count'] = mean_of_two_years(
+                subset_2020['count'], year_count(subset, 2019), year_count(subset, 2021))
+        elif set([2019, 2020]) == years:
+            subset_2020['count'] = mean_of_two_years(
+                subset_2020['count'], year_count(subset, 2019), year_count(subset, 2020))
+        elif set([2020, 2021]) == years:
+            subset_2020['count'] = mean_of_two_years(
+                subset_2020['count'], year_count(subset, 2020), year_count(subset, 2021))
+
+        fixed_data.append(subset_2020)
+
+    fixed_tuples = [tuple(w) for w in fixed_data if w]
+    return fixed_tuples
+
+def update_changes(table, rows):
+    with get_db_cursor() as cursor:
+        for row in rows:
+            query_str = """
+                UPDATE {}
+                SET count = %(count)s, updated = sysdate
+                WHERE issn_l = %(issn_l)s and fresh_oa_status = %(fresh_oa_status)s and year_int = %(year_int)s
+                """
+            qry = sql.SQL(query_str).format(sql.Identifier(table))
+            print(cursor.mogrify(qry, row))
+            cursor.execute(qry, row)
 
 def make_params(venue, oa_status, submitted):
     parts = [
@@ -20,7 +126,7 @@ def make_params(venue, oa_status, submitted):
         parts.append("has_oa_submitted_version:false")
     return ",".join(parts)
 
-tables = {
+tables_with_bronze = {
     "jump_oa_with_submitted_with_bronze":
         """
         insert into jump_oa_with_submitted_with_bronze (updated, venue_id, issn_l, fresh_oa_status, year_int, count) (
@@ -28,16 +134,18 @@ tables = {
             where with_submitted
         )
         """,
-    "jump_oa_with_submitted_no_bronze":
-        """
-        insert into jump_oa_with_submitted_no_bronze (select * from jump_oa_with_submitted_with_bronze where fresh_oa_status != 'bronze')
-        """,
     "jump_oa_no_submitted_with_bronze":
         """
         insert into jump_oa_no_submitted_with_bronze (updated, venue_id, issn_l, fresh_oa_status, year_int, count) (
             select sysdate,venue_id,issn_l,fresh_oa_status,year_int,count from jump_oa_all_vars_new
             where not with_submitted
         )
+        """,
+}
+tables_no_bronze = {
+    "jump_oa_with_submitted_no_bronze":
+        """
+        insert into jump_oa_with_submitted_no_bronze (select * from jump_oa_with_submitted_with_bronze where fresh_oa_status != 'bronze')
         """,
     "jump_oa_no_submitted_no_bronze":
         """
@@ -179,9 +287,42 @@ if __name__ == "__main__":
 
     if parsed_args.update_tables:
         from app import get_db_cursor
-        for table in tables.keys():
+        for table in tables_with_bronze.keys():
+            truncate_table(table)
+        for table in tables_no_bronze.keys():
             truncate_table(table)
 
+        # from app import get_db_cursor
+        # for table, qry in tables.items():
+        #     update_table(table, qry)
+        
+        # make tables_with_bronze tables
+        print("making with_bronze tables")
         from app import get_db_cursor
-        for table, qry in tables.items():
+        for table, qry in tables_with_bronze.items():
+            update_table(table, qry)
+
+        # correct year 2020 data in tables_with_bronze tables
+        print("correcting 2020 year data in with_bronze tables")
+        for table, qry in tables_with_bronze.items():
+            print(f"table: {table}")
+            # issnls = distinct_issnls(table)
+            data = fetch_data_and_split(table)
+            to_update = []
+            pbar = tqdm(total = len(issnls) - 1)
+            for issn, lst in data.items():
+                print(f"{issn}")
+                # res = query_one(issn)
+                out = correct_2020(lst)
+                if out:
+                    to_update.append(out)
+                pbar.update(1)
+                # print(f"{len(out)}")
+                # if out:
+                #     update_changes(table, out)
+            pbar.close()
+
+        # make tables_no_bronze tables
+        print("making no_bronze tables")
+        for table, qry in tables_no_bronze.items():
             update_table(table, qry)
