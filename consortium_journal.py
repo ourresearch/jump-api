@@ -1,5 +1,6 @@
 # coding: utf-8
 
+from datetime import datetime
 from cached_property import cached_property
 from time import time
 from journal import Journal
@@ -52,7 +53,8 @@ class ConsortiumJournal(Journal):
     @cached_property
     def historical_years_by_year(self):
         # used for citation, authorship lookup
-        return list(range(2015, 2019+1))
+        now = datetime.utcnow()
+        return list(range(now.year - 5, now.year))
 
     def sum_attribute(self, attribute_name, nesting_key=None):
         response = 0
