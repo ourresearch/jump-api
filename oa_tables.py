@@ -1,6 +1,10 @@
+import os
 import time
 import argparse
 import re
+import csv
+import tempfile
+import shortuuid
 from collections import defaultdict
 from datetime import datetime
 from dateutil.parser import parse
@@ -10,9 +14,12 @@ from statistics import mean
 from collections import defaultdict
 from psycopg2 import sql
 from psycopg2.extras import execute_values
+from sqlalchemy.sql import text
 
 from app import db
 from app import get_db_cursor
+from app import s3_client
+from util import safe_commit
 from openalex import OpenalexDBRaw
 
 def distinct_issnls(table):
@@ -321,12 +328,49 @@ if __name__ == "__main__":
                 if out:
                     to_update.extend(out)
 
-            # delete all rows that have changed data
-            delete_rows(table, to_update)
+            # update all 'updated' values
+            for dct in to_update:
+                dct['updated'] = datetime.utcnow()
 
-            # insert new data 
-            insert_rows(table, to_update)
+            # delete all 2020 rows
+            with get_db_cursor() as cursor:
+                qry = sql.SQL("delete from {} where year_int = 2020").format(sql.Identifier(table))
+                cursor.execute(qry)
 
+            # redshift copy
+            fields = list(to_update[0].keys())
+            csv_filename = tempfile.mkstemp()[1]
+            num_rows = 0
+            with open(csv_filename, "w", encoding="utf-8") as file:
+                writer = csv.DictWriter(file, delimiter=",", fieldnames=fields)
+                for row in to_update:
+                    num_rows += 1
+                    writer.writerow(row)
+
+            bucket_name = "jump-redshift-staging"
+            object_name = "{}_{}_{}".format(table, "inserts", shortuuid.uuid())
+            s3_client.upload_file(csv_filename, bucket_name, object_name)
+            s3_object = "s3://{}/{}".format(bucket_name, object_name)
+
+            copy_cmd = text("""
+                copy {table} ({fields}) from '{s3_object}'
+                credentials :creds format as csv
+                timeformat 'auto';
+            """.format(
+                table=table,
+                fields=", ".join(fields),
+                s3_object=s3_object,
+            ))
+
+            aws_creds = "aws_access_key_id={aws_key};aws_secret_access_key={aws_secret}".format(
+                aws_key=os.getenv("AWS_ACCESS_KEY_ID"),
+                aws_secret=os.getenv("AWS_SECRET_ACCESS_KEY")
+            )
+            print((copy_cmd.bindparams(creds=aws_creds)))
+            safe_commit(db)
+            db.session.execute(copy_cmd.bindparams(creds=aws_creds))
+            safe_commit(db)
+        
         # make tables_no_bronze tables
         print("making no_bronze tables")
         for table, qry in tables_no_bronze.items():
