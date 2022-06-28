@@ -35,6 +35,7 @@ class Journal(object):
     years = list(range(0, 5))
 
     def __init__(self, issn_l, scenario=None, scenario_data=None, package=None):
+        self.now = datetime.datetime.utcnow()
         self.set_scenario(scenario)
         self.set_scenario_data(scenario_data)
         self.issn_l = issn_l
@@ -454,9 +455,6 @@ class Journal(object):
     @cached_property
     def downloads_backfile_by_year(self):
         response = self.sum_obs_pub_matrix_by_obs(self.backfile_obs_pub)
-        # if self.issn_l == "0271-678X":
-        #     print self.backfile_obs_pub
-        #     print self.sum_obs_pub_matrix_by_obs(self.backfile_obs_pub)
         response = [min(response[year], self.downloads_total_by_year[year] - self.downloads_oa_by_year[year]) for year in self.years]
         return response
 
@@ -478,10 +476,6 @@ class Journal(object):
             by_age_old = (self.downloads_total_older_than_five_years/5.0) * (self.downloads_oa_by_age[4]/(self.downloads_by_age[4]))
         growth_scaling = self.growth_scaling_oa_downloads
         my_matrix = self.obs_pub_matrix(by_age, by_age_old, growth_scaling)
-        # if self.issn_l == "0271-678X":
-        #     print "by_age", by_age
-        #     print "by_age_old", by_age_old
-        #     print "my_matrix", self.display_obs_pub_matrix(my_matrix)
         return my_matrix
 
     @cached_property
