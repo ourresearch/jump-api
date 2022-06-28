@@ -26,7 +26,7 @@ def get_unpaywall_downloads_from_db():
     return unpaywall_downloads_dict
 
 def get_num_papers_from_db():
-    command = "select issn_l, year, num_papers from jump_num_papers"
+    command = "select issn_l, year, num_papers from jump_num_papers_oa where year >= 2014"
     with get_db_cursor() as cursor:
         cursor.execute(command)
         rows = cursor.fetchall()
@@ -58,7 +58,7 @@ def get_oa_data_from_db():
         for bronze in ["with_bronze", "no_bronze"]:
             key = "{}_{}".format(submitted, bronze)
 
-            command = """select * from jump_oa_{}_precovid  
+            command = """select * from jump_oa_{}  
                         where year_int >= 2015  
                             """.format(key)
 
@@ -116,18 +116,18 @@ def upload_common_data():
     data = gather_common_data()
 
     try:
-        os.remove('data/common_package_data_for_all.json.gz')
+        os.remove('data/common_package_data_for_all_forecast_years.json.gz')
     except OSError:
         pass
 
-    with gzip.open('data/common_package_data_for_all.json.gz', 'w') as f:
-        f.write(json.dumps(data).encode('utf-8'))
+    with gzip.open('data/common_package_data_for_all_forecast_years.json.gz', 'w') as f:
+        f.write(json.dumps(data, default=str).encode('utf-8'))
 
     print("uploading to S3")
     s3_client.upload_file(
-        Filename="data/common_package_data_for_all.json.gz", 
+        Filename="data/common_package_data_for_all_forecast_years.json.gz", 
         Bucket="unsub-cache", 
-        Key="common_package_data_for_all.json.gz")
+        Key="common_package_data_for_all_forecast_years.json.gz")
 
     print("done!")
 
