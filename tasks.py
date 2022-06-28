@@ -39,12 +39,12 @@ def update_apc(package_id):
         insert into jump_apc_authorships (
             select * from jump_apc_authorships_view
             where package_id = %s and issn_l in 
-            (select issn_l from journalsdb_computed rj where rj.publisher = %s))
+            (select issn_l from openalex_computed rj where rj.publisher = %s))
     """
     make_temp_table = """
         select * into temp table %s from jump_apc_authorships_view
             where package_id = %s and issn_l in
-            (select issn_l from journalsdb_computed rj where rj.publisher = %s)
+            (select issn_l from openalex_computed rj where rj.publisher = %s)
     """
     insert_from_temp_table = """
         insert into jump_apc_authorships (select * from %s)

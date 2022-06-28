@@ -13,7 +13,7 @@ register_adapter(dict, Json)
 
 from app import db
 from app import get_db_cursor
-from scenario import Scenario
+from scenario import Scenario, openalex_export_concepts
 from app import DEMO_PACKAGE_ID
 from util import elapsed
 
@@ -109,10 +109,12 @@ def get_latest_scenario_raw(scenario_id, exclude_added_via_pushpull=False):
     return (updated, scenario_data)
 
 
-def get_latest_scenario(scenario_id, my_jwt=None):
+def get_latest_scenario(scenario_id, pkg_id=None, my_jwt=None):
     my_saved_scenario = SavedScenario.query.get(scenario_id)
     if my_saved_scenario:
         package_id = my_saved_scenario.package_id
+    elif pkg_id:
+        package_id = pkg_id
     else:
         package_id = DEMO_PACKAGE_ID
 
@@ -263,7 +265,7 @@ class SavedScenario(db.Model):
 
     def set_live_scenario(self, my_jwt=None):
         if not hasattr(self, "live_scenario") or not self.live_scenario:
-            self.live_scenario = get_latest_scenario(self.scenario_id, my_jwt)
+            self.live_scenario = get_latest_scenario(self.scenario_id, self.package_id, my_jwt)
         self.live_scenario.package_id = self.package_id
         self.live_scenario.jwt = my_jwt
         return self.live_scenario
@@ -366,8 +368,13 @@ class SavedScenario(db.Model):
         return response
 
 
-    def to_dict_journals(self):
+    def to_dict_journals(self, gather_export_concepts = False):
         self.set_live_scenario()  # in case not done
+
+        if gather_export_concepts:
+            self.live_scenario.data['concepts'] = openalex_export_concepts(self.live_scenario.data['concepts'], self.live_scenario.my_package.unique_issns)
+            [setattr(j, 'subject_top_three', self.live_scenario.data['concepts'].get(j.issn_l, {}).get("top_three", "")) for j in self.live_scenario.journals]
+            [setattr(j, 'subjects_all', self.live_scenario.data['concepts'].get(j.issn_l, {}).get("all", "")) for j in self.live_scenario.journals]
 
         response = OrderedDict()
         response["meta"] = self.to_dict_meta()

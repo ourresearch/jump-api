@@ -636,7 +636,6 @@ def user_permissions():
 #     return jsonify_fast_no_sort(response_dict)
 
 
-
 @app.route("/institution/<institution_id>", methods=["POST", "GET"])
 @jwt_required()
 def institution(institution_id):
@@ -1011,7 +1010,7 @@ def jump_counter(package_id):
 @app.route("/publisher/<package_id>/perpetual-access", methods=["GET", "POST", "DELETE"])
 @jwt_required()
 def jump_perpetual_access(package_id):
-    authenticate_for_package(package_id, Permission.view() if request.method == "GET" else Permission.modify())
+    package = authenticate_for_package(package_id, Permission.view() if request.method == "GET" else Permission.modify())
 
     if request.method == "GET":
         rows = PerpetualAccess.query.filter(PerpetualAccess.package_id == package_id, PerpetualAccess.issn_l != None).all()
@@ -1327,7 +1326,7 @@ def export_get(table_dicts, is_main_export=True):
         return []
 
     if is_main_export:
-        keys = ['issn_l_prefixed', 'issn_l', 'title', 'issns', 'subject', 'era_subjects', 'subscribed', 'is_society_journal', 'usage', 'subscription_cost', 'ill_cost', 'cpu', 'cpu_rank', 'cost', 'instant_usage_percent', 'free_instant_usage_percent', 'subscription_minus_ill_cost', 'use_oa_percent', 'use_backfile_percent', 'use_subscription_percent', 'use_ill_percent', 'use_other_delayed_percent', 'perpetual_access_years_text', 'baseline_access_text', 'bronze_oa_embargo_months', 'downloads', 'citations', 'authorships', 'cpu_fuzzed', 'subscription_cost_fuzzed', 'subscription_minus_ill_cost_fuzzed', 'usage_fuzzed', 'downloads_fuzzed', 'citations_fuzzed', 'authorships_fuzzed']
+        keys = ['issn_l_prefixed', 'issn_l', 'title', 'issns', 'subject', 'subject_top_three', 'subjects_all', 'subscribed', 'is_society_journal', 'usage', 'subscription_cost', 'ill_cost', 'cpu', 'cpu_rank', 'cost', 'instant_usage_percent', 'free_instant_usage_percent', 'subscription_minus_ill_cost', 'use_oa_percent', 'use_backfile_percent', 'use_subscription_percent', 'use_ill_percent', 'use_other_delayed_percent', 'perpetual_access_years_text', 'baseline_access_text', 'bronze_oa_embargo_months', 'downloads', 'citations', 'authorships', 'cpu_fuzzed', 'subscription_cost_fuzzed', 'subscription_minus_ill_cost_fuzzed', 'usage_fuzzed', 'downloads_fuzzed', 'citations_fuzzed', 'authorships_fuzzed']
     else:
         keys = ['scenario_id', 'institution_code', 'package_id', 'institution_name', 'issn_l_prefixed', 'issn_l', 'subscribed_by_consortium', 'subscribed_by_member_institution', 'core_plus_for_member_institution', 'title', 'issns',  'subscription_cost', 'ill_cost', 'cpu', 'usage', 'downloads', 'citations', 'authorships', 'use_oa', 'use_backfile', 'use_subscription', 'use_ill', 'use_other_delayed', 'perpetual_access_years', 'bronze_oa_embargo_months',  'is_society_journal']
 
@@ -1370,7 +1369,7 @@ def scenario_id_export_subscriptions_txt_get(scenario_id):
 
 
 
-
+# push-pull functionality only
 @app.route("/scenario/<scenario_id>/member-institutions/consortial-scenarios.csv", methods=["GET"])
 @jwt_required()
 def scenario_id_member_institutions_export_csv_get(scenario_id):
@@ -1380,6 +1379,7 @@ def scenario_id_member_institutions_export_csv_get(scenario_id):
     contents = export_get(table_dicts, is_main_export=False)
     return Response(contents, mimetype="text/csv")
 
+# push-pull functionality only
 @app.route("/scenario/<scenario_id>/member-institutions/consortial-scenarios", methods=["GET"])
 @jwt_required()
 def scenario_id_member_institutions_export_text_get(scenario_id):
@@ -1400,7 +1400,7 @@ def scenario_id_export_csv_get(scenario_id):
         table_dicts = my_consortium.to_dict_journals()["journals"]
     else:
         my_saved_scenario = get_saved_scenario(scenario_id, required_permission=Permission.view())
-        table_dicts = my_saved_scenario.to_dict_journals()["journals"]
+        table_dicts = my_saved_scenario.to_dict_journals(gather_export_concepts = True)["journals"]
 
     contents = export_get(table_dicts)
     return Response(contents, mimetype="text/csv")

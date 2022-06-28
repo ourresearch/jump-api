@@ -5,6 +5,7 @@ import numpy as np
 from collections import OrderedDict
 import datetime
 import shortuuid
+from time import time
 import os
 import numpy as np
 import pandas as pd
@@ -23,23 +24,8 @@ from scenario import get_apc_data_from_db
 from util import get_sql_dict_rows
 from util import safe_commit
 from util import for_sorting
-
-
-def get_fresh_apc_journal_list(issn_ls, apc_df_dict, my_package):
-    print("in get_fresh_apc_journal_list")
-
-    from journalsdb import get_journal_metadata
-    apc_journals = []
-    if not hasattr(my_package, "apc_data"):
-        my_package.apc_data = get_apc_data_from_db(my_package.package_id)
-
-    for issn_l in issn_ls:
-        my_journal_metadata = get_journal_metadata(issn_l)
-        if my_journal_metadata:
-            if my_journal_metadata.get_apc_price(my_package.currency):
-                new_apc_journal = ApcJournal(issn_l, my_package.apc_data, apc_df_dict, my_package.currency)
-                apc_journals.append(new_apc_journal)
-    return apc_journals
+from util import elapsed
+from openalex import JournalMetadata, MissingJournalMetadata, all_journal_metadata_flat
 
 
 class Package(db.Model):
@@ -63,6 +49,66 @@ class Package(db.Model):
         self.created = datetime.datetime.utcnow().isoformat()
         self.is_deleted = False
         super(Package, self).__init__(**kwargs)
+
+    @cached_property
+    def is_consortial_package(self):
+        is_cons_pkg = False
+        if self.consortial_package_ids:
+            is_cons_pkg = True
+        return is_cons_pkg
+
+    @cached_property
+    def consortial_package_ids(self):
+        with get_db_cursor() as cursor:
+            qry = "select member_package_id from jump_consortium_members where consortium_package_id = %s"
+            cursor.execute(qry, (self.package_id,))
+            rows = cursor.fetchall()
+        return [w[0] for w in rows]
+
+    @cached_property
+    def unique_issns(self):
+        if self.is_consortial_package:
+            package_ids = tuple(self.consortial_package_ids)
+            with get_db_cursor() as cursor:
+                qry = "select distinct(issn_l) from jump_counter where package_id in %s"
+                cursor.execute(qry, (package_ids,))
+                rows = cursor.fetchall()
+        else:
+            with get_db_cursor() as cursor:
+                qry = "select distinct(issn_l) from jump_counter where package_id = %s"
+                cursor.execute(qry, (self.package_id,))
+                rows = cursor.fetchall()
+        return [w[0] for w in rows]
+
+    @cached_property
+    def journal_metadata(self):
+        pub_lookup = {
+            "SpringerNature": "Springer Nature",
+            "Springer": "Springer Nature",
+            "Sage": "SAGE",
+            "TaylorFrancis": "Taylor & Francis"
+        }
+        publisher_normalized = pub_lookup.get(self.publisher, self.publisher)
+        meta_list = JournalMetadata.query.filter(
+            JournalMetadata.issn_l.in_(self.unique_issns),
+            JournalMetadata.publisher == publisher_normalized,
+            JournalMetadata.is_current_subscription_journal).all()
+        [db.session.expunge(my_meta) for my_meta in meta_list]
+        return dict(list(zip([j.issn_l for j in meta_list], meta_list)))
+
+    @cached_property
+    def journal_metadata_flat(self):
+        jmf = {}
+        for issn_l, x in self.journal_metadata.items():
+            for issn in x.issns:
+                jmf[issn] = x
+        return jmf
+
+    def get_journal_metadata(self, issn):
+        journal_meta = self.journal_metadata_flat.get(issn, None)
+        if not journal_meta:
+            journal_meta = MissingJournalMetadata(issn_l=issn)
+        return journal_meta
 
     @property
     def unique_saved_scenarios(self):
@@ -127,7 +173,7 @@ class Package(db.Model):
             core.issn_l, 
             title as title
             from jump_core_journals core
-            left outer join journalsdb_computed on core.issn_l = journalsdb_computed.issn_l
+            left outer join openalex_computed on core.issn_l = openalex_computed.issn_l
             where package_id=%(package_id_for_db)s
             order by title desc
             """
@@ -147,7 +193,7 @@ class Package(db.Model):
            listagg(title, ',') as title, 
            sum(total::int) as num_2018_downloads
            from jump_counter counter
-           left outer join journalsdb_computed_flat rj on counter.issn_l = rj.issn
+           left outer join openalex_computed_flat rj on counter.issn_l = rj.issn
            where package_id=%(package_id_for_db)s
            group by rj.issn_l           
            order by num_2018_downloads desc
@@ -163,7 +209,7 @@ class Package(db.Model):
             sum(total::int) as num_2018_downloads, 
             count(*) as num_journals_with_issn_l
             from jump_counter counter
-            left outer join journalsdb_computed_flat rj on counter.issn_l = rj.issn
+            left outer join openalex_computed_flat rj on counter.issn_l = rj.issn
             where package_id=%(package_id_for_db)s 
             {}
             group by rj.issn_l
@@ -176,7 +222,7 @@ class Package(db.Model):
     def get_published_in_2019(self):
         rows = self.get_base(and_where=""" and rj.issn_l in
 	            (select rj.issn_l from unpaywall u 
-	            join journalsdb_computed_flat rj on u.journal_issn_l = rj.issn
+	            join openalex_computed_flat rj on u.journal_issn_l = rj.issn
 	            where year=2019 
 	            group by rj.issn_l) """)
         return self.filter_by_core_list(rows)
@@ -185,7 +231,7 @@ class Package(db.Model):
     def get_published_toll_access_in_2019(self):
         rows = self.get_base(and_where=""" and rj.issn_l in
 	            (select rj.issn_l from unpaywall u 
-	            join journalsdb_computed_flat rj on u.journal_issn_l = rj.issn
+	            join openalex_computed_flat rj on u.journal_issn_l = rj.issn
 	            where year=2019 and journal_is_oa='false' 
 	            group by rj.issn_l) """)
         return self.filter_by_core_list(rows)
@@ -225,7 +271,7 @@ class Package(db.Model):
         rows = self.get_base(and_where=""" and rj.issn_l in
 	            (select distinct rj.issn_l 
 	            from unpaywall u 
-	            join journalsdb_computed_flat rj on u.journal_issn_l=rj.issn
+	            join openalex_computed_flat rj on u.journal_issn_l=rj.issn
 	            where year=2019 and journal_is_oa='false'
 	            and rj.publisher = %(publisher)s
 	            ) """, extrakv={'publisher': self.publisher_name})
@@ -236,7 +282,7 @@ class Package(db.Model):
         rows = self.get_base(and_where=""" and rj.issn_l in
 	            (select distinct rj.issn_l 
 	            from unpaywall u 
-	            join journalsdb_computed_flat rj on u.journal_issn_l=rj.issn
+	            join openalex_computed_flat rj on u.journal_issn_l=rj.issn
 	            where year=2019 and journal_is_oa='false'
 	            and rj.publisher = %(publisher)s
 	            )
@@ -422,13 +468,11 @@ class Package(db.Model):
 
     @cached_property
     def journals_missing_prices(self):
-        from journalsdb import all_journal_metadata
-
         counter_rows = self.counter_totals_from_db
         prices_uploaded_raw = get_custom_prices(self.package_id)
         journals_missing_prices = []
 
-        for my_journal_metadata in list(all_journal_metadata.values()):
+        for my_journal_metadata in list(self.journal_metadata.values()):
             if my_journal_metadata.publisher_code == self.publisher:
                 if my_journal_metadata.is_current_subscription_journal:
                     issn_l = my_journal_metadata.issn_l
@@ -499,8 +543,7 @@ class Package(db.Model):
 
     def public_price_rows(self):
         prices_rows = []
-        from journalsdb import all_journal_metadata
-        for my_journal_metadata in list(all_journal_metadata.values()):
+        for my_journal_metadata in list(self.journal_metadata.values()):
             if my_journal_metadata.publisher_code == self.publisher:
                 if my_journal_metadata.is_current_subscription_journal:
                     my_price = my_journal_metadata.get_subscription_price(self.currency, use_high_price_if_unknown=False)
@@ -518,6 +561,19 @@ class Package(db.Model):
         prices_rows = sorted(prices_rows, key=lambda x: 0 if x["price"]==None else x["price"], reverse=True)
         return prices_rows
 
+    def get_fresh_apc_journal_list(self, issn_ls, apc_df_dict):
+        apc_journals = []
+        if not hasattr(self, "apc_data"):
+            self.apc_data = get_apc_data_from_db(self.package_id)
+
+        for issn_l in issn_ls:
+            meta = all_journal_metadata_flat.get(issn_l, None)
+            if meta:
+                if meta.get_apc_price(self.currency):
+                    apc_journal = ApcJournal(issn_l, self.apc_data, apc_df_dict, self.currency, self)
+                    apc_journals.append(apc_journal)
+        return apc_journals
+
     @cached_property
     def apc_journals(self):
         if not hasattr(self, "apc_data"):
@@ -527,12 +583,11 @@ class Package(db.Model):
             return []
 
         df = pd.DataFrame(self.apc_data)
-    #     # df["apc"] = df["apc"].astype(float)
         df["year"] = df["year"].astype(int)
         df["authorship_fraction"] = df.num_authors_from_uni/df.num_authors_total
         df_by_issn_l_and_year = df.groupby(["issn_l", "year"]).authorship_fraction.agg([np.size, np.sum]).reset_index().rename(columns={'size': 'num_papers', "sum": "authorship_fraction"})
         my_dict = {"df": df, "df_by_issn_l_and_year": df_by_issn_l_and_year}
-        return get_fresh_apc_journal_list(my_dict["df"].issn_l.unique(), my_dict, self)
+        return self.get_fresh_apc_journal_list(my_dict["df"].issn_l.unique(), my_dict)
 
     @cached_property
     def apc_journals_sorted_spend(self):
@@ -597,7 +652,7 @@ class Package(db.Model):
                 insert into jump_apc_authorships (
                     select * from jump_apc_authorships_view
                     where package_id = %s and issn_l in 
-                    (select issn_l from journalsdb_computed rj where rj.publisher = %s))
+                    (select issn_l from openalex_computed rj where rj.publisher = %s))
             """
         with get_db_cursor() as cursor:
             cursor.execute(delete_q, (self.package_id,))

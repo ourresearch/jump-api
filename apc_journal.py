@@ -5,13 +5,16 @@ import numpy as np
 from collections import defaultdict
 from collections import OrderedDict
 
+from openalex import all_journal_metadata_flat
+
 class ApcJournal(object):
     years = list(range(0, 5))
 
-    def __init__(self, issn_l, apc_data, df_dict, currency):
+    def __init__(self, issn_l, apc_data, df_dict, currency, package):
         self.issn_l = issn_l
         self.have_data = False
         self.scenario = None
+        self.package = package
         self.package_id = None
         self.package_currency = currency
 
@@ -39,8 +42,7 @@ class ApcJournal(object):
 
     @cached_property
     def journal_metadata(self):
-        from journalsdb import get_journal_metadata
-        return get_journal_metadata(self.issn_l)
+        return all_journal_metadata_flat.get(self.issn_l, {})
 
     @cached_property
     def issns(self):

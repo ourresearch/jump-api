@@ -78,6 +78,8 @@ class Top(Schema):
     cost_actual = fields.Str()
     subscription_cost = fields.Str()
     subject = fields.Str()
+    subject_top_three = fields.Str()
+    subjects_all = fields.List(fields.Str)
     is_society_journal = fields.Boolean()
     subscribed = fields.Boolean()
     era_subjects = fields.List(fields.List(fields.Str))

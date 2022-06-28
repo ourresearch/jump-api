@@ -14,11 +14,15 @@ class PerpetualAccess(db.Model):
     start_date = db.Column(db.DateTime)
     end_date = db.Column(db.DateTime)
     package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
+    package = None
 
     @cached_property
     def journal_metadata(self):
-        from journalsdb import get_journal_metadata
-        return get_journal_metadata(self.issn_l)
+        from openalex import MissingJournalMetadata, all_journal_metadata
+        meta = all_journal_metadata.get(self.issn_l)
+        if not meta:
+            meta = MissingJournalMetadata(issn_l=self.issn_l)
+        return meta
 
     @cached_property
     def issns(self):

@@ -34,14 +34,14 @@ def display_cpu(value):
 class Journal(object):
     years = list(range(0, 5))
 
-    def __init__(self, issn_l, scenario=None, scenario_data=None, package_id=None):
-        self.now = datetime.datetime.utcnow()
+    def __init__(self, issn_l, scenario=None, scenario_data=None, package=None):
         self.set_scenario(scenario)
         self.set_scenario_data(scenario_data)
         self.issn_l = issn_l
-        self.package_id = package_id
+        self.my_package = package
+        self.package_id = package.package_id
         self.package_id_for_db = self.package_id
-        if self.package_id.startswith("demo"):
+        if self.package_id.startswith("demo") or self.my_package.is_demo:
             self.package_id_for_db = DEMO_PACKAGE_ID
         self.subscribed_bulk = False
         self.subscribed_custom = False
@@ -74,17 +74,19 @@ class Journal(object):
 
     @cached_property
     def subject(self):
-        return self.my_scenario_data_row.get("subject", "")
+        return self._scenario_data['concepts'].get(self.issn_l, {}).get("best", "")
 
+    @cached_property
+    def subject_top_three(self):
+        return self._scenario_data['concepts'].get(self.issn_l, {}).get("top_three", "")
 
-    @property
-    def era_subjects(self):
-        return self._scenario_data["journal_era_subjects"].get(self.issn_l, [])
+    @cached_property
+    def subjects_all(self):
+        return self._scenario_data["concepts"].get(self.issn_l, {}).get("all", [])
 
     @cached_property
     def journal_metadata(self):
-        from journalsdb import get_journal_metadata
-        return get_journal_metadata(self.issn_l)
+        return self.my_package.get_journal_metadata(self.issn_l)
 
     @cached_property
     def issns(self):
@@ -1365,8 +1367,12 @@ class Journal(object):
         table_row["issn_l"] = self.issn_l
         table_row["title"] = self.title
         table_row["issns"] = self.issns
-        table_row["subject"] = self.subject
-        table_row["era_subjects"] = self.era_subjects
+        
+        if not self.__class__.__name__ == 'ConsortiumJournal':
+            table_row["subject"] = self.subject
+            table_row["subject_top_three"] = self.subject_top_three
+            table_row["subjects_all"] = self.subjects_all
+
         table_row["subscribed"] = self.subscribed
 
         table_row["is_society_journal"] = self.is_society_journal
@@ -1451,7 +1457,8 @@ class Journal(object):
                 "issn_l": self.issn_l,
                 "title": self.title,
                 "subject": self.subject,
-                "era_subjects": self.era_subjects,
+                "subject_top_three": self.subject_top_three,
+                "subjects_all": self.subjects_all,
                 # "publisher": self.publisher,
                 "is_society_journal": self.is_society_journal,
                 "subscribed": self.subscribed,

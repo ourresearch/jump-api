@@ -3,6 +3,7 @@
 import logging
 import sys
 import os
+import gzip
 import requests
 import simplejson as json
 import functools
@@ -268,12 +269,14 @@ def memorycache(func):
         result = app.my_memorycache_dict.get(cache_key, None)
         if result is not None:
             # print "cache hit on", cache_key
+            # print("cache hit")
             return result
 
-        print("cache miss on", cache_key)
+        # print("cache miss on", cache_key)
+        # print("cache miss")
 
         # Generate output
-        print("> calling {}.{} with {}".format(func.__module__, func.__name__, args))
+        # print("> calling {}.{} with {}".format(func.__module__, func.__name__, args))
         result = func(*args)
 
         # Cache output if allowed
@@ -303,61 +306,39 @@ def reset_cache(module_name, function_name, *args):
 
 cached_consortium_scenario_ids = ["tGUVWRiN", "scenario-QC2kbHfUhj9W", "EcUvEELe", "CBy9gUC3", "6it6ajJd", "GcAsm5CX", "aAFAuovt"]
 
+@memorycache
+def fetch_common_package_data():
+    try:
+        print("downloading common_package_data_for_all.json.gz")
+        s3_clientobj = s3_client.get_object(Bucket="unsub-cache", Key="common_package_data_for_all.json.gz")
+        with gzip.open(s3_clientobj["Body"], 'r') as f:
+            data_from_s3 = json.loads(f.read().decode('utf-8'))
+        return data_from_s3
+    except Exception as e:
+        print("no S3 data, so computing.  Error message: ", e)
+        pass
 
-def warm_cache():
-    print("warming cache")
+    from common_data import gather_common_data
+    return gather_common_data()
 
-    start_time = time()
+common_data_dict = None
 
-    # import consortium
-    # consortium_ids = consortium.get_consortium_ids()
-    # for scenario_id in [d["scenario_id"] for d in consortium_ids]:
-    #     consortium.consortium_get_computed_data(scenario_id)
-    #     consortium.consortium_get_issns(scenario_id)
+def warm_common_data(lst):
+    lst.append(fetch_common_package_data())
 
-    # from consortium import consortium_get_computed_data
-
-    # global cached_consortium_scenario_ids
-    # shuffle(cached_consortium_scenario_ids)
-    # for scenario_id in cached_consortium_scenario_ids:
-    #     consortium_get_computed_data(scenario_id)
-    # print u"done warming cached_consortium_scenario_ids {}s".format(elapsed(start_time))
-
-    # do this second so it is a bit random when it gets here
-
-    from scenario import _load_journal_era_subjects_from_db
-    _load_journal_era_subjects_from_db()
-
-    import scenario
-    scenario.get_common_package_data_for_all()
-    # scenario.get_common_package_data_specific(DEMO_PACKAGE_ID)
-
-    print("done warming the cache in {}s".format(elapsed(start_time)))
-
-
-if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
-    print("warming caches")
-    start_time = time()
-
+# NOTE: we have to do this when app loads for now - return to this later 
+## if there's a different take on dealing with common data
+# if os.getenv('PRELOAD_LARGE_TABLES', False) == 'True':
+if not common_data_dict:
     import threading
-
-    data = None
-    t = threading.Thread(target=warm_cache)
-    t.daemon = True  # so it doesn't block
+    import time
+    an_lst = []
+    t = threading.Thread(target=warm_common_data, args=[an_lst])
+    t.daemon = True
     t.start()
-    print("done start warm_cache")
-
-    # from views import start_cache_thread
-    # start_cache_thread()
-    # print u"done start_cache_thread"
-
-    print("done loading to cache in {}s".format(elapsed(start_time)))
+    while t.is_alive():
+        time.sleep(0.1)
+    common_data_dict = an_lst[0]
+    print("warm_common_data done!")
 else:
-    print("not warming caches")
-
-#
-# print "clearing cache"
-# reset_cache("consortium", "consortium_get_computed_data", "scenario-fsVitXLd")
-# print "cache clear set"
-
-
+    print("not warming common data cache")

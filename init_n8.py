@@ -269,8 +269,8 @@ def set_non_own_subscriptions(main_jusp_id, group_jusp_ids, package_type, corepl
 # yor york institution-3pQc7HbKgqYD https://unsub.org/i/institution-3pQc7HbKgqYD/p/package-ioUUYHNQRwom/s/hPWVrTDf
 
 def get_issnls(issns):
-    from journalsdb import get_journal_metadata
-    response = [get_journal_metadata(issn).issn_l for issn in issns]
+    from openalex import fetch_journal_metadata
+    response = [fetch_journal_metadata(issn).issn_l for issn in issns]
     return response
 
 def get_group_pta_name(group_name):

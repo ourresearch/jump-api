@@ -32,7 +32,7 @@ from journal import Journal
 class ConsortiumJournal(Journal):
     years = list(range(0, 5))
 
-    def __init__(self, issn_l, included_package_ids, all_member_data, is_jisc):
+    def __init__(self, issn_l, included_package_ids, all_member_data, is_jisc, package):
         start_time = time()
         self.issn_l = issn_l
         self.is_jisc = is_jisc
@@ -42,6 +42,7 @@ class ConsortiumJournal(Journal):
         self.subscribed_bulk = False
         self.subscribed_custom = False
         self.use_default_download_curve = False
+        self.my_package = package
         # print ".",
 
     @cached_property
