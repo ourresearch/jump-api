@@ -433,9 +433,10 @@ class Scenario(object):
                 return
             journal.set_subscribe_bulk()
 
-    @cached_property
-    def historical_years_by_year(self):
-        return list(range(2014, 2019))
+    # Scott here: not used AFAICT
+    # @cached_property
+    # def historical_years_by_year(self):
+    #     return list(range(2014, 2019))
 
     @cached_property
     def num_citations(self):
