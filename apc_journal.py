@@ -5,6 +5,8 @@ import numpy as np
 from collections import defaultdict
 from collections import OrderedDict
 
+from openalex import all_journal_metadata_flat
+
 class ApcJournal(object):
     years = list(range(0, 5))
 
@@ -40,7 +42,7 @@ class ApcJournal(object):
 
     @cached_property
     def journal_metadata(self):
-        return self.package.get_journal_metadata(self.issn_l)
+        return all_journal_metadata_flat.get(self.issn_l, {})
 
     @cached_property
     def issns(self):

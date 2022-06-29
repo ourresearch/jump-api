@@ -25,7 +25,7 @@ from util import get_sql_dict_rows
 from util import safe_commit
 from util import for_sorting
 from util import elapsed
-from openalex import JournalMetadata, MissingJournalMetadata
+from openalex import JournalMetadata, MissingJournalMetadata, all_journal_metadata_flat
 
 
 class Package(db.Model):
@@ -460,7 +460,7 @@ class Package(db.Model):
             self.apc_data = get_apc_data_from_db(self.package_id)
 
         for issn_l in issn_ls:
-            meta = self.get_journal_metadata(issn_l)
+            meta = all_journal_metadata_flat.get(issn_l, None)
             if meta:
                 if meta.get_apc_price(self.currency):
                     apc_journal = ApcJournal(issn_l, self.apc_data, apc_df_dict, self.currency, self)
