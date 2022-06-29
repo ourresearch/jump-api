@@ -404,7 +404,7 @@ class Package(db.Model):
     def journals_filtering(self):
         filtering = []
         with get_db_cursor() as cursor:
-            qry = "select issn_l from jump_journal_filter where package_id = %s"
+            qry = "select distinct(issn_l) from jump_journal_filter where package_id = %s"
             cursor.execute(qry, (self.package_id,))
             rows = cursor.fetchall()
         if rows:
