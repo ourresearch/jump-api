@@ -76,6 +76,20 @@ class Journal(object):
         return self.journal_metadata.publisher
 
     @cached_property
+    def publisher_short(self):
+        x_words = self.publisher.split()
+        if len(x_words) == 1:
+            return self.publisher[:8]
+        acronym = ""
+        for word in x_words:
+            acronym += word[0].upper()
+        short_name = ""
+        for word in x_words:
+            word = word.capitalize()
+            short_name += word[:3]
+        return short_name if len(short_name) <= 8 else acronym
+
+    @cached_property
     def subject(self):
         return self._scenario_data['concepts'].get(self.issn_l, {}).get("best", "")
 
@@ -1371,6 +1385,7 @@ class Journal(object):
         table_row["title"] = self.title
         table_row["issns"] = self.issns
         table_row["publisher_journal"] = self.publisher
+        table_row["publisher_short"] = self.publisher_short
         
         if not self.__class__.__name__ == 'ConsortiumJournal':
             table_row["subject"] = self.subject
