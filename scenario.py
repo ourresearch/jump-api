@@ -784,14 +784,6 @@ def get_unpaywall_downloads_from_json(issns):
 def get_num_papers_from_json(issns):
     return include_keys(common_data_dict['num_papers'], issns)
 
-def get_oa_recent_data_from_json(issns):
-    oa_dict = {}
-    for submitted in ["with_submitted", "no_submitted"]:
-        for bronze in ["with_bronze", "no_bronze"]:
-            key = "{}_{}".format(submitted, bronze)
-            oa_dict[key] = include_keys(common_data_dict['oa_recent'][key], issns)
-    return oa_dict
-
 def get_oa_data_from_json(issns):
     oa_dict = {}
     for submitted in ["with_submitted", "no_submitted"]:
@@ -847,7 +839,6 @@ def get_common_package_data_for(issns = None):
     my_data["embargo_dict"] = get_embargo_data_from_json(issns)
     my_data["unpaywall_downloads_dict_raw"] = get_unpaywall_downloads_from_json(issns)
     my_data["social_networks"] = get_social_networks_data_from_json(issns)
-    my_data["oa_recent"] = get_oa_recent_data_from_json(issns)
     my_data["oa"] = get_oa_data_from_json(issns)
     my_data["society"] = get_society_data_from_json(issns)
     my_data["num_papers"] = get_num_papers_from_json(issns)

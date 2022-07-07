@@ -1168,19 +1168,11 @@ class Journal(object):
 
         key = "{}_{}".format(submitted, bronze)
         my_rows = self._scenario_data["oa"][key].get(self.issn_l, [])
-        my_recent_rows = self._scenario_data["oa_recent"][key].get(self.issn_l, [])
 
         for row in my_rows:
             my_dict[row["fresh_oa_status"]][round(row["year_int"])] = round(row["count"])
-            # my_dict[row["fresh_oa_status"]][round(row["year_int"])] = round(row["count"]) * self.num_oa_papers_multiplier
 
-        for row in my_recent_rows:
-            my_dict[row["fresh_oa_status"]][2019] = round(row["count"])
-            # my_dict[row["fresh_oa_status"]][round(row["year_int"])] = round(row["count"]) * self.num_oa_papers_multiplier
-
-        # print my_dict
         return my_dict
-
 
     @cached_property
     def num_green_historical_by_year(self):
