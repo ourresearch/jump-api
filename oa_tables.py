@@ -100,7 +100,6 @@ def correct_2020(lst):
     returns only the data thats changed. if none changed, an empty 
     """
     colors = list(set([w['fresh_oa_status'] for w in lst]))
-    # color = colors[1]
     fixed_data = []
     for color in colors:
         subset_2020 = []
@@ -127,7 +126,10 @@ def correct_2020(lst):
             changed = True
 
         if changed:
-            fixed_data.append(subset_2020)
+            subset_2020['adjusted'] = True
+            subset_2020['updated'] = datetime.utcnow()
+
+        fixed_data.append(subset_2020)
 
     fixed_dicts = [dict(w) for w in fixed_data if w]
     return fixed_dicts
@@ -143,15 +145,15 @@ def make_params(venue, oa_status, submitted):
 tables_with_bronze = {
     "jump_oa_with_submitted_with_bronze":
         """
-        insert into jump_oa_with_submitted_with_bronze (updated, venue_id, issn_l, fresh_oa_status, year_int, count) (
-            select sysdate,venue_id,issn_l,fresh_oa_status,year_int,count from jump_oa_all_vars_new
+        insert into jump_oa_with_submitted_with_bronze (updated, venue_id, issn_l, fresh_oa_status, year_int, count, adjusted) (
+            select sysdate,venue_id,issn_l,fresh_oa_status,year_int,count,'false' from jump_oa_all_vars_new
             where with_submitted
         )
         """,
     "jump_oa_no_submitted_with_bronze":
         """
-        insert into jump_oa_no_submitted_with_bronze (updated, venue_id, issn_l, fresh_oa_status, year_int, count) (
-            select sysdate,venue_id,issn_l,fresh_oa_status,year_int,count from jump_oa_all_vars_new
+        insert into jump_oa_no_submitted_with_bronze (updated, venue_id, issn_l, fresh_oa_status, year_int, count, adjusted) (
+            select sysdate,venue_id,issn_l,fresh_oa_status,year_int,count,'false' from jump_oa_all_vars_new
             where not with_submitted
         )
         """,
@@ -328,9 +330,8 @@ if __name__ == "__main__":
                 if out:
                     to_update.extend(out)
 
-            # update all 'updated' values
-            for dct in to_update:
-                dct['updated'] = datetime.utcnow()
+            # drop rows with count=None
+            to_update = [row for row in to_update if row['count'] is not None]
 
             # delete all 2020 rows
             with get_db_cursor() as cursor:
