@@ -459,24 +459,24 @@ class Package(db.Model):
 
         return response
 
-    def public_price_rows(self):
-        prices_rows = []
-        for my_journal_metadata in list(self.journal_metadata.values()):
-            if my_journal_metadata.is_current_subscription_journal:
-                my_price = my_journal_metadata.get_subscription_price(self.currency, use_high_price_if_unknown=False)
-                if my_price != None:
-                    my_dict = OrderedDict()
-                    my_dict["issn_l_prefixed"] = my_journal_metadata.display_issn_l
-                    my_dict["issn_l"] = my_journal_metadata.issn_l
-                    my_dict["issns"] = my_journal_metadata.display_issns
-                    my_dict["title"] = my_journal_metadata.title
-                    my_dict["publisher"] = my_journal_metadata.publisher
-                    my_dict["currency"] = self.currency
-                    my_dict["price"] = my_price
-                    prices_rows += [my_dict]
+    # def public_price_rows(self):
+    #     prices_rows = []
+    #     for my_journal_metadata in list(self.journal_metadata.values()):
+    #         if my_journal_metadata.is_current_subscription_journal:
+    #             my_price = my_journal_metadata.get_subscription_price(self.currency, use_high_price_if_unknown=False)
+    #             if my_price != None:
+    #                 my_dict = OrderedDict()
+    #                 my_dict["issn_l_prefixed"] = my_journal_metadata.display_issn_l
+    #                 my_dict["issn_l"] = my_journal_metadata.issn_l
+    #                 my_dict["issns"] = my_journal_metadata.display_issns
+    #                 my_dict["title"] = my_journal_metadata.title
+    #                 my_dict["publisher"] = my_journal_metadata.publisher
+    #                 my_dict["currency"] = self.currency
+    #                 my_dict["price"] = my_price
+    #                 prices_rows += [my_dict]
 
-        prices_rows = sorted(prices_rows, key=lambda x: 0 if x["price"]==None else x["price"], reverse=True)
-        return prices_rows
+    #     prices_rows = sorted(prices_rows, key=lambda x: 0 if x["price"]==None else x["price"], reverse=True)
+    #     return prices_rows
 
     def get_fresh_apc_journal_list(self, issn_ls, apc_df_dict):
         apc_journals = []
@@ -609,7 +609,7 @@ class Package(db.Model):
             raw_file_upload_rows = cursor.fetchall()
 
         data_files_dict = {}
-        data_file_types = ["counter", "counter-trj2", "counter-trj3", "counter-trj4", "price-public", "price", "perpetual-access", "filter"]
+        data_file_types = ["counter", "counter-trj2", "counter-trj3", "counter-trj4", "price", "perpetual-access", "filter"]
         for data_file_type in data_file_types:
             my_dict = OrderedDict()
             my_dict["name"] = data_file_type
@@ -622,10 +622,10 @@ class Package(db.Model):
             my_dict["created_date"] = None
             data_files_dict[data_file_type] = my_dict
 
-        data_files_dict["price-public"]["is_uploaded"] = True
-        data_files_dict["price-public"]["is_parsed"] = True
-        data_files_dict["price-public"]["is_live"] = True
-        data_files_dict["price-public"]["rows_count"] = len(self.public_price_rows())
+        # data_files_dict["price-public"]["is_uploaded"] = False
+        # data_files_dict["price-public"]["is_parsed"] = False
+        # data_files_dict["price-public"]["is_live"] = False
+        # data_files_dict["price-public"]["rows_count"] = len(self.public_price_rows())
 
         # go through all the upload rows
         for raw_file_upload_row in raw_file_upload_rows:
@@ -681,6 +681,7 @@ class Package(db.Model):
             ("is_demo", self.is_demo),
             ("has_complete_counter_data", self.has_complete_counter_data),
             ("filter_data_set", self.filter_data_set),
+            ("has_custom_prices", self.has_custom_prices),
             ("data_files", data_files_list),
             # @todo for testing, show all scenarios even with owned by consortium
             # ("is_owned_by_consortium", self.is_owned_by_consortium),

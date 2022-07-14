@@ -1033,12 +1033,12 @@ def jump_perpetual_access(package_id):
 #     return Response(raw["body"], content_type=raw["content_type"], headers=raw["headers"])
 
 
-@app.route("/publisher/<package_id>/price-public", methods=["GET"])
-@jwt_required()
-def jump_journal_public_prices(package_id):
-    my_package = authenticate_for_package(package_id, Permission.view())
-    rows = my_package.public_price_rows()
-    return jsonify_fast_no_sort({"rows": rows})
+# @app.route("/publisher/<package_id>/price-public", methods=["GET"])
+# @jwt_required()
+# def jump_journal_public_prices(package_id):
+#     my_package = authenticate_for_package(package_id, Permission.view())
+#     rows = my_package.public_price_rows()
+#     return jsonify_fast_no_sort({"rows": rows})
 
 
 @app.route("/publisher/<package_id>/price", methods=["GET", "POST", "DELETE"])
