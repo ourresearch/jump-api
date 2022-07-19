@@ -1,5 +1,4 @@
 import ssl
-from enum import Enum
 from celery import Celery
 
 from app import app
@@ -22,29 +21,22 @@ def make_celery(app):
     celery.Task = ContextTask
     return celery
 
-class Pubs(Enum):
-    Elsevier = "Elsevier"
-    Wiley = "Wiley"
-    SpringerNature = "Springer Nature"
-    Sage = "SAGE"
-    TaylorFrancis = "Taylor & Francis"
-
 def update_apc(package_id):
     from app import get_db_cursor
     from psycopg2.extensions import AsIs
 
-    find_q = 'select publisher from jump_account_package where package_id = %s'
+    find_q = 'select package_id from jump_account_package where package_id = %s'
     delete_q = 'delete from jump_apc_authorships where package_id = %s'
     insert_q = """
         insert into jump_apc_authorships (
             select * from jump_apc_authorships_view
             where package_id = %s and issn_l in 
-            (select issn_l from openalex_computed rj where rj.publisher = %s))
+            (select issn_l from openalex_computed))
     """
     make_temp_table = """
         select * into temp table %s from jump_apc_authorships_view
             where package_id = %s and issn_l in
-            (select issn_l from openalex_computed rj where rj.publisher = %s)
+            (select issn_l from openalex_computed)
     """
     insert_from_temp_table = """
         insert into jump_apc_authorships (select * from %s)
@@ -60,12 +52,11 @@ def update_apc(package_id):
             cursor.execute(delete_q, (package_id,))
 
         # with get_db_cursor() as cursor:
-        #     cursor.execute(insert_q, (package_id, Pubs[row['publisher']].value,))
+        #     cursor.execute(insert_q, (package_id,))
 
         with get_db_cursor() as cursor:
-            # print(cursor.mogrify(make_temp_table, (AsIs(temp_table_name), package_id, 'Elsevier',)))
-            # print(cursor.mogrify(make_temp_table, (AsIs(temp_table_name), package_id, Pubs[row['publisher']].value,)))
-            cursor.execute(make_temp_table, (AsIs(temp_table_name), package_id, Pubs[row['publisher']].value,))
+            # print(cursor.mogrify(make_temp_table, (AsIs(temp_table_name), package_id,)))
+            cursor.execute(make_temp_table, (AsIs(temp_table_name), package_id,))
 
         with get_db_cursor() as cursor:
             # print(cursor.mogrify(insert_from_temp_table, (AsIs(temp_table_name),)))
