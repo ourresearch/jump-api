@@ -12,8 +12,8 @@ from package_input import PackageInput
 
 class FilterTitles(db.Model):
 	__tablename__ = "jump_journal_filter"
-	package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
 	issn_l = db.Column(db.Text)
+	package_id = db.Column(db.Text, db.ForeignKey("jump_account_package.package_id"), primary_key=True)
 	type = db.Column(db.Text)
 	title = db.Column(db.Text)
 	publisher = db.Column(db.Text)
