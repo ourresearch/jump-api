@@ -481,10 +481,10 @@ class Journal(object):
     @cached_property
     def backfile_raw_obs_pub(self):
         response = {}
-        for obs_year in range(2020, 2025):
+        for obs_year in range(self.now.year, self.now.year + 5):
             obs_key = "obs{}".format(obs_year)
             response[obs_key] = {}
-            for pub_year in range(2011, 2025):
+            for pub_year in range(self.now.year - 10, self.now.year + 5):
                 pub_key = "pub{}".format(pub_year)
 
                 # modelling subscription ending in 2020, so no backfile beyond that
@@ -502,10 +502,10 @@ class Journal(object):
     @cached_property
     def backfile_obs_pub(self):
         response = {}
-        for obs_year in range(2020, 2025):
+        for obs_year in range(self.now.year, self.now.year + 5):
             obs_key = "obs{}".format(obs_year)
             response[obs_key] = {}
-            for pub_year in range(2011, 2025):
+            for pub_year in range(self.now.year - 10, self.now.year + 5):
                 pub_key = "pub{}".format(pub_year)
                 value = self.backfile_raw_obs_pub[obs_key][pub_key]
                 # value *= (self.settings.backfile_contribution / 100.0)
@@ -516,9 +516,9 @@ class Journal(object):
 
     def obs_pub_matrix(self, by_age, by_age_old, growth_scaling):
         response = {}
-        for obs_index, obs_year in enumerate(range(2020, 2025)):
+        for obs_index, obs_year in enumerate(range(self.now.year, self.now.year + 5)):
             response["obs{}".format(obs_year)] = {}
-            for pub_year in range(2011, 2025):
+            for pub_year in range(self.now.year - 10, self.now.year + 5):
                 age = obs_year - pub_year
                 value = 0
                 if age >= 0 and age <= 4:
@@ -543,9 +543,9 @@ class Journal(object):
 
     def sum_obs_pub_matrix_by_obs(self, my_obs_pub_matrix):
         response = [0 for year in self.years]
-        for i, obs_year in enumerate(range(2020, 2025)):
+        for i, obs_year in enumerate(range(self.now.year, self.now.year + 5)):
             obs_key = "obs{}".format(obs_year)
-            for pub_year in range(2011, 2025):
+            for pub_year in range(self.now.year - 10, self.now.year + 5):
                 pub_key = "pub{}".format(pub_year)
                 response[i] += my_obs_pub_matrix[obs_key][pub_key]
         return response
