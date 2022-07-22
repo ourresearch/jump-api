@@ -309,8 +309,8 @@ cached_consortium_scenario_ids = ["tGUVWRiN", "scenario-QC2kbHfUhj9W", "EcUvEELe
 @memorycache
 def fetch_common_package_data():
     try:
-        print("downloading common_package_data_for_all_forecast_years_adjusted_no_recent.json.gz")
-        s3_clientobj = s3_client.get_object(Bucket="unsub-cache", Key="common_package_data_for_all_forecast_years_adjusted_no_recent.json.gz")
+        print("downloading common_package_data_for_all.json.gz")
+        s3_clientobj = s3_client.get_object(Bucket="unsub-cache", Key="common_package_data_for_all.json.gz")
         with gzip.open(s3_clientobj["Body"], 'r') as f:
             data_from_s3 = json.loads(f.read().decode('utf-8'))
         return data_from_s3

@@ -98,18 +98,18 @@ def upload_common_data():
     data = gather_common_data()
 
     try:
-        os.remove('data/common_package_data_for_all_forecast_years_adjusted_no_recent.json.gz')
+        os.remove('data/common_package_data_for_all.json.gz')
     except OSError:
         pass
 
-    with gzip.open('data/common_package_data_for_all_forecast_years_adjusted_no_recent.json.gz', 'w') as f:
+    with gzip.open('data/common_package_data_for_all.json.gz', 'w') as f:
         f.write(json.dumps(data, default=str).encode('utf-8'))
 
     print("uploading to S3")
     s3_client.upload_file(
-        Filename="data/common_package_data_for_all_forecast_years_adjusted_no_recent.json.gz", 
+        Filename="data/common_package_data_for_all.json.gz", 
         Bucket="unsub-cache", 
-        Key="common_package_data_for_all_forecast_years_adjusted_no_recent.json.gz")
+        Key="common_package_data_for_all.json.gz")
 
     print("done!")
 
