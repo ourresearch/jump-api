@@ -22,25 +22,6 @@ from app import s3_client
 from util import safe_commit
 from openalex import OpenalexDBRaw
 
-def distinct_issnls(table):
-    with get_db_cursor() as cursor:
-        qry = sql.SQL("select distinct(issn_l) from {}").format( 
-            sql.Identifier(table))
-        print(cursor.mogrify(qry))
-        cursor.execute(qry)
-        rows = cursor.fetchall()
-    return [w[0] for w in rows]
-
-def query_one(issn_l):
-    with get_db_cursor() as cursor:
-        cols = ['issn_l','fresh_oa_status','year_int','count']
-        qry = sql.SQL("select {} from {} where issn_l = %s").format( 
-            sql.SQL(', ').join(map(sql.Identifier, cols)), sql.Identifier(table))
-        # print(cursor.mogrify(qry, (issn_l,)))
-        cursor.execute(qry, (issn_l,))
-        rows = cursor.fetchall()
-    return rows
-
 def fetch_data_and_split(table):
     with get_db_cursor() as cursor:
         qry = sql.SQL("select * from {}").format(sql.Identifier(table))
@@ -56,37 +37,6 @@ def fetch_data_and_split(table):
         issn_dict[name] = group.to_dict(orient='records')
 
     return issn_dict
-    # issns = list(set([w['issn_l'] for w in rows]))
-    # issn_dict = defaultdict(list)
-    # for issn in issns:
-    #     issn_dict[issn] = list(filter(lambda x: x['issn_l'] == issn, rows))
-    #     # [x['issn_l'] == issn for x in issns[0:3]]
-    # issn_dict = defaultdict(list, { k:[] for k in issns })
-    # for issn in issns[0:100]:
-    #     issn_dict[issn] = [w for w in rows if w['issn_l'] == issn]
-    # return issn_dict
-
-def delete_rows(table, x):
-    keys_to_extract = ["issn_l", "fresh_oa_status", "year_int"]
-    delete_data = [{key: w[key] for key in keys_to_extract} for w in x]
-    delete_tuples = [tuple(w.values()) for w in delete_data]
-    with get_db_cursor() as cursor:
-        query_str = "delete from {} where (issn_l, fresh_oa_status, year_int) IN (%s)"
-        qry = sql.SQL(query_str).format(sql.Identifier(table))
-        execute_values(cursor, qry, delete_tuples, page_size = 10000)
-    
-    print(f"deleted {len(delete_tuples)} rows in {table}")
-
-def insert_rows(table, x):
-    keys_to_extract = ["issn_l", "fresh_oa_status", "year_int"]
-    for dct in x:
-        dct['updated'] = datetime.utcnow()
-    insert_tuples = [tuple(w.values()) for w in x]
-    with get_db_cursor() as cursor:
-        qry = sql.SQL("insert into {} values %s").format(sql.Identifier(table))
-        execute_values(cursor, qry, insert_tuples, page_size = 10000)
-    
-    print(f"deleted {len(delete_tuples)} rows in {table}")
 
 def year_count(rws, year):
     return list(filter(lambda x: x['year_int'] == year, rws))[0]['count']
@@ -146,14 +96,14 @@ tables_with_bronze = {
     "jump_oa_with_submitted_with_bronze":
         """
         insert into jump_oa_with_submitted_with_bronze (updated, venue_id, issn_l, fresh_oa_status, year_int, count, adjusted) (
-            select sysdate,venue_id,issn_l,fresh_oa_status,year_int,count,'false' from jump_oa_all_vars_new
+            select sysdate,venue_id,issn_l,fresh_oa_status,year_int,count,'false' from jump_oa_all_vars
             where with_submitted
         )
         """,
     "jump_oa_no_submitted_with_bronze":
         """
         insert into jump_oa_no_submitted_with_bronze (updated, venue_id, issn_l, fresh_oa_status, year_int, count, adjusted) (
-            select sysdate,venue_id,issn_l,fresh_oa_status,year_int,count,'false' from jump_oa_all_vars_new
+            select sysdate,venue_id,issn_l,fresh_oa_status,year_int,count,'false' from jump_oa_all_vars
             where not with_submitted
         )
         """,
@@ -193,7 +143,7 @@ class OpenAccessTables:
         self.years = list(range(2010, datetime.now().year + 1))
         self.oa_statuses = ['gold','green','bronze','hybrid',]
         self.oa_submitted = ["none","false",]
-        self.table = "jump_oa_all_vars_new"
+        self.table = "jump_oa_all_vars"
         self.load_openalex()
         self.make_tables(since_update_date)
 
