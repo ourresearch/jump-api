@@ -26,7 +26,7 @@ def get_unpaywall_downloads_from_db():
     return unpaywall_downloads_dict
 
 def get_num_papers_from_db():
-    command = "select issn_l, year, num_papers from jump_num_papers"
+    command = "select issn_l, year, num_papers from jump_num_papers_oa where year >= 2014"
     with get_db_cursor() as cursor:
         cursor.execute(command)
         rows = cursor.fetchall()
@@ -35,30 +35,13 @@ def get_num_papers_from_db():
         lookup_dict[row["issn_l"]][row["year"]] = row["num_papers"]
     return lookup_dict
 
-def get_oa_recent_data_from_db():
-    oa_dict = {}
-    for submitted in ["with_submitted", "no_submitted"]:
-        for bronze in ["with_bronze", "no_bronze"]:
-            key = "{}_{}".format(submitted, bronze)
-            command = """select * from jump_oa_recent_{}_precovid
-                            """.format(key)
-
-            with get_db_cursor() as cursor:
-                cursor.execute(command)
-                rows = cursor.fetchall()
-            lookup_dict = defaultdict(list)
-            for row in rows:
-                lookup_dict[row["issn_l"]] += [dict(row)]
-            oa_dict[key] = lookup_dict
-    return oa_dict
-
 def get_oa_data_from_db():
     oa_dict = {}
     for submitted in ["with_submitted", "no_submitted"]:
         for bronze in ["with_bronze", "no_bronze"]:
             key = "{}_{}".format(submitted, bronze)
 
-            command = """select * from jump_oa_{}_precovid  
+            command = """select * from jump_oa_{}  
                         where year_int >= 2015  
                             """.format(key)
 
@@ -105,7 +88,6 @@ def gather_common_data():
     my_data["embargo_dict"] = get_embargo_data_from_db()
     my_data["unpaywall_downloads_dict_raw"] = get_unpaywall_downloads_from_db()
     my_data["social_networks"] = get_social_networks_data_from_db()
-    my_data["oa_recent"] = get_oa_recent_data_from_db()
     my_data["oa"] = get_oa_data_from_db()
     my_data["society"] = get_society_data_from_db()
     my_data["num_papers"] = get_num_papers_from_db()
@@ -121,7 +103,7 @@ def upload_common_data():
         pass
 
     with gzip.open('data/common_package_data_for_all.json.gz', 'w') as f:
-        f.write(json.dumps(data).encode('utf-8'))
+        f.write(json.dumps(data, default=str).encode('utf-8'))
 
     print("uploading to S3")
     s3_client.upload_file(

@@ -5,7 +5,8 @@ from consortium import Consortium
 
 scenario_id = 'EL9sZJQP'
 # scenario_id_with_email = 'scenario-F3awPQcDiG7C'
-scenario_id_with_email = 'e5tqtgQQ'
+# scenario_id_with_email = 'e5tqtgQQ'
+scenario_id_with_email = 'KxjA3Gv6'
 cons = Consortium(scenario_id=scenario_id_with_email)
 
 # Make sure some of the methods that use psycopg2 sql bind variables are working as expected

@@ -35,6 +35,7 @@ class Journal(object):
     years = list(range(0, 5))
 
     def __init__(self, issn_l, scenario=None, scenario_data=None, package=None):
+        self.now = datetime.datetime.utcnow()
         self.set_scenario(scenario)
         self.set_scenario_data(scenario_data)
         self.issn_l = issn_l
@@ -207,12 +208,12 @@ class Journal(object):
 
     @cached_property
     def years_by_year(self):
-        return [2019 + year_index for year_index in self.years]
+        return [self.now.year + year_index for year_index in self.years]
 
     @cached_property
     def historical_years_by_year(self):
         # used for citation, authorship lookup
-        return list(range(2015, 2019+1))
+        return list(range(self.now.year - 5, self.now.year))
 
     @cached_property
     def cost_actual_by_year(self):
@@ -471,9 +472,6 @@ class Journal(object):
     @cached_property
     def downloads_backfile_by_year(self):
         response = self.sum_obs_pub_matrix_by_obs(self.backfile_obs_pub)
-        # if self.issn_l == "0271-678X":
-        #     print self.backfile_obs_pub
-        #     print self.sum_obs_pub_matrix_by_obs(self.backfile_obs_pub)
         response = [min(response[year], self.downloads_total_by_year[year] - self.downloads_oa_by_year[year]) for year in self.years]
         return response
 
@@ -495,19 +493,15 @@ class Journal(object):
             by_age_old = (self.downloads_total_older_than_five_years/5.0) * (self.downloads_oa_by_age[4]/(self.downloads_by_age[4]))
         growth_scaling = self.growth_scaling_oa_downloads
         my_matrix = self.obs_pub_matrix(by_age, by_age_old, growth_scaling)
-        # if self.issn_l == "0271-678X":
-        #     print "by_age", by_age
-        #     print "by_age_old", by_age_old
-        #     print "my_matrix", self.display_obs_pub_matrix(my_matrix)
         return my_matrix
 
     @cached_property
     def backfile_raw_obs_pub(self):
         response = {}
-        for obs_year in range(2020, 2025):
+        for obs_year in range(self.now.year, self.now.year + 5):
             obs_key = "obs{}".format(obs_year)
             response[obs_key] = {}
-            for pub_year in range(2011, 2025):
+            for pub_year in range(self.now.year - 10, self.now.year + 5):
                 pub_key = "pub{}".format(pub_year)
 
                 # modelling subscription ending in 2020, so no backfile beyond that
@@ -525,10 +519,10 @@ class Journal(object):
     @cached_property
     def backfile_obs_pub(self):
         response = {}
-        for obs_year in range(2020, 2025):
+        for obs_year in range(self.now.year, self.now.year + 5):
             obs_key = "obs{}".format(obs_year)
             response[obs_key] = {}
-            for pub_year in range(2011, 2025):
+            for pub_year in range(self.now.year - 10, self.now.year + 5):
                 pub_key = "pub{}".format(pub_year)
                 value = self.backfile_raw_obs_pub[obs_key][pub_key]
                 # value *= (self.settings.backfile_contribution / 100.0)
@@ -539,9 +533,9 @@ class Journal(object):
 
     def obs_pub_matrix(self, by_age, by_age_old, growth_scaling):
         response = {}
-        for obs_index, obs_year in enumerate(range(2020, 2025)):
+        for obs_index, obs_year in enumerate(range(self.now.year, self.now.year + 5)):
             response["obs{}".format(obs_year)] = {}
-            for pub_year in range(2011, 2025):
+            for pub_year in range(self.now.year - 10, self.now.year + 5):
                 age = obs_year - pub_year
                 value = 0
                 if age >= 0 and age <= 4:
@@ -566,9 +560,9 @@ class Journal(object):
 
     def sum_obs_pub_matrix_by_obs(self, my_obs_pub_matrix):
         response = [0 for year in self.years]
-        for i, obs_year in enumerate(range(2020, 2025)):
+        for i, obs_year in enumerate(range(self.now.year, self.now.year + 5)):
             obs_key = "obs{}".format(obs_year)
-            for pub_year in range(2011, 2025):
+            for pub_year in range(self.now.year - 10, self.now.year + 5):
                 pub_key = "pub{}".format(pub_year)
                 response[i] += my_obs_pub_matrix[obs_key][pub_key]
         return response
@@ -1191,19 +1185,11 @@ class Journal(object):
 
         key = "{}_{}".format(submitted, bronze)
         my_rows = self._scenario_data["oa"][key].get(self.issn_l, [])
-        my_recent_rows = self._scenario_data["oa_recent"][key].get(self.issn_l, [])
 
         for row in my_rows:
             my_dict[row["fresh_oa_status"]][round(row["year_int"])] = round(row["count"])
-            # my_dict[row["fresh_oa_status"]][round(row["year_int"])] = round(row["count"]) * self.num_oa_papers_multiplier
 
-        for row in my_recent_rows:
-            my_dict[row["fresh_oa_status"]][2019] = round(row["count"])
-            # my_dict[row["fresh_oa_status"]][round(row["year_int"])] = round(row["count"]) * self.num_oa_papers_multiplier
-
-        # print my_dict
         return my_dict
-
 
     @cached_property
     def num_green_historical_by_year(self):
@@ -1470,6 +1456,7 @@ class Journal(object):
 
     def to_dict_details(self):
         response = OrderedDict()
+        now = datetime.datetime.utcnow()
 
         response["top"] = {
                 "issn_l": self.issn_l,
@@ -1497,19 +1484,15 @@ class Journal(object):
             group_dict["usage_percent"] = format_percent(round(float(100)*self.use_actual[group]/self.use_total))
             # group_dict["timeline"] = u",".join(["{:>7}".format(self.use_actual_by_year[group][year]) for year in self.years])
             for year in self.years:
-                group_dict["year_"+str(2020 + year)] = format_with_commas(round(self.use_actual_by_year[group][year]))
+                group_dict["year_" + str(now.year + year)] = format_with_commas(round(self.use_actual_by_year[group][year]))
             group_list += [group_dict]
         response["fulfillment"] = {
             "headers": [
                 {"text": "Type", "value": "group"},
                 {"text": "Usage (projected annual)", "value": "usage"},
                 {"text": "Usage (percent)", "value": "usage_percent"},
-                {"text": "Usage projected 2020", "value": "year_2020"},
-                {"text": "2021", "value": "year_2021"},
-                {"text": "2022", "value": "year_2022"},
-                {"text": "2023", "value": "year_2023"},
-                {"text": "2024", "value": "year_2024"},
-            ],
+                {"text": "Usage projected " + str(now.year + self.years[0]), "value": "year_" + str(now.year + self.years[0])},
+            ] + [{"text": str(now.year + w), "value": "year_" + str(now.year + w)} for w in self.years[1:]],
             "data": group_list
             }
         response["fulfillment"]["use_actual_by_year"] = self.use_actual_by_year
@@ -1585,7 +1568,7 @@ class Journal(object):
                 cost_dict["cost_type"] = cost_dict["cost_type"].replace("Ill", "ILL")
             costs = self.__getattribute__(cost_type)
             for year in self.years:
-                cost_dict["year_"+str(2020 + year)] = format_currency(costs[year])
+                cost_dict["year_" + str(now.year + year)] = format_currency(costs[year])
             cost_list += [cost_dict]
             cost_dict["cost_avg"] = format_currency(self.__getattribute__(cost_type.replace("_by_year", "")))
             if self.use_paywalled:
@@ -1599,33 +1582,18 @@ class Journal(object):
                 {"text": "Cost Type", "value": "cost_type"},
                 {"text": "Cost (projected annual)", "value": "cost_avg"},
                 {"text": "Cost-Type per paid use", "value": "cost_per_use"},
-                {"text": "Cost projected 2020", "value": "year_2020"},
-                {"text": "2021", "value": "year_2021"},
-                {"text": "2022", "value": "year_2022"},
-                {"text": "2023", "value": "year_2023"},
-                {"text": "2024", "value": "year_2024"},
-            ],
+                {"text": "Cost projected " + str(now.year + self.years[0]), "value": "year_" + str(now.year + self.years[0])},
+            ] + [{"text": str(now.year + w), "value": "year_" + str(now.year + w)} for w in self.years[1:]],
             "data": cost_list
             }
 
         num_papers_list = []
         num_papers_dict = OrderedDict()
         for year in self.years:
-            num_papers_dict["year_" + str(2015 + year)] = int(round(self.raw_num_papers_historical_by_year[year]))
+            num_papers_dict["year_" + str(now.year - 5 + year)] = int(round(self.raw_num_papers_historical_by_year[year]))
         num_papers_list += [num_papers_dict]
         response["num_papers"] = {
-            "headers": [
-                {"text": "2015", "value": "year_2015"},
-                {"text": "2016", "value": "year_2016"},
-                {"text": "2017", "value": "year_2017"},
-                {"text": "2018", "value": "year_2018"},
-                {"text": "2019", "value": "year_2019"},
-                {"text": "2020", "value": "year_2020"},
-                {"text": "2021", "value": "year_2021"},
-                {"text": "2022", "value": "year_2022"},
-                {"text": "2023", "value": "year_2023"},
-                {"text": "2024", "value": "year_2024"}
-            ],
+            "headers": [{"text": str(w), "value": "year_" + str(w)} for w in range(now.year - 5, now.year + 5)],
             "data": num_papers_list
             }
 
@@ -1636,9 +1604,9 @@ class Journal(object):
                 for i, year in enumerate(self.curve_fit_for_num_papers["x"]):
                     # print self.curve_fit_for_num_papers["x"]
                     # print self.curve_fit_for_num_papers["y_fit"]
-                    num_papers_dict["year_" + str(2015 + year)] = int(round(self.curve_fit_for_num_papers["y_fit"][i]))
+                    num_papers_dict["year_" + str((now.year - 5) + year)] = int(round(self.curve_fit_for_num_papers["y_fit"][i]))
         for year in self.years:
-            num_papers_dict["year_" + str(2020 + year)] = int(round(self.num_papers_by_year[year]))
+            num_papers_dict["year_" + str(now.year + year)] = int(round(self.num_papers_by_year[year]))
         num_papers_list += [num_papers_dict]
         response["num_papers_forecast"] = {"headers": response["num_papers"]["headers"], "data": num_papers_list}
 

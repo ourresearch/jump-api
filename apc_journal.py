@@ -1,5 +1,6 @@
 # coding: utf-8
 
+from datetime import datetime
 from cached_property import cached_property
 import numpy as np
 from collections import defaultdict
@@ -114,7 +115,8 @@ class ApcJournal(object):
 
     @cached_property
     def historical_years_by_year(self):
-        return list(range(2014, 2019))
+        now = datetime.utcnow()
+        return list(range(now.year - 5, now.year))
 
     def to_dict(self):
         response = OrderedDict()

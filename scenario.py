@@ -2,6 +2,7 @@
 
 import os
 import gzip
+import datetime
 from cached_property import cached_property
 import numpy as np
 import pandas as pd
@@ -441,9 +442,10 @@ class Scenario(object):
                 return
             journal.set_subscribe_bulk()
 
-    @cached_property
-    def historical_years_by_year(self):
-        return list(range(2014, 2019))
+    # Scott here: not used AFAICT
+    # @cached_property
+    # def historical_years_by_year(self):
+    #     return list(range(2014, 2019))
 
     @cached_property
     def num_citations(self):
@@ -642,6 +644,7 @@ def get_package_specific_scenario_data_from_db(package_id):
     timing = []
     section_time = time()
 
+    now = datetime.datetime.utcnow()
 
     counter_dict = get_counter_totals_from_db(package_id)
 
@@ -652,13 +655,13 @@ def get_package_specific_scenario_data_from_db(package_id):
         from jump_citing citing
         join jump_grid_id institution_grid on citing.grid_id = institution_grid.grid_id
         join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id
-        where citing.year < 2019 
+        where citing.year < %(year)s
         and institution_package.package_id=%(package_id)s
         and (citing.issn_l in (select distinct issn_l from jump_counter where package_id=%(package_id)s))
         group by citing.issn_l, year"""
     citation_rows = None
     with get_db_cursor() as cursor:
-        cursor.execute(command, {'package_id': package_id})
+        cursor.execute(command, {'year': now.year, 'package_id': package_id})
         citation_rows = cursor.fetchall()
     citation_dict = defaultdict(dict)
     for row in citation_rows:
@@ -672,13 +675,13 @@ def get_package_specific_scenario_data_from_db(package_id):
         from jump_authorship authorship
         join jump_grid_id institution_grid on authorship.grid_id = institution_grid.grid_id
         join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id
-        where authorship.year < 2019 
+        where authorship.year < %(year)s
         and institution_package.package_id=%(package_id)s
         and (authorship.issn_l in (select distinct issn_l from jump_counter where package_id=%(package_id)s))
         group by authorship.issn_l, year"""
     authorship_rows = None
     with get_db_cursor() as cursor:
-        cursor.execute(command, {'package_id': package_id})
+        cursor.execute(command, {'year': now.year, 'package_id': package_id})
         authorship_rows = cursor.fetchall()
     authorship_dict = defaultdict(dict)
     for row in authorship_rows:
@@ -791,14 +794,6 @@ def get_unpaywall_downloads_from_json(issns):
 def get_num_papers_from_json(issns):
     return include_keys(common_data_dict['num_papers'], issns)
 
-def get_oa_recent_data_from_json(issns):
-    oa_dict = {}
-    for submitted in ["with_submitted", "no_submitted"]:
-        for bronze in ["with_bronze", "no_bronze"]:
-            key = "{}_{}".format(submitted, bronze)
-            oa_dict[key] = include_keys(common_data_dict['oa_recent'][key], issns)
-    return oa_dict
-
 def get_oa_data_from_json(issns):
     oa_dict = {}
     for submitted in ["with_submitted", "no_submitted"]:
@@ -854,7 +849,6 @@ def get_common_package_data_for(issns = None):
     my_data["embargo_dict"] = get_embargo_data_from_json(issns)
     my_data["unpaywall_downloads_dict_raw"] = get_unpaywall_downloads_from_json(issns)
     my_data["social_networks"] = get_social_networks_data_from_json(issns)
-    my_data["oa_recent"] = get_oa_recent_data_from_json(issns)
     my_data["oa"] = get_oa_data_from_json(issns)
     my_data["society"] = get_society_data_from_json(issns)
     my_data["num_papers"] = get_num_papers_from_json(issns)
