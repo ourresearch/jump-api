@@ -31,6 +31,7 @@ def update_authorship(grid_id):
 def update_apc_authorships(package_id):
 	with get_db_cursor() as cursor:
 		cmd = "delete from jump_apc_authorships where package_id=%s"
+		click.echo(cursor.mogrify(cmd, (package_id,)))
 		cursor.execute(cmd, (package_id,))
 
 	with get_db_cursor() as cursor:
@@ -39,6 +40,7 @@ def update_apc_authorships(package_id):
         where package_id = %s and issn_l in
         (select issn_l from openalex_computed))
 		"""
+		click.echo(cursor.mogrify(cmd, (package_id,)))
 		cursor.execute(cmd, (package_id,))
 
 def check_updated(grid_id, table):
@@ -50,13 +52,22 @@ def check_updated(grid_id, table):
 
 	return rows
 
+def check_updated_apc(pkg_id):
+	with get_db_cursor() as cursor:
+		cmd = "select * from jump_apc_authorships_updates where package_id=%s order by updated desc limit 1"
+		click.echo(cursor.mogrify(cmd, (pkg_id,)))
+		cursor.execute(cmd, (pkg_id,))
+		rows = cursor.fetchall()
+
+	return rows
+
 def record_update(grid_id, table, err, institution_id = None, package_id = None):
 	if table in ['jump_citing_updates','jump_authorship_updates',]:
 		cols = ['updated', 'grid_id', 'error']
 		values = (datetime.datetime.utcnow(), grid_id, err, )
 	else:
-		cols = ['updated', 'grid_id', 'institution_id', 'package_id', 'error',]
-		values = (datetime.datetime.utcnow(), grid_id, institution_id, package_id, err, )
+		cols = ['updated', 'institution_id', 'package_id', 'error',]
+		values = (datetime.datetime.utcnow(), institution_id, package_id, err, )
 
 	with get_db_cursor() as cursor:
 		qry = sql.SQL("insert into {} ({}) values ({})").format(
@@ -77,6 +88,7 @@ def cli():
 		python citation_authorship_update.py citing --help
 		python citation_authorship_update.py citing
 		python citation_authorship_update.py authorship
+		python citation_authorship_update.py apc
 	"""
 
 @cli.command(short_help='Update jump_citing table for each grid_id')
@@ -156,6 +168,48 @@ def authorship(update_after=None):
 
 			record_update(grid_id, 'jump_authorship_updates', mssg)
 
+@cli.command(short_help='Update jump_apc_authorships table for each package_id')
+@click.option("--update_after", help="update after (seconds)", type=int)
+def apc(update_after=None):
+	click.echo("Updating jump_apc_authorships")
+	update_after = update_after or UPDATE_AFTER_DEFAULT
+
+	# exclude packages: deleted, demo, and consortial feeder (-f for some jisc pkgs, and others)
+	with get_db_cursor() as cursor:
+		cmd = """
+		select package_id, institution_id from jump_account_package 
+			where package_id in (select DISTINCT(package_id) from jump_apc_authorships)
+			and not is_deleted
+			and not is_demo
+			and package_id not ilike '%-f'
+			and package_id not in (select DISTINCT(member_package_id) from jump_consortium_members)
+		"""
+		cursor.execute(cmd)
+		pkgrows = cursor.fetchall()
+
+	for row in pkgrows:
+		click.echo(f"working on (update_apc_authorships, {row['package_id']})")
+		res = check_updated_apc(row['package_id'])
+		
+		update = False
+		if not res:
+			update = True
+		else:
+			if (datetime.datetime.utcnow() - res[0]['updated']).seconds > update_after:
+				update = True
+		
+		if not update:
+			click.echo(f"(update_apc_authorships, {row['package_id']}) already updated recently")
+		else:
+			mssg = None
+			try:
+				update_apc_authorships(row['package_id'])
+			except Exception as err:
+				mssg = str(err)
+				click.echo(f"(update_apc_authorships, {row['package_id']}) failed: {err}")
+
+			record_update(None, 'jump_apc_authorships_updates', mssg, 
+				institution_id = row['institution_id'], package_id = row['package_id'])
 
 if __name__ == "__main__":
 	cli()
