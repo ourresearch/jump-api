@@ -200,7 +200,10 @@ class OpenAccessTables:
 
         if self.truncate:
             from app import get_db_cursor
+            ymd = re.sub("-", "_", datetime.utcnow().strftime("%Y-%m-%d"))
             with get_db_cursor() as cursor:
+                print(f"backing up {self.table}")
+                cursor.execute(f"create table {self.table}_backup_{ymd} as (select * from {self.table})")
                 print(f"deleting all rows in {self.table}")
                 cursor.execute(f"truncate table {self.table}")
 
