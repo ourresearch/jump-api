@@ -120,6 +120,13 @@ tables_no_bronze = {
         """,
 }
 
+BACKUP_DATE = re.sub('-', '_', datetime.utcnow().strftime('%Y-%m-%d'))
+
+def backup_table(table):
+    with get_db_cursor() as cursor:
+        print(f"backing up table: {table}")
+        cursor.execute(f"create table {table}_{BACKUP_DATE} as (select * from {table})")
+
 def truncate_table(table):
     with get_db_cursor() as cursor:
         print(f"deleting all rows in table: {table}")
@@ -258,8 +265,10 @@ if __name__ == "__main__":
     if parsed_args.update_tables:
         from app import get_db_cursor
         for table in tables_with_bronze.keys():
+            backup_table(table)
             truncate_table(table)
         for table in tables_no_bronze.keys():
+            backup_table(table)
             truncate_table(table)
 
         # from app import get_db_cursor
