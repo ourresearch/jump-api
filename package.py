@@ -34,6 +34,7 @@ class Package(db.Model):
     package_id = db.Column(db.Text, primary_key=True)
     publisher = db.Column(db.Text)
     package_name = db.Column(db.Text)
+    package_description = db.Column(db.Text)
     consortium_package_id = db.Column(db.Text)
     created = db.Column(db.DateTime)
     is_demo = db.Column(db.Boolean)
@@ -593,6 +594,7 @@ class Package(db.Model):
         return {
                 "id": self.package_id,
                 "name": self.package_name,
+                "description": self.package_description,
                 "currency": self.currency,
                 "hasCounterData": self.has_complete_counter_data,
                 "hasCustomPrices": self.has_custom_prices,
@@ -673,6 +675,7 @@ class Package(db.Model):
             ("id", self.package_id),
             ("name", self.package_name),
             ("publisher", self.publisher),
+            ("description", self.package_description),
             ("currency", self.currency),
             ("cost_bigdeal", self.returned_big_deal_cost),
             ("cost_bigdeal_increase", self.returned_big_deal_cost_increase),
@@ -710,6 +713,7 @@ class Package(db.Model):
             ("name", self.package_name),
             ("currency", self.currency),
             ("publisher", self.publisher),
+            ("description", self.package_description),
             ("is_deleted", self.is_deleted is not None and self.is_deleted),
             ("is_consortium", self.institution.is_consortium),
             ("is_owned_by_consortium", self.is_owned_by_consortium),

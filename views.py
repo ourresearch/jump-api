@@ -822,6 +822,9 @@ def update_publisher(publisher_id):
     if "name" in request.json:
         publisher.package_name = request.json["name"]
 
+    if "description" in request.json:
+        publisher.package_description = request.json["description"]
+
     if "currency" in request.json:
         publisher.currency = request.json["currency"]
         if (publisher.currency == "") or (publisher.currency == None):
@@ -883,14 +886,12 @@ def new_publisher():
     if "name" not in request.json:
         return abort_json(400, "name is required")
 
-    if "publisher" not in request.json:
-        return abort_json(400, "publisher is required")
-
     new_package = Package()
     new_package.package_id = "package-{}".format(shortuuid.uuid()[0:12])
     new_package.institution_id = pub_institution.id
     new_package.package_name = request.json["name"]
-    new_package.publisher = request.json["publisher"].lower()
+    new_package.package_description = request.json.get("description", None)
+    new_package.publisher = None
     new_package.is_demo = pub_institution.is_demo_institution
     new_package.created = datetime.datetime.utcnow().isoformat()
 
