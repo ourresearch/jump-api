@@ -673,6 +673,7 @@ class Package(db.Model):
         data_files_list = sorted(list(self.data_files_dict.values()), key=lambda x: 0 if x["rows_count"]==None else x["rows_count"], reverse=True)
         response = OrderedDict([
             ("id", self.package_id),
+            ("created", self.created),
             ("name", self.package_name),
             ("publisher", self.publisher),
             ("description", self.package_description),
