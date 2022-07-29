@@ -66,6 +66,9 @@ non_consortia = non_consortia[~non_consortia['name'].str.contains("DEMO")]
 non_consortia = non_consortia[~non_consortia['name'].str.contains("Test")]
 non_consortia = non_consortia[~non_consortia['name'].str.contains("TEST")]
 non_consortia = non_consortia[~non_consortia['name'].str.contains("Scott")]
+non_consortia = non_consortia[~non_consortia['name'].str.contains("Example")]
+non_consortia = non_consortia[~non_consortia['name'].str.contains("Purchase")]
+non_consortia = non_consortia[~non_consortia['name'].str.contains("Temp U")]
 
 
 # Each institution
@@ -87,7 +90,7 @@ for index, row in non_consortia.iterrows():
 		# institution_pkgs["current_deal"] = hs.current_deal(ror_id=row["ror_id"])
 		# company = hs.filter_by_ror_id(ror_id=row["ror_id"])
 	else:
-		institution_pkgs = pd.DataFrame(rows_inst, columns=['account_id','package_id','publisher','package_name','created','con_package_id','institution_id','is_demo','big_deal_cost','is_deleted','updated','default_to_no_perpetual_access','currency','is_dismissed_warning_missing_perpetual_access','is_dismissed_warning_missing_prices','big_deal_cost_increase'])
+		institution_pkgs = pd.DataFrame(rows_inst, columns=['account_id','package_id','publisher','package_name','created','con_package_id','institution_id','is_demo','big_deal_cost','is_deleted','updated','default_to_no_perpetual_access','currency','is_dismissed_warning_missing_perpetual_access','is_dismissed_warning_missing_prices','big_deal_cost_increase','package_description'])
 		institution_pkgs.drop(["account_id","con_package_id","is_dismissed_warning_missing_perpetual_access","is_dismissed_warning_missing_prices","default_to_no_perpetual_access","updated"], axis=1, inplace=True)
 		institution_pkgs["institution_name"] = row["name"]
 		institution_pkgs["ror_id"] = row["ror_id"]
