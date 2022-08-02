@@ -30,6 +30,8 @@ from util import get_sql_answer
 from journal import Journal
 from assumptions import Assumptions
 
+DATE_PRE_ALL_PUBLISHERS_PACKAGE = datetime.datetime.strptime('2022-07-31', '%Y-%m-%d')
+
 def get_clean_package_id(http_request_args):
     if not http_request_args:
         return DEMO_PACKAGE_ID
@@ -152,10 +154,13 @@ class Scenario(object):
         prices_dict = {}
         prices_uploaded_raw = get_custom_prices(self.package_id)
 
+        use_public_prices = self.my_package.created < DATE_PRE_ALL_PUBLISHERS_PACKAGE
+
         for my_issn_l, my_meta in self.my_package.journal_metadata.items():
             prices_dict[my_issn_l] = prices_uploaded_raw.get(my_issn_l, None)
             if prices_dict[my_issn_l] == None:
-                prices_dict[my_issn_l] = my_meta.get_subscription_price(self.my_package.currency, use_high_price_if_unknown=use_high_price_if_unknown)
+                if use_public_prices or use_high_price_if_unknown:
+                    prices_dict[my_issn_l] = my_meta.get_subscription_price(self.my_package.currency, use_high_price_if_unknown=use_high_price_if_unknown)
         self.data["prices"] = prices_dict
 
         clean_dict = {}
