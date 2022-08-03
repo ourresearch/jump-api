@@ -123,7 +123,7 @@ def add_ror(ror_id, institution_id):
 			rows_inserted = my_package.update_apc_authorships()
 			click.echo(f"    inserted apc rows for package {my_package}")
 
-def add_user(user_name, email, institution, permissions = None, password = None, jiscid = None):
+def add_user(user_name, email, institution = None, permissions = None, password = None, jiscid = None):
 	email = email.strip()
 	user_name = user_name.strip()
 	
@@ -223,7 +223,7 @@ def inst(name, shortname, ror, is_consortium):
 @cli.command(short_help='create a user and associate them with an institution')
 @click.option("--name", help="Full name (first last) of the person", type=str, default="Admin", required=True)
 @click.option("--email", help="Email for the person", type=str, required=True)
-@click.option("--institution", help="An institution ID", type=str, required=True)
+@click.option("--institution", help="An institution ID", type=str)
 @click.option("--permissions", help="Permissions", default="view,modify,admin", 
 	show_default=True, type=str, required=True)
 @click.option("--password", help="Password to associate with the user (default: no password set)", 
