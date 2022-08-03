@@ -392,6 +392,7 @@ class Package(db.Model):
                         ("issn_l", my_journal_metadata.issn_l),
                         ("name", my_journal_metadata.title),
                         ("issns", my_journal_metadata.display_issns),
+                        ("publisher", my_journal_metadata.publisher),
                         ("currency", self.currency),
                         ("counter_total", counter_rows[issn_l]),
                     ])
