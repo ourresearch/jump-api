@@ -52,7 +52,8 @@ class Institution(db.Model):
         response = [my_package for my_package in packages if not my_package.is_deleted]
         response.sort(key=lambda k: k.package_name, reverse=False)
         response.sort(key=lambda k: k.is_owned_by_consortium, reverse=False) #minor
-        response.sort(key=lambda k: k.publisher, reverse=False)  #main sorting key is last
+        # publisher will no longer be required so can not sort on it
+        # response.sort(key=lambda k: k.publisher, reverse=False)  #main sorting key is last
         return response
 
     @cached_property
