@@ -5,6 +5,7 @@ both its appearance and its underlying data.
 This means you will often see changes in the UI/UX, and sometimes in the presented data.  
 Most of these changes are too small to note, but we'll keep a record of the larger ones here:
 
+- 2022/08/04 Added support for bulk subscribe/unsubscribe to journals in Unsub scenrio dashboards. The upper right hand area of the dashboard has many changes to support this functionality: the search/select box is now always shown to make it more obvious that it's a feature users can take advantage of, the styling has changed, there are now two additional icons (shopping carts) to subscribe or unsubscribe to all selected journals.
 - 2022/08/02 Fixed the pagination at the bottom of the table view in the Unsub scenario dashboard. The numbers shown before were not accurate; they are now!
 - 2022/07/25 Fixes for PTA: 1) in the journal zoom Timeline tab, the correct years were not shown; now they are shown and right now show 2022 though 2026. 2) we were not including very recent PTA (e.g., end date Dec 2021); that is now fixed.
 - 2022/07/25 Additional parts of the Unsub backend data are now from OpenAlex: number of articles, citations, authorships. Previously this data was from Microsoft Academic Graph. These changes lead to changes in all Unsub forecasts/dashboards, mostly for the better (higher fuflfillment at lower cost).
