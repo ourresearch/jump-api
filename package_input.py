@@ -93,9 +93,6 @@ class PackageInput:
                 issn = issn[0:4] + "-" + issn[4:8]
                 if issn not in oa_issns:
                     print(f"Missing journal in normalize_issn {issn} from OpenAlex: https://api.openalex.org/venues/issn:{issn}")
-                    # journalsdb is no longer
-                    # r = requests.post("https://api.journalsdb.org/missing_journal", json={"issn": issn})
-                    # print("Error: Response posting about missing journal {}: {}".format(r.status_code, r.json()["message"]))
                     return ParseWarning.unknown_issn
                 return issn
             elif re.match(r"^[A-Z0-9]{4}-\d{3}(?:X|\d)$", issn):
