@@ -1325,6 +1325,41 @@ def live_publisher_id_apc_get(publisher_id):
     response = jsonify_fast_no_sort(my_package.to_dict_apc())
     return response
 
+@app.route("/institution/<institution_id>/apc", methods=["GET"])
+@app.route("/institution/<institution_id>/apc/export.csv", methods=["GET"])
+@jwt_required()
+def live_institution_id_apc_get(institution_id):
+    inst = Institution.query.get(institution_id)
+    if not inst:
+        return abort_json(404, "Institution does not exist.")
+    
+    if not authorize_institution(inst, Permission.view()):
+        return abort_json(403, "Must have read permission to get institution properties.")
+
+    results = inst.to_dict_apc()
+
+    if "export" in request.url_rule.rule:
+        if not results:
+            print("APC data not found for this institution")
+            abort_json(404, "APC data not found for this institution")
+
+        keys = list(results[0].keys())
+        filename = "export.csv"
+        with open(filename, "w", encoding="utf-8") as file:
+            csv_writer = csv.writer(file)
+            csv_writer.writerow(keys)
+            for dicct in results:
+                row = []
+                for my_key in keys:
+                    row.append(dicct.get(my_key, None))
+                csv_writer.writerow(row)
+
+        with open(filename, "r") as file:
+            contents = file.readlines()
+
+        return Response(contents, mimetype="text/csv")
+    else:
+        return jsonify_fast_no_sort(results)
 
 def export_get(table_dicts, is_main_export=True):
     if not table_dicts:

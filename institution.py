@@ -103,6 +103,40 @@ class Institution(db.Model):
             ("is_jisc", self.is_jisc)
         ])
 
+    @cached_property
+    def apc_data_from_db(self):
+        if self.is_consortium:
+            qry = """
+                select * from jump_apc_institutional_authorships
+                where institution_id in (
+                    select ji.id from jump_consortium_members jcm
+                    join jump_account_package jp on jcm.member_package_id=jp.package_id
+                    join jump_institution ji on jp.institution_id=ji.id
+                    where jp.package_id in (
+                        select distinct(member_package_id) from jump_consortium_members 
+                        where consortium_package_id in (
+                            select DISTINCT(package_id) from jump_account_package 
+                            where institution_id = %s
+                        )
+                    )
+                )
+            """
+            with get_db_cursor(use_realdictcursor=True) as cursor:
+                print(cursor.mogrify(qry, (self.id,)))
+                cursor.execute(qry, (self.id,))
+                rows = cursor.fetchall()
+        else:
+            qry = "select * from jump_apc_institutional_authorships where institution_id = %s"
+            with get_db_cursor(use_realdictcursor=True) as cursor:
+                print(cursor.mogrify(qry, (self.id,)))
+                cursor.execute(qry, (self.id,))
+                rows = cursor.fetchall()
+        
+        return rows
+
+    def to_dict_apc(self):
+        return self.apc_data_from_db
+
     def __init__(self, **kwargs):
         self.id = 'institution-{}'.format(shortuuid.uuid()[0:12])
         self.created = datetime.datetime.utcnow().isoformat()
