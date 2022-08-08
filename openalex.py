@@ -17,15 +17,9 @@ from util import chunks
 from util import sql_bool
 from util import sql_escape_string
 from journalsdb_pricing import jdb_pricing
+from jisc_utils import jisc_default_prices
 from openalex_date_last_doi import OpenalexDateLastDOI
 
-
-class JiscDefaultPrices(Enum):
-	TaylorFrancis = 954.10
-	Sage = 659.99
-	Wiley = 1350.47
-	SpringerNature = 1476.53
-	Elsevier = 3775
 
 class OpenalexDBRaw(db.Model):
 	__tablename__ = "openalex_journals"
@@ -192,8 +186,8 @@ class JournalMetadata(db.Model):
 
 		if not response:
 			if use_high_price_if_unknown and currency == "GBP":
-				JISC_DEFAULT_PRICE_IN_GBP = JiscDefaultPrices[self.publisher_code].value
-				response = JISC_DEFAULT_PRICE_IN_GBP
+				response = jisc_default_prices(self.publisher_code)
+		
 		return response
 
 	def get_apc_price(self, currency="USD"):

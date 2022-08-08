@@ -1,0 +1,14 @@
+def jisc_default_prices(publisher):
+	match publisher:
+		case 'TaylorFrancis':
+			return 954.10
+		case 'Sage':
+			return 659.99
+		case 'Wiley':
+			return 1350.47
+		case 'SpringerNature':
+			return 1476.53
+		case 'Elsevier':
+			return 3775
+		case _:
+			return None

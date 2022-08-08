@@ -9,13 +9,7 @@ from enum import Enum
 
 from app import db
 from util import elapsed
-
-class JiscDefaultPrices(Enum):
-	TaylorFrancis = 954.10
-	Sage = 659.99
-	Wiley = 1350.47
-	SpringerNature = 1476.53
-	Elsevier = 3775
+from jisc_utils import jisc_default_prices
 
 class JournalsDBRaw(db.Model):
 	__tablename__ = "journalsdb_raw"
@@ -81,8 +75,8 @@ class JournalsDB(db.Model):
 
 		if not response:
 			if use_high_price_if_unknown and currency == "GBP":
-				JISC_DEFAULT_PRICE_IN_GBP = JiscDefaultPrices[self.publisher_code].value
-				response = JISC_DEFAULT_PRICE_IN_GBP
+				response = jisc_default_prices(self.publisher_code)
+
 		return response
 
 	def get_apc_price(self, currency="USD"):
