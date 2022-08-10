@@ -18,6 +18,19 @@ if __name__ == "__main__":
         jump_scenario_computed
         jump_scenario_details_paid
         jump_user_institution_permission
+        jump_user_institution_permission
+        jump_oa_all_vars
+        jump_oa_no_submitted_no_bronze
+        jump_oa_no_submitted_with_bronze
+        jump_oa_with_submitted_no_bronze
+        jump_oa_with_submitted_with_bronze
+        jump_authorship
+        jump_citing
+        jump_institution
+        ricks_affiliation
+        journalsdb_computed
+        jump_consortium_members
+        permissions_input
     """.split()
 
     show_tables = """SELECT DISTINCT tablename
