@@ -590,7 +590,8 @@ class PackageInput:
             safe_commit(db)
             self.update_dest_table(package_id)
             self._copy_raw_to_s3(file_name, package_id, num_rows, error=None)
-            self.update_subscriptions(package_id)
+            if isinstance(self, FilterTitlesInput):
+                self.update_subscriptions(package_id)
         else:
             self._copy_raw_to_s3(file_name, package_id, num_rows=0, error="no_useable_rows")
 
