@@ -590,6 +590,7 @@ class PackageInput:
             safe_commit(db)
             self.update_dest_table(package_id)
             self._copy_raw_to_s3(file_name, package_id, num_rows, error=None)
+            from filter_titles import FilterTitlesInput
             if isinstance(self, FilterTitlesInput):
                 self.update_subscriptions(package_id)
         else:
