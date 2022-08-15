@@ -76,7 +76,6 @@ from app import logger
 from app import DEMO_PACKAGE_ID
 from app import s3_client
 
-from tasks import update_apc_authships
 
 def s3_cache_get(url):
     print("in cache_get with", url)
@@ -898,9 +897,6 @@ def new_publisher():
     db.session.add(new_package)
     safe_commit(db)
 
-    # new_package.update_apc_authorships()
-    update_apc_authships.apply_async(args=(new_package.package_id,), retry=True)
-
     package_dict = new_package.to_package_dict()
     return jsonify_fast_no_sort(package_dict)
 
@@ -1308,22 +1304,6 @@ def scenario_id_details_get(scenario_id):
     my_saved_scenario = get_saved_scenario(scenario_id)
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_details())
 
-
-@app.route("/publisher/<publisher_id>/apc", methods=["GET"])
-@jwt_required()
-def live_publisher_id_apc_get(publisher_id):
-    authenticate_for_package(publisher_id, required_permission=Permission.view())
-
-    my_package = Package.query.get(publisher_id)
-
-    if not my_package:
-        abort_json(404, "Publisher not found")
-
-    if not my_package.unique_saved_scenarios:
-        response = jsonify_fast_no_sort({"message": "need a scenario in order to see apcs"})
-
-    response = jsonify_fast_no_sort(my_package.to_dict_apc())
-    return response
 
 @app.route("/institution/<institution_id>/apc", methods=["GET"])
 @app.route("/institution/<institution_id>/apc/export.csv", methods=["GET"])
