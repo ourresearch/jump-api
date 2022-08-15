@@ -47,6 +47,8 @@ len(pkg_already_done)
 pkg_ids = list(set(pkg_ids) - set(pkg_already_done))
 len(pkg_ids)
 
+print(f"Getting to work on {len(pkg_ids)} packages\n")
+
 # package_id = pkg_ids[0]
 # package_id = 'package-jiscelsnr2ind'
 for package_id in pkg_ids:
