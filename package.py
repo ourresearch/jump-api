@@ -19,7 +19,7 @@ from app import s3_client
 from apc_journal import ApcJournal
 from saved_scenario import SavedScenario # used in relationship
 from institution import Institution  # used in relationship
-from scenario import get_core_list_from_db, get_apc_data_from_db, DATE_PRE_ALL_PUBLISHERS_PACKAGE
+from scenario import get_core_list_from_db, get_apc_data_from_db
 from util import get_sql_dict_rows
 from util import safe_commit
 from util import for_sorting
@@ -373,7 +373,6 @@ class Package(db.Model):
         counter_rows = self.counter_totals_from_db
         prices_uploaded_raw = get_custom_prices(self.package_id)
         journals_missing_prices = []
-        use_public_prices = self.created < DATE_PRE_ALL_PUBLISHERS_PACKAGE
 
         for my_journal_metadata in list(self.journal_metadata.values()):
             if my_journal_metadata.is_current_subscription_journal:
@@ -383,8 +382,6 @@ class Package(db.Model):
                 elif counter_rows[issn_l] == 0:
                     pass
                 elif prices_uploaded_raw.get(issn_l, None) != None:
-                    pass
-                elif use_public_prices and my_journal_metadata.get_subscription_price(self.currency, use_high_price_if_unknown=False) != None:
                     pass
                 else:
                     my_dict = OrderedDict([
