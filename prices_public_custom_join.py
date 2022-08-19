@@ -54,6 +54,12 @@ for package_id in pkg_ids:
 	publisher = pkg.publisher
 	currency = pkg.currency
 
+	if not publisher and 'CRKN' in pkg.package_name:
+		publisher = 'SpringerNature'
+
+	if not publisher:
+		continue
+
 	# get public price data
 	print(f"  ({package_id}) getting public price data")
 	with get_db_cursor() as cursor:
