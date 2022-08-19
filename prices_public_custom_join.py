@@ -42,15 +42,12 @@ with get_db_cursor() as cursor:
 	pdone = cursor.fetchall()
 
 pkg_already_done = [w[0] for w in pdone]
-len(pkg_already_done)
-
+print(f"{len(pkg_already_done)} packages already done")
 pkg_ids = list(set(pkg_ids) - set(pkg_already_done))
-len(pkg_ids)
-
 print(f"Getting to work on {len(pkg_ids)} packages\n")
 
 # package_id = pkg_ids[0]
-# package_id = 'package-jiscelsnr2ind'
+# package_id = 'package-QWGwbByHNa8c'
 for package_id in pkg_ids:
 	print(f"({package_id})")
 	pkg = Package.query.get(package_id)
