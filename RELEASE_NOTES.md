@@ -5,6 +5,10 @@ both its appearance and its underlying data.
 This means you will often see changes in the UI/UX, and sometimes in the presented data.  
 Most of these changes are too small to note, but we'll keep a record of the larger ones here:
 
+- 2022/08/19 Added support for all publishers! We've dropped support for specific publishers. Unsub packages are now essentially publisher agnostic. You can make Unsub packages with titles from 1 to any number of publishers. This change includes the ability to use Unsub for modeling aggregator packages as you may have through EBSCO or ProQuest. 
+- 2022/08/19 APC report moved from the package level to institutional level. The report includes an estimate of your APC spend for only the five publishers Elsevier, Wiley, Taylor & Francis, Springer Nature, and SAGE.
+- 2022/08/19 Packages now have descriptions. In addition, package and description editing are available in the list of packages under an institution and in the single package view under the Edit Details tab.
+- 2022/08/19 Packages have a new optional filter step. A spreadsheet of ISSNs or a KBART file can be uploaded to filter the titles that appear in all scenario views within a package.
 - 2022/08/04 Added support for bulk subscribe/unsubscribe to journals in Unsub scenrio dashboards. The upper right hand area of the dashboard has many changes to support this functionality: the search/select box is now always shown to make it more obvious that it's a feature users can take advantage of, the styling has changed, there are now two additional icons (shopping carts) to subscribe or unsubscribe to all selected journals.
 - 2022/08/02 Fixed the pagination at the bottom of the table view in the Unsub scenario dashboard. The numbers shown before were not accurate; they are now!
 - 2022/07/25 Fixes for PTA: 1) in the journal zoom Timeline tab, the correct years were not shown; now they are shown and right now show 2022 though 2026. 2) we were not including very recent PTA (e.g., end date Dec 2021); that is now fixed.
