@@ -34,6 +34,20 @@ def user_delete_one(email=None, id=None, inst=None, perm_only=False):
         logger.info("  *** user {} does not exist, exiting ***".format(email or id))
         return
 
+    logger.info("  backing up user permissions in case user wants permissions restored")
+    if inst:
+        query_backup = """
+            insert into jump_user_institution_permission_saved
+            (select * from jump_user_institution_permission where user_id = '{}' and institution_id = '{}')
+        """.format(user.id, inst)
+    else:    
+        query_backup = """
+            insert into jump_user_institution_permission_saved (select * from jump_user_institution_permission where user_id = '{}')
+        """.format(user.id)
+    with app.app_context():
+        with get_db_cursor() as cursor:
+            cursor.execute(query_backup)
+
     logger.info("  deleting user permissions from `jump_user_institution_permission` table")
     if inst:
         query = "delete from jump_user_institution_permission where user_id = '{}' and institution_id = '{}';".format(user.id, inst)
