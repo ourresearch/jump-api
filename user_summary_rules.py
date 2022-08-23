@@ -115,7 +115,8 @@ def rule_required_data(df_original):
 	df = df_original.copy()
 
 	# We noticed you haven’t uploaded required data
-	# From columns: is_deleted, is_feeder_package, is_feedback_package, currency, big_deal_cost, big_deal_cost_increase, has_complete_counter_data
+	# From columns: is_deleted, is_feeder_package, is_feedback_package, currency, big_deal_cost, 
+	#  big_deal_cost_increase, has_complete_counter_data, prices
 	# Rule:
 	# IF NOT is_deleted
 	# AND NOT is_feeder_package
@@ -123,6 +124,7 @@ def rule_required_data(df_original):
 	# ~~AND is current_user~~ (column doesn't exist yet)
 	# AND 
 	#    currency is empty OR 
+	#    prices is FALSE (empty) OR
 	#    big_deal_cost is empty OR
 	#    big_deal_cost_increase is empty OR 
 	#    has_complete_counter_data=FALSE
@@ -134,7 +136,8 @@ def rule_required_data(df_original):
 			df['currency'].isnull() |
 			df['big_deal_cost'].isnull() |
 			df['big_deal_cost_increase'].isnull() |
-			([not w if isinstance(w, bool) else False for w in df['has_complete_counter_data']])
+			([not w if isinstance(w, bool) else False for w in df['has_complete_counter_data']]) |
+			([not w if isinstance(w, bool) else False for w in df['prices']])
 		)
 	)]
 	mrd = mrd.assign(missing_required_data=True)
@@ -146,27 +149,21 @@ def rule_recommended_data(df_original):
 	df = df_original.copy()
 
 	# We noticed you haven’t uploaded recommended data
-	# From columns: is_deleted, is_feeder_package, is_feedback_package, perpetual_access, custom_price
+	# From columns: is_deleted, is_feeder_package, is_feedback_package, perpetual_access
 	# Rule:
 	# IF NOT is_deleted 
 	# AND NOT is_feeder_package 
 	# AND NOT is_feedback_package 
 	# ~~AND is current_user~~ (column doesn't exist yet)
 	# AND 
-	#     perpetual_access=FALSE OR
-	#     custom_price=FALSE
+	#     perpetual_access=FALSE
 	mrecd = df[(
 		([not w if isinstance(w, bool) else False for w in df['is_deleted']]) and
 		([not w if isinstance(w, bool) else False for w in df['is_feeder_package']]) and
 		([not w if isinstance(w, bool) else False for w in df['is_feedback_package']]) and
-		(
-			([not w if isinstance(w, bool) else False for w in df['perpetual_access']]) or
-			([not w if isinstance(w, bool) else False for w in df['custom_price']])
-		)
+		([not w if isinstance(w, bool) else False for w in df['perpetual_access']])
 	)]
 	mrecd = mrecd.assign(missing_recommended_data=True)
 
 	df_original = df_original.merge(mrecd[['package_id','ror_id','missing_recommended_data']], how='left', on=['package_id','ror_id'])
 	return df_original
-
-

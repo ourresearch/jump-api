@@ -77,7 +77,7 @@ non_consortia = non_consortia[~non_consortia['name'].str.contains("Temp U")]
 # row = next(it)[1]
 # non_consortia.iterrows()[572]
 all_institutions = []
-for index, row in non_consortia.iterrows():
+for index, row in non_consortia[0:10].iterrows():
 	print(row["ror_id"])
 	with get_db_cursor() as cursor:
 	    cmd = "select * from jump_account_package where institution_id = %s"
@@ -155,7 +155,8 @@ for index, row in non_consortia.iterrows():
 					# "created_pkg": pkg.created,
 					"has_complete_counter_data": pkg.has_complete_counter_data,
 					"perpetual_access": pkg.data_files_dict['perpetual-access']['is_live'],
-					"custom_price": pkg.data_files_dict['price']['is_live'],
+					"prices": pkg.data_files_dict['price']['is_live'],
+					"has_non_public_prices": pkg.has_non_public_prices,
 					"missing_prices": mpnum,
 					"is_feeder_package": pkg.is_feeder_package,
 					"is_feedback_package": pkg.is_feedback_package,
@@ -180,8 +181,9 @@ all_institutions_df['created_pkg'] = created_pkg_new
 all_institutions_df = all_institutions_df[["institution_id","institution_name","ror_id","created_inst","current_deal","consortia","consortium_account","date_last_paid_invoice","amount_last_paid_invoice",
 	"intercom_last_seen", "intercom_last_seen_email",
 	"package_id","package_name","created_pkg","publisher","is_deleted",
-	"currency","big_deal_cost","big_deal_cost_increase","has_complete_counter_data",
-	"perpetual_access","custom_price","is_feeder_package","is_feedback_package",
+	"currency","big_deal_cost","big_deal_cost_increase","has_complete_counter_data","prices","has_non_public_prices",
+	"perpetual_access",
+	"is_feeder_package","is_feedback_package",
 	"created_sce_first", "created_sce_last",
 	"scenarios", "scenario_user_subrs", "scenario_param_chgs", "scenario_param_str",]]
 pkg_file = 'non_consortia_pkg_level.csv'
@@ -208,7 +210,7 @@ inst_level = pd.concat([
 	inst_level.groupby(['institution_id','institution_name']).sum().scenarios,
 	inst_level.groupby(['institution_id','institution_name'])['has_complete_counter_data'].all(),
 	inst_level.groupby(['institution_id','institution_name'])['perpetual_access'].all(),
-	inst_level.groupby(['institution_id','institution_name'])['custom_price'].all(),
+	inst_level.groupby(['institution_id','institution_name'])['prices'].all(),
 	inst_level.groupby(['institution_id','institution_name'])['created_sce_last'].max(),
 	inst_level.groupby(['institution_id','institution_name'])['scenario_user_subrs'].any(),
 	inst_level.groupby(['institution_id','institution_name'])['scenario_param_chgs'].any(),
@@ -219,7 +221,7 @@ inst_level.rename(columns={
 	'scenarios': 'no_scenarios', 
 	'has_complete_counter_data': 'any_wo_counter_data', 
 	'perpetual_access': 'any_wo_pta', 
-	'custom_price': 'any_wo_custom_prices',
+	'prices': 'any_wo_prices',
 	'scenario_user_subrs': 'any_scenario_user_subrs',
 	'scenario_param_chgs': 'any_scenario_param_chgs'}, inplace=True)
 inst_file = 'non_consortia_inst_level.csv'

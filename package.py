@@ -150,6 +150,16 @@ class Package(db.Model):
             return True
         return False
 
+    @property
+    def has_non_public_prices(self):
+        with get_db_cursor() as cursor:
+            qry = "select count(*) from jump_journal_prices where package_id = %s and not public_price"
+            cursor.execute(qry, (self.package_id,))
+            row = cursor.fetchone()
+        count = 0
+        if row:
+            count = row[0]
+        return count > 0
 
     @property
     def has_core_journal_list(self):
