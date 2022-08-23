@@ -260,7 +260,6 @@ if __name__ == "__main__":
             # consortium.consortium_get_computed_data(scenario_id)
             # consortium.consortium_get_issns(scenario_id)
 
-            # # warm cache before we start the threads
             # consortium.get_consortium_ids()
             # consortium.big_deal_costs_for_members()
             # # consortium.consortium_get_computed_data(scenario_id)

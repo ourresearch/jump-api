@@ -37,7 +37,6 @@
 ## Runs on Heroku, but not part of the Flask app
 
 - consortium_calculate.py
-- warm_cache.py
 - parse_uploads.py
 
 ## Scripts
