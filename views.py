@@ -36,7 +36,7 @@ from app import jwt
 from app import db
 from app import get_db_cursor
 
-import ror_search
+# import ror_search
 import password_reset
 import prepared_demo_publisher
 from emailer import create_email, send
@@ -1241,9 +1241,9 @@ def member_institutions_consortial_scenarios_scenario_id_post(scenario_id):
 #     return response
 
 
-@app.route("/ror/autocomplete/<path:query>", methods=["GET"])
-def ror_autocomplete(query):
-    return jsonify_fast_no_sort({"results": ror_search.autocomplete(query)})
+# @app.route("/ror/autocomplete/<path:query>", methods=["GET"])
+# def ror_autocomplete(query):
+#     return jsonify_fast_no_sort({"results": ror_search.autocomplete(query)})
 
 
 @app.route("/scenario/<scenario_id>/summary", methods=["GET"])
