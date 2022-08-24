@@ -80,7 +80,7 @@ def parse_uploads():
                     loader = FilterTitlesInput()
 
                 if loader:
-                    load_result = loader.load(package_id, filename, commit=True)
+                    load_result = loader.load(package_id, filename, filetype, commit=True)
 
                     print(("moving file {}".format(filename)))
                     s3_resource = boto3.resource("s3")

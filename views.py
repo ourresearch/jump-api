@@ -918,11 +918,11 @@ def _json_to_temp_file(req):
         return None
 
 
-def _load_package_file(package_id, req, table_class):
+def _load_package_file(package_id, req, file_type, table_class):
     loader = table_class()
     temp_file = _json_to_temp_file(req)
     if temp_file:
-        load_result = loader.load(package_id, temp_file, commit=True)
+        load_result = loader.load(package_id, temp_file, file_type, commit=True)
         if load_result["success"]:
             return load_result
         else:
@@ -970,7 +970,7 @@ def jump_counter(package_id):
             return abort_json(400, _long_error_message())
         else:
             print("loading counter package {}".format(package_id))
-            response = _load_package_file(package_id, request, CounterInput)
+            response = _load_package_file(package_id, request, url_end, CounterInput)
 
             return jsonify_fast_no_sort(response)
 
@@ -1009,7 +1009,7 @@ def jump_perpetual_access(package_id):
             response = {}
 
             if "file" in request.json and "name" in request.json:
-                response.update(_load_package_file(package_id, request, PerpetualAccessInput))
+                response.update(_load_package_file(package_id, request, 'perpetual-access', PerpetualAccessInput))
 
             if not response:
                 return abort_json(400, "expected a JSON object containing {file: <base64-encoded file>, name: <file name>}")
@@ -1056,7 +1056,7 @@ def jump_journal_prices(package_id):
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
-            return jsonify_fast_no_sort(_load_package_file(package_id, request, JournalPriceInput))
+            return jsonify_fast_no_sort(_load_package_file(package_id, request, 'price', JournalPriceInput))
 
 
 @app.route("/publisher/<package_id>/filter", methods=["GET", "POST", "DELETE"])
@@ -1077,7 +1077,7 @@ def jump_journal_filter(package_id):
         if request.args.get("error", False):
             return abort_json(400, _long_error_message())
         else:
-            return jsonify_fast_no_sort(_load_package_file(package_id, request, FilterTitlesInput))
+            return jsonify_fast_no_sort(_load_package_file(package_id, request, 'filter', FilterTitlesInput))
 
 # @app.route("/publisher/<package_id>/price/raw", methods=["GET"])
 # @jwt_required()

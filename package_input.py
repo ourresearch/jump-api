@@ -503,10 +503,11 @@ class PackageInput:
                 if normalized:
                     error_rows["headers"].append({"id": normalized, "name": raw})
 
-            if not normalized_rows:
+            if not normalized_rows and not error_rows['rows']:
                 raise RuntimeError("Error: No rows found")
 
-            self.apply_header(normalized_rows, parsed_rows[0:header_index+1])
+            if normalized_rows:
+                self.apply_header(normalized_rows, parsed_rows[0:header_index+1])
 
             if not error_rows["rows"]:
                 error_rows = None
@@ -515,14 +516,17 @@ class PackageInput:
 
 
 
-    def load(self, package_id, file_name, commit=False):
+    def load(self, package_id, file_name, file_type, commit=False):
         my_package = db.session.query(package.Package).filter(package.Package.package_id == package_id).scalar()
+
+        if "counter" in file_type:
+            self.stored_file_type_label = file_type
 
         try:
             normalized_rows, error_rows = self.normalize_rows(file_name, file_package=my_package)
         except (UnicodeError, csv.Error) as e:
             print("normalize_rows error {}".format(e))
-            self._copy_raw_to_s3(file_name, package_id, num_rows=None, error="error_reading_file")
+            self._copy_raw_to_s3(file_name, package_id, num_rows=None, error="error_reading_file", error_details=str(e))
             return {"success": False, "message": "error_reading_file", "warnings": []}
         except RuntimeError as e:
             print("Runtime Error processing file: {}".format(str(e)))
@@ -594,7 +598,20 @@ class PackageInput:
             if isinstance(self, FilterTitlesInput):
                 self.update_subscriptions(package_id)
         else:
-            self._copy_raw_to_s3(file_name, package_id, num_rows=0, error="no_useable_rows")
+            from collections import OrderedDict
+            try:
+                z = list(filter(lambda x: [v.get('error') for k, v in x.items()], error_rows['rows']))[0]
+                errors_dct = OrderedDict()
+                for k,v in z.items():
+                    if v.get('error'):
+                        errors_dct[k] = v.get('error')
+
+                errors_tup = next(iter(errors_dct.items()))
+                error_str = f"First error. Error reading column '{errors_tup[0]}': {errors_tup[1].get('message')}"
+            except:
+                error_str = None
+
+            self._copy_raw_to_s3(file_name, package_id, num_rows=0, error="no_useable_rows", error_details=error_str)
 
         # delete the current errors, save new errors
         # self.save_errors(package_id, error_rows)
