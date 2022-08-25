@@ -46,17 +46,10 @@ def get_latest_member_institutions_raw(scenario_id):
 
     return scenario_members
 
-# NO CACHE FOR NOW @memorycache
-# too slow to get refreshed across dynos
 def get_consortium_ids():
-    q = """select institution_id, i.display_name as consortium_name, i.old_username as consortium_short_name, 
-            p.package_id, p.publisher, s.scenario_id
-                from jump_package_scenario s
-                join jump_account_package p on p.package_id = s.package_id
-                join jump_institution i on i.id = p.institution_id
-                where is_consortium = true"""
+    # consortium_ids is a materialized view
     with get_db_cursor() as cursor:
-        cursor.execute(q)
+        cursor.execute("select * from consortium_ids")
         rows = cursor.fetchall()
     return rows
 
