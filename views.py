@@ -1255,12 +1255,9 @@ def scenario_id_summary_get(scenario_id):
     my_timing.log_timing("after to_dict()")
     return jsonify_fast_no_sort(my_saved_scenario.live_scenario.to_dict_summary())
 
-
 @app.route("/scenario/<scenario_id>/journals", methods=["GET"])
 @jwt_required()
 def scenario_id_journals_get(scenario_id):
-    start_time = time()
-
     consortium_ids = get_consortium_ids()
     if scenario_id in [d["scenario_id"] for d in consortium_ids]:
         my_consortium = Consortium(scenario_id)
