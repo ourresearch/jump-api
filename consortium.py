@@ -12,6 +12,7 @@ import simplejson as json
 from simplejson import dumps
 from psycopg2 import sql
 from psycopg2.extras import execute_values
+from kids.cache import cache
 
 from app import app
 from app import get_db_cursor
