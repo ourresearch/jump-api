@@ -46,12 +46,12 @@ def get_latest_member_institutions_raw(scenario_id):
 
     return scenario_members
 
+@cache
 def get_consortium_ids():
     # consortium_ids is a materialized view
     with get_db_cursor() as cursor:
         cursor.execute("select * from consortium_ids")
-        rows = cursor.fetchall()
-    return rows
+        return cursor.fetchall()
 
 
 def consortium_get_computed_data(scenario_id):
