@@ -137,11 +137,16 @@ def update_table(table, qry):
         print(f"updating table: {table}")
         cursor.execute(qry)
 
+def make_chunks(lst, n):
+    for i in range(0, len(lst), n):
+        yield lst[i : i + n]
+
 # class Empty(object):
 #   pass
 # self = Empty()
 # self.__class__ = OpenAccessTables
 # since_update_date=None
+# truncate=False
 
 class OpenAccessTables:
     def __init__(self, since_update_date=None, truncate=False):
@@ -164,6 +169,8 @@ class OpenAccessTables:
         print(f"{len(self.openalex_data)} openalex_journals records found")
 
     def make_tables(self, since_update_date=None):
+        self.chunks = list(make_chunks(self.openalex_data, 12))
+
         if since_update_date:
             len_original = len(self.openalex_data)
 
@@ -195,12 +202,13 @@ class OpenAccessTables:
                 print(f"http request error for: {journal.issn_l}")
                 pass
 
-        async def fetch_many(j):
+        async def fetch_many(lst):
             async with httpx.AsyncClient() as client:
                 tasks = []
-                for oa_status in self.oa_statuses:
-                    for submitted in self.oa_submitted:
-                        tasks.append(asyncio.ensure_future(get_data(client, j, oa_status, submitted)))
+                for s in lst:
+                    for oa_status in self.oa_statuses:
+                        for submitted in self.oa_submitted:
+                            tasks.append(asyncio.ensure_future(get_data(client, s, oa_status, submitted)))
 
                 async_results = await asyncio.gather(*tasks)
                 return async_results
@@ -214,22 +222,24 @@ class OpenAccessTables:
                 print(f"deleting all rows in {self.table}")
                 cursor.execute(f"truncate table {self.table}")
 
-        print(f"querying OpenAlex API and writing data to {self.table}")
-        for j in self.openalex_data:
-            asyncio.run(fetch_many(j))
-            self.write_to_db(j)
+        print(f"querying OpenAlex API and writing each chunk to {self.table}")
+        for i, item in enumerate(self.chunks):
+            asyncio.run(fetch_many(item))
+            self.write_to_db(item)
+            time.sleep(1)
 
     def write_to_db(self, dat):
         cols = ['updated','venue_id','issn_l','fresh_oa_status','year_int','count','with_submitted',]
         all_rows = []
         updated = datetime.utcnow().isoformat()
         try:
-            for oa_status in dat.data.keys():
-                for key, value in dat.data[oa_status].items():
-                    if value:
-                        for years in value:
-                            all_rows.append((updated, dat.venue_id, dat.issn_l, oa_status, 
-                                int(years['key']), years['count'], False if key == "false" else True))
+            for j in dat:
+                for oa_status in j.data.keys():
+                    for key, value in j.data[oa_status].items():
+                        if value:
+                            for years in value:
+                                all_rows.append((updated, j.venue_id, j.issn_l, oa_status,
+                                    int(years['key']), years['count'], False if key == "false" else True))
         except:
             pass
 
@@ -270,10 +280,6 @@ if __name__ == "__main__":
         for table in tables_no_bronze.keys():
             backup_table(table)
             truncate_table(table)
-
-        # from app import get_db_cursor
-        # for table, qry in tables.items():
-        #     update_table(table, qry)
         
         # make tables_with_bronze tables
         print("making with_bronze tables")
