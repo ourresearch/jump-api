@@ -102,7 +102,7 @@ class CounterInput(db.Model, PackageInput):
             },
             "metric_type": {
                 "normalize": self.strip_text,
-                "name_snippets": ["metric_type"],
+                "name_snippets": ["metric_type", "metric type"],
                 "exact_name": True,
                 "required": False,
             },
@@ -114,7 +114,7 @@ class CounterInput(db.Model, PackageInput):
             },
             "access_type": {
                 "normalize": self.strip_text,
-                "name_snippets": ["access_type"],
+                "name_snippets": ["access_type", "access type"],
                 "exact_name": True,
                 "required": False,
             },
