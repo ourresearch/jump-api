@@ -524,9 +524,12 @@ class PackageInput:
 
         try:
             normalized_rows, error_rows = self.normalize_rows(file_name, file_package=my_package)
-        except (UnicodeError, csv.Error) as e:
+        except (UnicodeError, UnicodeDecodeError, csv.Error) as e:
             print("normalize_rows error {}".format(e))
-            self._copy_raw_to_s3(file_name, package_id, num_rows=None, error="error_reading_file", error_details=str(e))
+            err_mssg = str(e)
+            if "decode" in err_mssg:
+                err_mssg += " (try fixing encoding issues, possibly saving file in a different format, and/or changing file encoding)"
+            self._copy_raw_to_s3(file_name, package_id, num_rows=None, error="error_reading_file", error_details=err_mssg)
             return {"success": False, "message": "error_reading_file", "warnings": []}
         except RuntimeError as e:
             print("Runtime Error processing file: {}".format(str(e)))
