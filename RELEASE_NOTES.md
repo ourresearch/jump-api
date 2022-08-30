@@ -5,6 +5,8 @@ both its appearance and its underlying data.
 This means you will often see changes in the UI/UX, and sometimes in the presented data.  
 Most of these changes are too small to note, but we'll keep a record of the larger ones here:
 
+
+- 2022/08/30 Improve file upload error messages so they are more clear and cover more cases.
 - 2022/08/19 Added support for all publishers! We've dropped support for specific publishers. Unsub packages are now essentially publisher agnostic. You can make Unsub packages with titles from 1 to any number of publishers. This change includes the ability to use Unsub for modeling aggregator packages as you may have through EBSCO or ProQuest. 
 - 2022/08/19 APC report moved from the package level to institutional level. The report includes an estimate of your APC spend for only the five publishers Elsevier, Wiley, Taylor & Francis, Springer Nature, and SAGE.
 - 2022/08/19 Packages now have descriptions. In addition, package and description editing are available in the list of packages under an institution and in the single package view under the Edit Details tab.
