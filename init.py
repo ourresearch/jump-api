@@ -94,7 +94,7 @@ def add_ror(ror_id, institution_id):
 		num_citing_rows = get_sql_answer(db, f"select count(*) from jump_citing where grid_id = '{g_id}'")
 		num_citing_rows_view = get_sql_answer(db, f"select count(*) from jump_citing_view where grid_id = '{g_id}'")
 
-		click.echo(f"num_citing_rows: {num_citing_rows}, num_citing_rows_view {num_citing_rows_view}")
+		click.echo(f"    num_citing_rows: {num_citing_rows}, num_citing_rows_view {num_citing_rows_view}")
 
 		if num_citing_rows:
 			click.echo(f"    {num_citing_rows} jump_citing rows already exist for grid id '{g_id}'")
@@ -115,7 +115,7 @@ def add_ror(ror_id, institution_id):
 		num_authorship_rows = get_sql_answer(db, f"select count(*) from jump_authorship where grid_id = '{g_id}'")
 		num_authorship_rows_view = get_sql_answer(db, f"select count(*) from jump_authorship_view where grid_id = '{g_id}'")
 
-		click.echo(f"num_authorship_rows: {num_authorship_rows}, num_authorship_rows_view {num_authorship_rows_view}")
+		click.echo(f"    num_authorship_rows: {num_authorship_rows}, num_authorship_rows_view {num_authorship_rows_view}")
 
 		if num_authorship_rows:
 			click.echo(f"    {num_authorship_rows} jump_authorship rows already exist for grid id {g_id}")
