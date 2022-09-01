@@ -46,6 +46,17 @@ def add_institution(institution_name, old_username, ror_id_list, is_consortium=F
 	for ror_id in ror_id_list:
 		add_ror(ror_id, my_institution.id)
 
+	click.echo("populating institutional apc data")
+	with get_db_cursor() as cursor:
+		qry = """
+			insert into jump_apc_institutional_authorships (
+				select * from jump_apc_institutional_authorships_view
+			    where institution_id = %s
+			    and issn_l in (select issn_l from openalex_computed)
+			)
+		"""
+		cursor.execute(qry, (my_institution.id,))
+
 	db.session.commit()
 
 
