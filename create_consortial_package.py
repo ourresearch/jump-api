@@ -56,7 +56,7 @@ def copy_pkgs_as_feeders(pkgids, package_id_prefix = "package-"):
 	feeder_pkg_ids = []
 	for package_id in pkgids:
 		with get_db_cursor() as cursor:
-			cmd = "select account_id,publisher,package_name,institution_id,is_demo,big_deal_cost,is_deleted,currency,big_deal_cost_increase from jump_account_package where package_id = %s;"
+			cmd = "select account_id,publisher,package_name,institution_id,is_demo,big_deal_cost,is_deleted,currency,big_deal_cost_increase,package_description from jump_account_package where package_id = %s;"
 			cursor.execute(cmd, (package_id,))
 			rows = cursor.fetchall()
 
@@ -73,6 +73,7 @@ def copy_pkgs_as_feeders(pkgids, package_id_prefix = "package-"):
 			 'is_deleted',
 			 'currency',
 			 'big_deal_cost_increase',
+			 'package_description',
 			 'package_id',
 			 'created']
 		with get_db_cursor() as cursor:
@@ -125,13 +126,6 @@ def copy_package(old_package_id, new_package_id):
 		insert into jump_raw_file_upload_object (package_id, file, bucket_name, object_name, created, num_rows, error_details, error, to_delete_date) (
 			select '{new_package_id}', file, bucket_name, object_name, created, num_rows, error_details, error, to_delete_date
 			from jump_raw_file_upload_object
-			where package_id = '{old_package_id}'
-		);
-		
-		insert into jump_apc_authorships (
-			package_id, doi, publisher, num_authors_total, num_authors_from_uni, journal_name, issn_l, year, oa_status, apc) (
-			select '{new_package_id}', doi, publisher, num_authors_total, num_authors_from_uni, journal_name, issn_l, year, oa_status, apc
-			from jump_apc_authorships
 			where package_id = '{old_package_id}'
 		);
 	""".format(new_package_id=new_package_id, old_package_id=old_package_id)
@@ -193,6 +187,8 @@ def include_all_members(consortium_package_id, feed_ids):
 @click.option('--pkgidprefix', default="package-", help='Package IDs; flag can be supplied multiple times', required=True)
 # for VIVA:
 # heroku local:run python create_consortial_package.py --institution=institution-3tLYzP8JuYUf --publisher=springer --pkgid=package-YHV55FEuJCCr --pkgid=package-5GLcckM6ExH4 --pkgid=package-NHMnfCVKs4kc --pkgid=package-covfz2AoSLSA --pkgid=package-HFtEy7V9kpNm --pkgid=package-oXaqhaf38EqY --pkgid=package-5XK9GGwHWeNa --pkgid=package-oLD8eXCY3ysz --pkgid=package-KRr3YrDS59bK --pkgid=package-WxDawozhLReN --pkgid=package-FBM9Yeiix799
+# for CRKN:
+# heroku local:run python create_consortial_package.py --institution=institution-FeVtPAsVeKsK --publisher=springer --pkgid=package-N7PRDVAP4mdL --pkgid=package-iXxjTfXHUQvT --pkgid=package-WVmPikL2ykFN --pkgid=package-VCBiS69KY4e6 --pkgid=package-SngaXxBJcigc --pkgid=package-V8EYqqSXkgYi --pkgid=package-ZtYJwK97KXRp --pkgid=package-HwbRyHwXshTP --pkgid=package-kDaDr7pHiKDY --pkgid=package-NDNCw5aE2iEK --pkgid=package-2wobL7vDqUqx --pkgid=package-HZhoLdnEhcBU --pkgid=package-XFNWXDe2kzx9 --pkgid=package-aCaoBK7gemo2 --pkgid=package-C7FCJy5vSYyJ --pkgid=package-himw3PHajapj --pkgid=package-kWDYjwXK9gbs --pkgid=package-9VS4bXQpRhFc --pkgid=package-m6cjHqhBmhxZ --pkgid=package-bkHeEXuaBsoz --pkgid=package-L3sJqPkstJnk --pkgid=package-4WTgXLphoRQJ --pkgid=package-6GyQ3idSb3gr --pkgid=package-ixviLpJsU5xK --pkgid=package-Gqns2JwkohC9 --pkgid=package-KTvQfX9Ba9vL --pkgid=package-D6cCForPYpWF --pkgid=package-VqmuUZBzygYq --pkgid=package-MqPQHkMGbc7e --pkgid=package-4RmA5zqQ37Mk --pkgid=package-9sziriuGANKC --pkgid=package-LFuptcgYPj35 --pkgid=package-5EQZJR9ytLhf --pkgid=package-SXV7VwDMiNkQ --pkgid=package-nX34X8ZfnPNB --pkgid=package-AopqasoXDDMD --pkgid=package-mMjEUuiWEPv8 --pkgid=package-XZhv2jjPkpKC --pkgid=package-77igEayNDTyL --pkgid=package-RCXdWMupnt36 --pkgid=package-2qfkHj7LT6mJ --pkgid=package-UUgPJJ43C3Ka --pkgid=package-VcTCvAWMzhbA --pkgid=package-2erq2pje87NT --pkgid=package-8AhXa8LtErY8 --pkgid=package-mTtR7t573vP6 --pkgid=package-gKZGa6FdK4gz --pkgid=package-NBP8Mveu7spD --pkgid=package-ej624b4BWfP7 --pkgid=package-2ULJzArE43uR --pkgid=package-K2MaQ6mNUbDL --pkgid=package-PNe2ZQrChgLj --pkgid=package-bS6eF92xhoum --pkgid=package-EkEX85fdvZrN --pkgid=package-BnuucptQhSS3 --pkgid=package-7RsaWjFM5hZD --pkgid=package-ApV2Q2r27KX9 --pkgid=package-MsN2yK7Z8aKn --pkgid=package-KRgqisUCnt9h --pkgid=package-ZwZmukyiR9Rm --pkgid=package-77QHpgXwZmNg --pkgid=package-XtwRcjHJqgpA --pkgid=package-B2J3H85UQEKo
 def create_consortial_package(institution, publisher, pkgid, pkgidprefix):
 	"""Create a consortium for internal testing purposes"""
 	publisher = publisher.lower()

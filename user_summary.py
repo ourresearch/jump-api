@@ -70,6 +70,8 @@ non_consortia = non_consortia[~non_consortia['name'].str.contains("Example")]
 non_consortia = non_consortia[~non_consortia['name'].str.contains("Purchase")]
 non_consortia = non_consortia[~non_consortia['name'].str.contains("Temp U")]
 
+non_consortia.reset_index(inplace=True)
+del non_consortia['index']
 
 # Each institution
 # institution="institution-jscQRozbejja"

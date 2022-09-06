@@ -5,11 +5,21 @@ from app import get_db_cursor
 @click.command()
 def update_apc_institutional_authorships():
 	with get_db_cursor() as cursor:
+		# qry = """
+		# 	select DISTINCT(id) from jump_institution
+		# 	where not is_consortium
+		# 	and not is_demo_institution
+		# 	and id in (select DISTINCT(institution_id) from jump_debug_combo_view)
+		# """
 		qry = """
+			select id from jump_institution where id in (
+	select DISTINCT(institution_id) from jump_apc_institutional_authorships
+		where institution_id not in (
 			select DISTINCT(id) from jump_institution
 			where not is_consortium
 			and not is_demo_institution
 			and id in (select DISTINCT(institution_id) from jump_debug_combo_view)
+		));
 		"""
 		cursor.execute(qry)
 		rows = cursor.fetchall()
