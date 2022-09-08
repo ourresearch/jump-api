@@ -221,14 +221,11 @@ class Consortium(object):
     #     self.apc_journals.sort(key=lambda k: for_sorting(k.cost_apc_historical), reverse=True)
     #     return self.apc_journals
 
-    def to_dict_journals_list_by_institution(self, member_ids=None):
+    def to_dict_journals_list_by_institution(self):
         rows = self.journal_member_data
 
         response = []
-        if (len(member_ids) > 0) and (member_ids[0]):
-            members_to_export = member_ids
-        else:
-            members_to_export = self.member_institution_included_list
+        members_to_export = self.member_institution_included_list
 
         for row in rows:
             issn_l = row["issn_l"]

@@ -1338,7 +1338,7 @@ def live_institution_id_apc_get(institution_id):
     else:
         return jsonify_fast_no_sort(results)
 
-def export_get(table_dicts, is_main_export=True):
+def export_write(table_dicts, is_main_export=True):
     if not table_dicts:
         return []
 
@@ -1362,11 +1362,15 @@ def export_get(table_dicts, is_main_export=True):
                     row.append(table_dict.get(my_key, None))
             csv_writer.writerow(row)
 
+    return filename
+
+def export_get(table_dicts, is_main_export=True):
+    filename = export_write(table_dicts, is_main_export)
+    
     with open(filename, "r") as file:
         contents = file.readlines()
 
     return contents
-
 
 @app.route("/scenario/<scenario_id>/export_subscriptions.txt", methods=["GET"])
 @jwt_required()
@@ -1388,22 +1392,57 @@ def scenario_id_export_subscriptions_txt_get(scenario_id):
 
 
 # push-pull functionality only
-@app.route("/scenario/<scenario_id>/member-institutions/consortial-scenarios.csv", methods=["GET"])
+@app.route("/scenario/<scenario_id>/member-institutions/consortial-scenarios.csv", methods=["POST"])
 @jwt_required()
 def scenario_id_member_institutions_export_csv_get(scenario_id):
-    member_ids = request.args.get("only", "")
+    request_args = request.args
+    if request.is_json:
+        request_args = request.json
+
+    email = request_args.get("email", None)
+
+    if not email:
+        return abort_json(400, "email parameter is required.")
+
+    user = lookup_user(email=email)
+
+    if not user:
+        return abort_json(404, "User does not exist.")
+
+    if not user.email:
+        return abort_json(404, "User has no email address.")
+    
     my_consortium = Consortium(scenario_id)
-    table_dicts = my_consortium.to_dict_journals_list_by_institution(member_ids=member_ids.split(","))
-    contents = export_get(table_dicts, is_main_export=False)
-    return Response(contents, mimetype="text/csv")
+    table_dicts = my_consortium.to_dict_journals_list_by_institution()
+    file_name = export_write(table_dicts, is_main_export=False)
+
+    s3_key = f"jisc_scenario_{scenario_id}_member_subscription_requests" + ".csv"
+    s3_client.upload_file(Filename=file_name, Bucket="unsub-user-files", Key=s3_key)
+
+    download_url = s3_client.generate_presigned_url(
+        'get_object',
+        Params = {'Bucket': 'unsub-user-files', 'Key': s3_key},
+        ExpiresIn = 21600
+    )
+
+    email = create_email(user.email,
+        "Member subscription requests export", "member_subscription_requests", {
+            "data": {
+                "display_name": user.display_name,
+                "link": download_url,
+            }
+        })
+
+    send(email, for_real=True)
+
+    return jsonify_fast_no_sort({"message": "email sent with csv attached"})
 
 # push-pull functionality only
 @app.route("/scenario/<scenario_id>/member-institutions/consortial-scenarios", methods=["GET"])
 @jwt_required()
 def scenario_id_member_institutions_export_text_get(scenario_id):
-    member_ids = request.args.get("only", "")
     my_consortium = Consortium(scenario_id)
-    table_dicts = my_consortium.to_dict_journals_list_by_institution(member_ids=member_ids.split(","))
+    table_dicts = my_consortium.to_dict_journals_list_by_institution()
     contents = export_get(table_dicts, is_main_export=False)
     return Response(contents, mimetype="text/text")
 
