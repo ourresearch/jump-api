@@ -21,6 +21,9 @@ class Pubs(Enum):
 
 def make_consortial_package(publisher, institution_id):
 	click.echo("    Adding new package to jump_account_package table")
+
+	pkg_id = 'package-{}'.format(shortuuid.uuid()[0:12])
+
 	with get_db_cursor() as cursor:
 		cmd = """
 			insert into jump_account_package (account_id, package_id, publisher, package_name, created, consortium_package_id, institution_id, is_demo, big_deal_cost, big_deal_cost_increase, is_deleted, updated, default_to_no_perpetual_access, currency)
@@ -28,12 +31,7 @@ def make_consortial_package(publisher, institution_id):
 			(%(inst)s, %(pkg)s, %(pub)s, %(pub)s, sysdate, null, %(inst)s, false, null, null, false, null, null, 'USD')
 		"""
 		cursor.execute(cmd, 
-			{'inst': institution_id, 'pkg': 'package-{}'.format(shortuuid.uuid()[0:12]), 'pub': Pubs[publisher].value})
-
-	with get_db_cursor() as cursor:
-		cmd = "select package_id from jump_account_package where institution_id = %(inst)s"
-		cursor.execute(cmd, {'inst': institution_id})
-		pkg_id = cursor.fetchone()[0]
+			{'inst': institution_id, 'pkg': pkg_id, 'pub': Pubs[publisher].value})
 
 	return pkg_id
 
@@ -44,6 +42,7 @@ def scenario_create(package_id):
 	new_scenario_id = shortuuid.uuid()[0:8]
 	new_scenario_name = "First Scenario"
 	new_saved_scenario = SavedScenario(False, new_scenario_id, None)
+	new_saved_scenario.set_live_scenario()
 	new_saved_scenario.package_id = package_id
 	new_saved_scenario.is_base_scenario = False
 	dict_to_save = new_saved_scenario.to_dict_saved_from_db()
