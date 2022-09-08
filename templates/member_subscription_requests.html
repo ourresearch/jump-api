@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Member subscription requests export.</title>
+</head>
+<body>
+
+<p>
+    Hi{% if data.display_name and 'Anon' not in data.display_name %} {{ data.display_name }}{% endif %},
+</p>
+<p>
+    You made a request for member subscription requests. We've prepared the data as a csv file.
+
+    <a href="{{ data.link }}">Click here to download the file.</a>
+</p>
+<p>
+    Thanks,<br/>
+    Unsub Team
+</p>
+
+</body>
+</html>
