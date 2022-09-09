@@ -15,6 +15,8 @@ def intercom(emails, domain):
   emails_array = [{"field": "email", "operator": "=", "value": w} for w in emails]
 
   if domain:
+    if '@' not in domain:
+      domain = '@' + domain
     domain_dict = {"field": "email", "operator": "$", "value": domain}
     emails_array.append(domain_dict)
 
