@@ -225,7 +225,7 @@ def intercom_clean(which = "required"):
     [missing_reco_drop(w) for w in to_remove]
 
 
-@click.group(invoke_without_command=True)
+@click.group()
 def cli():
   """
   Update intercom required and recommended data fields
@@ -240,9 +240,6 @@ def cli():
 
     python intercom_drip.py reco
   """
-
-  req()
-  reco()
 
 @cli.command(short_help='Update required data in Intercom')
 def req():
