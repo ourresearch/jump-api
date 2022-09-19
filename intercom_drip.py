@@ -212,7 +212,7 @@ def intercom_clean(which = "required"):
   df_tmp = sheets_data(which)
 
   # clean out metadata for those no longer on required list
-  print("Removing Required data from Intercom")
+  print(f"Removing {which} data from Intercom")
   key_to_get = 'missing_required_data' if which == "required" else 'missing_recommended'
   icom_miss = list(filter(lambda w: w.get('custom_attributes', {}).get(key_to_get, {}), all_data))
   to_remove = list(filter(lambda x: x['email'] not in df_tmp['intercom_last_seen_email'].to_list(),
