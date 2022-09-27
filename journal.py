@@ -133,8 +133,8 @@ class Journal(object):
         return float(my_lookup.get(self.issn_l)) * (1 + self.settings.cost_content_fee_percent/float(100))
 
     @cached_property
-    def papers_2018(self):
-        response = self.my_scenario_data_row.get("num_papers_2018", 0)
+    def papers_2021(self):
+        response = self.my_scenario_data_row.get("num_papers_2021", 0)
         if not response:
             return 0
         return response
@@ -1081,8 +1081,8 @@ class Journal(object):
 
     @cached_property
     def num_papers_growth_from_2018_by_year(self):
-        num_papers_2018 = self.num_papers_by_year[4]
-        return [round(float(self.num_papers_by_year[year])/(num_papers_2018+1), 4) for year in self.years]
+        num_papers_2021 = self.num_papers_by_year[4]
+        return [round(float(self.num_papers_by_year[year])/(num_papers_2021+1), 4) for year in self.years]
 
     @cached_property
     def num_papers_by_year(self):
@@ -1091,7 +1091,7 @@ class Journal(object):
         # make sure it includes at least 4 years and the most recent year
         from app import USE_PAPER_GROWTH
         if USE_PAPER_GROWTH:
-            if len(nonzero_paper_years) >= 4 and self.papers_2018:
+            if len(nonzero_paper_years) >= 4 and self.papers_2021:
                 scipy_lock.acquire()
                 my_curve_fit = self.curve_fit_for_num_papers
                 scipy_lock.release()
@@ -1099,11 +1099,11 @@ class Journal(object):
             # print u"GREAT curve fit for {}, r_squared {}".format(self.issn_l, my_curve_fit.get("r_squared", "no r_squared"))
             self.use_default_num_papers_curve = False
             # only let it drop down below 25% of the most recent year
-            return [max(int(round(self.papers_2018 * 0.5)), num) for num in my_curve_fit["y_extrap"]]
+            return [max(int(round(self.papers_2021 * 0.5)), num) for num in my_curve_fit["y_extrap"]]
         else:
             # print u"bad curve fit for {}, r_squared {}".format(self.issn_l, my_curve_fit.get("r_squared", "no r_squared"))
             self.use_default_num_papers_curve = True
-            return [self.papers_2018 for year in self.years]
+            return [self.papers_2021 for year in self.years]
 
 
     @cached_property
@@ -1128,7 +1128,7 @@ class Journal(object):
                     response = [my_raw_numbers.get(str(year-1), 0) for year in self.historical_years_by_year]
 
         else:
-            response = [self.papers_2018 for year in self.years]
+            response = [self.papers_2021 for year in self.years]
 
         return response
 

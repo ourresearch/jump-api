@@ -17,7 +17,11 @@ def get_embargo_data_from_db():
     return embargo_dict
 
 def get_unpaywall_downloads_from_db():
-    command = "select * from jump_unpaywall_downloads where issn_l in (select distinct issn_l from jump_counter)"
+    command = """
+        select issn_l,num_papers_2021,downloads_total,downloads_0y,downloads_1y,downloads_2y,downloads_3y,downloads_4y
+        from jump_unpaywall_downloads_new
+        where issn_l in (select distinct issn_l from jump_counter)
+    """
     big_view_rows = None
     with get_db_cursor() as cursor:
         cursor.execute(command)
@@ -98,18 +102,18 @@ def upload_common_data():
     data = gather_common_data()
 
     try:
-        os.remove('data/common_package_data_for_all.json.gz')
+        os.remove('data/common_package_data_for_all_newjumpunpaywall.json.gz')
     except OSError:
         pass
 
-    with gzip.open('data/common_package_data_for_all.json.gz', 'w') as f:
+    with gzip.open('data/common_package_data_for_all_newjumpunpaywall.json.gz', 'w') as f:
         f.write(json.dumps(data, default=str).encode('utf-8'))
 
     print("uploading to S3")
     s3_client.upload_file(
-        Filename="data/common_package_data_for_all.json.gz", 
+        Filename="data/common_package_data_for_all_newjumpunpaywall.json.gz", 
         Bucket="unsub-cache", 
-        Key="common_package_data_for_all.json.gz")
+        Key="common_package_data_for_all_newjumpunpaywall.json.gz")
 
     print("done!")
 
