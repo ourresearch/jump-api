@@ -24,7 +24,25 @@ with open(file_cred, 'w') as f:
 gc = gspread.service_account(file_cred)
 
 @cache
-def sheets_data_prep():
+def inst_level_data_prep():
+  sheet_pkg = gc.open('unsub-institution-level')
+  worksheet = sheet_pkg.get_worksheet(0)
+  df = pd.DataFrame(worksheet.get_all_records())
+  df = df[df['intercom_last_seen_email'].str.len() > 0]
+  df['new_users'] = ['False' if not w else w for w in df['new_users']]
+  df['new_users'] = [ast.literal_eval(w.title()) for w in df['new_users']]
+  df['not_using'] = ['False' if not w else w for w in df['not_using']]
+  df['not_using'] = [ast.literal_eval(w.title()) for w in df['not_using']]
+  # remove any in a consortium where data is set up for them
+  ## jisc, irel, crkn 
+  df = df[~df['consortium_account'].str.contains("JISC|IreL|CRKN")]
+  df = df[df['institution_id'].str.contains("jisc", na = False) == False]
+  df = df[~df['intercom_last_seen_email'].str.endswith(".ie", na = False)]
+  df = df[~df['intercom_last_seen_email'].str.endswith("ourresearch.org", na = False)]
+  return df
+
+@cache
+def pkg_level_data_prep():
   sheet_pkg = gc.open('unsub-package-level')
   worksheet = sheet_pkg.get_worksheet(0)
   df = pd.DataFrame(worksheet.get_all_records())
@@ -52,8 +70,15 @@ def sheets_data_prep():
   df = df[~df['intercom_last_seen_email'].str.endswith("ourresearch.org", na = False)]
   return df
 
-def sheets_data(which = "required"):
-  df = sheets_data_prep()
+def inst_data(which = "not_using"):
+  df = inst_level_data_prep()
+  if which == "not_using":
+    return df[df['not_using']]
+  else:
+    return df[df['new_users']]
+
+def pkgs_data(which = "required"):
+  df = pkg_level_data_prep()
   
   if which == "required":
     return df[
@@ -173,6 +198,26 @@ def missing_reco_add(x, mssg):
   }
   return contact_update(x, missing)
 
+def not_using_drop(x):
+  print(f"    dropping from not_using {x['email']}")
+  missing = {"not_using": False}
+  return contact_update(x, missing)
+
+def not_using_add(x):
+  print(f"    adding to not_using {x['email']}")
+  data = {"not_using": True}
+  return contact_update(x, data)
+
+def new_users_drop(x):
+  print(f"    dropping from new_users {x['email']}")
+  data = {"new_user": False}
+  return contact_update(x, data)
+
+def new_users_add(x):
+  print(f"    adding to new_users {x['email']}")
+  data = {"new_user": True}
+  return contact_update(x, data)
+
 def contact_get(user_id):
   res = requests.get(intercom_base + f"/contacts/{user_id}", headers=auth)
   return res
@@ -209,21 +254,24 @@ def intercom_contacts():
 def intercom_clean(which = "required"):
   print("Getting all Intercom contacts")
   all_data = intercom_contacts()
-  df_tmp = sheets_data(which)
+  df_tmp = pkgs_data(which)
 
-  # clean out metadata for those no longer on required list
   print(f"Removing {which} data from Intercom")
   key_to_get = 'missing_required_data' if which == "required" else 'missing_recommended'
   icom_miss = list(filter(lambda w: w.get('custom_attributes', {}).get(key_to_get, {}), all_data))
   to_remove = list(filter(lambda x: x['email'] not in df_tmp['intercom_last_seen_email'].to_list(),
     icom_miss))
   
-  # remove data from Intercom (works fine with empty array)
-  if which == "required":
-    [missing_req_drop(w) for w in to_remove]
-  else:
-    [missing_reco_drop(w) for w in to_remove]
-
+  # works fine with empty to_remove list
+  match which:
+    case "required":
+      [missing_req_drop(w) for w in to_remove]
+    case "recommended":
+      [missing_reco_drop(w) for w in to_remove]
+    case "not_using":
+      [not_using_drop(w) for w in to_remove]
+    case "new_users":
+      [new_users_drop(w) for w in to_remove]
 
 @click.group()
 def cli():
@@ -239,15 +287,19 @@ def cli():
     python intercom_drip.py req
 
     python intercom_drip.py reco
+
+    python intercom_drip.py not_using
+
+    python intercom_drip.py new_users
   """
 
-@cli.command(short_help='Update required data in Intercom')
+@cli.command(short_help='Update missing required data in Intercom')
 def req():
   click.echo("Cleaning out required data in Intercom as needed")
   intercom_clean("required")
   
   click.echo("Updating required data in Intercom")
-  df = sheets_data("required")
+  df = pkgs_data("required")
   for email, group in df.groupby('intercom_last_seen_email'):
     print(f"  {email} (n={len(group)})")
 
@@ -255,10 +307,10 @@ def req():
     user_id, external_id = contact_find(email)
 
     # check if just updated, and skip if it was
-    just_updated = check_just_updated(user_id)
-    if just_updated:
-      print(f"    {email} already updated today")
-      continue
+    # just_updated = check_just_updated(user_id)
+    # if just_updated:
+    #   print(f"    {email} already updated today")
+    #   continue
 
     # update contact attributes 
     mssg = create_req_message(group)
@@ -268,13 +320,13 @@ def req():
       dat = {'id': user_id, 'external_id': external_id, 'email': email}
       missing_req_add(dat, mssg)
 
-@cli.command(short_help='Update recommended data in Intercom')
+@cli.command(short_help='Update missing recommended data in Intercom')
 def reco():
   click.echo("Cleaning out recommended data in Intercom as needed")
   intercom_clean("recommended")
   
   click.echo("Updating recommended data in Intercom")
-  df = sheets_data("recommended")
+  df = pkgs_data("recommended")
   for email, group in df.groupby('intercom_last_seen_email'):
     print(f"  {email} (n={len(group)})")
 
@@ -282,10 +334,10 @@ def reco():
     user_id, external_id = contact_find(email)
 
     # check if just updated, and skip if it was
-    just_updated = check_just_updated(user_id)
-    if just_updated:
-      print(f"    {email} already updated today")
-      continue
+    # just_updated = check_just_updated(user_id)
+    # if just_updated:
+    #   print(f"    {email} already updated today")
+    #   continue
 
     # update contact attributes 
     mssg = create_reco_message(group)
@@ -294,6 +346,33 @@ def reco():
     if mssg:
       dat = {'id': user_id, 'external_id': external_id, 'email': email}
       missing_reco_add(dat, mssg)
+
+@cli.command(short_help='Update not_using data in Intercom')
+def not_using():
+  click.echo("Cleaning out not using data in Intercom as needed")
+  intercom_clean("not_using")
+  
+  click.echo("Updating not_using data in Intercom")
+  df = inst_data("not_using")
+  for email, group in df.groupby('intercom_last_seen_email'):
+    print(f"  {email} (n={len(group)})")
+    user_id, external_id = contact_find(email)
+    dat = {'id': user_id, 'external_id': external_id, 'email': email}
+    not_using_add(dat)
+
+@cli.command(short_help='Update new_users data in Intercom')
+def new_users():
+  click.echo("Cleaning out not using data in Intercom as needed")
+  intercom_clean("new_users")
+  
+  click.echo("Updating new_users data in Intercom")
+  df = inst_data("new_users")
+  for email, group in df.groupby('intercom_last_seen_email'):
+    print(f"  {email} (n={len(group)})")
+    user_id, external_id = contact_find(email)
+    dat = {'id': user_id, 'external_id': external_id, 'email': email}
+    new_users_add(dat)
+
 
 if __name__ == "__main__":
   cli()
@@ -325,14 +404,14 @@ if __name__ == "__main__":
 #     missing_req_add(dat, mssg)
   
 # delete just updated stuff 
-# df_required = sheets_data("required")
+# df_required = pkgs_data("required")
 # for email, group in df_required.groupby('intercom_last_seen_email'):
 #   print(f"{email} (n={len(group)})")
 #   user_id, external_id = contact_find(email)
 #   x = contact_get(user_id)
 #   missing_req_drop(x.json())
 
-# df_recommended = sheets_data("recommended")
+# df_recommended = pkgs_data("recommended")
 # for email, group in df_recommended.groupby('intercom_last_seen_email'):
 #   print(f"{email} (n={len(group)})")
 #   user_id, external_id = contact_find(email)
