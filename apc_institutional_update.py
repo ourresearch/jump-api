@@ -17,8 +17,12 @@ def update_apc_institutional_authorships():
 	institution_ids = [w[0] for w in rows]
 	print(f"Getting to work on {len(institution_ids)} institutions\n")
 
-	for inst_id in institution_ids:
-		print(f"inserting data for {inst_id}")
+	for inst_id in institution_ids[0:3]:
+		print(f"deleting & inserting data for {inst_id}")
+
+		with get_db_cursor() as cursor:
+			qry = "delete from jump_apc_institutional_authorships where institution_id = %s"
+			cursor.execute(qry, (inst_id,))
 
 		with get_db_cursor() as cursor:
 			qry = """
