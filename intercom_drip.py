@@ -70,12 +70,17 @@ def pkg_level_data_prep():
   df = df[~df['intercom_last_seen_email'].str.endswith("ourresearch.org", na = False)]
   return df
 
+def remove_special_cases(df):
+  return df[~df['intercom_last_seen_email'].str.contains('.+uccs.edu|.+nyu.edu')]
+
 def inst_data(which = "not_using"):
   df = inst_level_data_prep()
   if which == "not_using":
-    return df[df['not_using']]
+    df = df[df['not_using']]
   else:
-    return df[df['new_users']]
+    df = df[df['new_users']]
+
+  return remove_special_cases(df)
 
 def pkgs_data(which = "required"):
   df = pkg_level_data_prep()
@@ -89,13 +94,15 @@ def pkgs_data(which = "required"):
       df['intercom_last_seen_email']
     ]
   else:
-    return df[
+    df = df[
       ~df['is_deleted'] & 
       df['missing_recommended_data'] & 
       ~df['is_feeder_package'] & 
       ~df['is_feedback_package'] &
       df['intercom_last_seen_email']
     ]
+
+  return remove_special_cases(df)
 
 def contact_find(email):
   query = {'query': {'field': 'email', 'operator': '=', 'value': email}}
