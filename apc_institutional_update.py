@@ -17,7 +17,7 @@ def update_apc_institutional_authorships():
 	institution_ids = [w[0] for w in rows]
 	print(f"Getting to work on {len(institution_ids)} institutions\n")
 
-	for inst_id in institution_ids[0:3]:
+	for inst_id in institution_ids:
 		print(f"deleting & inserting data for {inst_id}")
 
 		with get_db_cursor() as cursor:
