@@ -1079,6 +1079,21 @@ def jump_journal_filter(package_id):
         else:
             return jsonify_fast_no_sort(_load_package_file(package_id, request, 'filter', FilterTitlesInput))
 
+
+
+@app.route("/publisher/<package_id>/missing", methods=["GET"])
+@jwt_required()
+def jump_missing_titles(package_id):
+    from missing_titles import MissingTitles
+    x = MissingTitles(package_id = package_id)
+    x.fetch_or_make_temp_scenario()
+    x.calculate()
+    x.cleanup_temp_scenario()
+    if x.report_csv:
+        return Response(x.report_csv, mimetype="text/csv")
+    else:
+        return abort_json(400, "Error in creating missing titles report for {}".format(package_id))
+
 # @app.route("/publisher/<package_id>/price/raw", methods=["GET"])
 # @jwt_required()
 # def jump_get_raw_journal_prices(package_id):
