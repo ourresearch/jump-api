@@ -1081,18 +1081,18 @@ def jump_journal_filter(package_id):
 
 
 
-@app.route("/publisher/<package_id>/missing", methods=["GET"])
+@app.route("/publisher/<package_id>/excluded", methods=["GET"])
 @jwt_required()
-def jump_missing_titles(package_id):
-    from missing_titles import MissingTitles
-    x = MissingTitles(package_id = package_id)
+def jump_excluded_titles(package_id):
+    from excluded_titles import ExcludedTitles
+    x = ExcludedTitles(package_id = package_id)
     x.fetch_or_make_temp_scenario()
     x.calculate()
     x.cleanup_temp_scenario()
     if x.report_csv:
         return Response(x.report_csv, mimetype="text/csv")
     else:
-        return abort_json(400, "Error in creating missing titles report for {}".format(package_id))
+        return abort_json(400, "Error in creating excluded titles report for {}".format(package_id))
 
 # @app.route("/publisher/<package_id>/price/raw", methods=["GET"])
 # @jwt_required()

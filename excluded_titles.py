@@ -10,11 +10,11 @@ from util import safe_commit
 # class Empty(object):
 #   pass
 # self = Empty()
-# self.__class__ = MissingTitles
+# self.__class__ = ExcludedTitles
 # package_id = 'package-m46xU5bqA4vH'
-# x = MissingTitles(package_id = package_id)
+# x = ExcludedTitles(package_id = package_id)
 
-class MissingTitles:
+class ExcludedTitles:
 	def __init__(self, package_id):
 		self.package_id = package_id
 		from package import Package
