@@ -1737,6 +1737,156 @@ def sign_s3(package_id):
     })
 
 
+from admin_actions import add_institution, add_ror, add_user
+institution_name='Forest College'
+ror_ids=[]
+
+
+
+@app.route("/institution/search", methods=["GET"])
+@jwt_required()
+def institution_search():
+    institution_name = request.args.get("name", None)
+    if institution_name is None:
+        return abort_json(400, "Missing required parameter: name")
+
+    with get_db_cursor() as cursor:
+        qry = f"""
+            select id,display_name
+            from jump_institution
+            where display_name ilike '%{institution_name}%'
+            order by display_name
+        """
+        cursor.execute(qry)
+        results = cursor.fetchall()
+
+    if results:
+        results = [dict(w) for w in results]
+
+    return jsonify_fast_no_sort({"searched": institution_name, "matches": results})
+
+@app.route("/user/search", methods=["GET"])
+@jwt_required()
+def user_search():
+    email = request.args.get("email", None)
+    if email is None:
+        return abort_json(400, "Missing required parameter: email")
+
+    with get_db_cursor() as cursor:
+        qry = f"""
+            select id,email,display_name
+            from jump_user
+            where email ilike '%{email}%'
+            order by email
+        """
+        cursor.execute(qry)
+        results = cursor.fetchall()
+
+    if results:
+        results = [dict(w) for w in results]
+
+    return jsonify_fast_no_sort({"searched": email, "matches": results})
+
+@app.route("/institution", methods=["POST"])
+@jwt_required()
+def institution_create():
+    institution_name = request.json.get("institution_name", None)
+    if institution_name is None:
+        return abort_json(400, "Missing required parameter: institution_name")
+
+    ror_ids = request.json.get("ror_ids", None)
+    if ror_ids is None:
+        return abort_json(400, "Missing required parameter: ror_ids")
+
+    ror_ids = ror_ids.split(",")
+
+    institution_id = add_institution(institution_name, ror_ids)
+    return jsonify_fast_no_sort({"message": f"institution added", "id": institution_id})
+
+@app.route("/user", methods=["POST"])
+@jwt_required()
+def user_add():
+    email = request.json.get("email", None)
+    if email is None:
+        return abort_json(400, "Missing required parameter: email")
+
+    institution_id = request.json.get("institution_id", None)
+    if institution_id is None and jiscid is None:
+        return abort_json(400, "Missing required parameter when jiscid is missing: institution id")
+    
+    jiscid = request.json.get("jiscid", None)
+    if not len(jiscid):
+        jiscid = None
+    if jiscid is None and institution_id is None:
+        return abort_json(400, "Missing required parameter when institution id is missing: jiscid")
+
+    permissions = request.json.get("permissions", None)
+    if permissions is None or not len(permissions):
+        permissions = "admin,modify,view" # admin by default
+
+    permissions = permissions.split(",")
+    user_name = request.json.get("name", None)
+    password = request.json.get("password", None)
+
+    user_id = add_user(user_name, email, institution_id, permissions, password, jiscid)
+    return jsonify_fast_no_sort({
+        "message": f"user added w/ {email} to institution {institution_id}",
+        "id": user_id
+    })
+
+def user_delete_one(email=None, id=None, inst=None, perm_only=False):
+    if email:
+        email = email.strip()
+    if id:
+        id = id.strip()
+
+    user = lookup_user(email=email, user_id=id)
+    
+    if not user:
+        return
+
+    if inst:
+        query_backup = """
+            insert into jump_user_institution_permission_saved
+            (select * from jump_user_institution_permission where user_id = '{}' and institution_id = '{}')
+        """.format(user.id, inst)
+    else:    
+        query_backup = """
+            insert into jump_user_institution_permission_saved (select * from jump_user_institution_permission where user_id = '{}')
+        """.format(user.id)
+    
+    with get_db_cursor() as cursor:
+        cursor.execute(query_backup)
+
+    if inst:
+        query = "delete from jump_user_institution_permission where user_id = '{}' and institution_id = '{}';".format(user.id, inst)
+    else:    
+        query = "delete from jump_user_institution_permission where user_id = '{}';".format(user.id)
+    
+    with get_db_cursor() as cursor:
+        cursor.execute(query)
+    
+    if not perm_only:
+        query = "delete from jump_user where id = '{}';".format(user.id)
+        with get_db_cursor() as cursor:
+            cursor.execute(query)
+
+    db.session.commit()
+
+@app.route("/user/remove-access", methods=["POST"])
+@jwt_required()
+def delete_user():
+    email = request.json.get("email", None)
+    if email is None:
+        return abort_json(400, "Missing required parameter: email")
+
+    institution_id = request.json.get("institution_id", None)
+    if institution_id is None:
+        return abort_json(400, "Missing required parameter: institution id")
+    
+    user_delete_one(email = email, inst = institution_id, perm_only = True)
+    return jsonify_fast_no_sort({"message": f"removed user ({email}) access to institution ({institution_id})"})
+
 # cache_last_updated = "1999-01-01"
 
 # def start_cache_thread():

@@ -77,7 +77,7 @@ if __name__ == "__main__":
         report_items = contents_json.get("Report_Items", [])
         print((report_type, institution_name, len(report_items)))
 
-        input_dict["package_id"] = "package-jisc{}{}".format(parsed_args.publisher, filename[0:3])
+        input_dict["package_id"] = "package-jisc{}{}".format(publisher, filename[0:3])
         package_ids += [input_dict["package_id"]]
         input_dict["report_year"] = 2020
         input_dict["report_version"] = "5"
