@@ -1790,6 +1790,10 @@ def user_search():
 @app.route("/institution", methods=["POST"])
 @jwt_required()
 def institution_create():
+    submitter_email = request.json.get("submitter_email", None)
+    if not submitter_email.endswith('@ourresearch.org'):
+        abort_json(401, "Not authorized")
+
     institution_name = request.json.get("institution_name", None)
     if institution_name is None:
         return abort_json(400, "Missing required parameter: institution_name")
@@ -1806,6 +1810,10 @@ def institution_create():
 @app.route("/user", methods=["POST"])
 @jwt_required()
 def user_add():
+    submitter_email = request.json.get("submitter_email", None)
+    if not submitter_email.endswith('@ourresearch.org'):
+        abort_json(401, "Not authorized")
+
     email = request.json.get("email", None)
     if email is None:
         return abort_json(400, "Missing required parameter: email")
@@ -1825,7 +1833,7 @@ def user_add():
         permissions = "admin,modify,view" # admin by default
 
     permissions = permissions.split(",")
-    user_name = request.json.get("name", None)
+    user_name = request.json.get("name", "")
     password = request.json.get("password", None)
 
     user_id = add_user(user_name, email, institution_id, permissions, password, jiscid)
@@ -1876,6 +1884,10 @@ def user_delete_one(email=None, id=None, inst=None, perm_only=False):
 @app.route("/user/remove-access", methods=["POST"])
 @jwt_required()
 def delete_user():
+    submitter_email = request.json.get("submitter_email", None)
+    if not submitter_email.endswith('@ourresearch.org'):
+        abort_json(401, "Not authorized")
+    
     email = request.json.get("email", None)
     if email is None:
         return abort_json(400, "Missing required parameter: email")

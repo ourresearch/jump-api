@@ -16,7 +16,7 @@ from perpetual_access import PerpetualAccessInput
 from ror_id import RorId, RorGridCrosswalk
 from saved_scenario import SavedScenario
 from user import User
-from util import get_sql_answer
+from util import get_sql_answer, abort_json
 
 def add_institution(institution_name, ror_id_list, cli=False):
 	if cli:
@@ -29,7 +29,10 @@ def add_institution(institution_name, ror_id_list, cli=False):
 	if my_institutions:
 		my_institution = my_institutions[0]
 		if cli:
-			click.echo(f"  *** using existing institution {my_institution} ***")
+			click.echo(f"institution {my_institution} already exists")
+			raise click.Abort()
+		else:
+			abort_json(409, f"institution already exists under institution ID: {my_institution.id}")
 
 	my_institution = Institution()
 	my_institution.display_name = institution_name
@@ -160,8 +163,12 @@ def add_user(user_name, email, institution = None, permissions = None, password 
 	if jiscid is not None:
 		institution_id = "institution-jisc" + jiscid
 		my_institution = Institution.query.get(institution_id)
-		if cli:
-			click.echo(my_institution)
+		if not my_institution:
+			if cli:
+				click.echo(f"  *** FAILED: institution with JISC ID {jiscid} doesn't exist, exiting ***")
+				raise click.Abort()
+			else:
+				abort_json(404, f"institution with JISC ID '{jiscid}' not found - supply a different one")
 	else:
 		my_institutions = db.session.query(Institution).filter(
 			Institution.id == institution,
@@ -174,7 +181,9 @@ def add_user(user_name, email, institution = None, permissions = None, password 
 		else:
 			if cli:
 				click.echo(f"  *** FAILED: institution {institution} doesn't exist, exiting ***")
-			return
+				raise click.Abort()
+			else:
+				abort_json(404, f"institution does not exist: '{institution}' - supply an institution id or a different one")
 
 	my_user = db.session.query(User).filter(User.email.ilike(email)).scalar()
 
