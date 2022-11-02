@@ -1,4 +1,4 @@
-# Running the Unsub backend ("jump-api")
+# Running Unsub
 
 ## Running Unsub locally
 
@@ -16,7 +16,7 @@ cd get-unsub
 npm run serve -- --port 8081
 ```
 
-Port 8081 will use the localhost base URL (`http://localhost:5004/`)
+Port 8081 will point to the jump-api localhost URL `http://localhost:5004/`; `localhost:5004` is where you can call the backend API
 
 
 ### With backend running on Heroku staging app

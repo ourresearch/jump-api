@@ -1,10 +1,11 @@
 # jump-api mapping
 
-## Unsub: Code used in the Flask App
+## Unsub: Code used in the Flask App (via views.py)
 
 - data (directory of data)
 - templates (email templates)
 - requirements.txt (dependencies)
+- admin_actions.py
 - apc_journal.py
 - app.py
 - assumptions.py
@@ -32,7 +33,7 @@
 - scenario.py
 - user.py
 - util.py
-- views.py
+- views.py (main file running the Unsub backend, where routes are defined)
 
 ## Runs on Heroku, but not part of the Flask app
 
@@ -53,6 +54,7 @@
 - n8_uni_result.py
 - import_counter_from_json.py
 - import_accounts.py
+- init.py
 - user_delete.py
 - change_subs.py
 
