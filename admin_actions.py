@@ -17,6 +17,7 @@ from ror_id import RorId, RorGridCrosswalk
 from saved_scenario import SavedScenario
 from user import User
 from util import get_sql_answer, abort_json
+from tasks import update_apc_inst_authships
 
 def add_institution(institution_name, ror_id_list, cli=False):
 	if cli:
@@ -51,15 +52,20 @@ def add_institution(institution_name, ror_id_list, cli=False):
 	if cli:
 		click.echo("populating institutional apc data")
 
-	with get_db_cursor() as cursor:
-		qry = """
-			insert into jump_apc_institutional_authorships (
-				select * from jump_apc_institutional_authorships_view
-			    where institution_id = %s
-			    and issn_l in (select issn_l from openalex_computed)
-			)
-		"""
-		cursor.execute(qry, (my_institution.id,))
+	# if cli, just run the update table SQL directly, may take a while
+	if cli:
+		with get_db_cursor() as cursor:
+			qry = """
+				insert into jump_apc_institutional_authorships (
+					select * from jump_apc_institutional_authorships_view
+				    where institution_id = %s
+				    and issn_l in (select issn_l from openalex_computed)
+				)
+			"""
+			cursor.execute(qry, (my_institution.id,))
+	else:
+		# if running on heroku, use celery to schedule background task b/c 30 sec timeout
+		update_apc_inst_authships.apply_async(args=(my_institution.id,), retry=True)
 
 	db.session.commit()
 
@@ -156,7 +162,7 @@ def add_ror(ror_id, institution_id, cli=False):
 def add_user(user_name, email, institution = None, permissions = None, password = None, jiscid = None, cli = False):
 	email = email.strip()
 	user_name = user_name.strip()
-	
+
 	if cli:
 		click.echo(f"initializing user {email}")
 
