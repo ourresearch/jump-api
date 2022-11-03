@@ -1738,10 +1738,6 @@ def sign_s3(package_id):
 
 
 from admin_actions import add_institution, add_ror, add_user
-institution_name='Forest College'
-ror_ids=[]
-
-
 
 @app.route("/institution/search", methods=["GET"])
 @jwt_required()

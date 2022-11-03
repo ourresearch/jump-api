@@ -45,10 +45,13 @@ def add_institution(institution_name, ror_id_list, cli=False):
 	if not ror_id_list:
 		return
 
-	for ror_id in ror_id_list:
-		add_ror(ror_id, my_institution.id)
+	if cli:
+		for ror_id in ror_id_list:
+			add_ror(ror_id, my_institution.id, cli=True)
 
-	print("institutional apc data will be populated by a Heroku scheduled task within 30 min")
+		click.echo("institutional apc data will be populated by a Heroku scheduled task within 30 min")
+	else:
+		print("institutional apc, citing and authorship data will be populated by a Heroku scheduled task within 30 min")
 
 	db.session.commit()
 
@@ -135,12 +138,6 @@ def add_ror(ror_id, institution_id, cli=False):
 				)
 			if cli:
 				click.echo(f"    created jump_authorship rows for grid id {g_id}")
-
-		my_packages = Package.query.filter(Package.institution_id==institution_id)
-		for my_package in my_packages:
-			rows_inserted = my_package.update_apc_authorships()
-			if cli:
-				click.echo(f"    inserted apc rows for package {my_package}")
 
 def add_user(user_name, email, institution = None, permissions = None, password = None, jiscid = None, cli = False):
 	email = email.strip()

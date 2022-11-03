@@ -553,17 +553,17 @@ class Package(db.Model):
         else:
             return 0
 
-    def update_apc_authorships(self):
-        delete_q = 'delete from jump_apc_authorships where package_id = %s'
-        insert_q = """
-                insert into jump_apc_authorships (
-                    select * from jump_apc_authorships_view
-                    where package_id = %s and issn_l in 
-                    (select issn_l from openalex_computed))
-            """
-        with get_db_cursor() as cursor:
-            cursor.execute(delete_q, (self.package_id,))
-            cursor.execute(insert_q, (self.package_id,))
+    # def update_apc_authorships(self):
+    #     delete_q = 'delete from jump_apc_authorships where package_id = %s'
+    #     insert_q = """
+    #             insert into jump_apc_authorships (
+    #                 select * from jump_apc_authorships_view
+    #                 where package_id = %s and issn_l in 
+    #                 (select issn_l from openalex_computed))
+    #         """
+    #     with get_db_cursor() as cursor:
+    #         cursor.execute(delete_q, (self.package_id,))
+    #         cursor.execute(insert_q, (self.package_id,))
 
     def to_dict_apc(self):
         response = {

@@ -1,6 +1,8 @@
+# purpose: update apc institutional data across all institutions, 
+#  e.g., when citation and authorship data has been updated
+
 import click
 from app import get_db_cursor
-
 
 @click.command()
 def update_apc_institutional_authorships():
