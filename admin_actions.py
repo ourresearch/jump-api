@@ -17,7 +17,6 @@ from ror_id import RorId, RorGridCrosswalk
 from saved_scenario import SavedScenario
 from user import User
 from util import get_sql_answer, abort_json
-from tasks import update_apc_inst_authships
 
 def add_institution(institution_name, ror_id_list, cli=False):
 	if cli:
@@ -49,23 +48,7 @@ def add_institution(institution_name, ror_id_list, cli=False):
 	for ror_id in ror_id_list:
 		add_ror(ror_id, my_institution.id)
 
-	if cli:
-		click.echo("populating institutional apc data")
-
-	# if cli, just run the update table SQL directly, may take a while
-	if cli:
-		with get_db_cursor() as cursor:
-			qry = """
-				insert into jump_apc_institutional_authorships (
-					select * from jump_apc_institutional_authorships_view
-				    where institution_id = %s
-				    and issn_l in (select issn_l from openalex_computed)
-				)
-			"""
-			cursor.execute(qry, (my_institution.id,))
-	else:
-		# if running on heroku, use celery to schedule background task b/c 30 sec timeout
-		update_apc_inst_authships.apply_async(args=(my_institution.id,), retry=True)
+	print("institutional apc data will be populated by a Heroku scheduled task within 30 min")
 
 	db.session.commit()
 
