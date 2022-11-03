@@ -56,10 +56,24 @@ def add_institution(institution_name, ror_id_list, cli=False):
 		execute_values(cursor, qry, values)
 
 	if cli:
+		click.echo("adding citation and authorship data")
 		for ror_id in ror_id_list:
 			add_ror(ror_id, my_institution.id, cli=True)
 
-		click.echo("institutional apc data will be populated by a Heroku scheduled task within 30 min")
+		click.echo("adding institutional apc data")
+		with get_db_cursor() as cursor:
+			qry = "delete from jump_apc_institutional_authorships where institution_id = %s"
+			cursor.execute(qry, (my_institution.id,))
+
+		with get_db_cursor() as cursor:
+			qry = """
+				insert into jump_apc_institutional_authorships (
+					select * from jump_apc_institutional_authorships_view
+				    where institution_id = %s
+				    and issn_l in (select issn_l from openalex_computed)
+				)
+			"""
+			cursor.execute(qry, (my_institution.id,))
 	else:
 		print("institutional apc, citing and authorship data will be populated by a Heroku scheduled task within 30 min")
 
