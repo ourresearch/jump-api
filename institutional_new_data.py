@@ -10,12 +10,13 @@ from institution import Institution
 
 @click.command()
 def insert_institutional_data():
+	# find institutions created in the last 30 min (& not demo or consortia)
 	with get_db_cursor() as cursor:
 		qry = """
 			select DISTINCT(id) from jump_institution
 			where not is_consortium
 			and not is_demo_institution
-			and datediff(minute, created, sysdate) <= 140
+			and datediff(minute, created, sysdate) <= 30
 		"""
 		cursor.execute(qry)
 		rows = cursor.fetchall()
