@@ -17,6 +17,8 @@ from ror_id import RorId, RorGridCrosswalk
 from saved_scenario import SavedScenario
 from user import User
 from util import get_sql_answer, abort_json
+from psycopg2 import sql
+from psycopg2.extras import execute_values
 
 def add_institution(institution_name, ror_id_list, cli=False):
 	if cli:
@@ -44,6 +46,14 @@ def add_institution(institution_name, ror_id_list, cli=False):
 
 	if not ror_id_list:
 		return
+
+	# store ROR ID(s) linked with institution id for later use in institutional_new_data.py script
+	cols = ["institution_id", "ror_id"]
+	values = [(my_institution.id, w, ) for w in ror_id_list]
+	with get_db_cursor() as cursor:
+		qry = sql.SQL("INSERT INTO institution_ror_added ({}) VALUES %s").format(
+			sql.SQL(', ').join(map(sql.Identifier, cols)))
+		execute_values(cursor, qry, values)
 
 	if cli:
 		for ror_id in ror_id_list:

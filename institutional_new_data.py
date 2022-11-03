@@ -6,6 +6,7 @@
 import click
 from app import get_db_cursor
 from admin_actions import add_ror
+from institution import Institution
 
 @click.command()
 def insert_institutional_data():
@@ -14,7 +15,7 @@ def insert_institutional_data():
 			select DISTINCT(id) from jump_institution
 			where not is_consortium
 			and not is_demo_institution
-			and datediff(minute, created, sysdate) <= 30
+			and datediff(minute, created, sysdate) <= 140
 		"""
 		cursor.execute(qry)
 		rows = cursor.fetchall()
@@ -27,9 +28,9 @@ def insert_institutional_data():
 		click.echo(f"updating citation and authorship data for {inst_id}")
 
 		with get_db_cursor() as cursor:
-			qry = "select ror_id from jump_ror_id where institution_id = %s"
+			qry = "select ror_id from institution_ror_added where institution_id = %s"
 			cursor.execute(qry, (inst_id,))
-			rorids = cursor.fetchall()
+			rorids = cursor.fetchall()		
 		
 		if rorids:
 			rorids = [w[0] for w in rorids]
@@ -53,6 +54,8 @@ def insert_institutional_data():
 				)
 			"""
 			cursor.execute(qry, (inst_id,))
+
+	click.echo("Done!")
 
 
 if __name__ == "__main__":
