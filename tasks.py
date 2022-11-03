@@ -37,25 +37,29 @@ def update_apc_inst(institution_id):
     """
     temp_table_name = 'apc_inst_temp_' + institution_id.replace('-', '_').lower()
 
+    # with get_db_cursor() as cursor:
+    #     cursor.execute(find_q, (institution_id,))
+    #     row = cursor.fetchone()
+
+    # if row:
     with get_db_cursor() as cursor:
-        cursor.execute(find_q, (institution_id,))
-        row = cursor.fetchone()
+        cursor.execute(delete_q, (institution_id,))
 
-    if row:
-        with get_db_cursor() as cursor:
-            cursor.execute(delete_q, (institution_id,))
+    # with get_db_cursor() as cursor:
+    #     print(cursor.mogrify(make_temp_table, (AsIs(temp_table_name), institution_id,)))
+    #     # cursor.execute(make_temp_table, (AsIs(temp_table_name), institution_id,))
 
-        with get_db_cursor() as cursor:
-            # print(cursor.mogrify(make_temp_table, (AsIs(temp_table_name), institution_id,)))
-            cursor.execute(make_temp_table, (AsIs(temp_table_name), institution_id,))
+    # with get_db_cursor() as cursor:
+    #     print(cursor.mogrify(insert_from_temp_table, (AsIs(temp_table_name),)))
+        # cursor.execute(insert_from_temp_table, (AsIs(temp_table_name),))
 
-        with get_db_cursor() as cursor:
-            # print(cursor.mogrify(insert_from_temp_table, (AsIs(temp_table_name),)))
-            cursor.execute(insert_from_temp_table, (AsIs(temp_table_name),))
+    with get_db_cursor() as cursor:
+        cursor.execute(make_temp_table, (AsIs(temp_table_name), institution_id,))
+        cursor.execute(insert_from_temp_table, (AsIs(temp_table_name),))
 
-        # cleanup temporary table
-        with get_db_cursor() as cursor:
-            cursor.execute('drop table %s', (AsIs(temp_table_name),))
+    # cleanup temporary table
+    # with get_db_cursor() as cursor:
+    #     cursor.execute('drop table %s', (AsIs(temp_table_name),))
 
 celery = make_celery(app)
 
