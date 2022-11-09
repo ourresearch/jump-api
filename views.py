@@ -1787,7 +1787,8 @@ def user_search():
 @jwt_required()
 def institution_create():
     submitter_email = request.json.get("submitter_email", None)
-    if not submitter_email.endswith('@ourresearch.org'):
+    admin_users = os.getenv("ADMIN_USERS")
+    if not submitter_email in admin_users.split(","):
         abort_json(401, "Not authorized")
 
     institution_name = request.json.get("institution_name", None)
@@ -1807,7 +1808,8 @@ def institution_create():
 @jwt_required()
 def user_add():
     submitter_email = request.json.get("submitter_email", None)
-    if not submitter_email.endswith('@ourresearch.org'):
+    admin_users = os.getenv("ADMIN_USERS")
+    if not submitter_email in admin_users.split(","):
         abort_json(401, "Not authorized")
 
     email = request.json.get("email", None)
@@ -1881,7 +1883,8 @@ def user_delete_one(email=None, id=None, inst=None, perm_only=False):
 @jwt_required()
 def delete_user():
     submitter_email = request.json.get("submitter_email", None)
-    if not submitter_email.endswith('@ourresearch.org'):
+    admin_users = os.getenv("ADMIN_USERS")
+    if not submitter_email in admin_users.split(","):
         abort_json(401, "Not authorized")
     
     email = request.json.get("email", None)
