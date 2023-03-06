@@ -34,7 +34,7 @@ class NumPapers(db.Model):
 class MakeNumPapers:
     def __init__(self, since_update_date=None, truncate=False, per_async_chunk=40):
         self.truncate = truncate
-        self.api_url = "https://api.openalex.org/works?group_by=publication_year&filter=host_venue.id:{}&mailto=scott@ourresearch.org"
+        self.api_url = "https://api.openalex.org/works?group_by=publication_year&filter=primary_location.source.id:{}&mailto=scott@ourresearch.org"
         self.table = NumPapers.__tablename__
         self.load_openalex()
         self.gather_papers(since_update_date, per_async_chunk)
@@ -42,7 +42,7 @@ class MakeNumPapers:
     def load_openalex(self):
         self.openalex_data = OpenalexDBRaw.query.all()
         for x in self.openalex_data:
-            x.venue_id = re.search("V.+", x.id)[0]
+            x.venue_id = re.search("S.+", x.id)[0]
             x.data = None
         print(f"{len(self.openalex_data)} openalex_journals records found")
 
@@ -123,9 +123,9 @@ class MakeNumPapers:
         journal.data = data
 
 
-# full refresh 
+# full refresh
 ### heroku local:run python num_papers.py --update --truncate
-# just update since and do not truncate 
+# just update since and do not truncate
 ### heroku local:run python num_papers.py --update --since_update_date="2022-05-23 23:49:29.839859"
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
