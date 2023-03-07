@@ -27,7 +27,7 @@ def fetch_data_and_split(table):
         qry = sql.SQL("select * from {}").format(sql.Identifier(table))
         cursor.execute(qry)
         rows = cursor.fetchall()
-    
+
     import pandas as pd
     df = pd.DataFrame([dict(w) for w in rows])
     df.issn_l = [w.strip() for w in df.issn_l] # some have weird leading chars
@@ -47,7 +47,7 @@ def mean_of_two_years(year_1, year_2):
 
 def correct_2020(lst):
     """
-    returns only the data thats changed. if none changed, an empty 
+    returns only the data thats changed. if none changed, an empty
     """
     colors = list(set([w['fresh_oa_status'] for w in lst]))
     fixed_data = []
@@ -58,10 +58,10 @@ def correct_2020(lst):
         if 2020 not in years:
             fixed_data.append(subset_2020)
             continue
-        
+
         subset_2020 = list(filter(lambda x: x['year_int'] == 2020, subset))[0]
         changed = False
-        
+
         if set([2019, 2020, 2021]) == years:
             subset_2020['count'] = mean_of_two_years(year_count(subset, 2019), year_count(subset, 2021))
             changed = True
@@ -86,7 +86,7 @@ def correct_2020(lst):
 
 def make_params(venue, oa_status, submitted):
     parts = [
-        f"host_venue.id:{venue}", 
+        f"primary_location.source.id:{venue}",
         f"oa_status:{oa_status}",]
     if submitted == "false":
         parts.append("has_oa_submitted_version:false")
@@ -162,7 +162,7 @@ class OpenAccessTables:
     def load_openalex(self):
         self.openalex_data = OpenalexDBRaw.query.all()
         for x in self.openalex_data:
-            x.venue_id = re.search("V.+", x.id)[0]
+            x.source_id = re.search("S.+", x.id)[0]
             x.data = {}
             for oa_status in self.oa_statuses:
                 x.data[oa_status] = dict((el, None) for el in self.oa_submitted)
@@ -185,7 +185,7 @@ class OpenAccessTables:
 
         async def get_data(client, journal, oa_status, submitted):
             try:
-                url = self.api_url + make_params(journal.venue_id, oa_status, submitted)
+                url = self.api_url + make_params(journal.source_id, oa_status, submitted)
                 # r = httpx.get(url)
                 r = await client.get(url, timeout = 10)
                 if r.status_code == 404:
@@ -280,7 +280,7 @@ if __name__ == "__main__":
         for table in tables_no_bronze.keys():
             backup_table(table)
             truncate_table(table)
-        
+
         # make tables_with_bronze tables
         print("making with_bronze tables")
         from app import get_db_cursor
@@ -339,7 +339,7 @@ if __name__ == "__main__":
             safe_commit(db)
             db.session.execute(copy_cmd.bindparams(creds=aws_creds))
             safe_commit(db)
-        
+
         # make tables_no_bronze tables
         print("making no_bronze tables")
         for table, qry in tables_no_bronze.items():
