@@ -238,14 +238,14 @@ class OpenAccessTables:
                     for key, value in j.data[oa_status].items():
                         if value:
                             for years in value:
-                                all_rows.append((updated, j.venue_id, j.issn_l, oa_status,
+                                all_rows.append((updated, j.source_id, j.issn_l, oa_status,
                                     int(years['key']), years['count'], False if key == "false" else True))
         except:
             pass
 
         from app import get_db_cursor
 
-        with get_db_cursor(commit=True) as cursor:
+        with get_db_cursor() as cursor:
             qry = sql.SQL("INSERT INTO {table} ({cols}) VALUES %s").format(
                 table = sql.Identifier(self.table),
                 cols = sql.SQL(", ").join(map(sql.Identifier, cols)))
