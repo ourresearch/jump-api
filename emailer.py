@@ -1,46 +1,49 @@
 import os
 
 import jinja2
-import sendgrid
-from sendgrid.helpers.mail import HtmlContent
-from sendgrid.helpers.mail import Mail
-from sendgrid.helpers.mail import To
-from sendgrid.helpers.mail import Cc
-from sendgrid.helpers.mail import From
-from sendgrid.helpers.mail import Subject
+import requests
 
 from app import logger
 
-
-def create_email(address, subject, template_name, context):
-    templateLoader = jinja2.FileSystemLoader(searchpath="templates")
-    templateEnv = jinja2.Environment(loader=templateLoader)
-    html_template = templateEnv.get_template(template_name + ".html")
-
-    html_to_send = html_template.render(context)
-    content = HtmlContent(html_to_send)
-
-    from_email = From("support@unsub.org", "Unsub Team")
-    to_email = To(address)
-
-    to_emails = [to_email]
-    if ("mmu.ac.uk" in address) or ("unimelb.edu.au" in address) or ("cardiff.ac.uk" in address) or ("southwales.ac.uk" in address) or ("le.ac.uk" in address) or ("leicester.ac.uk" in address):
-        to_emails += [Cc("scott@ourresearch.org")]
-    email = Mail(from_email=from_email, subject=Subject(subject), to_emails=to_emails, html_content=content)
-
-    logger.info(('sending email "{}" to {}'.format(subject, address)))
-
-    return email
+_mailgun_api_key = os.getenv('MAILGUN_API_KEY')
 
 
-def send(email, for_real=False):
+def send_email(to_address, subject, template_name, template_data, for_real=False):
+    template_loader = jinja2.FileSystemLoader(searchpath='templates')
+    template_env = jinja2.Environment(loader=template_loader)
+    html_template = template_env.get_template(template_name + '.html')
+    html = html_template.render(template_data)
+
+    to_emails = [to_address]
+
+    if (
+        ("mmu.ac.uk" in to_address)
+        or ("unimelb.edu.au" in to_address)
+        or ("cardiff.ac.uk" in to_address)
+        or ("southwales.ac.uk" in to_address)
+        or ("le.ac.uk" in to_address)
+        or ("leicester.ac.uk" in to_address)
+    ):
+        to_emails += ["richard@ourresearch.org"]
+
+    mailgun_url = f"https://api.mailgun.net/v3/unsub.org/messages"
+
+    mailgun_auth = ("api", _mailgun_api_key)
+
+    mailgun_data = {
+        "from": "Unsub Team <support@unsub.org>",
+        "to": to_emails,
+        "subject": subject,
+        "html": html
+    }
+
+    logger.info(f'sending email "{subject}" to {to_address}')
+
     if for_real:
-        sg = sendgrid.SendGridAPIClient(api_key=os.environ.get('SENDGRID_API_KEY'))
-        email_get = email.get()
-        response = sg.client.mail.send.post(request_body=email_get)
-        print("Sent an email")
+        try:
+            requests.post(mailgun_url, auth=mailgun_auth, data=mailgun_data)
+            logger.info("Sent an email")
+        except Exception as e:
+            logger.exception(e)
     else:
-        print("Didn't really send")
-
-
-
+        logger.info("Didn't really send")

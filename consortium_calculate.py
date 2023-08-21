@@ -9,7 +9,7 @@ import argparse
 
 from app import get_db_cursor
 from consortium import Consortium
-from emailer import create_email, send
+from emailer import send_email
 from util import elapsed
 
 
@@ -49,17 +49,23 @@ def consortium_calculate():
 
             if row["email"]:
                 print("SENDING EMAIL")
-                done_email = create_email(row["email"], 'Unsub update complete', 'update_done', {
-                                'data': {
-                                     'consortium_name': row.get("consortium_name", ""),
-                                     'package_name': row.get("package_name", ""),
-                                     'start_time': row.get("created", ""),
-                                     'end_time': datetime.datetime.utcnow().isoformat(),
-                                     'institution_id': row.get("institution_id", ""),
-                                     'package_id': row.get("package_id", ""),
-                                     'scenario_id': row["scenario_id"]
-                                 }})
-                send(done_email, for_real=True)
+                send_email(
+                    to_address=row["email"],
+                    subject='Unsub update complete',
+                    template_name='update_done',
+                    template_data={
+                        'data': {
+                             'consortium_name': row.get("consortium_name", ""),
+                             'package_name': row.get("package_name", ""),
+                             'start_time': row.get("created", ""),
+                             'end_time': datetime.datetime.utcnow().isoformat(),
+                             'institution_id': row.get("institution_id", ""),
+                             'package_id': row.get("package_id", ""),
+                             'scenario_id': row["scenario_id"]
+                        }
+                    },
+                    for_real=True
+                )
                 print("SENT EMAIL DONE")
 
             print("DONE UPDATING", row["scenario_id"])

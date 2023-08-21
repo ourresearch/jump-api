@@ -39,7 +39,7 @@ from app import get_db_cursor
 # import ror_search
 import password_reset
 import prepared_demo_publisher
-from emailer import create_email, send
+from emailer import send_email
 from counter import Counter, CounterInput
 from grid_id import GridId
 from institution import Institution
@@ -331,8 +331,9 @@ def register_demo_user():
     assign_demo_institution(demo_user, use_prepared_publisher=use_prepared_publisher)
 
     if safe_commit(db):
-        welcome_email = create_email(email, "Welcome to Unsub", "demo_user", {})
-        send(welcome_email, for_real=True)
+        send_email(
+            email, "Welcome to Unsub", "demo_user", {}, for_real=True
+        )
 
         identity_dict = make_identity_dict(demo_user)
         logger.info("login to account {} with {}".format(demo_user.username, identity_dict))
@@ -378,15 +379,20 @@ def notify_changed_permissions(user, admin, old_permissions, new_permissions):
                 diff_lines.append("new: {}".format(",".join(new_names) if new_names else "[None]"))
                 diff_lines.append("")
 
-        email = create_email(user.email, "Your Unsub permissions were changed.", "changed_permissions",
-                             {"data": {
-                                 "display_name": user.display_name,
-                                 "admin_name": admin.display_name,
-                                 "admin_email": admin.email,
-                                 "diff": "\n".join(diff_lines)
-                             }})
-
-        send(email, for_real=True)
+        send_email(
+            user.email,
+            "Your Unsub permissions were changed.",
+            "changed_permissions",
+             {
+                 "data": {
+                     "display_name": user.display_name,
+                     "admin_name": admin.display_name,
+                     "admin_email": admin.email,
+                     "diff": "\n".join(diff_lines)
+                }
+            },
+            for_real=True
+        )
 
 
 @app.route("/user/new", methods=["POST"])
@@ -467,13 +473,19 @@ def register_new_user():
             list(permissions_by_institution.keys())[0]
         ) if permissions_by_institution else None
 
-        email = create_email(req_user.email, "Welcome to Unsub", "new_user", {"data": {
-            "email": new_email,
-            "password": password,
-            "institution_name": email_institution and email_institution.display_name
-        }})
-
-        send(email, for_real=True)
+        send_email(
+            req_user.email,
+            "Welcome to Unsub",
+            "new_user",
+            {
+                "data": {
+                    "email": new_email,
+                    "password": password,
+                    "institution_name": email_institution and email_institution.display_name
+                }
+            },
+            for_real=True
+        )
     else:
         notify_changed_permissions(req_user, auth_user, old_permissions, new_permissions)
 
@@ -1183,11 +1195,17 @@ def subscriptions_notifications_done_editing_post(scenario_id):
     email_for_notification = "scott+consortiumtest@ourresearch.org"
     if 'jisc' in scenario_id:
         email_for_notification = "alice.hughes@jisc.ac.uk"
-    email = create_email(email_for_notification, u"New push/pull submission", "push_pull_done_editing", {"data": {
-        "institution_name": institution_name
-    }})
-
-    send(email, for_real=True)
+    send_email(
+        email_for_notification,
+        u"New push/pull submission",
+        "push_pull_done_editing",
+        {
+            "data": {
+                "institution_name": institution_name
+            }
+        },
+        for_real=True
+    )
 
     return jsonify_fast_no_sort({"status": "success"})
 
@@ -1440,15 +1458,18 @@ def scenario_id_member_institutions_export_csv_get(scenario_id):
         ExpiresIn = 21600
     )
 
-    email = create_email(user.email,
-        "Member subscription requests export", "member_subscription_requests", {
+    send_email(
+        user.email,
+        "Member subscription requests export",
+        "member_subscription_requests",
+        {
             "data": {
                 "display_name": user.display_name,
                 "link": download_url,
             }
-        })
-
-    send(email, for_real=True)
+        },
+        for_real=True
+    )
 
     return jsonify_fast_no_sort({"message": "email sent with csv attached"})
 
@@ -1631,14 +1652,20 @@ def request_password_reset():
     db.session.add(reset_request)
     safe_commit(db)
 
-    email = create_email(reset_user.email, "Change your Unsub password.", "password_reset", {"data": {
-        "display_name": reset_user.display_name,
-        "email": reset_user.email,
-        "jump_url": os.environ.get("JUMP_URL"),
-        "token": reset_request.token,
-    }})
-
-    send(email, for_real=True)
+    send_email(
+        reset_user.email,
+        "Change your Unsub password.",
+        "password_reset",
+        {
+            "data": {
+                "display_name": reset_user.display_name,
+                "email": reset_user.email,
+                "jump_url": os.environ.get("JUMP_URL"),
+                "token": reset_request.token,
+            }
+        },
+        for_real=True
+    )
 
     return jsonify_fast_no_sort({"message": "reset request received"})
 
