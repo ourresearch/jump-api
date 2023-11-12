@@ -1,4 +1,4 @@
-Flask==2.0.3
+Flask==2.3.2
 psycopg2_binary==2.9.1
 simplejson==3.17.3
 chardet==4.0.0
