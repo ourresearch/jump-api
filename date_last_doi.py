@@ -36,7 +36,7 @@ class DateLastDoiOA:
         print(f"{len(self.openalex_data)} openalex_journals records found")
 
     def all_date_last_dois(self):
-        self.openalex_data_chunks = list(make_chunks(self.openalex_data, 50))
+        self.openalex_data_chunks = list(make_chunks(self.openalex_data, 10))
 
         async def get_data(client, journal):
             try:
