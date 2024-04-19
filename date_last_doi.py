@@ -23,7 +23,7 @@ def make_chunks(lst, n):
 
 class DateLastDoiOA:
     def __init__(self):
-        self.api_url = "https://api.openalex.org/works?filter=primary_location.source.id:{}&per_page=1&sort=publication_date:desc&mailto=scott@ourresearch.org"
+        self.api_url = "https://api.openalex.org/works?filter=primary_location.source.id:{}&per_page=1&sort=publication_date:desc&mailto=dev@ourresearch.org"
         self.table = "openalex_date_last_doi"
         self.load_openalex()
         self.all_date_last_dois()
