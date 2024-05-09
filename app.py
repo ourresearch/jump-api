@@ -37,6 +37,7 @@ JISC_PACKAGE_ID = "package-3WkCDEZTqo6S"
 JISC_INSTITUTION_ID = "institution-Afxc4mAYXoJH"
 USE_PAPER_GROWTH = False
 DATABASE_URL = os.getenv("DATABASE_URL_REDSHIFT_TEST") if os.getenv("TESTING_DB") else os.getenv("DATABASE_URL_REDSHIFT")
+OPENALEX_API_KEY = os.getenv("OPENALEX_API_KEY")
 
 # set up logging
 # see http://wiki.pylonshq.com/display/pylonscookbook/Alternative+logging+configuration
