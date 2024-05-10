@@ -20,7 +20,7 @@ class OpenalexDBRaw(db.Model):
 	id = db.Column(db.Text)
 
 
-def process_updated_records():
+def create_or_update_sources():
     count = 0
     date_start = (datetime.datetime.now() - datetime.timedelta(days=2)).strftime("%Y-%m-%dT00:00:00Z")
     date_end = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime("%Y-%m-%dT00:00:00Z")
@@ -32,7 +32,7 @@ def process_updated_records():
 
     if response.status_code == 200:
         for record in response.json()["results"]:
-            upsert_records_by_issn_l(record["issn_l"], record)
+            create_or_update_record_by_issn_l(record["issn_l"], record)
             count += 1
             break
 
@@ -44,7 +44,7 @@ def process_updated_records():
         response = requests.get(url)
         if response.status_code == 200:
             for record in response.json()["results"]:
-                upsert_records_by_issn_l(record["issn_l"], record)
+                create_or_update_record_by_issn_l(record["issn_l"], record)
                 count += 1
 
             cursor = response.json()["meta"]["next_cursor"] if "next_cursor" in response.json()["meta"] else None
@@ -52,7 +52,7 @@ def process_updated_records():
         db.session.commit()
 
 
-def upsert_records_by_issn_l(issn_l, new_data):
+def create_or_update_record_by_issn_l(issn_l, new_data):
     existing_record = db.session.query(OpenalexDBRaw).filter_by(issn_l=new_data["issn_l"]).first()
     if not existing_record:
         print(f"Record with issn_l {issn_l} does not exist. Creating new record.")
@@ -106,4 +106,4 @@ def create_new_record(new_data):
 
 
 if __name__ == "__main__":
-    process_updated_records()
+    create_or_update_sources()
