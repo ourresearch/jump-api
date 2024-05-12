@@ -70,11 +70,7 @@ class JournalMetadata(db.Model):
 
 	@cached_property
 	def issns(self):
-		try:
-			return json.loads(self.issns_string.replace("'", '"'))
-		except Exception as e:
-			print('Json Decode error')
-			return None
+		return json.loads(self.issns_string.replace("'", '"'))
 
 	@cached_property
 	def display_issns(self):
@@ -217,7 +213,7 @@ class JournalConcepts(object):
 	def __init__(self, journal_raw):
 		self.created = datetime.datetime.utcnow().isoformat()
 		self.issn_l = journal_raw.issn_l
-		self.x_concepts = json.loads(journal_raw.x_concepts)
+		self.x_concepts = json.loads(journal_raw.x_concepts.replace("'", '"'))
 		self.data = None
 		self.set_data()
 		super(JournalConcepts, self).__init__()
