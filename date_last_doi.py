@@ -23,7 +23,7 @@ def make_chunks(lst, n):
 
 class DateLastDoiOA:
     def __init__(self):
-        self.api_url = "https://api.openalex.org/works?filter=primary_location.source.id:{}&per_page=1&sort=publication_date:desc&mailto=dev@ourresearch.org"
+        self.api_url = "https://api.openalex.org/works?filter=primary_location.source.id:{}&per_page=1&sort=publication_date:desc&mailto=team@ourresearch.org"
         self.table = "openalex_date_last_doi"
         self.load_openalex()
         self.all_date_last_dois()
@@ -36,7 +36,7 @@ class DateLastDoiOA:
         print(f"{len(self.openalex_data)} openalex_journals records found")
 
     def all_date_last_dois(self):
-        self.openalex_data_chunks = list(make_chunks(self.openalex_data, 10))
+        self.openalex_data_chunks = list(make_chunks(self.openalex_data, 30))
 
         async def get_data(client, journal):
             try:
