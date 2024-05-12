@@ -1,5 +1,5 @@
 # coding: utf-8
-
+import ast
 import datetime
 import argparse
 import simplejson as json
@@ -21,6 +21,12 @@ from util import sql_escape_string
 from journalsdb_pricing import jdb_pricing
 from jisc_utils import jisc_default_prices
 from openalex_date_last_doi import OpenalexDateLastDOI
+
+def safer_json_decode(json_str):
+    try:
+        return json.loads(json_str)
+    except JSONDecodeError:
+        return ast.literal_eval(json_str)
 
 
 class OpenalexDBRaw(db.Model):
@@ -70,7 +76,7 @@ class JournalMetadata(db.Model):
 
 	@cached_property
 	def issns(self):
-		return json.loads(self.issns_string.replace("'", '"'))
+		return safer_json_decode(self.issns_string)
 
 	@cached_property
 	def display_issns(self):
@@ -157,7 +163,7 @@ class JournalMetadata(db.Model):
 					self.is_currently_publishing = True
 		else:
 			if journal_raw.counts_by_year:
-				dois = json.loads(journal_raw.counts_by_year.replace("'", '"'))
+				dois = safer_json_decode(journal_raw.counts_by_year)
 				for row in dois:
 					if row['year'] == this_year_ish() and row['works_count'] > 0:
 						self.is_currently_publishing = True
@@ -213,7 +219,7 @@ class JournalConcepts(object):
 	def __init__(self, journal_raw):
 		self.created = datetime.datetime.utcnow().isoformat()
 		self.issn_l = journal_raw.issn_l
-		self.x_concepts = json.loads(journal_raw.x_concepts.replace("'", '"'))
+		self.x_concepts = safer_json_decode(journal_raw.x_concepts)
 		self.data = None
 		self.set_data()
 		super(JournalConcepts, self).__init__()
