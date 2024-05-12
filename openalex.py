@@ -10,6 +10,8 @@ from psycopg2 import sql
 from psycopg2.extras import execute_values
 from enum import Enum
 
+from simplejson import JSONDecodeError
+
 from app import db
 from app import get_db_cursor
 from util import elapsed
@@ -68,7 +70,11 @@ class JournalMetadata(db.Model):
 
 	@cached_property
 	def issns(self):
-		return json.loads(self.issns_string)
+		try:
+			return json.loads(self.issns_string.replace("'", '"'))
+		except Exception as e:
+			print('Json Decode error')
+			return None
 
 	@cached_property
 	def display_issns(self):
@@ -155,7 +161,7 @@ class JournalMetadata(db.Model):
 					self.is_currently_publishing = True
 		else:
 			if journal_raw.counts_by_year:
-				dois = json.loads(journal_raw.counts_by_year)
+				dois = json.loads(journal_raw.counts_by_year.replace("'", '"'))
 				for row in dois:
 					if row['year'] == this_year_ish() and row['works_count'] > 0:
 						self.is_currently_publishing = True
