@@ -11,6 +11,7 @@ from psycopg2 import sql
 from psycopg2.extras import execute_values
 from openalex import OpenalexDBRaw
 from openalex_date_last_doi import OpenalexDateLastDOIFromOA
+from app import OPENALEX_API_KEY
 
 def make_chunks(lst, n):
     for i in range(0, len(lst), n):
@@ -23,7 +24,7 @@ def make_chunks(lst, n):
 
 class DateLastDoiOA:
     def __init__(self):
-        self.api_url = "https://api.openalex.org/works?filter=primary_location.source.id:{}&per_page=1&sort=publication_date:desc&mailto=team@ourresearch.org"
+        self.api_url = "https://api.openalex.org/works?filter=primary_location.source.id:{}&per_page=1&sort=publication_date:desc&api_key=" + OPENALEX_API_KEY
         self.table = "openalex_date_last_doi"
         self.load_openalex()
         self.all_date_last_dois()
@@ -36,7 +37,7 @@ class DateLastDoiOA:
         print(f"{len(self.openalex_data)} openalex_journals records found")
 
     def all_date_last_dois(self):
-        self.openalex_data_chunks = list(make_chunks(self.openalex_data, 30))
+        self.openalex_data_chunks = list(make_chunks(self.openalex_data, 50))
 
         async def get_data(client, journal):
             try:
