@@ -27,6 +27,7 @@ openpyxl==3.0.7
 pyexcel==0.6.6
 pyexcel-xls==0.6.2
 pyexcel-xlsx==0.6.0
+pyjwt<2.10.0
 python_dateutil==2.8.2
 scipy==1.8.1
 Unidecode==1.2.0
