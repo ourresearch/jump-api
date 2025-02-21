@@ -6,7 +6,7 @@ from dateutil.parser import parse
 import httpx
 import asyncio
 
-from app import db
+from app import db, OPENALEX_API_KEY
 from psycopg2 import sql
 from psycopg2.extras import execute_values
 from openalex import OpenalexDBRaw
@@ -34,7 +34,7 @@ class NumPapers(db.Model):
 class MakeNumPapers:
     def __init__(self, since_update_date=None, truncate=False, per_async_chunk=40):
         self.truncate = truncate
-        self.api_url = "https://api.openalex.org/works?group_by=publication_year&filter=primary_location.source.id:{}&mailto=scott@ourresearch.org"
+        self.api_url = "https://api.openalex.org/works?group_by=publication_year&filter=primary_location.source.id:{}&api_key=" + OPENALEX_API_KEY
         self.table = NumPapers.__tablename__
         self.load_openalex()
         self.gather_papers(since_update_date, per_async_chunk)
