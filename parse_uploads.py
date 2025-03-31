@@ -55,7 +55,7 @@ def parse_uploads():
                 filename = preprocess_file["Key"]
                 filename_base = filename.split(".")[0]
                 try:
-                    package_id, filetype = filename_base.split("_")
+                    package_id, filetype = filename_base.rsplit("_", 1)
                 except ValueError:
                     # not a valid file, skip it
                     continue
