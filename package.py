@@ -644,7 +644,7 @@ class Package(db.Model):
             filename = preprocess_file["Key"]
             filename_base = filename.split(".")[0]
             try:
-                preprocess_package_id, preprocess_filetype = filename_base.split("_")
+                preprocess_package_id, preprocess_filetype = filename_base.rsplit("_", 1)
             except ValueError:
                 # not a valid file, skip it
                 continue
