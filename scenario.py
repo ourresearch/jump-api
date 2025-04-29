@@ -764,6 +764,9 @@ def load_openalex_export_concepts_from_db(concepts, issns):
         rows = cursor.fetchall()
 
     for row in rows:
+        if row['issn_l'] not in concepts:
+            print(f"{row['issn_l']} not found in concepts")
+            continue
         concepts[row['issn_l']].update({'top_three': row['top_three']})
 
     # get all the concepts and their openalex IDs
