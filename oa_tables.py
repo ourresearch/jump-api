@@ -16,7 +16,7 @@ from psycopg2 import sql
 from psycopg2.extras import execute_values
 from sqlalchemy.sql import text
 
-from app import db
+from app import db, OPENALEX_API_KEY
 from app import get_db_cursor
 from app import s3_client
 from util import safe_commit
@@ -151,7 +151,7 @@ def make_chunks(lst, n):
 class OpenAccessTables:
     def __init__(self, since_update_date=None, truncate=False):
         self.truncate = truncate
-        self.api_url = "https://api.openalex.org/works?group_by=publication_year&mailto=scott@ourresearch.org&filter="
+        self.api_url = f"https://api.openalex.org/works?group_by=publication_year&api_key={OPENALEX_API_KEY}&filter="
         self.years = list(range(2010, datetime.now().year + 1))
         self.oa_statuses = ['gold','green','bronze','hybrid',]
         self.oa_submitted = ["none","false",]
