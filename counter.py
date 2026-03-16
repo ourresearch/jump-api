@@ -181,7 +181,7 @@ class CounterInput(db.Model, PackageInput):
                 assigned_label = "TR_J4"
             elif first_row["metric_type"] == "No_License":
                 assigned_label = "TR_J2"
-            elif "OA_Gold" in [row.get("access_type", "") for row in normalized_rows]:
+            elif set([row.get("access_type", "") for row in normalized_rows]) & {"OA_Gold", "Open", "Free_To_Read"}:
                 assigned_label = "TR_J3"
 
         if assigned_label:
