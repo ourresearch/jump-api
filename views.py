@@ -1104,7 +1104,8 @@ def jump_excluded_titles(package_id):
     if x.report_csv:
         return Response(x.report_csv, mimetype="text/csv")
     else:
-        return abort_json(400, "Error in creating excluded titles report for {}".format(package_id))
+        message = x.error_message or "Error in creating excluded titles report for {}".format(package_id)
+        return abort_json(400, message)
 
 # @app.route("/publisher/<package_id>/price/raw", methods=["GET"])
 # @jwt_required()
