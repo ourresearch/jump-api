@@ -65,6 +65,11 @@ class JournalMetadata(db.Model):
 		self.created = self.now.isoformat()
 		for attr in ("issn_l", "publisher"):
 			setattr(self, attr, getattr(journal_raw, attr))
+		# Defensive: source data has been observed to contain trailing
+		# whitespace on issn_l (e.g. '2754-2726 '), which creates duplicate
+		# rows downstream because string equality treats them as distinct.
+		if self.issn_l:
+			self.issn_l = self.issn_l.strip()
 		self.set_custom_fields()
 		self.issns_string = journal_raw.issn
 		for attr in ("title","is_current_subscription_journal",):
@@ -155,18 +160,25 @@ class JournalMetadata(db.Model):
 
 	def set_is_currently_publishing(self, journal_raw):
 		self.is_currently_publishing = False
+
+		# Signal 1: a recent DOI has been registered for this journal.
 		match = last_dois_dict.get(self.issn_l)
-		if match:
-			if match.date_last_doi:
-				date_last_doi_as_date = datetime.datetime.strptime(match.date_last_doi, "%Y-%m-%d")
-				if (self.now - date_last_doi_as_date).days < 365:
+		if match and match.date_last_doi:
+			date_last_doi_as_date = datetime.datetime.strptime(match.date_last_doi, "%Y-%m-%d")
+			if (self.now - date_last_doi_as_date).days < 365:
+				self.is_currently_publishing = True
+
+		# Signal 2: OpenAlex reports works in the current year. Previously this
+		# was an else-branch, so it never ran when last_dois_dict had a stale
+		# entry — causing actively-publishing journals (e.g. Slavic Review,
+		# Brookings Papers, many CUP/JHU titles) to be flagged as defunct.
+		if not self.is_currently_publishing and journal_raw.counts_by_year:
+			dois = safer_json_decode(journal_raw.counts_by_year)
+			for row in dois:
+				if row['year'] == this_year_ish() and row['works_count'] > 0:
 					self.is_currently_publishing = True
-		else:
-			if journal_raw.counts_by_year:
-				dois = safer_json_decode(journal_raw.counts_by_year)
-				for row in dois:
-					if row['year'] == this_year_ish() and row['works_count'] > 0:
-						self.is_currently_publishing = True
+					break
+
 		# TODO: hack for Scientific American, take out when fixed in metadata
 		if self.issn_l == '0036-8733':
 			self.is_currently_publishing = True

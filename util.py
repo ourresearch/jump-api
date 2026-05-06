@@ -564,17 +564,23 @@ def get_link_target(url, base_url, strip_jsessionid=True):
     return url
 
 def sql_escape_string(value):
-    if value == None:
-        return "null"
+    # Return Python None for NULL so psycopg2 parameter-binding produces a real
+    # SQL NULL. Previously returned the string "null", which was inserted
+    # verbatim into the publisher column for any journal whose publisher was
+    # missing in the source data.
+    if value is None:
+        return None
     value = value.replace("'", "''")
     return value
 
 def sql_bool(is_value):
-    if is_value==True:
+    # Return Python None for SQL NULL on boolean columns, for the same reason
+    # as sql_escape_string above.
+    if is_value is True:
         return "true"
-    if is_value==False:
+    if is_value is False:
         return "false"
-    return "null"
+    return None
 
 def run_sql(db, q):
     q = q.strip()
