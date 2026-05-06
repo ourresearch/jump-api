@@ -71,7 +71,20 @@ class JournalMetadata(db.Model):
 		if self.issn_l:
 			self.issn_l = self.issn_l.strip()
 		self.set_custom_fields()
-		self.issns_string = journal_raw.issn
+		# journal_raw.issn is stored in openalex_journals as text. Many rows
+		# are Python-repr style (single-quoted, e.g. "['0036-8075', ...]")
+		# rather than valid JSON. The openalex_computed_flat materialized
+		# view does json_array_length / json_extract_array_element_text on
+		# this column, so non-JSON values caused the view refresh to fail
+		# silently every rebuild (the get_db_cursor context manager
+		# swallowed the error). Normalize to canonical JSON here.
+		if journal_raw.issn:
+			try:
+				self.issns_string = json.dumps(safer_json_decode(journal_raw.issn))
+			except Exception:
+				self.issns_string = journal_raw.issn
+		else:
+			self.issns_string = None
 		for attr in ("title","is_current_subscription_journal",):
 			setter = getattr(self, "set_{}".format(attr))
 			setter(journal_raw)
@@ -168,14 +181,19 @@ class JournalMetadata(db.Model):
 			if (self.now - date_last_doi_as_date).days < 365:
 				self.is_currently_publishing = True
 
-		# Signal 2: OpenAlex reports works in the current year. Previously this
-		# was an else-branch, so it never ran when last_dois_dict had a stale
-		# entry — causing actively-publishing journals (e.g. Slavic Review,
-		# Brookings Papers, many CUP/JHU titles) to be flagged as defunct.
+		# Signal 2: OpenAlex reports works in the current-or-previous year.
+		# Previously this was an else-branch (never ran when last_dois_dict had
+		# a stale entry) AND limited to this_year_ish() exactly. Both together
+		# caused actively-publishing journals to be flagged as defunct: e.g.
+		# Slavic Review, with hundreds of 2024 works but a typical lag before
+		# 2025 entries appear in OpenAlex, was missed because this_year_ish()
+		# returns 2025 in the first half of 2026. We relax to "this year or
+		# last year" to align with Signal 1's 365-day window.
 		if not self.is_currently_publishing and journal_raw.counts_by_year:
 			dois = safer_json_decode(journal_raw.counts_by_year)
+			threshold_year = this_year_ish() - 1
 			for row in dois:
-				if row['year'] == this_year_ish() and row['works_count'] > 0:
+				if row.get('year', 0) >= threshold_year and row.get('works_count', 0) > 0:
 					self.is_currently_publishing = True
 					break
 
