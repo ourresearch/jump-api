@@ -78,6 +78,8 @@ class Journal(object):
 
     @cached_property
     def publisher_short(self):
+        if not self.publisher:
+            return None
         x_words = self.publisher.split()
         if len(x_words) == 1:
             return self.publisher[:8]
