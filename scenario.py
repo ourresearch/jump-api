@@ -775,6 +775,9 @@ def load_openalex_export_concepts_from_db(concepts, issns):
         aggrows = cursor.fetchall()
 
     for aggrow in aggrows:
+        if aggrow["issn_l"] not in concepts:
+            print(f"{aggrow['issn_l']} not found in concepts")
+            continue
         concepts[aggrow["issn_l"]].update({'all': aggrow["id_concept_all"]})
 
     print(f"loaded openalex export concepts in {elapsed(start_time)} seconds")
