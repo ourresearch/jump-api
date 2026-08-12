@@ -1,5 +1,7 @@
 # coding: utf-8
 
+import re
+
 from flask import request
 from flask import redirect
 from flask import abort
@@ -687,15 +689,14 @@ def institution_ror_id(institution_id, ror_id):
     if not authorize_institution(inst, Permission.modify()):
         return abort_json(403, "Must have Write permission to modify institution properties.")
 
+    # ROR is the canonical institution key; GRID resolution happens in the
+    # jump_institution_grid_v2 view, so a ROR missing from the crosswalk is
+    # accepted (its affiliation-derived data stays empty until covered).
+    ror_id = re.sub(r"^https?://ror\.org/", "", ror_id.strip())
     grid_ids = [x.grid_id for x in RorGridCrosswalk.query.filter(RorGridCrosswalk.ror_id == ror_id).all()]
 
     if request.method == "POST":
-        if not grid_ids:
-            return abort_json(404, "Unknown ROR '{}'.".format(ror_id))
-
         db.session.merge(RorId(institution_id=inst.id, ror_id=ror_id))
-        for grid_id in grid_ids:
-            db.session.merge(GridId(institution_id=inst.id, grid_id=grid_id))
     elif request.method == "DELETE":
 
         command = "delete from jump_ror_id where ror_id=%s and institution_id=%s"

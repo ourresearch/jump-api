@@ -654,7 +654,7 @@ def get_package_specific_scenario_data_from_db(package_id):
 
     command = """select citing.issn_l, citing.year::int, sum(num_citations) as num_citations
         from jump_citing citing
-        join jump_grid_id institution_grid on citing.grid_id = institution_grid.grid_id
+        join jump_institution_grid_v2 institution_grid on citing.grid_id = institution_grid.grid_id
         join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id
         where citing.year < %(year)s
         and institution_package.package_id=%(package_id)s
@@ -674,7 +674,7 @@ def get_package_specific_scenario_data_from_db(package_id):
     command = """
         select authorship.issn_l, authorship.year::int, sum(num_authorships) as num_authorships
         from jump_authorship authorship
-        join jump_grid_id institution_grid on authorship.grid_id = institution_grid.grid_id
+        join jump_institution_grid_v2 institution_grid on authorship.grid_id = institution_grid.grid_id
         join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id
         where authorship.year < %(year)s
         and institution_package.package_id=%(package_id)s

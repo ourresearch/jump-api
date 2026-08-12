@@ -117,11 +117,6 @@ def copy_institution(old_institution_id, new_institution_id, publisher=None, old
             from jump_ror_id
             where institution_id = '{old_institution_id}'
         );
-        insert into jump_grid_id  (
-            select '{new_institution_id}' as institution_id, grid_id
-            from jump_grid_id
-            where institution_id = '{old_institution_id}'
-        );
     """.format(old_institution_id=old_institution_id, new_institution_id=new_institution_id)
     print(command)
     with get_db_cursor() as cursor:

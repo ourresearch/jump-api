@@ -112,6 +112,11 @@ def add_institution(institution_name, old_username, ror_id_list, is_consortium=F
 def add_ror(ror_id, institution_id):
     logger.info("adding ROR IDs, if needed")
 
+    # ROR is the canonical institution key; GRID resolution happens in the
+    # jump_institution_grid_v2 view (ror crosswalk), so nothing is written to
+    # jump_grid_id and a missing crosswalk row is no longer an error.
+    ror_id = re.sub(r"^https?://ror\.org/", "", ror_id.strip())
+
     if not db.session.query(RorId).filter(RorId.institution_id == institution_id, RorId.ror_id==ror_id).all():
         db.session.add(RorId(institution_id=institution_id, ror_id=ror_id))
         logger.info("  adding ROR ID {} for {}".format(ror_id, institution_id))
@@ -120,22 +125,8 @@ def add_ror(ror_id, institution_id):
 
     db.session.commit()
 
-    # add grid ids
-    logger.info("adding GRID IDs, if needed")
-    logger.info("  looking up GRID IDs")
-    grid_ids = [x.grid_id for x in RorGridCrosswalk.query.filter(RorGridCrosswalk.ror_id == ror_id).all()]
-
-    if not grid_ids:
-        raise ValueError("at least one ror id corresponding to a grid id is required)")
-
-    for g_id in grid_ids:
-        if not db.session.query(GridId).filter(GridId.institution_id == institution_id, GridId.grid_id==g_id).all():
-            db.session.add(GridId(institution_id=institution_id, grid_id=g_id))
-            logger.info("  adding GRID ID {} for {}".format(g_id, institution_id))
-        else:
-            logger.info("  GRID ID already there")
-
-        db.session.commit()
+    if not RorGridCrosswalk.query.filter(RorGridCrosswalk.ror_id == ror_id).all():
+        logger.warning("  no GRID in the ror crosswalk for {} — affiliation-derived data (APC, citing, authorship) will be empty until the crosswalk covers it".format(ror_id))
 
 
         # jump_citing
