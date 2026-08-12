@@ -192,7 +192,7 @@ class PackageInput:
             error_details_dict = {
                 "no_useable_rows": "No usable rows found.",
                 "error_reading_file": "Error reading this file. Try opening this file, save in .xlsx format, and upload that."}
-            error_details = error_details_dict.get("error", "Error processing file. Please email this file to support@unsub.org so the Unsub team can look into the problem.")
+            error_details = error_details_dict.get("error", "Error processing file. Please email this file to support@openalex.org so the Unsub team can look into the problem.")
 
         new_object = RawFileUploadObject(
             package_id=package_id,

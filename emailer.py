@@ -30,8 +30,13 @@ def send_email(to_address, subject, template_name, template_data, for_real=False
 
     mailgun_auth = ("api", _mailgun_api_key)
 
+    # From stays on unsub.org: Mailgun sends on that domain, so moving it to
+    # @openalex.org would break DKIM/SPF alignment for all Unsub mail. But
+    # support@unsub.org was retired in Feb 2026, so replies to it bounce --
+    # Reply-To sends them somewhere a human actually reads. See oxjob #696.
     mailgun_data = {
         "from": "Unsub Team <support@unsub.org>",
+        "h:Reply-To": "support@openalex.org",
         "to": to_emails,
         "subject": subject,
         "html": html
