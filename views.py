@@ -130,6 +130,20 @@ def authenticated_user():
     return User.query.get(user_id) if user_id else None
 
 
+def require_admin_user():
+    # Staff-only guard for the account-management endpoints. These used to compare a
+    # submitter_email field from the request body with ADMIN_USERS, but the caller picks that
+    # field and /user/demo hands a valid token to anyone, so any token holder could claim a staff
+    # address. Authorize on the token's own user instead. The get-unsub admin screens already
+    # send the logged-in user's email, so they keep working; submitter_email is now ignored.
+    # Every ADMIN_USERS address must already have an account, or /user/demo could register it.
+    admin_emails = {e.strip().lower() for e in (os.getenv("ADMIN_USERS") or "").split(",") if e.strip()}
+    auth_user = authenticated_user()
+    if not auth_user or not auth_user.email or auth_user.email.strip().lower() not in admin_emails:
+        abort_json(403, "Not authorized")
+    return auth_user
+
+
 def lookup_user(user_id=None, email=None, username=None):
     id_user = User.query.filter(User.id == user_id).scalar() if user_id is not None else None
     email_user = User.query.filter(sql_func.lower(User.email) == email.lower()).scalar() if email is not None else None
@@ -534,7 +548,10 @@ def my_user_info():
 @app.route("/user/id/<user_id>", methods=["GET"], defaults={"email": None, "username": None})
 @app.route("/user/email/<email>", methods=["GET"], defaults={"user_id": None, "username": None})
 @app.route("/user/username/<username>", methods=["GET"], defaults={"email": None, "user_id": None})
+@jwt_required()
 def user_info(user_id, email, username):
+    # was unauthenticated: anyone could look up an account's name, email and institutions
+    require_admin_user()
     user = lookup_user(user_id=user_id, email=email, username=username)
 
     if user:
@@ -1771,18 +1788,19 @@ from admin_actions import add_institution, add_ror, add_user
 @app.route("/institution/search", methods=["GET"])
 @jwt_required()
 def institution_search():
+    require_admin_user()
     institution_name = request.args.get("name", None)
     if institution_name is None:
         return abort_json(400, "Missing required parameter: name")
 
     with get_db_cursor() as cursor:
-        qry = f"""
+        qry = """
             select id,display_name
             from jump_institution
-            where display_name ilike '%{institution_name}%'
+            where display_name ilike %s
             order by display_name
         """
-        cursor.execute(qry)
+        cursor.execute(qry, ("%" + institution_name + "%",))
         results = cursor.fetchall()
 
     if results:
@@ -1793,18 +1811,19 @@ def institution_search():
 @app.route("/user/search", methods=["GET"])
 @jwt_required()
 def user_search():
+    require_admin_user()
     email = request.args.get("email", None)
     if email is None:
         return abort_json(400, "Missing required parameter: email")
 
     with get_db_cursor() as cursor:
-        qry = f"""
+        qry = """
             select id,email,display_name
             from jump_user
-            where email ilike '%{email}%'
+            where email ilike %s
             order by email
         """
-        cursor.execute(qry)
+        cursor.execute(qry, ("%" + email + "%",))
         results = cursor.fetchall()
 
     if results:
@@ -1815,10 +1834,7 @@ def user_search():
 @app.route("/institution", methods=["POST"])
 @jwt_required()
 def institution_create():
-    submitter_email = request.json.get("submitter_email", None)
-    admin_users = os.getenv("ADMIN_USERS")
-    if not submitter_email in admin_users.split(","):
-        abort_json(401, "Not authorized")
+    require_admin_user()
 
     institution_name = request.json.get("institution_name", None)
     if institution_name is None:
@@ -1836,10 +1852,7 @@ def institution_create():
 @app.route("/user", methods=["POST"])
 @jwt_required()
 def user_add():
-    submitter_email = request.json.get("submitter_email", None)
-    admin_users = os.getenv("ADMIN_USERS")
-    if not submitter_email in admin_users.split(","):
-        abort_json(401, "Not authorized")
+    require_admin_user()
 
     email = request.json.get("email", None)
     if email is None:
@@ -1911,11 +1924,8 @@ def user_delete_one(email=None, id=None, inst=None, perm_only=False):
 @app.route("/user/remove-access", methods=["POST"])
 @jwt_required()
 def delete_user():
-    submitter_email = request.json.get("submitter_email", None)
-    admin_users = os.getenv("ADMIN_USERS")
-    if not submitter_email in admin_users.split(","):
-        abort_json(401, "Not authorized")
-    
+    require_admin_user()
+
     email = request.json.get("email", None)
     if email is None:
         return abort_json(400, "Missing required parameter: email")
