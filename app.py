@@ -12,6 +12,7 @@ import functools
 import warnings
 import urllib.parse
 from time import time
+from time import monotonic  # survives the `import time` further down, which rebinds `time` to the module
 import numpy
 from contextlib import contextmanager
 from collections import OrderedDict
@@ -197,7 +198,7 @@ connection_last_used = {}
 def checked_out_connection(pool):
     for attempt in range(3):
         connection = pool.getconn()
-        if time() - connection_last_used.get(id(connection), 0) < IDLE_CONNECTION_CHECK_SECONDS:
+        if monotonic() - connection_last_used.get(id(connection), float("-inf")) < IDLE_CONNECTION_CHECK_SECONDS:
             return connection
         try:
             connection.autocommit = True
@@ -222,7 +223,7 @@ def get_db_connection():
     #     print u"error in get_db_connection", e
     #     raise
     finally:
-        connection_last_used[id(connection)] = time()
+        connection_last_used[id(connection)] = monotonic()
         app.config['postgreSQL_pool'].putconn(connection)
 
 @contextmanager
