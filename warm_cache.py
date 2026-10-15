@@ -1,5 +1,7 @@
 # coding: utf-8
 
+import sentry_setup  # noqa: F401  (#1685)
+
 import os
 import requests
 import time

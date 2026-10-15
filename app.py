@@ -1,5 +1,7 @@
 # coding: utf-8
 
+import sentry_setup  # noqa: F401  first, so Sentry sees import-time errors too (#1685)
+
 import logging
 import sys
 import os

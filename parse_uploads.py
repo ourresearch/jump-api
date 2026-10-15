@@ -6,6 +6,7 @@ import random
 import datetime
 from time import sleep
 import boto3
+import sentry_sdk
 
 from app import s3_client
 from app import get_db_cursor
@@ -41,6 +42,7 @@ def parse_uploads():
                 # the delete will also delete the raw row which will take it off this queue
 
         except Exception as e:
+            sentry_sdk.capture_exception(e)
             print(("Error: exception1 {} during parse_uploads".format(e)))
             try:
                 db.session.rollback()
@@ -90,6 +92,7 @@ def parse_uploads():
                     print("moved")
 
         except Exception as e:
+            sentry_sdk.capture_exception(e)
             print(("Error: exception2 {} during parse_uploads on file {}".format(e, filename)))
             if loader and filename:
                 print(("because of error, deleting file {}".format(filename)))
