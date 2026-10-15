@@ -187,10 +187,33 @@ app.config['PROFILE_REQUESTS'] = (os.getenv("PROFILE_REQUESTS", False) == "True"
 
 logger.info("Database URL host: {}".format(redshift_url.hostname))
 
+# Redshift ends sessions that sit idle (the cluster default; awsuser has no SESSION TIMEOUT of its own)
+# and the pool can't tell until a query fails. get_db_cursor swallows that failure, so callers crashed
+# with UnboundLocalError once warm_cache stopped keeping connections busy (oxjob #1711). So a
+# connection idle for over a minute gets a "select 1" before it's handed out, and is replaced if dead.
+IDLE_CONNECTION_CHECK_SECONDS = 60
+connection_last_used = {}
+
+def checked_out_connection(pool):
+    for attempt in range(3):
+        connection = pool.getconn()
+        if time() - connection_last_used.get(id(connection), 0) < IDLE_CONNECTION_CHECK_SECONDS:
+            return connection
+        try:
+            connection.autocommit = True
+            with connection.cursor() as cursor:
+                cursor.execute("select 1")
+            return connection
+        except psycopg2.Error as e:
+            print("get_db_connection: replacing a dead pooled connection: {}".format(e))
+            connection_last_used.pop(id(connection), None)
+            pool.putconn(connection, close=True)
+    return pool.getconn()
+
 @contextmanager
 def get_db_connection():
     try:
-        connection = app.config['postgreSQL_pool'].getconn()
+        connection = checked_out_connection(app.config['postgreSQL_pool'])
         connection.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
         connection.autocommit=True
         # connection.readonly = True
@@ -199,6 +222,7 @@ def get_db_connection():
     #     print u"error in get_db_connection", e
     #     raise
     finally:
+        connection_last_used[id(connection)] = time()
         app.config['postgreSQL_pool'].putconn(connection)
 
 @contextmanager
