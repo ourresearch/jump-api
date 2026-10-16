@@ -7,6 +7,7 @@ import click
 from app import get_db_cursor
 from admin_actions import add_ror
 from institution import Institution
+from institution_apc import refresh_institutions as refresh_institution_apc
 
 @click.command()
 def insert_institutional_data():
@@ -38,23 +39,9 @@ def insert_institutional_data():
 			for ror_id in rorids:
 				add_ror(ror_id, inst_id, cli=True)
 
-	# APCs
-	for inst_id in institution_ids:
-		click.echo(f"updating APC data for {inst_id}")
-
-		with get_db_cursor() as cursor:
-			qry = "delete from jump_apc_institutional_authorships where institution_id = %s"
-			cursor.execute(qry, (inst_id,))
-
-		with get_db_cursor() as cursor:
-			qry = """
-				insert into jump_apc_institutional_authorships (
-					select * from jump_apc_institutional_authorships_view
-				    where institution_id = %s
-				    and issn_l in (select issn_l from openalex_computed)
-				)
-			"""
-			cursor.execute(qry, (inst_id,))
+	# APCs, from the OpenAlex API (oxjob #1717; this used to copy the legacy GRID view)
+	click.echo(f"updating APC data for {len(institution_ids)} institutions")
+	refresh_institution_apc(institution_ids)
 
 	click.echo("Done!")
 
