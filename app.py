@@ -41,6 +41,9 @@ JISC_INSTITUTION_ID = "institution-Afxc4mAYXoJH"
 USE_PAPER_GROWTH = False
 DATABASE_URL = os.getenv("DATABASE_URL_REDSHIFT_TEST") if os.getenv("TESTING_DB") else os.getenv("DATABASE_URL_REDSHIFT")
 OPENALEX_API_KEY = os.getenv("OPENALEX_API_KEY")
+# where scenario citations and authorships come from (oxjob #1717): "grid" = legacy GRID-keyed
+# jump_citing / jump_authorship, "openalex" = jump_inst_citing / jump_inst_authorship
+INSTITUTION_METRICS = os.getenv("INSTITUTION_METRICS", "grid")
 
 # set up logging
 # see http://wiki.pylonshq.com/display/pylonscookbook/Alternative+logging+configuration

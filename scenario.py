@@ -20,6 +20,7 @@ from app import logger
 from app import memorycache
 from app import s3_client
 from app import common_data_dict
+from app import INSTITUTION_METRICS
 
 from time import time
 from util import elapsed
@@ -652,14 +653,21 @@ def get_package_specific_scenario_data_from_db(package_id):
     timing.append(("time from db: counter", elapsed(section_time, 2)))
     section_time = time()
 
-    command = """select citing.issn_l, citing.year::int, sum(num_citations) as num_citations
-        from jump_citing citing
+    if INSTITUTION_METRICS == "openalex":
+        # one row per (institution, issn_l, year) counting distinct works, keyed on OpenAlex IDs (oxjob #1717)
+        citing_source = """jump_inst_citing citing
+        join jump_account_package institution_package on citing.institution_id = institution_package.institution_id"""
+    else:
+        citing_source = """jump_citing citing
         join jump_institution_grid_v2 institution_grid on citing.grid_id = institution_grid.grid_id
-        join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id
+        join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id"""
+
+    command = """select citing.issn_l, citing.year::int, sum(num_citations) as num_citations
+        from {}
         where citing.year < %(year)s
         and institution_package.package_id=%(package_id)s
         and (citing.issn_l in (select distinct issn_l from jump_counter where package_id=%(package_id)s))
-        group by citing.issn_l, year"""
+        group by citing.issn_l, year""".format(citing_source)
     citation_rows = None
     with get_db_cursor() as cursor:
         cursor.execute(command, {'year': now.year, 'package_id': package_id})
@@ -671,15 +679,21 @@ def get_package_specific_scenario_data_from_db(package_id):
     timing.append(("time from db: citation_rows", elapsed(section_time, 2)))
     section_time = time()
 
+    if INSTITUTION_METRICS == "openalex":
+        authorship_source = """jump_inst_authorship authorship
+        join jump_account_package institution_package on authorship.institution_id = institution_package.institution_id"""
+    else:
+        authorship_source = """jump_authorship authorship
+        join jump_institution_grid_v2 institution_grid on authorship.grid_id = institution_grid.grid_id
+        join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id"""
+
     command = """
         select authorship.issn_l, authorship.year::int, sum(num_authorships) as num_authorships
-        from jump_authorship authorship
-        join jump_institution_grid_v2 institution_grid on authorship.grid_id = institution_grid.grid_id
-        join jump_account_package institution_package on institution_grid.institution_id = institution_package.institution_id
+        from {}
         where authorship.year < %(year)s
         and institution_package.package_id=%(package_id)s
         and (authorship.issn_l in (select distinct issn_l from jump_counter where package_id=%(package_id)s))
-        group by authorship.issn_l, year"""
+        group by authorship.issn_l, year""".format(authorship_source)
     authorship_rows = None
     with get_db_cursor() as cursor:
         cursor.execute(command, {'year': now.year, 'package_id': package_id})

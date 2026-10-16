@@ -13,7 +13,7 @@ from package import Package
 from permission import Permission
 from permission import UserInstitutionPermission
 from perpetual_access import PerpetualAccessInput
-from ror_id import RorId, RorGridCrosswalk
+from ror_id import RorId, RorGridCrosswalk, ROR_PATTERN, normalize_ror, openalex_id_for_ror
 from saved_scenario import SavedScenario
 from user import User
 from util import get_sql_answer, abort_json
@@ -85,10 +85,14 @@ def add_ror(ror_id, institution_id, cli=False):
 	if cli:
 		click.echo("adding ROR IDs, if needed")
 
-	# ROR is the canonical institution key; GRID resolution happens in the
-	# jump_institution_grid_v2 view (ror crosswalk), so nothing is written to
-	# jump_grid_id and a missing crosswalk row is no longer an error.
-	ror_id = re.sub(r"^https?://ror\.org/", "", ror_id.strip())
+	# ROR is the canonical institution key. institution_metrics.py builds the institution's citations
+	# and authorships from the OpenAlex institution(s) the ROR resolves to (oxjob #1717); the GRID
+	# tables below stay filled until the cutover.
+	ror_id = normalize_ror(ror_id)
+	if not ROR_PATTERN.match(ror_id):
+		raise ValueError(f"'{ror_id}' is not a ROR ID")
+	if not openalex_id_for_ror(ror_id) and cli:
+		click.echo(f"  WARNING: OpenAlex has no institution with ROR {ror_id}; its citations and authorships stay empty until it does")
 
 	if not db.session.query(RorId).filter(RorId.institution_id == institution_id, RorId.ror_id==ror_id).all():
 		db.session.add(RorId(institution_id=institution_id, ror_id=ror_id))

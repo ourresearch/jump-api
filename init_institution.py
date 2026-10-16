@@ -110,70 +110,11 @@ def add_institution(institution_name, old_username, ror_id_list, is_consortium=F
 
 
 def add_ror(ror_id, institution_id):
-    logger.info("adding ROR IDs, if needed")
-
-    # ROR is the canonical institution key; GRID resolution happens in the
-    # jump_institution_grid_v2 view (ror crosswalk), so nothing is written to
-    # jump_grid_id and a missing crosswalk row is no longer an error.
-    ror_id = re.sub(r"^https?://ror\.org/", "", ror_id.strip())
-
-    if not db.session.query(RorId).filter(RorId.institution_id == institution_id, RorId.ror_id==ror_id).all():
-        db.session.add(RorId(institution_id=institution_id, ror_id=ror_id))
-        logger.info("  adding ROR ID {} for {}".format(ror_id, institution_id))
-    else:
-        logger.info("  ROR ID already there")
-
-    db.session.commit()
-
-    if not RorGridCrosswalk.query.filter(RorGridCrosswalk.ror_id == ror_id).all():
-        logger.warning("  no GRID in the ror crosswalk for {} — affiliation-derived data (APC, citing, authorship) will be empty until the crosswalk covers it".format(ror_id))
-
-
-        # jump_citing
-        logger.info("  populating jump_citing for GRID ID {}".format(g_id))
-
-        num_citing_rows = get_sql_answer(db, "select count(*) from jump_citing where grid_id = '{}'".format(g_id))
-        num_citing_rows_view = get_sql_answer(db, "select count(*) from jump_citing_view where grid_id = '{}'".format(g_id))
-
-        logger.info("num_citing_rows: {}, num_citing_rows_view {}".format(num_citing_rows, num_citing_rows_view))
-
-        if num_citing_rows:
-            logger.info("    {} jump_citing rows already exist for grid id '{}'".format(num_citing_rows, g_id))
-        else:
-            with get_db_cursor() as cursor:
-                cursor.execute(
-                    "delete from jump_citing where grid_id = '{}'".format(g_id)
-                )
-                cursor.execute(
-                    "insert into jump_citing (select * from jump_citing_view where grid_id = '{}')".format(g_id)
-                )
-            logger.info("    created jump_citing rows for grid id {}".format(g_id))
-
-        # jump_authorship
-
-        logger.info("  populating jump_authorship for GRID ID  {}".format(g_id))
-
-        num_authorship_rows = get_sql_answer(db, "select count(*) from jump_authorship where grid_id = '{}'".format(g_id))
-        num_authorship_rows_view = get_sql_answer(db, "select count(*) from jump_authorship_view where grid_id = '{}'".format(g_id))
-
-        logger.info("num_authorship_rows: {}, num_authorship_rows_view {}".format(num_authorship_rows, num_authorship_rows_view))
-
-        if num_authorship_rows:
-            logger.info("    {} jump_authorship rows already exist for grid id {}".format(num_authorship_rows, g_id))
-        else:
-            with get_db_cursor() as cursor:
-                cursor.execute(
-                    "delete from jump_authorship where grid_id = '{}'".format(g_id)
-                )
-                cursor.execute(
-                    "insert into jump_authorship (select * from jump_authorship_view where grid_id = '{}')".format(g_id)
-                )
-            logger.info("    created jump_authorship rows for grid id {}".format(g_id))
-
-        my_packages = Package.query.filter(Package.institution_id==institution_id)
-        for my_package in my_packages:
-            rows_inserted = my_package.update_apc_authorships()
-            logger.info("    inserted apc rows for package {}".format(my_package))
+    # the admin version validates the ROR and keeps the legacy GRID tables filled until the
+    # oxjob #1717 cutover; institution_metrics.py picks the new ROR up for the OpenAlex counts.
+    # (The copy that used to live here lost its GRID loop in 4bea337 and failed on an undefined g_id.)
+    from admin_actions import add_ror as admin_add_ror
+    admin_add_ror(ror_id, institution_id)
 
 
 def add_user(user_info):

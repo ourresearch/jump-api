@@ -50,7 +50,7 @@ from filter_titles import FilterTitles, FilterTitlesInput
 from package import Package
 from permission import Permission, UserInstitutionPermission
 from perpetual_access import PerpetualAccess, PerpetualAccessInput
-from ror_id import RorId, RorGridCrosswalk
+from ror_id import RorId, RorGridCrosswalk, normalize_ror, openalex_id_for_ror
 from saved_scenario import SavedScenario
 from saved_scenario import get_latest_scenario
 from saved_scenario import save_raw_scenario_to_db
@@ -706,13 +706,15 @@ def institution_ror_id(institution_id, ror_id):
     if not authorize_institution(inst, Permission.modify()):
         return abort_json(403, "Must have Write permission to modify institution properties.")
 
-    # ROR is the canonical institution key; GRID resolution happens in the
-    # jump_institution_grid_v2 view, so a ROR missing from the crosswalk is
-    # accepted (its affiliation-derived data stays empty until covered).
-    ror_id = re.sub(r"^https?://ror\.org/", "", ror_id.strip())
+    # ROR is the canonical institution key. A ROR that OpenAlex doesn't know is refused (most likely
+    # a typo); citations and authorships for an added ROR appear once institution_metrics.py next
+    # runs (oxjob #1717).
+    ror_id = normalize_ror(ror_id)
     grid_ids = [x.grid_id for x in RorGridCrosswalk.query.filter(RorGridCrosswalk.ror_id == ror_id).all()]
 
     if request.method == "POST":
+        if not openalex_id_for_ror(ror_id):
+            return abort_json(404, "Unknown ROR '{}'. Check it at https://ror.org.".format(ror_id))
         db.session.merge(RorId(institution_id=inst.id, ror_id=ror_id))
     elif request.method == "DELETE":
 
